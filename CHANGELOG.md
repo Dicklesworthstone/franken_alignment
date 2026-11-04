@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-04: promote complete independently reviewed learned policy campaigns
+
+- Add a separate explicit governor command that binds the original candidate,
+  predecessor and complete retained policy-replay report before promotion.
+- Reuse original Request/Approve/Promote reducers in one guarded canonical
+  replacement; preserve shadow/relaxation gates, Unknown charges, ordinary
+  capacity and terminal reserves without returning live roles or effect keys.
+- Recover exact acknowledged operations with zero appended events and the
+  independently selected current policy; retain anchors despite report failure.
+- Add ten native/operator regressions covering real publication, accounting,
+  all five write barriers, strict review binding, deadlines and output recovery.
+  Source/syntax checks passed; RCH compilation and runtime verification remain
+  unavailable, and deployment/governance qualification remains pending.
+
 ## 2026-11-04: rearm owned prediction at a restored prompt boundary
 
 - Add an explicitly bound native recipe that freshly audits the actual restored

@@ -32,6 +32,7 @@
 #[path = "learned/stream_checkpoint.rs"] mod stream_checkpoint;
 #[path = "learned/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
 #[path = "learned/campaigns.rs"] mod campaigns;
+#[path = "learned/policy_promotion.rs"] mod policy_promotion;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -79,6 +80,9 @@ where F: FnMut() -> ElapsedTick {
     let args = args.as_slice();
     // These independent historical and maintenance modes own the complete argv.
     // No live option stripper may remove an incompatible mode or output first.
+    if args.iter().any(|arg| arg == "--promote-policy") {
+        return policy_promotion::command(args, credibility, &mut std::io::stdout().lock());
+    }
     if args.iter().any(|arg| matches!(arg.as_str(), "--capture-stream-checkpoint" | "--begin-stream-reset")) {
         return stream_checkpoint::command(args, credibility, time, &mut std::io::stdout().lock());
     }

@@ -47,6 +47,11 @@ policy and retained history anchor. The creation flag is not a substitute for
 those recovery expectations. Missing or changed campaign requirements refuse
 before acknowledging a recovery fence.
 
+The separate [explicit policy-governance command](LEARNED_POLICY_GOVERNANCE.md)
+can promote a reviewed candidate in an eligible campaign-protected history.
+It requires the full original report and independently selected governor
+intent; the creation profile does not itself approve any policy change.
+
 Five regression functions cover full command parsing and real native/human
 publication, guarded native policy refusal, plain/raw/owned first-image custody,
 exact anchored recovery, malformed profiles and incompatible modes. These are

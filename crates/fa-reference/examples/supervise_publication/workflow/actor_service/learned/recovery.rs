@@ -7,6 +7,8 @@ pub(super) mod readonly;
 pub(super) mod diagnosis;
 #[path = "recovery/policy_replay.rs"]
 pub(super) mod policy_replay;
+#[path = "recovery/policy_promotion.rs"]
+pub(super) mod policy_promotion;
 #[path = "recovery/credential.rs"]
 pub(super) mod credential;
 #[path = "recovery/selected.rs"]

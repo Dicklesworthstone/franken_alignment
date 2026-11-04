@@ -3,6 +3,8 @@
 //! independent operator authentication or deployment effectiveness.
 #[path = "recovery_policy/campaign.rs"]
 mod campaign;
+#[path = "recovery_policy/promotion.rs"]
+mod promotion;
 
 use super::*;
 use super::continuation as native;

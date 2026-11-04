@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: promote independently reviewed learned policy campaigns
+
+The operator now connects a complete original policy-replay report to an
+explicit trusted offline governor request for a campaign-protected plain
+learned history. A sealed guarded cursor captures the original corpus/cut in
+the same numerical replay, verifies every independent guard and exact current
+policy, and compares the entire bounded canonical report before mutation.
+Read-only policy replay remains descriptive; its output grants no authority.
+
+The native finalizer applies the original Request, Approve and Promote reducers
+in one canonical replacement. Original governor shadow/relaxation checks and
+one-use promotion rules remain in force. Only undispatched reservations may be
+cancelled; Unknown/admitted effects stay charged. Ordinary event and byte
+capacity funds all three events, preserving the terminal reserve. No Fence,
+live governor, numerical owner, human effect key or effect permit escapes.
+
+An exact lost-acknowledgment retry appends zero events and compares the original
+full report, predecessor, candidate and explicit relaxation bit. Recovery must
+independently select the CURRENT effective policy; it cannot relabel the owner
+with the original predecessor policy. After acknowledgment, archive retention
+and reporting are both attempted despite independent output failure or lateness.
+
+Ten new native/operator regression functions cover actual native/human learned
+publication before replay/promotion, reserved versus charged Unknown outcomes,
+denied and shadow corpora, all five write barriers, ordinary/terminal capacity,
+exact report/intent/canonical binding, stale current-policy refusal, deadline
+cuts and output repair. Thirteen Rust files passed syntax/whitespace checks and
+independent source/API reviews found no concrete blocker. RCH compilation,
+execution, formatting and Clippy remain unavailable. This initial capability
+requires trusted local governance custody and plain nonpredictive histories;
+remote governor authentication, mediated/predictive promotion and broader
+shadow/deployment qualification remain open.
+
 ## 2026-11-04: forecast from a freshly audited restored prompt boundary
 
 The explicit with_owned_forecast_restart_audit recipe resolves a native reset

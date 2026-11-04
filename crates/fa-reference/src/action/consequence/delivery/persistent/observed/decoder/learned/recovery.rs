@@ -5,9 +5,12 @@ mod stopped;
 mod receipt;
 mod investigation;
 mod policy_replay;
+mod policy_promotion;
 mod abandonment;
 mod stream_control;
 pub use receipt::FileReconciledLearnedReceipt;
+pub use policy_promotion::{FileLearnedPolicyPromotionHistory, FileLearnedPolicyPromotionRequest,
+    FileLearnedPolicyPromotionReview};
 pub use stream_control::{FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
     FileLearnedStreamControlReceipt};
 
@@ -67,6 +70,7 @@ pub struct FileLearnedRecovery {
     replayed: usize,
     status: FileLearnedRecoveryStatus,
     investigation: Option<Selection>,
+    promotion: Option<policy_promotion::Selection>,
     last_drain: Option<FileShutdownDrain>,
 }
 
@@ -92,7 +96,8 @@ impl FileOversight {
         let machine = Machine::new(&profile)?;
         Ok(FileLearnedRecovery { profile, store, events, machine,
             expected: expected.clone(), canonical, replayed: 0,
-            status: FileLearnedRecoveryStatus::Replaying, investigation: None, last_drain: None })
+            status: FileLearnedRecoveryStatus::Replaying, investigation: None,
+            promotion: None, last_drain: None })
     }
 }
 
@@ -139,6 +144,11 @@ impl FileLearnedRecovery {
             // Latch BEFORE the original reducer, including its numerical work.
             // An unwinding caller cannot retry partially applied history.
             self.status = FileLearnedRecoveryStatus::Interrupted;
+            if let Some(selection) = self.promotion.as_mut()
+                && let Err(error) = selection.capture(&self.machine, self.replayed) {
+                self.status = FileLearnedRecoveryStatus::Failed(error);
+                return Err(error.into());
+            }
             // A selected investigation captures the admission in this SAME
             // reducer pass; it never replays numerical history a second time.
             let applied = match self.investigation.as_mut() {
@@ -167,6 +177,11 @@ impl FileLearnedRecovery {
             if self.machine.learned_contract() != Some(&self.expected) {
                 self.status = FileLearnedRecoveryStatus::Failed(Error::Binding);
                 return Err(Error::Binding.into());
+            }
+            if let Some(selection) = self.promotion.as_mut()
+                && let Err(error) = selection.capture(&self.machine, self.replayed) {
+                self.status = FileLearnedRecoveryStatus::Failed(error);
+                return Err(error.into());
             }
             self.status = FileLearnedRecoveryStatus::Ready;
         }

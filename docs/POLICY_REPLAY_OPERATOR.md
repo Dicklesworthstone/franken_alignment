@@ -5,6 +5,12 @@ The executable registers ordinary `policy-replay` and learned
 processing. Each receives the complete original argument list, so incompatible
 activation, generation, or terminal modes remain explicit refusals.
 
+For an existing campaign-protected plain learned history, the separately
+authorized [policy-governance workflow](LEARNED_POLICY_GOVERNANCE.md) can consume
+the exact complete report reviewed here. It requires an independent governor
+request, exact original cut and current guarded recovery expectations. This
+read-only command itself still requests, approves and promotes nothing.
+
 `supervise_publication policy-replay CONFIG CANDIDATE_JSON` compares a candidate
 exact policy with every retained proposal and applied review belonging to the
 effective policy in one canonical publication journal image. It includes exact

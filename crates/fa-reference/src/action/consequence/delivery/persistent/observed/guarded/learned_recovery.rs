@@ -1,6 +1,7 @@
 //! Cooperative learned recovery with the original complete guard/role contract.
 //! The inner candidate, original reset and sole persistence boundary stay sealed.
 mod stream_control;
+mod policy_promotion;
 use crate::action::consequence::delivery::credential_broker::{
     CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
 };

@@ -18,6 +18,7 @@ use std::collections::BTreeSet;
 
 #[path = "../../../../../../driver/native_learned/native_fixture.rs"]
 mod native_fixture;
+mod policy_promotion;
 
 fn review(mut driver: FileSupervisedDriver, request: u64, round: u64, spelling: &[u8])
     -> FileNativeSupervisedDriver

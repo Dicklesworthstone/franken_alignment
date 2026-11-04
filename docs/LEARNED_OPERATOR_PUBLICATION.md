@@ -838,6 +838,13 @@ and recovery cannot use this creation flag to add governance after work begins;
 they must independently require the installed inventory. See
 [LEARNED_CAMPAIGN_CREATION.md](LEARNED_CAMPAIGN_CREATION.md).
 
+An existing campaign-protected plain history can use the separate offline
+`--promote-policy GOVERNOR_REQUEST` maintenance mode. It compares the complete
+independently reviewed original policy-replay output, then atomically records
+the original campaign request, approval and promotion. It returns immutable
+history and a retained anchor; all future effects still require their ordinary
+keys. See [LEARNED_POLICY_GOVERNANCE.md](LEARNED_POLICY_GOVERNANCE.md).
+
 A plain functional-restart Message command can also select
 `--checkpoint-before-generation PROFILE` to capture the exact original quiet
 numerical boundary before its next sampled token. This is explicit supervisor
