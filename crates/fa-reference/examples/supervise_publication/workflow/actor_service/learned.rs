@@ -124,10 +124,10 @@ where F: FnMut() -> ElapsedTick {
     let config = if live_continuation || args[3] == "--resume" {
         // An explicit recovery mode still has to bind the original numerical
         // history before any live role or receipt is available. Creation below
-        // keeps its existing audit-only Config admission.
+        // uses the scoped learned-creation reader below.
         Config::read_learned_recovery(Path::new(&args[1]))?
     } else {
-        Config::read(Path::new(&args[1]))?
+        Config::read_learned_generation(Path::new(&args[1]))?
     };
     if args[3] == "--resume" {
         // Receipt recovery never reads a current helper-evidence capsule. An

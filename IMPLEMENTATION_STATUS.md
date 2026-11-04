@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: create explicitly selected functional learned histories
+
+The single create-learned-generated command can now provision a fresh native
+learned owner with an explicitly declared functional_restart profile. Previously
+its generic audit-only Config reader prevented operator-created histories from
+using the native paired checkpoint/reset contract. The scoped creation reader
+still refuses bit_exact and unknown grades, never infers a grade, and leaves
+ordinary and resident creation on their original audit-only paths.
+
+The original numerical bootstrap constructs and synchronizes the actual model,
+cache and sampler before publishing the first canonical image. A declared
+functional grade cannot import an advanced actor or replace an existing store.
+Recovery continues to require the complete original profile, recipe and guards;
+an audit-only expectation cannot relabel the resulting functional history.
+
+Three new regression functions cover actual CLI generation, native sidecar
+review and independent authenticated human publication; exact actor/numerical
+recovery and wrong-grade no-write refusal; unsupported declarations and legacy
+profile equivalence; and advanced-state bootstrap refusal before storage. The
+existing creation-boundary test now checks existing-store preservation for this
+new learned path while retaining generic and resident restrictions. Five edited
+Rust files passed a syntax parse. The required RCH gate was attempted and failed
+with rch not found; compilation, test execution and qualification remain pending.
+No restart-grade certification, roadmap packet or bead is closed.
+
 ## 2026-11-04: functional histories in audit, situations and terminal fleets
 
 Historical learned review audit and recipe-selected individual/fleet situation

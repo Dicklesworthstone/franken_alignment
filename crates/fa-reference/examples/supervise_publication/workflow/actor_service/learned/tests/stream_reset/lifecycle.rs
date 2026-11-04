@@ -242,7 +242,7 @@ fn completed_functional_history_accepts_terminal_admission_without_current_evide
 }
 
 #[test]
-fn generic_and_resident_creation_keep_the_audit_only_boundary() {
+fn learned_creation_cannot_replace_history_and_generic_resident_profiles_remain_audit_only() {
     let root = Root::new();
     let (case, arguments, _) = completed(&root);
     let (peer, _) = peer_file(&root, &case.config);
@@ -250,8 +250,10 @@ fn generic_and_resident_creation_keep_the_audit_only_boundary() {
     assert!(Config::read(Path::new(&arguments[1])).is_err());
     let create = vec!["create-learned-generated".into(), arguments[1].clone(),
         arguments[2].clone(), peer.display().to_string()];
-    let error = super::super::super::command_with_clock(&create, None, || ElapsedTick(1001)).unwrap_err();
-    assert!(error.contains("audit_only"), "{error}");
+    // The explicit learned constructor can now provision a new functional
+    // owner, but a create invocation can never replace this existing history.
+    assert!(super::super::super::command_with_clock(&create, None, || ElapsedTick(1001)).is_err());
+    assert_eq!(disk(&case), before);
     let resident = vec!["serve-learned-generated".into(), arguments[1].clone(),
         root.0.join("absent-sequence.json").display().to_string(), peer.display().to_string()];
     let error = super::super::super::sequence::command_with_clock(

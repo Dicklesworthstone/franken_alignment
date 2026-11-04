@@ -123,3 +123,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 #[path = "tests/fleet.rs"] mod fleet_shutdown;
 
 #[path = "tests/situation.rs"] mod situation;
+
+#[path = "tests/functional_creation.rs"] mod functional_creation;

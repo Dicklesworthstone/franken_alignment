@@ -80,11 +80,21 @@ pub(crate) fn assert_oversight_profiles_eq(actual: &FileOversightProfile, expect
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> { Self::decode(&read_regular(path, CONFIG_BYTES)?) }
 
+    /// Provision a fresh ORIGINAL learned numerical owner with an explicitly
+    /// selected restart grade. Only the learned creation command uses this
+    /// reader; its native bootstrap constructs the real model/cache/sampler
+    /// before publishing the first image. Metadata never imports numerical
+    /// state or establishes an external process's restart behavior.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_learned_generation(path: &Path) -> Result<Self, String> {
+        Self::decode_with_actor_profile(&read_regular(path, CONFIG_BYTES)?, true)
+    }
+
     /// Independent bootstrap expectation for an original learned history.
     /// The selected native reader must bind this complete profile and numerical
     /// recipe before returning a historical report or any recovered role.
     /// A declaration is never inferred, upgraded, or an external model attestation.
-    /// Ordinary creation retains its audit-only admission contract.
+    /// Ordinary non-learned creation retains its audit-only admission contract.
     #[cfg(target_os = "linux")]
     pub(crate) fn read_learned_recovery(path: &Path) -> Result<Self, String> {
         Self::decode_learned_recovery(&read_regular(path, CONFIG_BYTES)?)

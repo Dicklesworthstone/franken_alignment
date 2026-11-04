@@ -440,10 +440,24 @@ exactly. The configured full-input profiles and questions remain the original
 committee contracts. Model identity labels do not replace those contracts.
 
 Set `initial_payload_hex` to the empty string and match the primary model tenant
-to the configured effect scope. The `actor` block remains the original
-`audit_only` metadata; the imported learned recipe supplies the actual numerical
-owner. Policy predicates must admit the original framed message, target and
-complete charge, not an assumed unframed prompt.
+to the configured effect scope. The single `create-learned-generated` command
+accepts an explicitly selected `actor.grade` of `audit_only` or
+`functional_restart`. The imported learned recipe constructs the actual fresh
+numerical owner, including its cache and sampler, before the first durable
+image. Actor metadata cannot import an advanced numerical state; the native
+bootstrap requires position zero. No grade is inferred from successful inference,
+and `bit_exact` remains unsupported. The functional declaration selects the
+native checkpoint/reset contract; it is not a qualification claim about an
+external model or process. Ordinary and resident creation retain their existing
+audit-only readers. Policy predicates must admit the original framed message,
+target and complete charge, not an assumed unframed prompt.
+
+Retain the original Config, complete recipe and an independent output history
+anchor. Reopening a functional history requires that same declared grade and all
+original numerical/guard bindings; an audit-only Config cannot relabel it. Actual
+stream checkpoint capture additionally requires a quiet eligible original
+prefix, and reset still performs the native bounded restart audit and monotone
+containment transitions.
 
 Budget the original journal and source histories for the complete operation.
 Generation persists intents and outcomes, source refreshes retain their original

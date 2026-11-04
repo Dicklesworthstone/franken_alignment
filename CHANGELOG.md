@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: provision restart-capable native learned histories
+
+- Allow explicit functional_restart metadata in the single learned creation
+  command, with the real native numerical bootstrap and original durable guards.
+- Keep ordinary/resident creation audit-only, reject bit_exact or inferred
+  upgrades, and preserve existing-store and advanced-state refusal.
+- Add three causal regression functions covering real native/human publication,
+  exact recovery, legacy equivalence and no-write rejection boundaries.
+- Source and syntax checks completed; the mandatory RCH build/test gate remains
+  blocked because rch is unavailable. Execution and qualification are pending.
+
 ## 2026-11-04: observe and stop functional learned histories across fleets
 
 - Admit explicitly selected learned functional profiles in historical review
