@@ -891,3 +891,6 @@ fn an_authenticated_stop_interrupts_the_pending_reset_before_any_completion() {
 
 #[path = "stream_reset/topology.rs"]
 mod topology;
+
+#[path = "stream_reset/lifecycle.rs"]
+mod lifecycle;

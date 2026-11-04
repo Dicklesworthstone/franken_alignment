@@ -118,7 +118,14 @@ where F: FnMut() -> ElapsedTick {
         return Err(USAGE.into());
     }
     // Closed option, fit, probe and real model admission precede durable startup.
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = if live_continuation || args[3] == "--resume" {
+        // An explicit recovery mode still has to bind the original numerical
+        // history before any live role or receipt is available. Creation below
+        // keeps its existing audit-only Config admission.
+        Config::read_learned_recovery(Path::new(&args[1]))?
+    } else {
+        Config::read(Path::new(&args[1]))?
+    };
     if args[3] == "--resume" {
         // Receipt recovery never reads a current helper-evidence capsule. An
         // optional capsule cannot turn historical outcome lookup into live work.

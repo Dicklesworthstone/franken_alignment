@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: continue and maintain recovered functional histories
+
+- Admit explicit native functional-restart profile expectations across guarded
+  learned continuation, receipts, maintenance and terminal recovery commands.
+- Preserve audit-only creation and reject unsupported or mismatched declarations
+  before journal mutation, staging cleanup or role issuance.
+- Add five causal operator regressions, including an actual fresh request with
+  new native review, authenticated human approval and confirmed publication after
+  reset, without refilling numerical or restart allowances.
+- Source review and available syntax/whitespace checks completed; required RCH
+  compilation and runtime execution remain pending.
+
 ## 2026-11-04: restore native learned stream-reset execution
 
 - Supply the missing shared reset-kind implementation required by the native

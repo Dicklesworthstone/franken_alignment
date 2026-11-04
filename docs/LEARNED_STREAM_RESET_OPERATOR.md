@@ -185,6 +185,36 @@ accepts new input. No actor gateway, reviewer endpoint, effect permit, or live
 resume is issued by this operation. Filesystem and output calls are synchronous
 cooperative boundaries; the elapsed budget is not a hard preemption guarantee.
 
+## Continue a recovered functional history
+
+A restored owner remains paused until a separate live operation supplies fresh
+source and time and obtains the original review authority. The existing learned
+continuation commands accept the same explicitly declared `functional_restart`
+bootstrap profile as an independent recovery expectation. For example, a fresh
+request can use the newly retained history anchor:
+
+```text
+supervise_publication create-learned-generated CONFIG NEXT_REQUEST_RECIPE \\
+  REVIEWER_PROFILE --continue-generation \\
+  --history-anchor RESET_OUTPUT_ANCHOR \\
+  --retain-history-anchor NEW_PUBLICATION_ANCHOR
+```
+
+The next request must retain the original numerical generation and stream
+contracts. Its request identity and review rounds are fresh; changing them cannot
+refill lifetime numerical work, restart allowances or spent publication rights.
+Actual publication still requires the native automatic review and authenticated
+human approval. A mediated continuation additionally supplies the newly retained
+source checkpoint and follows the existing newer-source/rebind and certification
+path.
+
+The same scoped declaration is accepted by guarded receipt recovery and service,
+resident continuation, diagnosis, policy replay, credential maintenance,
+abandonment and terminal Stop. Every path retains its original independent
+requirements. Ordinary creation continues to use the audit-only Config reader.
+Changing a declaration, model generation or grade cannot relabel an existing
+journal, and `bit_exact` remains unsupported.
+
 ## Outcomes and retained custody
 
 After native acknowledgment, the command attempts history-anchor retention and

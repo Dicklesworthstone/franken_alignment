@@ -102,7 +102,7 @@ pub(super) fn command_with(
         }),
         _ => return Err(USAGE.into()),
     };
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     let mut checkpoint = || check_elapsed(elapsed, wall);
     checkpoint()?;

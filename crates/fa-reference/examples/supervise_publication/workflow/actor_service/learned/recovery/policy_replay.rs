@@ -84,7 +84,7 @@ pub(in super::super) fn command_with_elapsed(
         return Err(USAGE.into());
     }
     let request = Request::parse(args)?;
-    let config = Config::read(request.config)?;
+    let config = Config::read_learned_recovery(request.config)?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     checkpoint(wall, elapsed)?;
     let candidate = Candidate::read(request.candidate)?;

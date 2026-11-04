@@ -88,7 +88,7 @@ where F: FnOnce() -> Result<ElapsedTick, JournalError> {
     if text.is_empty() || !text.bytes().all(|byte| byte.is_ascii_digit()) { return Err(USAGE.into()); }
     let operation = text.parse::<u64>().map_err(|_| USAGE.to_owned())?;
     if operation == 0 { return Err(USAGE.into()); }
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     let mut checkpoint = || {
         if elapsed() >= wall { Err("learned stop recovery replay deadline reached".to_owned()) }

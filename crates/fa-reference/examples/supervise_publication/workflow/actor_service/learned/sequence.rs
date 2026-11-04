@@ -39,7 +39,11 @@ where F: FnMut() -> ElapsedTick {
     if credibility.is_some() && !continuing {
         return Err("sequence credibility activation requires explicit live recovery".into());
     }
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = if continuing {
+        Config::read_learned_recovery(Path::new(&args[1]))?
+    } else {
+        Config::read(Path::new(&args[1]))?
+    };
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     let mut entries = profile::load(Path::new(&args[2]), &config)?;
     validate(&config, &entries, &peers)?;

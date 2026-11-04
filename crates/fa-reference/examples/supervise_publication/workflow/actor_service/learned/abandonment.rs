@@ -100,7 +100,7 @@ pub(super) fn command_with(
     if args.len() != 5 {
         return Err(USAGE.into());
     }
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     check_elapsed(elapsed, wall)?;
     let request = decode_request(&read_regular(Path::new(&args[4]), REQUEST_BYTES)?)?;

@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: functional-history recovery through the operator lifecycle
+
+The explicit functional-restart Config reader now serves original guarded
+learned recovery, including live generation/message continuation and finish,
+receipt recovery and service, resident continuation, diagnosis, policy replay,
+credential maintenance, abandonment and terminal Stop. Each selected path still
+has to bind the complete independent bootstrap profile and numerical history
+before issuing any role or result. Ordinary and resident creation keep the
+original audit-only boundary; a declaration cannot upgrade a stored history or
+admit bit-exact claims.
+
+Five new regression functions include a genuine reset followed by a fresh
+request through the real continuation parser, native sidecar review, authenticated
+human approval and confirmed publication. They retain the same numerical recipe
+and cumulative sampling allowance, original incident and restart expenditure,
+and actual native dispatch linkage. Other cases cover wrong profile no-write
+refusal, terminal admission without live evidence, historical receipt recovery,
+creation restrictions and refusal to relabel an audit-only journal.
+
+Independent source review is complete. The authored lifecycle child passed a
+Rust syntax parse and scoped production edits passed whitespace checks before
+executor loss. The replacement resident selection preserves the concurrently
+landed campaign guard comparison. Required RCH compilation and runtime tests
+remain unavailable; qualification and restart-grade gates stay open.
+
 ## 2026-11-04: native reset-kind execution and replay integration
 
 The stream checkpoint implementation referenced shared reset methods and kind

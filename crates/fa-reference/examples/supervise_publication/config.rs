@@ -80,20 +80,27 @@ pub(crate) fn assert_oversight_profiles_eq(actual: &FileOversightProfile, expect
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> { Self::decode(&read_regular(path, CONFIG_BYTES)?) }
 
-    /// Independent bootstrap expectation for the original learned stream-reset
-    /// finalizer only. The declared functional grade is never inferred from
-    /// metadata; native replay still verifies the exact numerical checkpoint.
+    /// Independent bootstrap expectation for original learned recovery only.
+    /// The caller must select a recovery path whose original native replay
+    /// binds this complete profile and numerical recipe before issuing a role.
+    /// A declaration is never inferred, upgraded, or an external model attestation.
     /// Ordinary creation retains its audit-only admission contract.
     #[cfg(target_os = "linux")]
-    pub(crate) fn read_learned_stream_reset(path: &Path) -> Result<Self, String> {
+    pub(crate) fn read_learned_recovery(path: &Path) -> Result<Self, String> {
         Self::decode_with_actor_profile(&read_regular(path, CONFIG_BYTES)?, true)
+    }
+
+    /// Stream-reset completion uses the same explicit recovery expectation.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_learned_stream_reset(path: &Path) -> Result<Self, String> {
+        Self::read_learned_recovery(path)
     }
 
     pub fn decode(bytes: &[u8]) -> Result<Self, String> {
         Self::decode_with_actor_profile(bytes, false)
     }
 
-    fn decode_with_actor_profile(bytes: &[u8], learned_stream_reset: bool) -> Result<Self, String> {
+    fn decode_with_actor_profile(bytes: &[u8], learned_recovery: bool) -> Result<Self, String> {
         let json = strict_json::parse(bytes, Limits { max_bytes: CONFIG_BYTES, max_depth: 12,
             max_items: 16_384, max_string_bytes: 1_048_576 }).map_err(|e| format!("configuration JSON: {e:?}"))?;
         let mut root = Fields::new(json, "configuration")?;
@@ -115,7 +122,7 @@ impl Config {
         let reserve = RecoveryReserve::terminal();
         if limits.events <= reserve.events || limits.events > 4096 || limits.bytes <= reserve.bytes
             || limits.bytes > 16 * 1024 * 1024 { return Err("invalid journal limits".into()); }
-        let actor = actor(root.object("actor")?, learned_stream_reset)?;
+        let actor = actor(root.object("actor")?, learned_recovery)?;
         let policy = policy(root.object("policy")?)?;
         let mut congress = root.object("congress")?;
         let mut members = BTreeMap::new();
@@ -226,11 +233,11 @@ fn target(value: Json) -> Result<ResolvedTarget, String> {
         contract_version: f.u64("contract_version")?, expected_version: f.u64("expected_version")?, generation: f.u64("generation")? };
     f.end()?; Ok(value)
 }
-fn actor(mut f: Fields, learned_stream_reset: bool) -> Result<ActorState, String> {
+fn actor(mut f: Fields, learned_recovery: bool) -> Result<ActorState, String> {
     let grade = match f.text("grade")?.as_str() {
         "audit_only" => RestartGrade::AuditOnly,
-        "functional_restart" if learned_stream_reset => RestartGrade::FunctionalRestart,
-        _ if learned_stream_reset => return Err("stream-reset recovery accepts only explicitly declared audit_only or functional_restart metadata".into()),
+        "functional_restart" if learned_recovery => RestartGrade::FunctionalRestart,
+        _ if learned_recovery => return Err("learned recovery accepts only explicitly declared audit_only or functional_restart metadata".into()),
         _ => return Err("command accepts audit_only actor metadata, not a model restart claim".into()),
     };
     let p = RestartProfile { id: f.u64("id")?, generation: f.u64("generation")?, host_generation: f.u64("host_generation")?,

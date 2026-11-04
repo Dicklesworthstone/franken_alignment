@@ -103,7 +103,7 @@ fn load(args: &[String], credibility: Option<&Path>, mode: Mode,
         || args[1..3].iter().any(|arg| arg.is_empty() || arg.starts_with("--")) {
         return Err(usage.into());
     }
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     check_elapsed(&config, elapsed)?;
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     anchors.admit(&config, &mut loaded, true)?;

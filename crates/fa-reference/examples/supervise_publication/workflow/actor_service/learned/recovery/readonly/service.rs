@@ -113,7 +113,7 @@ where
     } else {
         None
     };
-    let config = Config::read(Path::new(&args[1]))?;
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     checkpoint(Duration::from_millis(config.timing.runtime_ms), elapsed)?;
     let actor = Profile::read(Path::new(&args[5]))?;
     let wall = Duration::from_millis(actor.runtime_ms.min(config.timing.runtime_ms));
