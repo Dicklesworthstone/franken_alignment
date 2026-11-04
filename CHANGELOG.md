@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-04: connect predictive containment to the mediated learned operator
+
+- Prepare a topology-protected original prompt and retain its exact source and
+  history archives before forecasting or sampling, with distinct v2 outputs.
+- Route offline capture, narrowing, initiation, completion and stopped-reset
+  confirmation through original predictive-mediated guards and paired custody.
+- Preserve acknowledgment and successful companion exports after output races,
+  report failures or deadlines; release preparation owners before output.
+- Require paired custody for ordinary live checkpoint capture and fix public
+  learned command routing before generic precheck and receipt option handling.
+- Add nine operator regressions, including fresh qualification and native/human
+  publication after reset, rejection/bypass refusals and public dispatch.
+  Source/syntax review passed; required RCH compilation and execution are pending.
+
 ## 2026-11-04: retain topology custody through native predictive stream control
 
 - Add operation-bound mediated capture, narrow and reset-initiation recovery

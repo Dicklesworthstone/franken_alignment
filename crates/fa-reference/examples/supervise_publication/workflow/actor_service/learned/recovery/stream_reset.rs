@@ -4,7 +4,10 @@ use super::cooperative::{Progress, finish_replay};
 use super::{Config, Control, Deadline, ElapsedTick, FileOversight, Loaded,
     RecoveryReserve, debug, requirements};
 use super::super::{stream_reset::{Request, SourceRetention}, topology};
-use fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::FileMediatedRequirements;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::{
+    FileMediatedRequirements,
+    predictive::{FileMediatedPredictor, FilePredictiveMediatedRequirements},
+};
 
 #[inline(never)]
 pub(in super::super) fn complete<F>(config: &Config, loaded: &Loaded,
@@ -16,10 +19,6 @@ where F: FnMut() -> ElapsedTick {
         .ok_or("stream-reset source custody requires an explicit topology profile")?;
     let anchor = loaded.recovery_anchor.as_ref()
         .ok_or("stream-reset source custody requires an independent input history anchor")?;
-    let expected = FileMediatedRequirements {
-        oversight: requirements(config, loaded), topology: history.requirement.clone(),
-        prediction: None, evaluation: None,
-    };
     let mut pending = false;
     let run = {
         let mut checkpoint = |_: Option<Progress>| {
@@ -28,11 +27,27 @@ where F: FnMut() -> ElapsedTick {
             Ok(())
         };
         checkpoint(None)?;
-        let run = FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
-            &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
-            .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
-            .and_then(|run| run.require_stream_reset_checkpoint(source.saved,
-                &request.intent, request.first_incident_sequence)).map_err(debug)?;
+        let run = if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+            let expected = FilePredictiveMediatedRequirements {
+                oversight: requirements(config, loaded), topology: history.requirement.clone(),
+                prediction: FileMediatedPredictor::Owned(prediction.clone()), evaluation: None,
+            };
+            FileOversight::begin_open_predictive_mediated_guarded_anchored_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+                .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+                .and_then(|run| run.require_stream_reset_checkpoint(source.saved,
+                    &request.intent, request.first_incident_sequence))
+        } else {
+            let expected = FileMediatedRequirements {
+                oversight: requirements(config, loaded), topology: history.requirement.clone(),
+                prediction: None, evaluation: None,
+            };
+            FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
+                &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+                .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+                .and_then(|run| run.require_stream_reset_checkpoint(source.saved,
+                    &request.intent, request.first_incident_sequence))
+        }.map_err(debug)?;
         finish_replay(run, &mut checkpoint, |run| run.progress(),
             |run, done| run.advance(done, 1), Ok)?
     };
@@ -69,17 +84,29 @@ where F: FnMut() -> ElapsedTick {
         .ok_or("stopped stream-reset recovery requires an explicit topology profile")?;
     let anchor = loaded.recovery_anchor.as_ref()
         .ok_or("stopped stream-reset recovery requires an independent input history anchor")?;
-    let expected = FileMediatedRequirements {
-        oversight: requirements(config, loaded), topology: history.requirement.clone(),
-        prediction: None, evaluation: None,
-    };
     let mut checkpoint = |_: Option<Progress>| deadline.check(time());
     checkpoint(None)?;
-    let run = FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
-        &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
-        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
-        .and_then(|run| run.require_stopped_stream_reset_checkpoint(source.saved,
-            &request.intent, request.first_incident_sequence, operation)).map_err(debug)?;
+    let run = if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+        let expected = FilePredictiveMediatedRequirements {
+            oversight: requirements(config, loaded), topology: history.requirement.clone(),
+            prediction: FileMediatedPredictor::Owned(prediction.clone()), evaluation: None,
+        };
+        FileOversight::begin_open_predictive_mediated_guarded_anchored_with_learned_generation(
+            &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+            .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+            .and_then(|run| run.require_stopped_stream_reset_checkpoint(source.saved,
+                &request.intent, request.first_incident_sequence, operation))
+    } else {
+        let expected = FileMediatedRequirements {
+            oversight: requirements(config, loaded), topology: history.requirement.clone(),
+            prediction: None, evaluation: None,
+        };
+        FileOversight::begin_open_mediated_guarded_anchored_with_learned_generation(
+            &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+            .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+            .and_then(|run| run.require_stopped_stream_reset_checkpoint(source.saved,
+                &request.intent, request.first_incident_sequence, operation))
+    }.map_err(debug)?;
     let run = finish_replay(run, &mut checkpoint, |run| run.progress(),
         |run, done| run.advance(done, 1), Ok)?;
     run.finish_admission_stop().map_err(debug)

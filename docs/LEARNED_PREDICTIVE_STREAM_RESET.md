@@ -24,8 +24,11 @@ artifact with `reset: "disabled"` retain the same original recipe bytes and
 refusals. The new field cannot retrofit an existing journal.
 
 The bootstrap Config must explicitly declare `functional_restart`. A declaration
-does not qualify an external model or host. This workflow supports a plain
-history; predictive topology custody remains unavailable. The create-only
+does not qualify an external model or host. This workflow supports plain and
+topology-backed histories. Mediated commands require the independently retained
+source/history pairs and fresh certification described in the
+[topology-protected predictive workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md).
+The examples below show plain custody. The create-only
 preparation command has additional guard limits documented in
 [prompt preparation](LEARNED_PROMPT_PREPARATION.md).
 
@@ -114,6 +117,9 @@ Unknown effects retain their charges. Actor state, policy and predictor
 generations, numerical work, likelihood evidence, source/audit allowances and
 the incident count remain unchanged. One ordinary journal event records the
 request and full recomputed witness. It cannot spend the terminal reserve.
+For a mediated history, narrowing also withdraws the accepted topology cut
+while preserving its graph and source expenditure. An old certification cannot
+be used at the new authority epoch.
 
 Each target includes `expected_version`. A Message followed by Finish needs
 both exact target versions; two Messages followed by Finish need three. Every
@@ -178,9 +184,12 @@ original receipt-bound continuation and separately retained target versions.
 ## Failure and retry boundaries
 
 Narrowing, offline capture and reset initiation acknowledge immutable results
-without returning a live owner or roles. An exact original request and anchor
-can be retried with a new output destination; the same operation appends zero
-events, including after later publication. A changed binding, ceiling or
+without returning a live owner or roles. For a plain history, an exact original
+request and anchor can be retried with a new output destination; the same
+operation appends zero events, including after later publication. A mediated
+history additionally seals the exact source/history pair: its unchanged cut or
+single matching selected event can repair a lost export, but unrelated later
+work requires newer independently retained custody. A changed binding, ceiling or
 predecessor under the same ID refuses. Report and anchor failures do not undo an
 acknowledged consequence. Completed reset retries preserve both audits and the
 incident count and append only the ordinary recovery Fence.

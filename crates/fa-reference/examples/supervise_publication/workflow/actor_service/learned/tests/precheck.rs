@@ -25,6 +25,29 @@ fn settings(root: &Root, epoch: u64) -> precheck::Settings {
         root.0.display()).as_bytes()).unwrap()
 }
 
+#[test]
+fn public_learned_precheck_reaches_its_original_profile_guard_before_startup() {
+    let root = Root::new();
+    let config = configured(&root);
+    let recipe = fixture::write(&root, b"allow");
+    let actor = actor_profile(&root, &config, 1);
+    let mut args = super::mediated_topology::command_inputs(&root, &config, &recipe, &actor);
+    let path = root.0.join("cached-precheck.json");
+    fs::write(&path, format!(r#"{{"schema":"fa.actor-precheck-service/2","policy_disclosure":"exact_predicates","socket":"{}/peers/precheck.sock","expected_policy_epoch":0,"disclosure_id":81,"query_limit":8,"exchange_limit":8,"candidate_limit":8,"connection_limit":8,"runtime_ms":60000,"cache_entries":8,"cache_bytes":65536}}"#,
+        root.0.display())).unwrap();
+    precheck::Settings::read(&path).unwrap();
+    args.extend(["--precheck-profile".into(), path.display().to_string()]);
+    let mut output = Vec::new();
+    let error = crate::command_with_output(args, &mut output).unwrap_err();
+    // This valid ordinary cached profile must reach the learned contract. The
+    // ordinary actor-service parser used to reject the learned mode itself.
+    assert_eq!(error, "learned release precheck requires the explicit v1 exact-predicate profile");
+    assert!(output.is_empty());
+    assert!(!config.store.exists());
+    assert!(!actor.socket.exists());
+    assert!(!root.0.join("peers/precheck.sock").exists());
+}
+
 fn intent(request: u64, release: LearnedTextRelease, epoch: u64) -> ActorProposal {
     let mut proposal = FileLearnedTextStreamActorPort::encode_release(request, release,
         ElapsedTick(50_000)).unwrap();

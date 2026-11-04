@@ -1,8 +1,9 @@
 //! Exact checkpoint capture, prompt containment and stream-reset initiation.
 //! The sealed native finalizer returns only acknowledged history and no roles.
 use super::{Config, Deadline, Duration, ElapsedTick, Instant, Loaded, anchors,
-    checked, debug, fields, plus, recipe, recovery, stream_reset};
+    checked, debug, fields, plus, recipe, recovery, stream_reset, topology};
 use crate::config::read_regular;
+use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::{
     FileLearnedStreamCheckpointRequest, FileLearnedStreamNarrowRequest, FileLearnedStreamControlHistory,
     FileLearnedStreamControlReceipt,
@@ -14,7 +15,7 @@ mod request;
 #[path = "stream_checkpoint/narrow.rs"]
 mod narrow;
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_REQUEST | --narrow-stream-checkpoint NARROW_REQUEST | --begin-stream-reset RESET_REQUEST) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_REQUEST | --narrow-stream-checkpoint NARROW_REQUEST | --begin-stream-reset RESET_REQUEST) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE]";
 const REQUEST_BYTES: usize = 262_144;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,18 +34,21 @@ pub(super) fn decode_narrow(bytes: &[u8]) -> Result<FileLearnedStreamNarrowReque
 }
 
 fn arguments(args: &[String]) -> Result<(), String> {
-    if args.len() != 9 || args.first().map(String::as_str) != Some("create-learned-generated")
+    if args.len() < 9 || args.first().map(String::as_str) != Some("create-learned-generated")
         || !matches!(args.get(3).map(String::as_str),
             Some("--capture-stream-checkpoint" | "--narrow-stream-checkpoint" | "--begin-stream-reset")) {
         return Err(USAGE.into());
     }
     for index in [1, 2, 4] { fields::path(&args[index])?; }
     let mut seen = BTreeSet::new();
-    for index in [5, 7] {
-        if !matches!(args[index].as_str(), "--history-anchor" | "--retain-history-anchor")
+    let mut index = 5;
+    while index < args.len() {
+        if !matches!(args[index].as_str(), "--history-anchor" | "--retain-history-anchor" | "--topology-profile")
             || !seen.insert(args[index].as_str()) { return Err(USAGE.into()); }
-        fields::path(&args[index + 1])?;
+        fields::path(args.get(index + 1).ok_or(USAGE)?)?;
+        index += 2;
     }
+    if !seen.contains("--history-anchor") || !seen.contains("--retain-history-anchor") { return Err(USAGE.into()); }
     Ok(())
 }
 
@@ -54,7 +58,8 @@ where F: FnMut() -> ElapsedTick {
     let started = Instant::now();
     if credibility.is_some() { return Err("stream checkpoint control cannot activate credibility".into()); }
     arguments(args)?;
-    let (args, options) = anchors::take_options(args)?;
+    let (args, topology_profile) = topology::take_option(args)?;
+    let (args, options) = anchors::take_options(&args)?;
     let start = time();
     let config = Config::read_learned_stream_reset(Path::new(&args[1]))?;
     let deadline = Deadline { logical: plus(start, config.timing.runtime_ms)?,
@@ -77,6 +82,7 @@ where F: FnMut() -> ElapsedTick {
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     checked::check_selection(&config, &loaded)?;
     options.admit(&config, &mut loaded, true)?;
+    topology::admit(&config, &mut loaded, topology_profile.as_deref(), topology::Mode::Live)?;
     check_request_selection(&loaded, &request)?;
     deadline.check(time())?;
     run(&config, &loaded, &request, &deadline, &mut time, output)
@@ -91,11 +97,26 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
             && !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
         return Err("predictive stream checkpoint control requires the explicit owned prompt-audit reset recipe".into());
     }
-    if loaded.topology.is_some() {
-        return Err("stream checkpoint control requires a plain history; topology custody is unsupported".into());
-    }
-    if loaded.recovery_anchor.is_none() || loaded.anchor_output.is_none() {
+    let Some(anchor) = loaded.recovery_anchor.as_ref() else {
         return Err("stream checkpoint control requires an independent input history anchor and a new retained output".into());
+    };
+    if loaded.anchor_output.is_none() {
+        return Err("stream checkpoint control requires an independent input history anchor and a new retained output".into());
+    }
+    if let Some(selected) = loaded.topology.as_ref() {
+        if !loaded.generation.requires_owned_forecast_stream_restart_audit() {
+            return Err("mediated stream control requires the explicit owned prompt-audit reset recipe".into());
+        }
+        let topology::Selection::Recover { selection, history } = selected else {
+            return Err("topology creation inputs cannot control a historical stream checkpoint".into());
+        };
+        let saved = history.checkpoint().ok_or("stream control requires an exact v2 topology checkpoint")?;
+        if saved.history_anchor() != anchor {
+            return Err("stream-control source checkpoint and input history anchor describe different cuts".into());
+        }
+        if selection.acknowledged_output().is_none() {
+            return Err("stream control requires a new retained topology checkpoint output".into());
+        }
     }
     Ok(())
 }
@@ -115,18 +136,38 @@ pub(super) fn run<F>(config: &Config, loaded: &Loaded, request: &Request,
 where F: FnMut() -> ElapsedTick {
     checked::check_selection(config, loaded)?;
     check_request_selection(loaded, request)?;
-    let acknowledged = recovery::stream_checkpoint::execute(config, loaded, request,
+    let source_output = match loaded.topology.as_ref() {
+        Some(topology::Selection::Recover { selection, .. }) => {
+            let output = AcknowledgedOutput::admit(config,
+                selection.acknowledged_output().ok_or("missing stream-control topology output")?)?;
+            if loaded.anchor_output.as_deref() == Some(output.path()) {
+                return Err("history anchor and topology checkpoint outputs must be distinct new files".into());
+            }
+            Some(output)
+        }
+        _ => None,
+    };
+    let (acknowledged, saved) = recovery::stream_checkpoint::execute_paired(config, loaded, request,
         &mut |_| deadline.check(time())).map_err(|error| format!(
             "native stream checkpoint control is unconfirmed: {error}; preserve the original independent expectation and input history anchor"))?;
     // A late deadline, failed archive or broken output cannot retract native
     // acknowledgment. Attempt retention and reporting independently, once.
     let mut failures = Vec::new();
+    let late = deadline.check(time()).is_err();
+    if late { failures.push("original control deadline reached after acknowledgment".into()); }
     let retained = anchors::export_acknowledged(acknowledged.history_anchor(),
         loaded.anchor_output.as_deref().ok_or(USAGE)?);
     if let Err(error) = &retained { failures.push(format!("history anchor retention failed: {error}")); }
-    let late = deadline.check(time()).is_err();
-    if late { failures.push("original control deadline reached after acknowledgment".into()); }
-    if let Err(error) = report(&acknowledged, retained.is_ok(), late, output) { failures.push(error); }
+    let source_retained = match (source_output.as_ref(), saved.as_ref()) {
+        (Some(output), Some(saved)) => Some(if saved.history_anchor() != acknowledged.history_anchor() {
+            Err("acknowledged stream control returned different topology/history cuts".into())
+        } else { output.retain(saved) }),
+        (None, None) => None,
+        _ => Some(Err("acknowledged stream control is missing selected topology custody".into())),
+    };
+    if let Some(Err(error)) = &source_retained { failures.push(error.clone()); }
+    if let Err(error) = report(&acknowledged, retained.is_ok(), source_retained.as_ref().map(Result::is_ok),
+        late, output) { failures.push(error); }
     if !late && deadline.check(time()).is_err() {
         failures.push("original control deadline reached during acknowledged output".into());
     }
@@ -135,7 +176,7 @@ where F: FnMut() -> ElapsedTick {
         acknowledged.snapshot().revision, failures.join("; "))) }
 }
 
-fn report(history: &FileLearnedStreamControlHistory, retained: bool, late: bool,
+fn report(history: &FileLearnedStreamControlHistory, retained: bool, source_retained: Option<bool>, late: bool,
     output: &mut impl Write) -> Result<(), String>
 {
     let (outcome, checkpoint, operation, first) = match history.receipt() {
@@ -157,6 +198,7 @@ fn report(history: &FileLearnedStreamControlHistory, retained: bool, late: bool,
     let state = history.snapshot();
     let numerical = history.numerical();
     let usage = history.recovery_usage();
+    let source_retained = source_retained.map_or("null", |retained| if retained { "true" } else { "false" });
     let text = format!(concat!(
         "{{\"schema\":\"fa.learned-stream-control-result/1\",\"outcome\":\"{}\",",
         "\"checkpoint\":\"{}\",\"operation\":{},\"first_incident_sequence\":{},",
@@ -164,11 +206,11 @@ fn report(history: &FileLearnedStreamControlHistory, retained: bool, late: bool,
         "\"authority_epoch\":\"{}\",\"actor_revision\":\"{}\",\"position\":\"{}\",",
         "\"sampled_draws\":\"{}\",\"charged\":\"{}\",\"reserved\":\"{}\",",
         "\"executions\":\"{}\",\"checkpoints\":\"{}\",\"restart_attempts\":\"{}\",",
-        "\"history_anchor_retained\":{},\"deadline_reached\":{},\"authority\":\"none\"}}\n"),
+        "\"history_anchor_retained\":{},\"topology_checkpoint_retained\":{},\"deadline_reached\":{},\"authority\":\"none\"}}\n"),
         outcome, checkpoint, operation, first, state.revision, history.appended_events(),
         state.control.sequence, state.control.ledger.epoch, numerical.actor_revision,
         numerical.position, numerical.sampled_draws, state.control.ledger.charged,
         state.control.ledger.reserved, state.executions, usage.checkpoints, usage.restart_attempts,
-        retained, late);
+        retained, source_retained, late);
     output.write_all(text.as_bytes()).and_then(|()| output.flush()).map_err(debug)
 }

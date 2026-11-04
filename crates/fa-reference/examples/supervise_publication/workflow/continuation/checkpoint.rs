@@ -21,14 +21,27 @@ impl Output {
     pub(crate) fn retain(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
         -> Result<(), String>
     {
+        let checkpoint = self.capture(host, topology)?;
+        self.retain_acknowledged(&checkpoint)
+    }
+
+    /// Capture this unchanged acknowledged owner and its retained source work
+    /// before releasing live custody. No document read or refresh occurs.
+    pub(crate) fn capture(&self, host: &FileOversight, topology: Option<&FileDriverTopology>)
+        -> Result<TopologyCheckpoint, String>
+    {
         let result = (|| {
             let topology = topology.ok_or("no retained topology-source custody to checkpoint")?;
             // Use retained expectations, NOT newly read live files. Native capture
             // pairs actual expenditure with this SAME acknowledged owner's history.
-            let checkpoint = topology.checkpoint(host, &self.topology, &self.inventory).map_err(debug)?;
-            self.archive.write(&checkpoint)
+            topology.checkpoint(host, &self.topology, &self.inventory).map_err(debug)
         })();
         result.map_err(retention_error)
+    }
+
+    /// Export a previously captured original cut after the live owner is gone.
+    pub(crate) fn retain_acknowledged(&self, checkpoint: &TopologyCheckpoint) -> Result<(), String> {
+        self.archive.retain(checkpoint)
     }
 }
 

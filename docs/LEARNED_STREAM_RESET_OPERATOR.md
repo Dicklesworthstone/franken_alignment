@@ -3,15 +3,18 @@
 The operator can capture an eligible original numerical stream checkpoint,
 initiate an independently selected reset, and complete an already acknowledged
 native `BeginStreamReset` after a crash. Completion implements the plain and
-nonpredictive mediated guarded recovery paths described in
+mediated guarded recovery paths described in
 [PENDING_LEARNED_RESET_RECOVERY.md](PENDING_LEARNED_RESET_RECOVERY.md) and
 [LEARNED_STREAM_CONTAINMENT.md](LEARNED_STREAM_CONTAINMENT.md). Capture and fresh
-initiation also support the explicitly selected plain owned prompt-audit stream
+initiation also support the explicitly selected owned prompt-audit stream
 recipe. Its [preparation, narrowing and predictive reset workflow](LEARNED_PREDICTIVE_STREAM_RESET.md)
 reaches the complete unsampled prompt through the actual CLI, preserves the
 pinned policy/predictor and uses the original fresh successor-cache audit before
 sampling. Each operation retains the original confirmed audience and containment
-rules. Raw, legacy owned and topology-backed predictive reset remain unavailable.
+rules. The [mediated predictive workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md)
+adds exact paired source/history custody through preparation, narrowing,
+initiation and completion. Raw, legacy owned and post-sampling predictive resets
+remain unavailable.
 
 ## Capture and independent initiation
 
@@ -60,7 +63,12 @@ a plain nonpredictive stream or the explicit owned prompt-audit recipe. The
 owned profile requires the complete original prompt and zero cumulative sampling.
 It composes with fresh campaign provisioning, actor/precheck service and existing
 anchor options; a resident sequence captures only its first selected Message.
-It cannot be used for Finish, historical maintenance or topology-backed capture.
+It cannot be used for Finish or historical maintenance. Mediated capture requires
+the explicit owned prompt-audit recipe and new paired history/topology outputs;
+recovery additionally requires an exact v2 input pair. The topology creation
+profile must therefore use `fa.mediated-create/2`, or the recovery profile
+`fa.mediated-submit/2`, with an explicit `retain_checkpoint` destination distinct
+from the history output.
 Use a fresh checkpoint ID. A repeated ID refuses before generation; an already
 acknowledged capture remains in history and ordinary continuation can omit the
 new-capture flag. The usual anchor export is attempted at request completion.
@@ -152,14 +160,20 @@ reporting are both attempted even if a deadline or output fails. Preserve the
 same request and old anchor, then choose a new export path to recover a lost
 acknowledgment without duplicating capture or initiation.
 
-These modes reject topology, raw or legacy predictive selections and all
-live-service, credibility or other maintenance combinations. The explicit owned
+These modes reject raw or legacy predictive selections and all live-service,
+credibility or other maintenance combinations. A topology-backed history
+requires the explicit owned prompt-audit recipe and a `--topology-profile`
+`fa.mediated-submit/2` selection with exact input custody and new paired outputs.
+Its offline finalizer permits only an unchanged source/history cut or its own
+single matching selected event after that cut; unrelated later work cannot be
+covered by stale source accounting. Both archive attempts and the report retain
+the native acknowledgment even if one output fails. The explicit owned
 prompt-audit profile also admits `--narrow-stream-checkpoint` with an independent
 exact request; its original `NarrowAuthority` consequence supplies a later
 control frontier without changing policy or predictor generations. See the
 [predictive lifecycle and request schema](LEARNED_PREDICTIVE_STREAM_RESET.md).
-Existing reset **completion** continues to support exact nonpredictive topology
-custody as described below.
+Reset **completion** supports both exact nonpredictive and owned prompt-audit
+topology custody as described below.
 
 ## Complete an existing reset
 
@@ -198,7 +212,8 @@ replacement, select the full expected effective policy through the independent
 original bootstrap Config. Recovery does not read current source/helper evidence,
 launch inference workers, or obtain a fresh publication approval. This increment
 supports plain guarded learned text streams, their nonpredictive mediated
-histories, and the explicitly selected plain owned prompt-audit stream profile.
+histories, and the explicitly selected plain or mediated owned prompt-audit
+stream profile.
 Every other predictive history retains its native refusal and cannot downgrade
 to a plain profile.
 

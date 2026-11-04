@@ -3,18 +3,20 @@
 use super::{Config, Control, Deadline, Duration, ElapsedTick, FileOversight,
     FileSupervisedDriver, GenerationGoal, GenerationOutcome, Instant, Loaded,
     anchors, campaigns, checked, checkpoint_on_generation::Selection, cleanup,
-    debug, drive_generation, fields, plus, prediction, qualification, recipe, recovery, stop};
+    debug, drive_generation, fields, plus, prediction, qualification, recipe, stop, topology};
+use crate::workflow::continuation::checkpoint::Output;
 use fa_reference::action::consequence::delivery::persistent::{FileDeliverySnapshot,
     observed::{decoder::learned::checkpoint::FileLearnedCheckpointInfo,
+        driver::topology::checkpoint::TopologyCheckpoint,
         guarded::anchored::FileHistoryAnchor}};
 use fa_reference::action::consequence::oversight::learned_host::{HostedLearnedInspection,
     checkpoint::HostedLearnedRecoveryUsage};
 use std::{collections::BTreeSet, io::Write, path::Path};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]";
 
 /// Own the complete grammar before any shared option stripper runs. There is no
-/// recovery, actor, reviewer, topology or automatic reset selection in this mode.
+/// recovery, actor, reviewer or automatic reset selection in this mode.
 fn arguments(args: &[String]) -> Result<(), String> {
     if args.len() < 7 || args.first().map(String::as_str) != Some("create-learned-generated")
         || args.get(3).map(String::as_str) != Some("--prepare-stream-checkpoint") {
@@ -25,7 +27,7 @@ fn arguments(args: &[String]) -> Result<(), String> {
     let mut at = 5;
     while at < args.len() {
         let flag = args[at].as_str();
-        if !matches!(flag, "--retain-history-anchor" | "--campaign-profile")
+        if !matches!(flag, "--retain-history-anchor" | "--campaign-profile" | "--topology-profile")
             || !seen.insert(flag) { return Err(USAGE.into()); }
         fields::path(args.get(at + 1).ok_or(USAGE)?)?;
         at += 2;
@@ -41,6 +43,7 @@ where F: FnMut() -> ElapsedTick {
     if credibility.is_some() { return Err("prompt checkpoint preparation cannot activate credibility".into()); }
     arguments(args)?;
     let (args, campaign) = campaigns::take_option(args)?;
+    let (args, topology_profile) = topology::take_option(&args)?;
     let (args, custody) = anchors::take_options(&args)?;
     let mut config = Config::read_learned_generation(Path::new(&args[1]))?;
     let selected = Selection::read(Path::new(&args[4]))?;
@@ -49,6 +52,7 @@ where F: FnMut() -> ElapsedTick {
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     campaigns::admit(&config, &mut loaded, campaign.as_deref(), false)?;
     custody.admit(&config, &mut loaded, false)?;
+    topology::admit(&config, &mut loaded, topology_profile.as_deref(), topology::Mode::Create)?;
     check_selection(&config, &loaded, selected)?;
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
@@ -56,7 +60,9 @@ where F: FnMut() -> ElapsedTick {
         wall: Duration::from_millis(lifetime) };
     deadline.check(start)?;
     let mut control = Control::new(&config, loaded.request, None)?;
-    let (host, reviewer, observer, identity) = recovery::create_selected(&config, &loaded)?;
+    let topology::Started { custody: (host, reviewer, observer, identity), source,
+        output: source_output } = topology::start(&config, &loaded, false,
+            &mut control, &deadline, &mut time)?;
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     // No actor request or endpoint is admitted. The existing driver owns only
     // original generation, source freshness, deadlines and terminal cleanup.
@@ -64,10 +70,17 @@ where F: FnMut() -> ElapsedTick {
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let prepared = (|| {
+        topology::attach(&mut driver, source)?;
         if identity.is_some() { return Err("unexpected identity custody during prompt preparation".into()); }
         if !qualification::prepare(&mut driver, &config, None,
             (&mut control, &reviewer, &deadline), &mut time)? {
             return Ok(GenerationOutcome::Stopped);
+        }
+        if driver.topology().is_some() {
+            if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                return Ok(GenerationOutcome::Stopped);
+            }
+            topology::certify(&mut driver, &deadline, &mut time)?;
         }
         drive_generation(&mut driver, &reviewer, &mut config, &mut control, &deadline,
             &mut time, (prediction.as_mut(), Some(selected), GenerationGoal::Checkpoint))
@@ -76,13 +89,13 @@ where F: FnMut() -> ElapsedTick {
         Ok(GenerationOutcome::CheckpointCaptured) => {
             // Capture is already acknowledged. Later clock/archive/report errors
             // cannot turn this successful maintenance boundary into a Stop.
-            let acknowledged = Prepared::capture(&driver, selected);
+            let acknowledged = Prepared::capture(&driver, selected, source_output.as_ref());
             drop(prediction);
             drop(driver);
             let acknowledged = acknowledged.map_err(|error| format!(
                 "prompt checkpoint {} acknowledged but its report is unavailable: {error}; preserve the original store",
                 selected.checkpoint_id()))?;
-            acknowledged.finish(&loaded, &deadline, &mut time, output)
+            acknowledged.finish(&loaded, &deadline, &mut time, source_output.as_ref(), output)
         }
         result => {
             let error = match result {
@@ -95,6 +108,8 @@ where F: FnMut() -> ElapsedTick {
                 Err(stopping) => format!("{error}; stop/drain: {stopping}"),
             };
             let error = anchors::retain(&loaded, &driver, Some(error))
+                .expect("incoming preparation failure is retained");
+            let error = topology::retain(source_output.as_ref(), &driver, Some(error))
                 .expect("incoming preparation failure is retained");
             drop(prediction);
             let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
@@ -115,9 +130,8 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
     selected.check(config, loaded)?;
     if loaded.generation.required_owned_pre_output_forecast().is_none()
         || !loaded.generation.requires_owned_forecast_stream_restart_audit()
-        || loaded.generation.text_stream_profile().is_none()
-        || loaded.topology.is_some() {
-        return Err("prompt preparation requires the original plain owned prompt-audit stream recipe".into());
+        || loaded.generation.text_stream_profile().is_none() {
+        return Err("prompt preparation requires the original owned prompt-audit stream recipe".into());
     }
     if loaded.identity.is_some() || loaded.generation.requires_computed_identity()
         || loaded.publication.is_some() || loaded.generation.required_publication_validation().is_some()
@@ -130,6 +144,10 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
         return Err("prompt preparation creates a fresh history and cannot adopt recovery floors or custody".into());
     }
     if loaded.anchor_output.is_none() { return Err(USAGE.into()); }
+    if loaded.topology.as_ref().is_some_and(|selected|
+        !matches!(selected, topology::Selection::Create(_))) {
+        return Err("prompt preparation requires intentional topology creation inputs".into());
+    }
     Ok(())
 }
 
@@ -139,11 +157,21 @@ struct Prepared {
     numerical: HostedLearnedInspection,
     usage: HostedLearnedRecoveryUsage,
     anchor: FileHistoryAnchor,
+    topology: Option<Result<TopologyCheckpoint, String>>,
 }
 impl Prepared {
-    fn capture(driver: &FileSupervisedDriver, selected: Selection) -> Result<Self, String> {
+    fn capture(driver: &FileSupervisedDriver, selected: Selection, source_output: Option<&Output>)
+        -> Result<Self, String> {
         let host = driver.supervisor().host().map_err(debug)?;
-        Self::from_host(&host, selected)
+        let mut acknowledged = Self::from_host(&host, selected)?;
+        acknowledged.topology = source_output.map(|output| {
+            let saved = output.capture(&host, driver.topology())?;
+            if saved.history_anchor() != &acknowledged.anchor {
+                return Err("prepared source and history describe different cuts".into());
+            }
+            Ok(saved)
+        });
+        Ok(acknowledged)
     }
 
     fn from_host(host: &FileOversight, selected: Selection) -> Result<Self, String> {
@@ -151,11 +179,11 @@ impl Prepared {
         Ok(Self { checkpoint, snapshot: host.inspect(),
             numerical: host.learned_generation_inspection().map_err(debug)?.numerical,
             usage: host.learned_recovery_usage().map_err(debug)?,
-            anchor: host.history_anchor().map_err(debug)? })
+            anchor: host.history_anchor().map_err(debug)?, topology: None })
     }
 
     fn finish<F>(&self, loaded: &Loaded, deadline: &Deadline, time: &mut F,
-        output: &mut impl Write) -> Result<(), String>
+        topology_output: Option<&Output>, output: &mut impl Write) -> Result<(), String>
     where F: FnMut() -> ElapsedTick {
         let mut failures = Vec::new();
         let late = deadline.check(time()).is_err();
@@ -163,7 +191,17 @@ impl Prepared {
         let retained = anchors::export_acknowledged(&self.anchor,
             loaded.anchor_output.as_deref().ok_or(USAGE)?);
         if let Err(error) = &retained { failures.push(format!("history anchor retention failed: {error}")); }
-        if let Err(error) = self.report(retained.is_ok(), late, output) { failures.push(error); }
+        // Both immutable captures were taken before dropping the original owner.
+        // Export cannot refresh, reread or acquire a second source allowance.
+        let source_retained = match (topology_output, self.topology.as_ref()) {
+            (Some(output), Some(Ok(saved))) => Some(output.retain_acknowledged(saved)),
+            (Some(_), Some(Err(error))) => Some(Err(error.clone())),
+            (None, None) => None,
+            _ => Some(Err("prepared result is missing selected source custody".into())),
+        };
+        if let Some(Err(error)) = &source_retained { failures.push(error.clone()); }
+        if let Err(error) = self.report(retained.is_ok(), source_retained.as_ref().map(Result::is_ok),
+            late, output) { failures.push(error); }
         if !late && deadline.check(time()).is_err() {
             failures.push("original preparation deadline reached during acknowledged output".into());
         }
@@ -172,9 +210,11 @@ impl Prepared {
             self.checkpoint.checkpoint, self.snapshot.revision, failures.join("; "))) }
     }
 
-    fn report(&self, retained: bool, late: bool, output: &mut impl Write) -> Result<(), String> {
+    fn report(&self, retained: bool, source_retained: Option<bool>, late: bool,
+        output: &mut impl Write) -> Result<(), String> {
         let cut = self.checkpoint;
         let state = &self.snapshot;
+        let source_retained = source_retained.map_or("null", |retained| if retained { "true" } else { "false" });
         let bytes = format!(concat!(
             "{{\"schema\":\"fa.learned-stream-preparation-result/1\",\"outcome\":\"prepared\",",
             "\"checkpoint\":\"{}\",\"revision\":\"{}\",\"actor_revision\":\"{}\",",
@@ -182,12 +222,12 @@ impl Prepared {
             "\"position\":\"{}\",\"sampled_draws\":\"{}\",\"sampling_attempts\":\"{}\",",
             "\"executions\":\"{}\",\"charged\":\"{}\",\"reserved\":\"{}\",",
             "\"checkpoints\":\"{}\",\"restart_attempts\":\"{}\",",
-            "\"history_anchor_retained\":{},\"deadline_reached\":{},\"effect_authority\":\"not_issued\"}}\n"),
+            "\"history_anchor_retained\":{},\"topology_checkpoint_retained\":{},\"deadline_reached\":{},\"effect_authority\":\"not_issued\"}}\n"),
             cut.checkpoint, state.revision, cut.actor_revision, cut.authority_epoch,
             cut.control_sequence, cut.stream, cut.position, cut.sampled_draws,
             self.numerical.cumulative_work.sampling_attempts, state.executions,
             state.control.ledger.charged, state.control.ledger.reserved,
-            self.usage.checkpoints, self.usage.restart_attempts, retained, late);
+            self.usage.checkpoints, self.usage.restart_attempts, retained, source_retained, late);
         output.write_all(bytes.as_bytes()).and_then(|()| output.flush()).map_err(debug)
     }
 }

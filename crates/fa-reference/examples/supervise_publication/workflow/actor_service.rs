@@ -78,12 +78,15 @@ pub(crate) fn precheck_command(args: &[String], output: &mut impl std::io::Write
 }
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    let (args, precheck_path) = take_precheck_option(args)?;
-    if args.first().is_some_and(|mode| mode == "serve-learned-generated") {
-        return learned::sequence_command(args, credibility);
+    // Learned services own their complete grammar. Ordinary precheck, topology
+    // and receipt parsers cannot strip or reject a selected learned operation.
+    match args.first().map(String::as_str) {
+        Some("serve-learned-generated") => return learned::sequence_command(args, credibility),
+        Some("create-learned-generated") => return learned::command(args, credibility),
+        _ => {}
     }
-    if args.first().is_none_or(|mode| mode != "create-learned-generated")
-        && args.iter().any(|arg| arg == "--topology-profile") { return topology::command(args, credibility); }
+    let (args, precheck_path) = take_precheck_option(args)?;
+    if args.iter().any(|arg| arg == "--topology-profile") { return topology::command(args, credibility); }
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return receipts::command(args, credibility);
     }
@@ -95,9 +98,6 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     }
     if args.first().is_some_and(|mode| mode == "create-generated") {
         return generated::command(args, credibility);
-    }
-    if args.first().is_some_and(|mode| mode == "create-learned-generated") {
-        return learned::command(args, credibility);
     }
     if args.iter().any(|arg| arg == "--native-text") { return native::command(args, credibility); }
     if args.iter().any(|arg| arg == "--peers") { return multi::command(args, credibility); }

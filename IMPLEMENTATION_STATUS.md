@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: expose the topology-protected predictive containment lifecycle
+
+The learned operator now routes fresh preparation, offline capture/narrowing,
+reset initiation, reset completion and stopped-reset confirmation through the
+original owned predictive topology guards. Fresh preparation requires an explicit
+v2 creation profile and distinct new history/source outputs. Every offline
+operation selects an exact independently retained v2 source/history pair before
+replay; missing or mismatched custody cannot fall back to a plain owner.
+
+The original topology source check and cut certification precede prompt work.
+Successful preparation captures the matching immutable archives, releases its
+owner, and attempts each export and the report without another source read,
+forecast, draw, Stop or Fence. Offline control returns the same paired immutable
+custody through its operation-bound native finalizer. Late deadlines and lost
+outputs preserve acknowledgment and successful companion archives. Later live
+publication still requires a newer graph/inventory, current-epoch certification,
+a fresh owned forecast, native review and a separate human decision.
+
+Ordinary live checkpoint capture now requires paired v2 outputs whenever
+topology is selected, and an exact input pair on recovery. Public command
+routing also preserves the complete learned grammar before generic precheck or
+receipt parsers; preparation and narrowing reach their own closed parsers before
+shared live options can be stripped. The retained-report schemas add a separate
+topology retention result without converting observations into authority.
+
+Eight new operator regressions cover the complete real lifecycle and matched
+human rejection/bypass cases, exact retry with unavailable live inputs,
+pair/graph/recipe/output refusals and archive/report failures. A ninth regression
+exercises the public learned precheck route, and an exact paired retry also uses
+the public entry point. Source and syntax review passed; required RCH compilation,
+formatting, Clippy and runtime execution remain pending. Losing a fresh
+preparation's only source archive still requires independent custody recovery;
+the operator does not reconstruct it from the journal. Post-sampling reset,
+calibration and physical deployment qualification remain open. See the
+[complete operator contract](docs/LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md).
+
 ## 2026-11-04: preserve topology custody through native predictive containment
 
 The explicit owned prompt-audit stream now supports sealed mediated capture,

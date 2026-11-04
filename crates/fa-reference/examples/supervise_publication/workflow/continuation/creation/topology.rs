@@ -22,6 +22,9 @@ pub(crate) struct Selection {
 }
 
 impl Selection {
+    /// Explicit separately retained source/history custody for maintenance.
+    pub(crate) fn acknowledged_output(&self) -> Option<&Path> { self.output.as_deref() }
+
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, PROFILE_BYTES)?)
     }

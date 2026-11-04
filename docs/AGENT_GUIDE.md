@@ -81,6 +81,10 @@ can identify the later incident frontier for `--begin-stream-reset` and
 the [predictive stream workflow](LEARNED_PREDICTIVE_STREAM_RESET.md) gives the
 grammar and independently retained request/anchor chain. This containment
 preserves policy, predictor, work, audience and charged liabilities. The
+same [topology-protected workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md)
+retains exact source/history pairs at each step and withdraws the accepted cut
+at narrowing; live continuation must freshly certify the current epoch without
+renewing spent source allowances. The
 supervisor's evidence binding does not authenticate a detector; any later
 publication still requires the original native and human review.
 

@@ -19,12 +19,13 @@ itself grants neither reset permission nor either publication key.
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
   --prepare-stream-checkpoint CHECKPOINT_PROFILE \
   --retain-history-anchor NEW_OUTPUT \
-  [--campaign-profile CAMPAIGN_PROFILE]
+  [--campaign-profile CAMPAIGN_PROFILE] \
+  [--topology-profile CREATE_TOPOLOGY_PROFILE]
 ```
 
 The command is fresh creation only. `CONFIG` must explicitly declare
 `functional_restart`; an audit-only configuration is insufficient and no stronger
-restart grade is inferred. `LEARNED_RECIPE` must select the original plain owned
+restart grade is inferred. `LEARNED_RECIPE` must select the original owned
 K/V stream predictor and `fa.learned-forecast/2` with
 `"reset":"owned_prompt_audit"`. The numerical recipe, tokenizer, prompt, fitted
 codec, monitor, predictor, stream limits, policy-source contract and terminal
@@ -63,19 +64,29 @@ is installed before prompt work. Later recovery must independently select that
 same inventory through its recovery-policy envelope; preparation does not create
 a reusable governor or let a later command omit the guard.
 
+A topology-backed preparation additionally selects `fa.mediated-create/2` with
+an explicit new `retain_checkpoint` destination distinct from `NEW_OUTPUT`.
+The original topology source is checked and its cut certified before prompt
+inference. Both archives describe the same acknowledged capture, including the
+original source documents and spent work. The source/history pair is captured
+while its owner is held; the owner is released before output delivery. See the
+[mediated predictive workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md) for
+the exact profiles and later paired recovery. A v1 creation profile without a
+source checkpoint output cannot supply this custody.
+
 ## Supported scope
 
 The complete grammar accepts only the checkpoint profile, new history output,
-and optional campaign profile. Recovery flags, an input history anchor, actor or
-reviewer service selection, live prechecks, topology, Finish, simultaneous live
+and optional campaign and topology creation profiles. Recovery flags, an input
+history anchor, actor or reviewer service selection, live prechecks, Finish, simultaneous live
 checkpoint capture, duplicate flags and held-out activation are refused before
 creation.
 
 This bounded preparation path also refuses numerical recipes requiring computed
 identity, checked final publication, credential custody or held-out joint
 activation, and refuses nonzero recovery floors. It does not drop those
-requirements to obtain a simpler owner. Raw predictors, legacy owned predictors,
-nonpredictive streams, and topology-backed histories remain outside this mode.
+requirements to obtain a simpler owner. Raw predictors, legacy owned predictors
+and nonpredictive streams remain outside this mode.
 An existing store is never reopened or replaced by preparation, including after
 a previous preparation's report was lost.
 
@@ -111,6 +122,7 @@ The command emits `fa.learned-stream-preparation-result/1`. Its fields are:
 | `executions`, `charged`, `reserved` | Current original external-effect ledger |
 | `checkpoints`, `restart_attempts` | Original checkpoint and reset usage |
 | `history_anchor_retained` | Whether the separately selected archive was fully retained |
+| `topology_checkpoint_retained` | Whether the matching topology archive was retained; `null` for a plain history |
 | `deadline_reached` | Whether the original deadline had been observed at the reporting boundary |
 | `effect_authority` | Always `not_issued` |
 
@@ -134,6 +146,9 @@ sampling, native helper review and independent human approval. It retains spent
 prompt work and cannot reuse preparation as a publication approval. When
 campaigns were installed, the recipe in this command must carry their exact
 independent recovery expectation.
+When topology was installed, continuation also selects the matching v2 source
+checkpoint, fresh topology profile and new paired outputs; the plain command
+above is insufficient to recover that guarded history.
 
 ## Failure and lost acknowledgment
 
@@ -144,8 +159,8 @@ missing evidence or an incorrect boundary does not authorize sampling. A
 terminally stopped preparation is not relabeled as a reusable prompt cut.
 
 After successful capture, archive, report or late-deadline failure is different:
-the checkpoint is already acknowledged. Retention and report delivery are both
-attempted, and the failure message identifies acknowledgment. These later
+the checkpoint is already acknowledged. Each selected archive and report delivery
+are attempted independently, and the failure message identifies acknowledgment. These later
 failures do not issue Stop, add a Fence, repeat prompt inference or discard the
 checkpoint. A destination created concurrently is left unchanged.
 
@@ -160,7 +175,9 @@ does not invent an input archive from the mutable store or claim a partially
 written destination as successful custody. Preserve the store and any successful
 output, inspect the actual acknowledgment, and retain independent evidence before
 choosing another operation. No automatic retry can silently solve a missing
-first archive.
+first archive. The same limit applies when a mediated preparation loses its
+only topology checkpoint: history alone cannot recreate independent source-work
+custody. A successful archive is preserved even if its paired export fails.
 
 ## Costs and verification scope
 

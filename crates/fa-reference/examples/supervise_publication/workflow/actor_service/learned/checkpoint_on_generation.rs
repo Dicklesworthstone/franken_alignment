@@ -1,9 +1,10 @@
 //! Explicit original checkpoint at a selected quiet boundary before sampling.
 //! The selected numerical recipe supplies the model/stream; no actor input can
 //! select this supervisor operation or obtain the saved numerical state.
-use super::{Config, FileOversight, GenerationStatus, Loaded, debug};
+use super::{Config, FileOversight, GenerationStatus, Loaded, debug, topology};
 use super::fields::Fields;
 use crate::config::read_regular;
+use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
 use fa_reference::action::consequence::delivery::persistent::JournalError;
 use fa_reference::action::consequence::gate::containment::RestartGrade;
 use fa_reference::strict_json::{self, Limits};
@@ -86,10 +87,32 @@ impl Selection {
         if config.profile.delivery.actor.profile().grade != RestartGrade::FunctionalRestart {
             return Err("live learned checkpoint capture requires an explicit functional_restart profile".into());
         }
-        if loaded.topology.is_some() || loaded.generation.required_pre_output_forecast().is_some()
+        if loaded.generation.required_pre_output_forecast().is_some()
             || (loaded.generation.required_owned_pre_output_forecast().is_some()
                 && !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
-            return Err("live checkpoint selection requires a plain stream with no predictor or the explicit owned prompt-audit reset recipe".into());
+            return Err("live checkpoint selection requires no predictor or the explicit owned prompt-audit reset recipe".into());
+        }
+        if let Some(selected) = loaded.topology.as_ref() {
+            if !loaded.generation.requires_owned_forecast_stream_restart_audit() {
+                return Err("mediated live checkpoint selection requires the explicit owned prompt-audit reset recipe".into());
+            }
+            let output = match selected {
+                topology::Selection::Create(selection) => selection.acknowledged_output(),
+                topology::Selection::Recover { selection, history } => {
+                    let saved = history.checkpoint()
+                        .ok_or("mediated checkpoint selection requires an exact v2 topology checkpoint")?;
+                    if loaded.recovery_anchor.as_ref() != Some(saved.history_anchor()) {
+                        return Err("mediated checkpoint selection requires the same source and history cut".into());
+                    }
+                    selection.acknowledged_output()
+                }
+            }.ok_or("mediated checkpoint selection requires a new retained topology checkpoint")?;
+            let anchor = loaded.anchor_output.as_deref()
+                .ok_or("mediated checkpoint selection requires a new retained history anchor")?;
+            let output = AcknowledgedOutput::admit(config, output)?;
+            if anchor == output.path() {
+                return Err("history anchor and topology checkpoint outputs must be distinct new files".into());
+            }
         }
         if loaded.generation.requires_owned_forecast_stream_restart_audit()
             && self.sampled_draws != 0 {
