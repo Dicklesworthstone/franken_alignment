@@ -13,7 +13,7 @@ use crate::Error;
 use crate::action::consequence::activation::monitor::decoder::sampled::host::replay::error_tag;
 use crate::action::consequence::gate::TargetCeiling;
 use crate::action::consequence::oversight::learned_host::checkpoint::{
-    HostedLearnedResetReceipt, HostedLearnedResetRequest,
+    HostedLearnedResetReceipt, HostedLearnedResetRequest, HostedLearnedStreamResetRequest,
 };
 use crate::action::consequence::oversight::learned_source::LearnedAvailability;
 use std::collections::BTreeMap;
@@ -23,14 +23,18 @@ use std::collections::BTreeMap;
 const MAX_RESET_RECORD_BYTES: usize = MAX_WITNESS_BYTES;
 #[derive(Default)]
 pub(super) struct ResetHistory {
-    pending: Option<PendingLearnedReset>,
-    completed: BTreeMap<
+    pub(super) pending: Option<PendingLearnedReset>,
+    // Presence selects the stream kind and binds its independent incident frontier.
+    // This metadata is rebuilt only from the original BeginStreamReset event.
+    pub(super) pending_stream: Option<u64>,
+    pub(super) completed: BTreeMap<
         u64,
         (
             FileLearnedResetIntent,
             Result<HostedLearnedResetReceipt, Error>,
         ),
     >,
+    pub(super) completed_stream: BTreeMap<u64, u64>,
     bytes: usize,
 }
 
@@ -42,6 +46,37 @@ impl Machine {
             .as_ref()
             .and_then(|state| state.checkpoints.resets.pending.as_ref())
     }
+    pub(in super::super::super::super) fn pending_learned_stream_reset_sequence(
+        &self,
+    ) -> Option<u64> {
+        let history = &self.learned.as_ref()?.checkpoints.resets;
+        history.pending.as_ref()?;
+        history.pending_stream
+    }
+
+    // Operation identity spans both kinds. A historical stream result cannot
+    // become a legacy result merely because both share the same receipt type.
+    // Unknown operations continue to the original missing/pending checks.
+    pub(in super::super::super::super) fn check_learned_reset_kind(
+        &self,
+        operation: u64,
+        stream: bool,
+    ) -> Result<(), Error> {
+        let history = &self.learned.as_ref().ok_or(Error::Incomplete)?.checkpoints.resets;
+        if let Some(pending) = &history.pending
+            && pending.intent.control.operation == operation
+            && history.pending_stream.is_some() != stream
+        {
+            return Err(Error::Binding);
+        }
+        if history.completed.contains_key(&operation)
+            && history.completed_stream.contains_key(&operation) != stream
+        {
+            return Err(Error::Binding);
+        }
+        Ok(())
+    }
+
     pub(in super::super::super) fn interrupt_learned_reset(&mut self) {
         if let Some(state) = &mut self.learned
             && let Some(pending) = &mut state.checkpoints.resets.pending
@@ -65,6 +100,7 @@ impl Machine {
         &self,
         intent: &FileLearnedResetIntent,
     ) -> Result<Option<Result<HostedLearnedResetReceipt, Error>>, Error> {
+        self.check_learned_reset_kind(intent.control.operation, false)?;
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
         match state
             .checkpoints
@@ -85,11 +121,14 @@ impl Machine {
         event: &Event,
     ) -> Option<Result<(), Error>> {
         if self.pending_learned_reset().is_some() {
-            if let Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
-                CheckpointEvent::Reset { operation, .. },
-            ))) = event
-            {
-                return Some(self.check_pending_learned_reset(*operation));
+            match event {
+                Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+                    CheckpointEvent::Reset { operation, .. },
+                ))) => return Some(self.check_pending_learned_reset(*operation)),
+                Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+                    CheckpointEvent::StreamReset { operation, .. },
+                ))) => return Some(self.check_pending_learned_stream_reset(*operation)),
+                _ => {}
             }
             // No new inference, report, review, approval, dispatch, publication
             // or replacement intent can erase an unknown reset. These original
@@ -128,7 +167,10 @@ impl Machine {
                 CheckpointEvent::BeginReset(intent),
             ))) => Some(self.check_learned_reset_intent(intent)),
             Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
-                CheckpointEvent::Reset { .. },
+                CheckpointEvent::BeginStreamReset { intent, first_incident_sequence },
+            ))) => Some(self.check_learned_stream_reset_intent(intent, *first_incident_sequence)),
+            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+                CheckpointEvent::Reset { .. } | CheckpointEvent::StreamReset { .. },
             ))) => Some(Err(Error::Incomplete)),
             _ => None,
         }
@@ -137,6 +179,14 @@ impl Machine {
     pub(in super::super::super::super) fn check_learned_reset_intent(
         &self,
         intent: &FileLearnedResetIntent,
+    ) -> Result<(), Error> {
+        self.check_learned_reset_intent_kind(intent, false)
+    }
+
+    pub(super) fn check_learned_reset_intent_kind(
+        &self,
+        intent: &FileLearnedResetIntent,
+        stream: bool,
     ) -> Result<(), Error> {
         intent.validate()?;
         let state = self.learned.as_ref().ok_or(Error::Incomplete)?;
@@ -150,8 +200,12 @@ impl Machine {
         if history.completed.len() >= MAX_CHECKPOINTS || history.bytes >= MAX_RESET_RECORD_BYTES {
             return Err(Error::Limit);
         }
-        if !state.checkpoints.captures.contains_key(&intent.checkpoint) {
-            return Err(Error::Missing);
+        // The two sealed handle namespaces are distinct even when checkpoint
+        // identifiers, control predecessors and audit budgets otherwise match.
+        if stream {
+            self.learned_stream_checkpoint_info(intent.checkpoint)?;
+        } else {
+            self.learned_checkpoint_info(intent.checkpoint)?;
         }
         self.check_learned_reset_predecessor(intent)
     }
@@ -189,10 +243,19 @@ impl Machine {
         &self,
         operation: u64,
     ) -> Result<(), Error> {
+        self.check_pending_learned_reset_kind(operation, false)
+    }
+
+    pub(super) fn check_pending_learned_reset_kind(
+        &self,
+        operation: u64,
+        stream: bool,
+    ) -> Result<(), Error> {
         let pending = self.pending_learned_reset().ok_or(Error::Incomplete)?;
         if pending.intent.control.operation != operation {
             return Err(Error::Binding);
         }
+        self.check_learned_reset_kind(operation, stream)?;
         if pending.interrupted {
             return Err(Error::WrongState);
         }
@@ -206,24 +269,25 @@ impl Machine {
         intent: &FileLearnedResetIntent,
     ) -> Result<Transition, Error> {
         self.check_learned_reset_intent(intent)?;
-        self.learned
+        let history = &mut self.learned
             .as_mut()
             .expect("checked learned source")
             .checkpoints
-            .resets
-            .pending = Some(PendingLearnedReset {
+            .resets;
+        history.pending = Some(PendingLearnedReset {
             intent: intent.clone(),
             interrupted: false,
         });
+        history.pending_stream = None;
         Ok(Transition::Unit)
     }
     pub(in super::super::super::super) fn prepare_learned_reset(
         &mut self,
         operation: u64,
     ) -> Result<CheckpointEvent, Error> {
-        let (intent, result) = self.execute_learned_reset(operation)?;
+        let (intent, result) = self.execute_learned_reset_kind(operation, None)?;
         let witness = self.learned_reset_witness(&intent, &result)?;
-        self.record_learned_reset(intent, result, witness.len())?;
+        self.record_learned_reset_kind(intent, result, witness.len(), None)?;
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
         Ok(CheckpointEvent::Reset {
@@ -236,17 +300,18 @@ impl Machine {
         operation: u64,
         expected: &[u8],
     ) -> Result<Transition, Error> {
-        let (intent, result) = self.execute_learned_reset(operation)?;
+        let (intent, result) = self.execute_learned_reset_kind(operation, None)?;
         let witness = self.learned_reset_witness(&intent, &result)?;
         if witness.as_slice() != expected {
             return Err(Error::Binding);
         }
-        self.record_learned_reset(intent, result, witness.len())?;
+        self.record_learned_reset_kind(intent, result, witness.len(), None)?;
         Ok(Transition::Unit)
     }
-    fn execute_learned_reset(
+    pub(super) fn execute_learned_reset_kind(
         &mut self,
         operation: u64,
+        first_incident_sequence: Option<u64>,
     ) -> Result<
         (
             FileLearnedResetIntent,
@@ -254,33 +319,53 @@ impl Machine {
         ),
         Error,
     > {
-        self.check_pending_learned_reset(operation)?;
+        match first_incident_sequence {
+            Some(first) => {
+                self.check_pending_learned_stream_reset(operation)?;
+                if self.pending_learned_stream_reset_sequence() != Some(first) {
+                    return Err(Error::Binding);
+                }
+            }
+            None => self.check_pending_learned_reset(operation)?,
+        }
         let intent = self
             .pending_learned_reset()
             .expect("checked reset intent")
             .intent
             .clone();
-        let handle = self
-            .learned
-            .as_ref()
-            .expect("checked learned source")
-            .checkpoints
-            .captures
-            .get(&intent.checkpoint)
-            .ok_or(Error::Missing)?
-            .1
-            .clone();
         let before = self.broker.hosted_learned_recovery_usage()?;
         let sequence = self.broker.inspect().sequence;
-        let result = self.broker.reset_hosted_learned(HostedLearnedResetRequest {
-            checkpoint: handle,
-            expected_control_sequence: intent.control.expected_control_sequence,
-            expected_actor_revision: intent.control.expected_actor_revision,
-            expected_authority_epoch: intent.control.expected_authority_epoch,
-            binding: intent.control.binding,
-            retained_targets: TargetCeiling::new(&intent.control.retained_targets)?,
-            restart_budget: intent.budget,
-        });
+        let result = match first_incident_sequence {
+            Some(first) => {
+                let handle = self.learned.as_ref().expect("checked learned source")
+                    .checkpoints.stream_captures.get(&intent.checkpoint)
+                    .ok_or(Error::Missing)?.1.clone();
+                self.broker.reset_hosted_learned_stream(HostedLearnedStreamResetRequest {
+                    checkpoint: handle,
+                    expected_control_sequence: intent.control.expected_control_sequence,
+                    expected_actor_revision: intent.control.expected_actor_revision,
+                    expected_authority_epoch: intent.control.expected_authority_epoch,
+                    binding: intent.control.binding,
+                    retained_targets: TargetCeiling::new(&intent.control.retained_targets)?,
+                    restart_budget: intent.budget,
+                    first_incident_sequence: first,
+                })
+            }
+            None => {
+                let handle = self.learned.as_ref().expect("checked learned source")
+                    .checkpoints.captures.get(&intent.checkpoint)
+                    .ok_or(Error::Missing)?.1.clone();
+                self.broker.reset_hosted_learned(HostedLearnedResetRequest {
+                    checkpoint: handle,
+                    expected_control_sequence: intent.control.expected_control_sequence,
+                    expected_actor_revision: intent.control.expected_actor_revision,
+                    expected_authority_epoch: intent.control.expected_authority_epoch,
+                    binding: intent.control.binding,
+                    retained_targets: TargetCeiling::new(&intent.control.retained_targets)?,
+                    restart_budget: intent.budget,
+                })
+            }
+        };
         if let Some(receipt) = self.broker.stop_receipt() {
             let request = receipt.request();
             self.apply_core(&BaseEvent::Stop(request))?;
@@ -297,11 +382,12 @@ impl Machine {
         // changed source/epoch invalidates old evidence without erasing its cost.
         Ok((intent, result))
     }
-    fn record_learned_reset(
+    pub(super) fn record_learned_reset_kind(
         &mut self,
         intent: FileLearnedResetIntent,
         result: Result<HostedLearnedResetReceipt, Error>,
         bytes: usize,
+        first_incident_sequence: Option<u64>,
     ) -> Result<(), Error> {
         let history = &mut self
             .learned
@@ -309,6 +395,13 @@ impl Machine {
             .expect("checked learned source")
             .checkpoints
             .resets;
+        // Audit/escalation may already have interrupted this pending intent.
+        // Bind its immutable identity/kind without rechecking the now-advanced
+        // control predecessor or discarding an acknowledged native refusal.
+        let pending = history.pending.as_ref().ok_or(Error::Incomplete)?;
+        if pending.intent != intent || history.pending_stream != first_incident_sequence {
+            return Err(Error::Binding);
+        }
         let total = history.bytes.checked_add(bytes).ok_or(Error::Limit)?;
         if total > MAX_RESET_RECORD_BYTES {
             return Err(Error::Limit);
@@ -316,14 +409,17 @@ impl Machine {
         if history.completed.contains_key(&intent.control.operation) {
             return Err(Error::Duplicate);
         }
-        history
-            .completed
-            .insert(intent.control.operation, (intent, result));
+        let operation = intent.control.operation;
+        history.completed.insert(operation, (intent, result));
+        if let Some(first) = first_incident_sequence {
+            history.completed_stream.insert(operation, first);
+        }
         history.bytes = total;
         history.pending = None;
+        history.pending_stream = None;
         Ok(())
     }
-    fn learned_reset_witness(
+    pub(super) fn learned_reset_witness(
         &self,
         intent: &FileLearnedResetIntent,
         result: &Result<HostedLearnedResetReceipt, Error>,

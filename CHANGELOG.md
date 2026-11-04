@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: restore native learned stream-reset execution
+
+- Supply the missing shared reset-kind implementation required by the native
+  stream checkpoint and recovery paths.
+- Bind pending and completed operations to their original legacy or stream
+  kind, including the independently selected stream incident frontier.
+- Dispatch stream restoration through the original broker, preserve its audit,
+  containment, accounting and key withdrawal, and retain exact native refusals.
+- Preserve the legacy witness encoding byte for byte. Existing native causal
+  regressions cover cross-kind substitution, exact retry and restoration.
+- Independent source review is complete. The workspace and mandatory RCH runner
+  are unavailable; compilation, runtime tests and qualification remain pending.
+
 ## 2026-11-04: recover topology-backed stream resets with paired custody
 
 - Admit exact retained source/history pairs in the learned stream-reset operator

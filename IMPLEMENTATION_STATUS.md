@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: native reset-kind execution and replay integration
+
+The stream checkpoint implementation referenced shared reset methods and kind
+metadata that were absent from the native reset module. The missing definitions
+and sibling visibility prevented that path from compiling. The shared module
+now implements the full native stream/legacy discriminator across pending
+admission, original checkpoint lookup, execution, completion and exact retry.
+The selected incident frontier remains bound to the original stream intent;
+a legacy reset cannot finish a stream operation, or vice versa.
+
+Stream execution delegates to the existing broker restoration operation with
+the original captured handle, control predecessor, budget and target ceiling.
+Audit work, incident accounting, containment escalation, key withdrawal and
+acknowledged native refusals retain their existing authority. No new reset
+algorithm, refund policy or witness format is introduced. The existing legacy
+witness body is unchanged, and stream witnesses continue to wrap that encoder.
+
+Existing native stream checkpoint/recovery regressions exercise pending and
+completed cross-kind refusal, changed frontier and budget refusal, exact retry
+without repeated work, numerical restoration and subsequent advancement. The
+repair has independent source/API review; executor loss and the missing
+mandatory RCH runner prevent compilation and execution in this session. This
+status does not close a restart grade, packet, bead or qualification gate.
+
 ## 2026-11-04: topology custody during original stream-reset recovery
 
 The learned stream-reset operator now accepts an explicit topology profile for
