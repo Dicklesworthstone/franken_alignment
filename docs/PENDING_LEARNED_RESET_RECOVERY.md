@@ -1,5 +1,10 @@
 # Complete a pending learned reset before the recovery fence
 
+The explicit Linux command for plain guarded stream histories is documented in
+[LEARNED_STREAM_RESET_OPERATOR.md](LEARNED_STREAM_RESET_OPERATOR.md). It requires
+an independently retained exact request, input history anchor, and new output
+archive; it completes the original intent before the native recovery Fence.
+
 The original durable reset can leave an acknowledged `BeginReset` without its
 completion after a process or storage failure. Ordinary recovery intentionally
 fences that intent and leaves it as an interrupted barrier. This additional,

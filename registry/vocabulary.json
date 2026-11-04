@@ -218,7 +218,7 @@
       "idempotency": "expected predecessor",
       "cost_class": "moderate",
       "response": "ResetEvent",
-      "note": "never rewinds ledger (FA-INV-034)"
+      "note": "never rewinds ledger (FA-INV-034); supervise_publication create-learned-generated --complete-stream-reset is the guarded recovery form of an already acknowledged stream intent, with exact request/incident matching and a Fence-only completed retry"
     },
     {
       "verb": "fence",

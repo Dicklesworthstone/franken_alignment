@@ -2575,7 +2575,7 @@
       "id": "FA-108",
       "gate": "G3",
       "title": "Implement rewind as containment (ResetToCheckpoint)",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-027",
         "FA-104",
@@ -2608,7 +2608,11 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
         "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints/recovery.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint/recovery.rs",
-        "crates/fa-reference/tests/mediated_learned_receipts/stream_reset_recovery.rs"
+        "crates/fa-reference/tests/mediated_learned_receipts/stream_reset_recovery.rs",
+        "docs/LEARNED_STREAM_RESET_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset/request.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset.rs"
       ],
       "founding_ideas": [
         "FI-A09",

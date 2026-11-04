@@ -32,6 +32,36 @@ where F: FnMut() -> ElapsedTick {
     recovery.finish_with_topology().map_err(debug)
 }
 
+/// Complete only the independently expected pending stream intent. The SAME
+/// event/Ready checkpoints and authenticated terminal Stop branch precede its
+/// native reset-plus-Fence transaction; no ordinary finish interrupts it first.
+pub(super) fn complete_stream_reset<F>(
+    config: &Config,
+    loaded: &Loaded,
+    intent: &fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent,
+    first_incident_sequence: u64,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<TopologyCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut pending = false;
+    let recovery = {
+        let mut checkpoint = |_: Option<Progress>| {
+            deadline.check(time())?;
+            pending |= control.recovery_pending_peer()?;
+            Ok(())
+        };
+        ready_selected_with_checkpoints(config, loaded, &mut checkpoint)?
+    };
+    if pending {
+        return stop(config, loaded, recovery, control, deadline, time);
+    }
+    recovery.finish_pending_stream_reset(intent, first_incident_sequence).map_err(debug)
+}
+
 fn stop<F>(config: &Config, loaded: &Loaded, recovery: selected::Cursor,
     control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<TopologyCustody, String>
 where F: FnMut() -> ElapsedTick {

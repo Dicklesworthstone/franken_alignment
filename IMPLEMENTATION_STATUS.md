@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: complete acknowledged stream resets through the operator
+
+`create-learned-generated ... --complete-stream-reset` now selects the original
+plain guarded stream-reset finalizer before recovery can fence its intent. The
+operator requires the independently retained full intent and incident frontier,
+an exact input history anchor, and a new output archive. Strict bounded request
+parsing preserves full-width identities. Replay retains the original deadline
+and authenticated Stop priority at every event and Ready checkpoint.
+
+A dedicated Config entry admits an explicitly declared native functional-restart
+bootstrap for this recovery only; ordinary Config admission remains audit-only.
+The command retains acknowledged custody and reports restoration, containment
+without restoration, and native refusal distinctly. Exact retries only fence;
+they cannot repeat audit work, refund spent rights or count another incident.
+Predictive and topology histories remain explicitly unsupported in this operator.
+
+Real numerical regression cases cover command-file admission, exact matching,
+unchanged files on refusal/deadline, interrupted intents, preserved accounting,
+acknowledged inner refusal, exact retries, and output crossing the original
+deadline. They are authored but unexecuted because RCH is unavailable. FA-108 is
+in progress; its executed-evidence and complete-containment acceptance remains
+unchanged. See `docs/LEARNED_STREAM_RESET_OPERATOR.md` for the closed input schema
+and operational result contract.
+
 ## 2026-11-04: connect operator commands to original native owners
 
 The executable now registers and dispatches the existing situation, policy-replay,

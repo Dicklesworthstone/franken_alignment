@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: expose pending learned-stream reset recovery
+
+- Add an explicit offline command completing the original acknowledged stream
+  intent before recovery Fence, with exact independent request and anchor inputs.
+- Admit declared native functional-restart metadata only in this recovery path;
+  preserve ordinary audit-only Config behavior and reject unsupported profiles.
+- Preserve authenticated Stop priority, bounded replay and the original deadline.
+  Retain acknowledged custody and distinguish restoration from native refusal.
+- Add real numerical/command regressions for mismatches, interrupted intents,
+  exact retry accounting, deadline boundaries, parser limits and closed grammar.
+  Runtime/type checks remain pending the required RCH environment.
+
 ## 2026-11-04: restore operator reachability and guarded learned recovery
 
 - Connect situation reports, policy replay, actor-only prechecks and mixed learned

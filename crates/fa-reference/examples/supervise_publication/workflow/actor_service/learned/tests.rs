@@ -26,6 +26,7 @@ use super::*;
 #[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;
 #[path = "tests/qualification.rs"] mod qualification;
 #[path = "tests/stopped.rs"] mod stopped;
+#[path = "tests/stream_reset.rs"] mod stream_reset;
 use fixture::{Root, configured, evidence};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},

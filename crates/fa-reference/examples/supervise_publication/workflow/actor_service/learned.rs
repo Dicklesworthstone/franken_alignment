@@ -27,6 +27,7 @@
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
+#[path = "learned/stream_reset.rs"] mod stream_reset;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -69,6 +70,9 @@ fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -
 where F: FnMut() -> ElapsedTick {
     // These independent historical and maintenance modes own the complete argv.
     // No live option stripper may remove an incompatible mode or output first.
+    if args.iter().any(|arg| arg == "--complete-stream-reset") {
+        return stream_reset::command(args, credibility, time, &mut std::io::stdout().lock());
+    }
     if args.iter().any(|arg| arg == "--policy-replay") {
         return recovery::policy_replay::command(args, credibility, &mut std::io::stdout().lock());
     }

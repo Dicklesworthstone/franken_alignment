@@ -272,6 +272,25 @@ fn ready_selected_with_checkpoints(
     )
 }
 
+/// The same original guarded Ready cursor completes its pending stream reset
+/// before the sole recovery Fence. No unguarded intermediate owner is exposed.
+pub(super) fn complete_stream_reset_live<F>(
+    config: &Config,
+    loaded: &Loaded,
+    intent: &fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent,
+    first_incident_sequence: u64,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<TopologyCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    live::complete_stream_reset(
+        config, loaded, intent, first_incident_sequence, control, deadline, time,
+    )
+}
+
 fn open_receipt(
     config: &Config,
     loaded: &Loaded,
