@@ -399,6 +399,16 @@
       "cost_class": "expensive",
       "response": "Vec<WireResponse> retaining original Knowledge<ActorOutcome>",
       "note": "bounded resident operator adapter; one original generation, forecast observer and topology custodian; no lifetime allowance refill or branch authority"
+    },
+    {
+      "verb": "compare-learned-prompt",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "independently configured experiment operator; no production capability is loaded or issued",
+      "idempotency": "one immutable in-memory campaign per invocation; fixed trial slots are never retried; a new invocation spends new work",
+      "cost_class": "expensive, bounded by complete paired campaign reservation and original per-arm limits",
+      "response": "PromptCampaignReport with typed observed, censored, interrupted and unstarted outcomes",
+      "note": "supervise_publication maps exact source-token intervention and paired replay to the original monitored numerical engine; seeds share one source lineage and do not establish independent tasks or a calibrated causal claim"
     }
   ],
   "reason_codes": [

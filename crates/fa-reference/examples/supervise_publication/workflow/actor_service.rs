@@ -66,6 +66,11 @@ pub(crate) fn shutdown_fleet(args: &[String], output: &mut impl std::io::Write) 
     learned::fleet_command(args, output)
 }
 
+/// The experiment owns its entire argv before any production option is removed.
+pub(crate) fn prompt_counterfactual_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+    learned::prompt_counterfactual_command(args, output)
+}
+
 // The actor-only command owns its grammar before shared supervisor options are
 // stripped. It never opens Config or routes through ordinary Submit dispatch.
 pub(crate) fn precheck_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {

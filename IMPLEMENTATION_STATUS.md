@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: run actual prompt counterfactual campaigns from bounded files
+
+`supervise_publication compare-learned-prompt PLAN` now loads independently
+selected model, tokenizer, sampling, codec-fit and monitor assets and drives the
+original `PromptIntervention`/`PromptCampaign` engine. The closed plan fixes an
+exact source-token span edit, ordered unique paired seeds, continuation-token
+question, full campaign reservation and original per-arm limits. The same
+aggregate asset allowance includes the plan and all selected input files;
+single-file and existing explicit checkpoint-source loading remain original.
+No production configuration, journal, helper service or effect owner is opened.
+
+The command advances one original revision at a time under one wall deadline
+that starts before input intake. Cancellation retains partial work and all
+unstarted seeds. The structured experiment report preserves the full denominator,
+the three-by-three outcome table, typed arm stops, numerical and telemetry costs,
+declared limits, reservations and any active failed comparison. A censored
+nonmatch remains censored; an admission failure has no fabricated arm outcome.
+Output failure never reruns inference. The public command dispatch rejects live
+options before any shared supervisor option can consume them.
+
+Eight new operator regressions cover actual prompt-induced sampled output and
+sham equality against separately driven original generators, unchanged live
+storage, explicit checkpoint-source intake, closed arguments, independent fit
+lineage, all five complete campaign budget boundaries, censored and failed
+trials, deadline boundaries and output failure. These tests, compilation,
+formatting and Clippy remain unexecuted pending the required RCH gate. This is a
+bounded numerical experiment on one declared source lineage: it supplies no
+calibrated population estimate, authenticated model identity, external protocol
+registration or production authority. FA-032 and experimental qualification
+remain open. See [the operator contract](docs/LEARNED_PROMPT_COUNTERFACTUAL_OPERATOR.md).
+
 ## 2026-11-04: drive predictive stream containment through the actual operator
 
 The operator now reaches a complete unsampled prompt through explicit fresh

@@ -434,7 +434,7 @@ pub(super) fn tokenization(mut fields: Fields) -> Result<TokenizationBudget, Str
         pair_lookups: fields.size("pair_lookups")?, heap_pops: fields.size("heap_pops")? };
     fields.end()?; Ok(value)
 }
-fn telemetry(mut fields: Fields) -> Result<GenerationTelemetryBudget, String> {
+pub(super) fn telemetry(mut fields: Fields) -> Result<GenerationTelemetryBudget, String> {
     let value = GenerationTelemetryBudget {
         compression_source_values: fields.number("compression_source_values")?,
         compression_encoded_bytes: fields.number("compression_encoded_bytes")?,

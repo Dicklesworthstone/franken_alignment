@@ -1986,6 +1986,17 @@
       ]
     },
     {
+      "mechanism": "File-backed prompt counterfactual campaigns",
+      "serves": [
+        "FI-A16",
+        "FI-I11"
+      ],
+      "plan_sections": [
+        "§12.2",
+        "§12.4"
+      ]
+    },
+    {
       "mechanism": "Policy disclosure profile and actor precheck",
       "serves": [
         "FI-A13",

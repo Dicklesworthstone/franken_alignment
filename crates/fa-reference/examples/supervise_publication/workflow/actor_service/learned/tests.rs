@@ -31,6 +31,7 @@ use super::*;
 #[path = "tests/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
 #[path = "tests/checkpoint_prepare.rs"] mod checkpoint_prepare;
 #[path = "tests/campaign_creation.rs"] mod campaign_creation;
+#[path = "tests/prompt_counterfactual.rs"] mod prompt_counterfactual;
 
 #[path = "tests/recovery_policy.rs"] mod recovery_policy;
 use fixture::{Root, configured, evidence};

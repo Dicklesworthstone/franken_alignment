@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: execute real prompt counterfactual campaigns from the operator
+
+- Add `compare-learned-prompt PLAN` with original model, tokenizer, fitted codec,
+  monitor, direct or checkpoint-source weights and conserved asset intake.
+- Apply an exact source-token edit through the original monitored paired
+  generators, with fixed seeds, one outcome question and full campaign admission.
+- Emit typed experimental outcomes, complete denominators, declared budgets,
+  reservations and original numerical/telemetry work; retain censored and
+  partial deadline outcomes without retrying inference or acquiring live rights.
+- Add eight regression functions, including actual changed sampled output,
+  sham controls and a live store that remains unchanged. Required RCH compilation
+  and execution remain pending; no experimental or production gate is closed.
+
 ## 2026-11-04: expose the complete predictive prompt containment workflow
 
 - Prepare a fresh original prompt, capture its selected checkpoint and retain

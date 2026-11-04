@@ -6,6 +6,14 @@ complements, rather than replaces, sparse KV interventions and learned-policy
 comparison. It uses the original learned generator, inference, sampler, codec,
 source checks and complete per-position K/V monitor roster.
 
+The Linux reference operator exposes these original experiments as
+`supervise_publication compare-learned-prompt PLAN`. The independently selected
+plan loads bounded model, tokenizer, codec and monitor assets, fixes the token
+edit, paired seed schedule and outcome question, and returns all trial outcomes
+and costs. See [the operator contract](LEARNED_PROMPT_COUNTERFACTUAL_OPERATOR.md)
+for the closed input schema, deadlines and complete result denominator. This
+path does not load a production configuration or acquire a publication role.
+
 `DecoderModel::prompt_intervention` freezes the model, original GenerationSpec,
 learned policy, source/evaluation identities, per-arm numerical and telemetry
 ceilings, and an exact expected-token-span replacement. Insertions and deletions

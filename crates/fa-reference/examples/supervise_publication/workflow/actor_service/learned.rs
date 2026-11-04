@@ -34,6 +34,7 @@
 #[path = "learned/checkpoint_prepare.rs"] mod checkpoint_prepare;
 #[path = "learned/campaigns.rs"] mod campaigns;
 #[path = "learned/policy_promotion.rs"] mod policy_promotion;
+#[path = "learned/prompt_counterfactual.rs"] mod prompt_counterfactual;
 use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
@@ -60,6 +61,11 @@ const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PRO
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
     fleet::command(args, output)
+}
+
+/// Independent experiment assets never enter the live owner/recovery grammar.
+pub(super) fn prompt_counterfactual_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    prompt_counterfactual::command(args, output)
 }
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {

@@ -906,6 +906,8 @@ Candidate interventions include replacing an untrusted document with a semantica
 
 The result is a `CounterfactualWitness`: inputs, intervention recipe, baseline and treated outcomes, disagreement between evaluators, effect estimates with uncertainty, and exact replay grade. It supports the question it tested. It does not grant permission to ignore unrelated risks.
 
+A bounded source-token campaign may make this comparison through independently selected model, tokenizer, codec and monitor files without loading a production authority store. It freezes an exact expected-span edit, ordered unique seeds, a continuation-token question and the complete paired resource reservation before the first trial. Each seed is paired within its original baseline/treated generators. A nonmatching interrupted, held or failed arm is censored, not evidence of absence; every declared seed remains in the reported denominator. This file-backed engineering profile supplies source-intervention observations, not a calibrated population estimate, external preregistration receipt or production permission. A new invocation incurs new work and cannot be presented as a retry with free experimental credit.
+
 ### 12.3 A causal frontier for investigation cost
 
 The evidence graph can backward-slice from a proposed effect to its available dependencies: read artifacts, tool outputs, explicit decisions, and registered activation windows. This bounds the first investigation packet and identifies candidate interventions. The slice is complete only relative to captured dependencies. An absent edge is not proof of no influence.

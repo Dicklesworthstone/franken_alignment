@@ -144,6 +144,15 @@ the complete retained current-policy corpus, not a caller-selected sample.
 2. Run under `ExperimentCx` only: `fa branch`, `fa intervene`, `fa replay`, canaries through the audit floor. No branch returns a permit.
 3. Record the result artifact against the preregistered row; a late protocol is labeled exploratory and cannot be promoted.
 
+The implemented source-token experiment is
+`supervise_publication compare-learned-prompt PLAN`. Its
+[closed file-backed plan](LEARNED_PROMPT_COUNTERFACTUAL_OPERATOR.md) runs the
+original monitored model under an exact prompt edit and a frozen paired seed
+schedule. Use an unchanged edit as the sham control. Retain the full report,
+including held, interrupted, failed-admission and unstarted trials; a censored
+nonmatch is not a negative observation. This command neither loads a production
+store nor registers a confirmatory protocol in an external ledger.
+
 ### P8. Fencing a fleet
 
 1. `fa fence --scope <scope> --floor <epoch>` → the fence address.
