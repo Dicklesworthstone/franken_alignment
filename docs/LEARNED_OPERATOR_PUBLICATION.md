@@ -832,18 +832,21 @@ replaced after its result is known.
 
 ## Original transitions and recovery
 
-Fresh single-request creation can select `--campaign-profile PATH` to install
+Fresh single-request or resident creation can select `--campaign-profile PATH` to install
 the original mandatory policy-campaign guard in its first image. Continuation
 and recovery cannot use this creation flag to add governance after work begins;
 they must independently require the installed inventory. See
 [LEARNED_CAMPAIGN_CREATION.md](LEARNED_CAMPAIGN_CREATION.md).
 
-An existing campaign-protected plain history can use the separate offline
+An existing campaign-protected nonpredictive history can use the separate offline
 `--promote-policy GOVERNOR_REQUEST` maintenance mode. It compares the complete
 independently reviewed original policy-replay output, then atomically records
 the original campaign request, approval and promotion. It returns immutable
 history and a retained anchor; all future effects still require their ordinary
-keys. See [LEARNED_POLICY_GOVERNANCE.md](LEARNED_POLICY_GOVERNANCE.md).
+keys. Topology-mediated histories additionally retain their exact source
+checkpoint and unchanged source expenditure in a paired new output. See
+[LEARNED_POLICY_GOVERNANCE.md](LEARNED_POLICY_GOVERNANCE.md) and
+[LEARNED_MEDIATED_POLICY_GOVERNANCE.md](LEARNED_MEDIATED_POLICY_GOVERNANCE.md).
 
 A plain functional-restart Message command can also select
 `--checkpoint-before-generation PROFILE` to capture the exact original quiet

@@ -1,16 +1,18 @@
 //! Explicit trusted offline governor workflow, separate from policy replay and
 //! human effect approval. The sealed native owner is the only policy writer.
-use super::{Config, Duration, Instant, Loaded, anchors, checked, debug, fields, recipe, recovery};
+use super::{Config, Duration, Instant, Loaded, anchors, checked, debug, fields, recipe, recovery, topology};
 use crate::{config::read_regular, policy_replay::{Request as Candidate, encode}};
+use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
 use fa_reference::action::consequence::delivery::persistent::{
     governance::PolicyUpdate,
     observed::decoder::learned::{FileLearnedPolicyPromotionHistory,
         FileLearnedPolicyPromotionRequest, FileLearnedPolicyPromotionReview},
+    observed::driver::topology::checkpoint::TopologyCheckpoint,
 };
 use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeSet, fs, io::Write, path::{Path, PathBuf}};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --promote-policy GOVERNOR_REQUEST --history-anchor INPUT --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE --promote-policy GOVERNOR_REQUEST --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile PATH --retain-topology-checkpoint NEW_OUTPUT]";
 const REQUEST_BYTES: usize = 16_384;
 const DEADLINE: &str = "learned policy promotion deadline reached before acknowledgment";
 
@@ -55,17 +57,34 @@ fn number(fields: &mut fields::Fields, name: &str) -> Result<u64, String> {
     value.parse().map_err(|_| format!("{name} exceeds the unsigned 64-bit range"))
 }
 
-fn arguments(args: &[String]) -> Result<(), String> {
-    if args.len() != 9 || args.first().map(String::as_str) != Some("create-learned-generated")
+struct Arguments { topology: Option<PathBuf>, source_output: Option<PathBuf> }
+
+fn arguments(args: &[String]) -> Result<Arguments, String> {
+    if args.len() < 9 || args.first().map(String::as_str) != Some("create-learned-generated")
         || args[3] != "--promote-policy" { return Err(USAGE.into()); }
     for at in [1, 2, 4] { fields::path(&args[at])?; }
     let mut seen = BTreeSet::new();
-    for at in [5, 7] {
-        if !matches!(args[at].as_str(), "--history-anchor" | "--retain-history-anchor")
-            || !seen.insert(args[at].as_str()) { return Err(USAGE.into()); }
-        fields::path(&args[at + 1])?;
+    let mut selected = Arguments { topology: None, source_output: None };
+    let mut at = 5;
+    while at < args.len() {
+        let flag = args[at].as_str();
+        if !matches!(flag, "--history-anchor" | "--retain-history-anchor"
+            | "--topology-profile" | "--retain-topology-checkpoint") || !seen.insert(flag) {
+            return Err(USAGE.into());
+        }
+        let path = fields::path(args.get(at + 1).ok_or(USAGE)?).map_err(|_| USAGE.to_owned())?;
+        match flag {
+            "--topology-profile" => selected.topology = Some(path),
+            "--retain-topology-checkpoint" => selected.source_output = Some(path),
+            _ => {}
+        }
+        at += 2;
     }
-    Ok(())
+    if !seen.contains("--history-anchor") || !seen.contains("--retain-history-anchor")
+        || selected.topology.is_some() != selected.source_output.is_some() {
+        return Err(USAGE.into());
+    }
+    Ok(selected)
 }
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>, output: &mut impl Write)
@@ -79,7 +98,7 @@ pub(super) fn command_with_elapsed(args: &[String], credibility: Option<&Path>,
     output: &mut impl Write, elapsed: &mut impl FnMut() -> Duration) -> Result<(), String>
 {
     if credibility.is_some() { return Err("policy governance cannot activate helper credibility".into()); }
-    arguments(args)?;
+    let arguments = arguments(args)?;
     let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     checkpoint(wall, elapsed)?;
@@ -95,9 +114,19 @@ pub(super) fn command_with_elapsed(args: &[String], credibility: Option<&Path>,
     checked::check_selection(&config, &loaded)?;
     let (_, custody) = anchors::take_options(args)?;
     custody.admit(&config, &mut loaded, true)?;
+    if let Some(path) = &arguments.topology { outside(&config, path)?; }
+    topology::admit(&config, &mut loaded, arguments.topology.as_deref(), topology::Mode::Historical)?;
     check_selection(&loaded)?;
+    let source_output = arguments.source_output.as_deref().map(|path| {
+        let output = AcknowledgedOutput::admit(&config, path)?;
+        if loaded.anchor_output.as_deref() == Some(output.path()) {
+            return Err("policy promotion history and topology outputs must be distinct new files".into());
+        }
+        Ok::<_, String>(output)
+    }).transpose()?;
     checkpoint(wall, elapsed)?;
-    run(&config, &loaded, &request, candidate, &reviewed, output, elapsed)
+    run_selected(&config, &loaded, &request, candidate, &reviewed,
+        (output, source_output.as_ref()), elapsed)
 }
 
 fn outside(config: &Config, path: &Path) -> Result<(), String> {
@@ -115,18 +144,36 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
         return Err("policy promotion requires an independent input history anchor and a new retained output".into());
     }
     if loaded.generation.required_pre_output_forecast().is_some()
-        || loaded.generation.required_owned_pre_output_forecast().is_some() || loaded.topology.is_some() {
-        return Err("offline policy promotion requires a plain nonpredictive learned history".into());
+        || loaded.generation.required_owned_pre_output_forecast().is_some() {
+        return Err("offline policy promotion requires a nonpredictive learned history".into());
+    }
+    if let Some(history) = topology::history(loaded)? {
+        let saved = history.checkpoint().ok_or("policy promotion requires an exact v2 topology-source checkpoint")?;
+        if Some(saved.history_anchor()) != loaded.recovery_anchor.as_ref() {
+            return Err("policy promotion source checkpoint and history anchor describe different cuts".into());
+        }
     }
     Ok(())
 }
 
+#[cfg(test)]
 pub(super) fn run(config: &Config, loaded: &Loaded, request: &Request, candidate: Candidate,
     reviewed: &[u8], output: &mut impl Write, elapsed: &mut impl FnMut() -> Duration)
     -> Result<(), String>
 {
+    run_selected(config, loaded, request, candidate, reviewed, (output, None), elapsed)
+}
+
+fn run_selected(config: &Config, loaded: &Loaded, request: &Request, candidate: Candidate,
+    reviewed: &[u8], outputs: (&mut impl Write, Option<&AcknowledgedOutput>),
+    elapsed: &mut impl FnMut() -> Duration) -> Result<(), String>
+{
+    let (output, source_output) = outputs;
     checked::check_selection(config, loaded)?;
     check_selection(loaded)?;
+    if topology::history(loaded)?.is_some() != source_output.is_some() {
+        return Err("policy promotion requires paired history and topology checkpoint retention".into());
+    }
     if loaded.expected_campaigns.ok_or(USAGE)?.limits != candidate.limits {
         return Err("reviewed report limits must equal the installed campaign guard exactly".into());
     }
@@ -140,20 +187,28 @@ pub(super) fn run(config: &Config, loaded: &Loaded, request: &Request, candidate
     let original = run.policy_promotion_review().map_err(debug)?.clone();
     compare(&original, candidate.expected_policy_generation, candidate.output_bytes, reviewed)?;
     checkpoint(wall, elapsed)?;
-    let history = run.finish_promoted_policy(&original, request.accept_newly_reviewable)
+    let (history, source) = run.finish_promoted_policy(&original, request.accept_newly_reviewable)
         .map_err(|error| format!("policy promotion is unconfirmed: {error:?}; retain the exact governor request, reviewed report and old history anchor"))?;
     // An acknowledged transition cannot be retracted by a slow or failing
     // archive/output. Attempt both independently; exact retries append nothing.
     let mut failures = Vec::new();
+    let late = elapsed() >= wall;
+    if late { failures.push("original policy promotion deadline reached after acknowledgment".into()); }
     let retained = anchors::export_acknowledged(history.history_anchor(),
         loaded.anchor_output.as_deref().ok_or(USAGE)?);
     if let Err(error) = &retained { failures.push(format!("history retention failed: {error}")); }
-    let late = elapsed() >= wall;
-    if late { failures.push("original policy promotion deadline reached after acknowledgment".into()); }
-    if let Err(error) = report(&history, retained.is_ok(), late, output) { failures.push(error); }
+    let source_retained = match (source_output, source.as_ref()) {
+        (Some(destination), Some(saved)) => Some(destination.retain(saved)),
+        (None, None) => None,
+        _ => Some(Err("policy promotion has no matching acknowledged topology checkpoint".into())),
+    };
+    if let Some(Err(error)) = &source_retained { failures.push(error.clone()); }
+    let source_report = source.as_ref().map(|saved|
+        (saved, source_retained.as_ref().is_some_and(Result::is_ok)));
+    if let Err(error) = report(&history, retained.is_ok(), late, source_report, output) { failures.push(error); }
     if !late && elapsed() >= wall { failures.push("original policy promotion deadline reached during acknowledged output".into()); }
     if failures.is_empty() { Ok(()) } else { Err(format!(
-        "policy promotion acknowledged at revision {}: {}; retry the exact request/report with the independently selected current policy and a new anchor output",
+        "policy promotion acknowledged at revision {}: {}; retry the exact request/report with the independently selected current policy and new paired outputs when topology is selected",
         history.snapshot().revision, failures.join("; "))) }
 }
 
@@ -175,17 +230,19 @@ fn checkpoint(wall: Duration, elapsed: &mut impl FnMut() -> Duration) -> Result<
 }
 
 fn report(history: &FileLearnedPolicyPromotionHistory, retained: bool, late: bool,
+    source: Option<(&TopologyCheckpoint, bool)>,
     output: &mut impl Write) -> Result<(), String>
 {
     let cut = history.snapshot();
     let change = history.receipt().change();
     let mut bytes = format!(concat!(
-        "{{\"schema\":\"fa.learned-policy-promotion-result/1\",\"outcome\":\"{}\",",
+        "{{\"schema\":\"{}\",\"outcome\":\"{}\",",
         "\"operation\":\"{}\",\"reviewed_revision\":\"{}\",\"revision\":\"{}\",",
         "\"appended_events\":\"{}\",\"promoted_policy_generation\":\"{}\",",
         "\"current_policy_generation\":\"{}\",\"control_sequence\":\"{}\",",
         "\"authority_epoch\":\"{}\",\"executions\":\"{}\",\"charged\":\"{}\",",
         "\"reserved\":\"{}\",\"accepted_newly_reviewable\":{},\"cancelled_attempts\":["),
+        if source.is_some() { "fa.learned-policy-promotion-result/2" } else { "fa.learned-policy-promotion-result/1" },
         if history.appended_events() == 0 { "already_promoted" } else { "promoted" },
         history.receipt().update().operation(), history.review().request().revision(),
         cut.revision, history.appended_events(), history.receipt().update().policy().generation(),
@@ -196,8 +253,14 @@ fn report(history: &FileLearnedPolicyPromotionHistory, retained: bool, late: boo
         if index != 0 { bytes.push(','); }
         bytes.push_str(&format!("\"{attempt}\""));
     }
-    bytes.push_str(&format!(concat!(
-        "],\"history_anchor_retained\":{},\"deadline_reached\":{},",
-        "\"effect_authority\":\"not_issued\",\"helpers_rerun\":false}}\n"), retained, late));
+    bytes.push_str(&format!("],\"history_anchor_retained\":{},\"deadline_reached\":{}", retained, late));
+    if let Some((saved, retained)) = source {
+        bytes.push_str(&format!(concat!(
+            ",\"topology_checkpoint_retained\":{},\"topology_checkpoint_revision\":\"{}\",",
+            "\"topology_source_checks\":\"{}\",\"topology_source_read_bytes\":\"{}\",",
+            "\"topology_last_operation\":\"{}\""), retained, saved.history_anchor().revision(),
+            saved.work().checks, saved.work().reserved_read_bytes, saved.last_operation()));
+    }
+    bytes.push_str(",\"effect_authority\":\"not_issued\",\"helpers_rerun\":false}\n");
     output.write_all(bytes.as_bytes()).and_then(|()| output.flush()).map_err(debug)
 }

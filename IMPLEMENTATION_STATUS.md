@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: promote learned policy with exact topology-source custody
+
+The explicit policy governor now supports nonpredictive mediated learned
+histories through the original guarded numerical replay. A sealed cursor binds
+the complete independently retained topology/history pair before replay and
+admits only that cut or its exact original Request/Approve/Promote suffix.
+Unrelated source, numerical, time, Fence or campaign events cannot fill a gap.
+Every original graph, availability, guard, current-policy, credential and
+recovery-floor requirement is checked before and after private preparation.
+
+The original atomic campaign transaction preserves Unknown/admitted charges,
+cancels only undispatched reservations and consumes ordinary capacity while
+retaining terminal reserves. Its immutable result pairs the acknowledged
+history with unchanged source documents, spent work and last operation. The
+operator requires distinct new outputs for both archives and attempts both
+plus the report despite lateness or output failure. Exact retries require the
+independently selected current policy and append zero events; no owner, observer,
+governor, effect key, clock acquisition or numerical work escapes the finalizer.
+
+Six native and five operator regression functions cover real mediated learned
+publication, complete reports, full guard/source-cut binding, Unknown versus
+reserved liabilities, capacity, canonical/staging failures, exact retries and
+paired export recovery. Eleven Rust files passed syntax/whitespace checks and
+two independent source reviews found no remaining concrete blocker. Required
+RCH compilation, formatting, Clippy, tests and qualification remain pending.
+Predictive governance, signed governor authentication and physical mediation
+qualification remain outside this capability.
+
 ## 2026-11-04: create governed functional resident learned streams
 
 Resident learned creation now uses the same explicit functional-restart reader

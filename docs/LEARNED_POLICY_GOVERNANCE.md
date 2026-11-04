@@ -2,9 +2,14 @@
 
 This operator path connects an independently reviewed, complete retained-policy
 comparison to the **original campaign governor and policy transition**. It is a
-trusted offline governance operation for an existing, campaign-protected, plain
-learned text-stream history. It changes policy; it issues no effect permit,
+trusted offline governance operation for an existing, campaign-protected,
+nonpredictive learned text-stream history. It changes policy; it issues no effect permit,
 human-review key, numerical owner or governor handle.
+
+The plain profile uses its independent history anchor. Topology-mediated
+histories use the [paired source-custody extension](LEARNED_MEDIATED_POLICY_GOVERNANCE.md),
+which retains the original graph requirements and source expenditure through
+the same atomic promotion.
 
 The read-only `--policy-replay` command remains descriptive. Running it does not
 request, approve or promote a campaign. A separate operator selects
@@ -111,10 +116,12 @@ supervise_publication create-learned-generated CONFIG RECIPE \
 
 This mode owns its complete argument grammar. It takes no reviewer profile,
 actor profile, precheck, live source, helper credibility activation, generation
-continuation, stream reset, topology profile, receipt reconciliation or Stop
+continuation, stream reset, receipt reconciliation or Stop
 option. It admits the existing audit-only or explicitly functional learned
-history under the scoped recovery reader. Predictive and mediated histories
-remain outside this initial promotion path; no weaker fallback is attempted.
+history under the scoped recovery reader. A mediated invocation additionally
+requires `--topology-profile` with an exact v2 retained source checkpoint and
+`--retain-topology-checkpoint` with a distinct new paired output. Predictive
+histories remain unsupported; they cannot fall back to a plain recovery owner.
 
 ## Original transitions and durability
 

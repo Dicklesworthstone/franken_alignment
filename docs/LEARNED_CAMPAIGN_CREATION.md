@@ -1,6 +1,6 @@
 # Provision mandatory policy campaigns in a learned history
 
-The single learned publication command can install original policy-campaign
+The single and resident learned publication commands can install original policy-campaign
 governance in the first acknowledged image, before numerical work, proposals or
 effects. This connects the existing native governance guard to operator creation:
 
@@ -9,6 +9,11 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PR
   --campaign-profile CAMPAIGN_PROFILE \
   --retain-history-anchor NEW_OUTPUT_ANCHOR
 ```
+
+`serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE` accepts the
+same creation flag. It installs the guard once, retains its exact inventory
+through every entry and keeps later entries from installing another guard; see
+[resident learned publication](RESIDENT_LEARNED_PUBLICATION.md).
 
 The profile is a closed `fa.policy-campaign-profile/1` document with independently
 selected nonzero native limits:

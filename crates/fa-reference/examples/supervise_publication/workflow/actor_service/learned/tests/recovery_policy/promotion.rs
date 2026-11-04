@@ -1,5 +1,8 @@
 //! End-to-end trusted maintenance over a real learned publication and the
 //! original read-only report. Descriptive replay never performs the promotion.
+#[path = "promotion/mediated.rs"]
+mod mediated;
+
 use super::*;
 use super::super::super::{campaigns, policy_promotion as operator};
 use fa_reference::action::consequence::delivery::persistent::FileDeliverySnapshot;

@@ -118,8 +118,10 @@ impl FileLearnedRecovery {
             Some(Event::Campaign(CampaignEvent::Request(actual))) if actual == &request.update) {
             return Err(Error::Binding.into());
         }
-        if self.expected.text_stream_profile().is_none()
-            || self.events.iter().any(|event| matches!(event, Event::Mediation(_))) {
+        // The plain and mediated guarded wrappers retain their own complete
+        // independent inventories. A mediated caller additionally seals this
+        // cursor to its exact retained source checkpoint before replay.
+        if self.expected.text_stream_profile().is_none() {
             return Err(Error::Binding.into());
         }
         self.promotion = Some(Selection { request, limits, review: None });

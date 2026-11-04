@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: promote learned policy with paired topology-source custody
+
+- Extend the explicit offline governor to nonpredictive mediated histories,
+  preserving exact source/history custody and every original guarded check.
+- Retain source documents, expenditure and last operation through the original
+  atomic campaign triple; permit only exact zero-event retries with the current
+  independently selected effective policy.
+- Require paired new archive outputs and attempt both plus the report after
+  acknowledgment despite independent output failures or deadline expiry.
+- Add eleven native/operator regression functions. Syntax, whitespace and
+  independent source review passed; required RCH compilation and execution,
+  governor authentication and deployment qualification remain pending.
+
 ## 2026-11-04: create governed functional resident learned streams
 
 - Connect resident creation to explicit functional-restart bootstrap, bounded

@@ -1,5 +1,8 @@
 //! Keep original topology-observer custody across learned numerical recovery.
 //! One locked history, original reset, and original recovery-fence transaction.
+mod policy_promotion;
+pub use policy_promotion::{FileMediatedPolicyPromotionHistory, FileMediatedPolicyPromotionRecovery};
+
 use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileCredentialRegistration, FileGuardSet, FileMediatedRequirements, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, JournalError, Machine,

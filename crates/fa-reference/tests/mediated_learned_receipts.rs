@@ -24,6 +24,8 @@ mod proposal_diagnosis;
 mod fleet_shutdown;
 #[path = "mediated_learned_receipts/stream_reset_recovery.rs"]
 mod stream_reset_recovery;
+#[path = "mediated_learned_receipts/policy_promotion.rs"]
+mod policy_promotion;
 
 use fa_reference::action::consequence::delivery::persistent::observed::{
     decoder::learned::FileReconciledLearnedReceipt,
@@ -258,7 +260,7 @@ impl Recovery {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Cut { Sent, Published, Confirmed, FinishPending }
+enum Cut { Sent, Unknown, Published, Confirmed, FinishPending }
 struct History {
     root: Directory, lane: Lane, profile: FileOversightProfile, config: FileLearnedConfig,
     expected: FileMediatedRequirements, anchor: FileHistoryAnchor,
@@ -332,12 +334,17 @@ impl History {
             let charge = action.spec().units;
             assert_eq!(host.inspect().control.ledger.charged, charge);
             assert_eq!(host.delivery_mediation(attempt).unwrap().unwrap().graph(), &graph(1, false));
-            if cut != Cut::Sent {
+            if !matches!(cut, Cut::Sent | Cut::Unknown) {
                 let revision = host.revision();
                 let receipt = host.publish_checked(revision, attempt, Some(&input), snapshot(), ElapsedTick(3)).unwrap();
                 assert_eq!(receipt.outcome, EndpointOutcome::Executed { resulting_version: 2 });
                 assert_eq!(host.inspect().executions, 1);
                 if matches!(cut, Cut::Confirmed | Cut::FinishPending) { let revision = host.revision(); host.reconcile(revision, attempt).unwrap(); }
+            }
+            if cut == Cut::Unknown {
+                let revision = host.revision();
+                host.reconcile(revision, attempt).unwrap();
+                assert_eq!(host.inspect().control.ledger.stages[&attempt], ActionState::Unknown);
             }
             (attempt, charge)
         };
