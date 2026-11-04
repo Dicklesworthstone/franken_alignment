@@ -116,6 +116,7 @@ impl Machine {
                 let forecast = config.required_pre_output_forecast().cloned();
                 let owned_forecast = config.required_owned_pre_output_forecast().cloned();
                 let forecast_reset_successors = config.follows_forecast_reset_successors();
+                let owned_forecast_restart_audit = config.requires_owned_forecast_restart_audit();
                 self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new(), message_continuation: None });
                 if let Some(forecast) = forecast {
                     // One independently bound Enable owns BOTH installations.
@@ -136,6 +137,9 @@ impl Machine {
                     // Only the versioned, independently pinned recipe enables
                     // successor streams in the SAME first-image transition.
                     self.broker.enable_learned_forecast_reset_successors()?;
+                }
+                if owned_forecast_restart_audit {
+                    self.broker.enable_owned_learned_forecast_restart_audit()?;
                 }
                 Ok(Transition::Unit)
             }

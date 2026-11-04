@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: forecast from a freshly audited restored prompt boundary
+
+The explicit with_owned_forecast_restart_audit recipe resolves a native reset
+ordering gap: a restored complete prompt had no current accepted event, its
+owned predictor needed that event, and sampling required the forecast first.
+The reset now performs a second bounded audit of the actual successor cache and
+exposes it solely to that original owned K/V predictor. Ordinary source evidence
+stays Empty until a newly accepted token. Both audits are reserved and charged;
+the separately versioned recipe and reset witness bind their actual stream
+identities, while legacy recipe bytes and single-audit behavior remain intact.
+
+This scoped native capability admits an unsampled complete prompt only. Pending
+or lost forecasts, crossed evidence, unreported prediction work and any prior
+cumulative sampling remain barriers, preserving one-origin statistical credit.
+Raw predictors and the cumulative streams used by the current operator command
+retain their existing refusals. No predictor lifetime, likelihood process,
+numerical allowance, revocation floor or effect key is renewed by restoration.
+
+Six new regressions cover original capture, guarded recovery, fresh forecast
+before sampling, identical original output, native helper plus human publication,
+full journal replay, old-recipe and pending/sampled-history causal refusals, and
+failed audit accounting. Fourteen Rust files passed assigned syntax checks and
+source review. The mandatory RCH runner is unavailable; compilation, runtime
+execution, rustfmt, Clippy, calibration and restart qualification remain pending.
+
 ## 2026-11-04: provision campaign guards and capture live learned checkpoints
 
 Single learned creation now accepts an independently selected campaign profile

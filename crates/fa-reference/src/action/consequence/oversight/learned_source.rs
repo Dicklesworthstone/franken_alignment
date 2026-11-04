@@ -79,6 +79,7 @@ pub struct ObservedLearnedGeneration {
     run: LearnedGeneration,
     shared: Rc<Shared>,
     text: Option<text::TextBinding>,
+    restart_forecast_audit: Option<Rc<crate::action::consequence::activation::tensor::kv::decoder::monitoring::restart::RestartAudit>>,
 }
 impl fmt::Debug for ObservedLearnedGeneration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -102,7 +103,7 @@ impl DecoderModel {
             evaluation_origin: config.evaluation_origin, generation: config.monitor_generation,
             availability: Cell::new(LearnedAvailability::Empty),
             prefix: RefCell::new(Prefix { tokens, audit: None }) });
-        Ok(ObservedLearnedGeneration { run, shared, text: None })
+        Ok(ObservedLearnedGeneration { run, shared, text: None, restart_forecast_audit: None })
     }
 }
 impl ObservedLearnedGeneration {
@@ -119,6 +120,7 @@ impl ObservedLearnedGeneration {
         if !self.run.status().is_active() || !matches!(self.shared.availability.get(),
             LearnedAvailability::Empty | LearnedAvailability::Ready) { return Err(Error::WrongState); }
         if expected_position != self.run.position() { return Err(Error::Stale); }
+        self.restart_forecast_audit = None;
         self.shared.availability.set(LearnedAvailability::InProgress);
         match self.advance_inner(expected_position) {
             Ok(event) => Ok(event),

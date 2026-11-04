@@ -33,4 +33,36 @@ impl FileLearnedConfig {
     pub fn follows_forecast_reset_successors(&self) -> bool {
         self.forecast_reset_successors
     }
+
+    /// Permit the original OWNED K/V predictor to observe a restored prompt
+    /// boundary before the first sampled token. Select after the required owned
+    /// predictor and with_forecast_reset_successors. Cumulative text streams and
+    /// raw residual predictors are not supported by this separate recipe.
+    ///
+    /// The original checkpoint audit is followed by a second complete audit of
+    /// the ACTUAL restored successor cache. Both audits have the requested limits
+    /// intersected with the original policy and are charged to reset usage. Only
+    /// the owned predictor can use that new source: ordinary source evidence stays
+    /// Empty until a new accepted token. No saved verdict or source is relabeled.
+    ///
+    /// Capture requires the exact original prompt boundary. Reset refuses ANY
+    /// historical sampling, pending/lost forecast or crossed likelihood process.
+    /// In particular, the same sampled outcome cannot earn statistical credit a
+    /// second time through reset. Predictor work, sequence and alpha never reset.
+    pub fn with_owned_forecast_restart_audit(mut self) -> Result<Self, Error> {
+        if self.owned_forecast_restart_audit { return Err(Error::Duplicate); }
+        if !self.forecast_reset_successors || self.owned_pre_output_forecast.is_none()
+            || self.text_stream_profile().is_some() { return Err(Error::Binding); }
+        let mut writer = Writer::new(MAX_CONFIG_BYTES);
+        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALKRFA\x01")?;
+        writer.blob(&self.bytes)?;
+        self.bytes = writer.finish().into();
+        self.owned_forecast_restart_audit = true;
+        Ok(self)
+    }
+
+    /// Immutable fresh-audit selection, not evidence or a predictor reset role.
+    pub fn requires_owned_forecast_restart_audit(&self) -> bool {
+        self.owned_forecast_restart_audit
+    }
 }

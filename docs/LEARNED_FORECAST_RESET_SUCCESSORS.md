@@ -75,6 +75,14 @@ It also does not rescue an unanswered forecast or permit sampling the same outpu
 again under a fresh budget. These refusals are necessary boundaries of this
 finite original continuation protocol.
 
+For the owned K/V predictor only, the separately selected
+[`with_owned_forecast_restart_audit`](OWNED_FORECAST_RESTART_AUDIT.md) wrapper
+adds a fresh audit of the actual restored successor cache. It permits the
+complete prompt boundary before any sampling, while preserving the pending,
+lost-coverage and sampled-history barriers described here. The ordinary
+observation still stays Empty; only that explicit predictor path can use the
+second audit before a newly accepted token.
+
 ## Regression coverage
 
 The public `forecast_reset_successors` harness uses the actual learned numerical

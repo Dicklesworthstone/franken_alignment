@@ -51,6 +51,10 @@ pub struct HostedLearnedResetReceipt {
     pub position: u64,
     pub sampled_draws: u64,
     pub restart: GenerationKvRestartReceipt,
+    /// Optional SECOND fresh audit of the actual restored successor cache.
+    /// Its presence follows the independently pinned owned-predictor recipe;
+    /// copies are historical evidence, never a live forecast source or permit.
+    pub restored_forecast_audit: Option<RestartAudit>,
 }
 
 /// Logical bounded work, not allocator memory or wall-clock isolation. At most
@@ -136,6 +140,12 @@ impl OversightBroker {
         let actor = host.run.capture_host_actor(host.profile)?;
         if &actor != self.delivery.controller().actor() { return Err(Error::Binding); }
         let original = host.run.original_generation();
+        if self.owned_learned_forecast_restart_audit_required()
+            && (original.position() != original.spec().prompt().len() as u64
+                || original.status() != GenerationStatus::Generating
+                || original.work().sampling_attempts != 0) {
+            return Err(Error::WrongState);
+        }
         let numerical = original.checkpoint_kv(DecoderRestoreBudget { cache_values: MAX_MODEL_KV_VALUES })?;
         // Fixed model/policy objects are shared. Charge retained logical state
         // including histories, logits and the original sampler representation.
@@ -167,6 +177,9 @@ impl OversightBroker {
     /// The destination begins without current proposal evidence. It must be an
     /// active checkpoint so a fresh accepted token can establish that evidence;
     /// a finished live continuation may still rewind to an earlier active pair.
+    /// An independently pinned owned-predictor restart-audit recipe instead
+    /// admits only the unsampled complete prompt checkpoint and produces a
+    /// separate fresh forecast-only audit of the actual restored cache.
     ///
     /// ```compile_fail,E0308
     /// use fa_reference::action::{Permit, consequence::oversight::learned_host::checkpoint::HostedLearnedCheckpointHandle};
@@ -186,6 +199,8 @@ impl OversightBroker {
     fn reset_hosted_learned_inner(&mut self, request: HostedLearnedResetRequest,
         first_incident_sequence: Option<u64>) -> Result<HostedLearnedResetReceipt, Error>
     {
+        let fresh_forecast_audit = self.owned_learned_forecast_restart_audit_required();
+        self.check_owned_learned_forecast_restart()?;
         if let Some(first) = first_incident_sequence {
             self.check_hosted_learned_stream_reset(&request.checkpoint, first)?;
         }
@@ -208,6 +223,9 @@ impl OversightBroker {
         let saved = host.recovery.checkpoints.get(&request.checkpoint.id).ok_or(Error::Missing)?;
         if saved.stream.is_some() != first_incident_sequence.is_some() { return Err(Error::Binding); }
         if !saved.numerical.status().is_active() { return Err(Error::WrongState); }
+        if fresh_forecast_audit && (saved.numerical.status() != GenerationStatus::Generating
+            || saved.numerical.position() != saved.numerical.spec().prompt().len() as u64
+            || saved.numerical.work().sampling_attempts != 0) { return Err(Error::Binding); }
         // A checkpoint ahead of the active logical timeline is not a rewind.
         generation_work(host.run.work(), saved.numerical.work(), subtract)?;
         telemetry(host.run.telemetry_work(), saved.numerical.telemetry_work(), subtract)?;
@@ -219,6 +237,9 @@ impl OversightBroker {
         if rows > saved.numerical.policy().monitor().budget().rows { return Err(Error::Limit); }
         let stream = host.run.observation().stream().checked_add(1).ok_or(Error::Overflow)?;
         let reserved = reservation(request.restart_budget.audit, saved.numerical.policy().allowance())?;
+        // Both immutable-source audits receive the SAME intersected per-audit
+        // allowance. Reserve both before either runs; failures never refund it.
+        let reserved = if fresh_forecast_audit { telemetry(reserved, reserved, add)? } else { reserved };
         let audit_total = telemetry(host.recovery.usage.reserved_audit, reserved, add)?;
         let cache_total = add(host.recovery.usage.reserved_cache_values, count(request.restart_budget.cache_values)?)?;
         let retired = generation_work(host.recovery.cumulative_work(host.run.work())?, saved.numerical.work(), subtract)?;
@@ -254,11 +275,18 @@ impl OversightBroker {
             host.recovery.usage.bytes_recaptured = recaptured;
             host.recovery.usage.staged_write_bytes = staged;
             generation.conserve_host_continuation_budget(host.run.original_generation())?;
-            let next = ObservedLearnedGeneration::from_host_restart(generation, &receipt, &host.run)?;
+            let mut next = ObservedLearnedGeneration::from_host_restart(generation, &receipt, &host.run)?;
+            let forecast_audit = if fresh_forecast_audit {
+                let audit = next.audit_restored_forecast(request.restart_budget.audit)?;
+                host.recovery.usage.completed_audit = telemetry(host.recovery.usage.completed_audit,
+                    audit_work(&audit)?, add)?;
+                if !audit.monitoring().complete_quiet() { return Err(Error::Incomplete); }
+                Some(audit)
+            } else { None };
             let actor = next.capture_host_actor(host.profile)?;
-            Ok::<_, Error>((next, actor, receipt))
+            Ok::<_, Error>((next, actor, receipt, forecast_audit))
         })();
-        let (next, actor, restart) = match prepared {
+        let (next, actor, restart, restored_forecast_audit) = match prepared {
             Ok(value) => value,
             Err(error) => { host.fault = Some(error); return Err(error); }
         };
@@ -298,7 +326,8 @@ impl OversightBroker {
         }
         Ok(HostedLearnedResetReceipt { control, actor_revision: self.actor_revision(), resumed_stream,
             position: self.learned_host.as_ref().expect("owned learned source").run.position(),
-            sampled_draws: self.learned_host.as_ref().expect("owned learned source").run.sampled_draws(), restart })
+            sampled_draws: self.learned_host.as_ref().expect("owned learned source").run.sampled_draws(),
+            restart, restored_forecast_audit })
     }
 }
 

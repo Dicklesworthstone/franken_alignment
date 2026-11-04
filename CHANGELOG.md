@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: rearm owned prediction at a restored prompt boundary
+
+- Add an explicitly bound native recipe that freshly audits the actual restored
+  successor cache before the first sampled token and feeds only the owned K/V
+  predictor; ordinary learned observations remain unavailable until new work.
+- Preserve original audit and add the second bounded reservation/completed cost;
+  bind both reports in the new recipe's reset witness without changing legacy
+  recipe bytes or witness behavior.
+- Keep pending/lost forecasts and all sampled histories ineligible; preserve
+  lifetime prediction and statistical accounting rather than repeat credit.
+- Add six complete-path and causal-negative regression functions. Syntax/source
+  review passed; RCH compilation and runtime tests remain unexecuted.
+
 ## 2026-11-04: provision campaign governance and live learned checkpoints
 
 - Add explicit first-image campaign provisioning to single learned creation,

@@ -213,6 +213,7 @@ impl Machine {
         &self,
         intent: &FileLearnedResetIntent,
     ) -> Result<(), Error> {
+        self.broker.check_owned_learned_forecast_restart()?;
         if !self.clock_ready {
             return Err(Error::Incomplete);
         }
@@ -425,7 +426,9 @@ impl Machine {
         result: &Result<HostedLearnedResetReceipt, Error>,
     ) -> Result<Vec<u8>, Error> {
         let mut w = Writer::new(MAX_WITNESS_BYTES);
-        w.raw(b"FALRST\0\x01")?;
+        let forecast_audit = self.learned_contract()
+            .is_some_and(|config| config.requires_owned_forecast_restart_audit());
+        w.raw(if forecast_audit { b"FALRST\0\x02" } else { b"FALRST\0\x01" })?;
         write_intent(&mut w, intent)?;
         self.write_learned_state(&mut w)?;
         self.write_learned_recovery_state(&mut w)?;
@@ -500,6 +503,22 @@ impl Machine {
                 w.count(audit.compression().encoded_bytes)?;
                 w.u64(audit.compression().work_units_reserved)?;
                 report(&mut w, audit.monitoring())?;
+                if forecast_audit {
+                    let fresh = receipt.restored_forecast_audit.as_ref().ok_or(Error::Incomplete)?;
+                    let monitoring = fresh.monitoring();
+                    if !monitoring.complete_quiet() || monitoring.first_position() != 0
+                        || monitoring.end_position() != restored.position
+                        || monitoring.source().descriptor().profile() != restored.source.profile()
+                        || monitoring.source().descriptor().layers().values().any(|layer| {
+                            layer.stream != restored.resumed_stream || layer.first_position != 0
+                                || layer.first_sequence != 1 || layer.token_count as u64 != restored.position
+                        }) { return Err(Error::Binding); }
+                    w.count(fresh.compression().encoded_bytes)?;
+                    w.u64(fresh.compression().work_units_reserved)?;
+                    report(&mut w, monitoring)?;
+                } else if receipt.restored_forecast_audit.is_some() {
+                    return Err(Error::Binding);
+                }
             }
         }
         Ok(w.finish())
