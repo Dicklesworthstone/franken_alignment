@@ -23,7 +23,8 @@ supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_P
 ```
 
 The optional invocation-wide selections are `--topology-profile PATH`,
-`--history-anchor INPUT` and `--retain-history-anchor NEW_OUTPUT`. Explicit
+`--history-anchor INPUT`, `--retain-history-anchor NEW_OUTPUT`,
+`--campaign-profile PATH` and `--checkpoint-before-generation PROFILE`. Explicit
 live recovery may additionally select `--credibility-activation CAPSULE`
 under the existing qualification contract. Recovery selection applies once,
 before entry one. Creation requires a fresh authority store; existing state
@@ -77,6 +78,58 @@ Only the first entry can select recovery floors, the history anchor, topology
 custody or checkpoint outputs. Secondary entries with those selections refuse
 before startup. Unknown fields, missing actor profiles, changed generation,
 duplicate identities and misplaced Finish also refuse during admission.
+
+## Functional creation, campaign guards and the first generation checkpoint
+
+Fresh resident creation now accepts an explicitly declared `functional_restart`
+CONFIG through the same scoped reader as single learned creation. Legacy
+`audit_only` creation remains available. No grade is inferred or upgraded, and
+`bit_exact` remains unsupported. The original first-image constructor binds the
+actual numerical model, cache and sampler; an advanced supplied actor state
+cannot substitute for that bootstrap.
+
+An invocation can install the original campaign guard before any generation:
+
+```text
+supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --campaign-profile /operator/campaign.json \
+  --checkpoint-before-generation /operator/first-checkpoint.json \
+  --retain-history-anchor /operator/final.anchor
+```
+
+The [campaign profile](LEARNED_CAMPAIGN_CREATION.md) selects the existing bounded
+case, input-byte and campaign inventory. All independently supplied recipe
+inventories must agree before this creation selection is applied. Only entry one
+holds the first-image creation selection; subsequent entries retain its exact
+expected inventory without installing another guard or acquiring governor
+authority. Every release still needs its own native or process review and
+independent human permit. The original numerical, predictor, terminal-recovery
+and publication allowances are not replenished.
+
+`--campaign-profile` is creation-only. A recovery invocation must select the
+exact existing inventory in every recipe's
+`fa.learned-recovery-policy/2` envelope. Recovery-only expectations cannot create
+campaign resources, and a later recipe cannot replace, omit or broaden an
+existing requirement.
+
+`--checkpoint-before-generation` selects one fresh checkpoint ID and exact
+position/draw count using the existing
+[live checkpoint profile](LEARNED_STREAM_RESET_OPERATOR.md). It applies only to
+the first Message served by this invocation. A fresh run can capture the complete
+prompt before its first draw; an explicitly continued plain stream can select
+its first new quiet boundary after the confirmed predecessor. This initial live
+capture selection requires a plain, nonpredictive stream. Required raw or owned
+predictors and topology-backed live capture retain their refusals.
+
+After durably capturing that boundary, the original generation loop services
+Stop, source and deadline checks before the next sampled intent. Later Messages
+and Finish do not capture again and cannot reuse the first checkpoint ID. A
+wrong boundary refuses before sampling instead of waiting for a later matching
+position. Selecting a capture grants neither reset authority nor a review key.
+The checkpoint retains its original audience: once a later message is confirmed,
+it cannot be used to rewind across that externally released prefix. Capturing a
+checkpoint also retains the original synchronous replay/serialization cost; this
+option does not introduce a new preemption or latency guarantee.
 
 The manifest is bounded to 64 KiB. All entries and their original independently
 selected assets are admitted before the first clock observation, socket bind
@@ -223,7 +276,17 @@ has no available worker; no compilation, runtime, Clippy or production
 qualification is claimed. Synthetic enforcement fixtures do not establish
 model quality or empirical forecast calibration.
 
+Six additional resident regression functions cover actual on-disk functional
+creation with a first-image campaign guard and prompt checkpoint, separate human
+approval/rejection at the second Message, cumulative raw and owned predictor
+history, exact independent campaign recovery, zero-draw wrong-cut refusal,
+first-entry-only selection, closed command/grade admission, and anchored
+after-message continuation with a checkpoint at its first new boundary. Their
+central RCH compilation and execution remain pending; authored assertions and
+syntax review are not qualification evidence.
+
 Implementation:
 [`learned/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs),
 [`sequence/profile.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs),
-[`tests/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence.rs).
+[`tests/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence.rs),
+[`tests/sequence/functional.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/functional.rs).

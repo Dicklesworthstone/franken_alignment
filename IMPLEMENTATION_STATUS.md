@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: create governed functional resident learned streams
+
+Resident learned creation now uses the same explicit functional-restart reader
+and original first-image numerical constructor as single learned creation. A
+resident invocation can install the original bounded campaign guard and retain
+its exact inventory through every Message and Finish. Only the first entry
+holds the creation selection; recovery-only expectations and later entries
+cannot install or broaden it. Raw and owned predictors keep their original
+cumulative work and likelihood lifetimes across the whole resident sequence.
+
+The existing live checkpoint profile can select the first Message boundary in
+a resident invocation, including its first new boundary after anchored message
+continuation. Capture is acknowledged before sampling, then the original loop
+services Stop, source and deadline checks. Subsequent entries cannot recapture
+or reuse that ID. This increment retains plain nonpredictive capture and exact
+confirmed-audience eligibility; it does not reset audience knowledge or budgets.
+
+Six new regressions cover actual functional CLI Message/Message/Finish,
+campaign guards, native helper and authenticated human review, human rejection,
+both predictor lifetimes, first-entry-only selection, wrong-cut zero-draw
+refusal and anchored continuation. The existing creation-boundary regression
+now admits a complete functional resident declaration before verifying that an
+existing store cannot be replaced. Five Rust files passed syntax and whitespace
+checks; source/API review found no concrete blocker. Required RCH compilation,
+formatting, Clippy, runtime execution and qualification remain pending.
+
 ## 2026-11-04: promote independently reviewed learned policy campaigns
 
 The operator now connects a complete original policy-replay report to an

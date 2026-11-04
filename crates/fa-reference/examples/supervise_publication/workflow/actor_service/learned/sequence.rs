@@ -5,7 +5,8 @@
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
-    anchors, topology, prediction, identity, ingress, process, request_preflight, execute_request};
+    anchors, campaigns, checkpoint_on_generation, topology, prediction, identity,
+    ingress, process, request_preflight, execute_request};
 use super::super::Profile;
 use fa_reference::action::{ActionState, consequence::delivery::{EndpointOutcome,
     persistent::requests::FileRequestDisposition}};
@@ -13,7 +14,7 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT]";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT]";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -33,20 +34,37 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 
 pub(super) fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (args, anchors) = anchors::take_options(args)?;
+    let (args, checkpoint_path) = checkpoint_on_generation::take_option(args)?;
+    let (args, campaign_path) = campaigns::take_option(&args)?;
+    let (args, anchors) = anchors::take_options(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
     let (continuing, after) = options(&args)?;
     if credibility.is_some() && !continuing {
         return Err("sequence credibility activation requires explicit live recovery".into());
     }
+    if campaign_path.is_some() && continuing {
+        return Err("--campaign-profile is only for new learned histories".into());
+    }
     let config = if continuing {
         Config::read_learned_recovery(Path::new(&args[1]))?
     } else {
-        Config::read(Path::new(&args[1]))?
+        Config::read_learned_generation(Path::new(&args[1]))?
     };
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     let mut entries = profile::load(Path::new(&args[2]), &config)?;
     validate(&config, &entries, &peers)?;
+    // First compare every independently supplied recovery inventory. A creation
+    // selection cannot erase a different later requirement. Then install ONE
+    // original first-image guard and carry its expected inventory through the
+    // resident entries; only entry one holds the creation selection.
+    campaigns::admit(&config, &mut entries[0].loaded, campaign_path.as_deref(), continuing)?;
+    if let Some(selected) = entries[0].loaded.creation_campaigns {
+        for entry in &mut entries[1..] {
+            entry.loaded.expected_campaigns = Some(selected);
+        }
+    }
+    entries[0].loaded.checkpoint_on_generation = checkpoint_path
+        .map(checkpoint_on_generation::Selection::read).transpose()?;
     anchors.admit(&config, &mut entries[0].loaded, continuing)?;
     topology::admit(&config, &mut entries[0].loaded, topology_path.as_deref(),
         if continuing { topology::Mode::Live } else { topology::Mode::Create })?;
@@ -106,6 +124,9 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
         if loaded.expected_campaigns != original.expected_campaigns {
             return Err("every sequence entry must retain the independently selected campaign guard".into());
         }
+        if let Some(selected) = loaded.checkpoint_on_generation {
+            selected.check(config, loaded)?;
+        }
         let same_credential = match (&original.credential, &loaded.credential) {
             (None, None) => true,
             (Some(original), Some(selected)) => original.same_resident_selection(selected),
@@ -137,8 +158,9 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
         }
         if index != 0 && (loaded.recovery_anchor.is_some() || loaded.anchor_output.is_some()
             || loaded.topology.is_some() || loaded.floor.journal_revision != 0
-            || loaded.floor.control_sequence != 0 || loaded.floor.authority_epoch != 0) {
-            return Err("only the first sequence entry selects recovery, topology and retained outputs".into());
+            || loaded.floor.control_sequence != 0 || loaded.floor.authority_epoch != 0
+            || loaded.creation_campaigns.is_some() || loaded.checkpoint_on_generation.is_some()) {
+            return Err("only the first sequence entry selects recovery, topology, creation guards, checkpoint capture and retained outputs".into());
         }
         for other in entries {
             if entry.actor.socket == peers.socket(other.loaded.request)
@@ -210,6 +232,12 @@ where F: FnMut() -> ElapsedTick {
     if !continuing && (after_message.is_some() || credibility.is_some()) {
         return Err("sequence predecessor and credibility activation require explicit live recovery".into());
     }
+    if continuing && entries[0].loaded.creation_campaigns.is_some() {
+        return Err("resident recovery cannot install a creation campaign guard".into());
+    }
+    if !continuing {
+        super::recipe::check_creation(&config, &entries[0].loaded)?;
+    }
     if let Some(after) = after_message {
         super::continuation::check_ids(entries[0].loaded.request, after)?;
     }
@@ -229,6 +257,9 @@ where F: FnMut() -> ElapsedTick {
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
     let topology::Started { custody: (host, reviewer, observer, identity_observer), source, output } =
         topology::start(&config, &first.loaded, continuing, &mut control, &deadline, &mut time)?;
+    if let Some(selected) = first.loaded.checkpoint_on_generation {
+        selected.check_owner(&host)?;
+    }
     let mut initial_deadline = Some(deadline);
     let mut prediction = observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
     let mut identity = identity_observer.map(identity::Session::new);

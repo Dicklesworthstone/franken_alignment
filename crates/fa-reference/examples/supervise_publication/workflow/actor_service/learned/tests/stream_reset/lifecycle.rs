@@ -242,7 +242,7 @@ fn completed_functional_history_accepts_terminal_admission_without_current_evide
 }
 
 #[test]
-fn learned_creation_cannot_replace_history_and_generic_resident_profiles_remain_audit_only() {
+fn learned_and_resident_creation_cannot_replace_history_and_generic_profiles_remain_audit_only() {
     let root = Root::new();
     let (case, arguments, _) = completed(&root);
     let (peer, _) = peer_file(&root, &case.config);
@@ -254,13 +254,38 @@ fn learned_creation_cannot_replace_history_and_generic_resident_profiles_remain_
     // owner, but a create invocation can never replace this existing history.
     assert!(super::super::super::command_with_clock(&create, None, || ElapsedTick(1001)).is_err());
     assert_eq!(disk(&case), before);
+    // A fully admitted resident declaration now accepts the functional grade,
+    // but must reach the same create-new storage refusal instead of reopening
+    // this completed reset or replacing its original canonical bytes.
+    let next = fresh_request(&root, &case);
+    let mut entries = Vec::new();
+    for (request, recipe, release) in [(1, &case.recipe, "message"), (2, &next, "finish")] {
+        let mut actor = super::super::peer_intake::actor_profile(&root, &case.config, request);
+        actor.socket = root.0.join(format!("peers/resident-{request}.sock"));
+        let scope = actor.scope;
+        let audience = format!(r#"{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}"#,
+            scope.tenant, scope.principal, scope.run, scope.branch, scope.authority);
+        let identity = format!(r#"{{"uid":{},"gid":{},"pid":{}}}"#,
+            actor.actor.uid(), actor.actor.gid(), actor.actor.pid().unwrap());
+        let path = root.0.join(format!("resident-actor-{request}.json"));
+        fs::write(&path, format!(r#"{{"schema":"fa.actor-service/1","clock":"unix_milliseconds","request":{request},"scope":{audience},"socket":"{}","supervisor":{identity},"actor":{identity},"candidate_limit":4,"connection_limit":4,"exchange_limit":4096,"runtime_ms":60000,"poll_ms":1,"reply_ms":500}}"#,
+            actor.socket.display())).unwrap();
+        entries.push(format!(r#"{{"recipe":"{}","actor_profile":"{}","release":"{release}"}}"#,
+            recipe.display(), path.display()));
+    }
+    let sequence = root.0.join("resident-sequence.json");
+    fs::write(&sequence, format!(r#"{{"schema":"fa.learned-publication-sequence/1","entries":[{}]}}"#,
+        entries.join(","))).unwrap();
     let resident = vec!["serve-learned-generated".into(), arguments[1].clone(),
-        root.0.join("absent-sequence.json").display().to_string(), peer.display().to_string()];
+        sequence.display().to_string(), peer.display().to_string()];
+    let clocks = Cell::new(0);
     let error = super::super::super::sequence::command_with_clock(
-        &resident, None, || ElapsedTick(1001),
+        &resident, None, || { clocks.set(clocks.get() + 1); ElapsedTick(1001) },
     ).unwrap_err();
-    assert!(error.contains("audit_only"), "{error}");
+    assert!(clocks.get() > 0, "the complete functional declaration passed admission");
+    assert!(error.contains("AlreadyExists"), "{error}");
     assert_eq!(disk(&case), before);
+    assert_eq!(fs::read_dir(root.0.join("peers")).unwrap().count(), 0);
 }
 
 #[test]

@@ -11,7 +11,7 @@ use fa_reference::Error;
 use std::path::Path;
 
 const OPTION: &str = "--checkpoint-before-generation";
-const USAGE: &str = "--checkpoint-before-generation PROFILE requires a single live learned Message command and a fresh checkpoint ID";
+const USAGE: &str = "--checkpoint-before-generation PROFILE requires a live learned Message command and a fresh checkpoint ID; a resident sequence captures its first Message only";
 const MAX_BYTES: usize = 4096;
 
 /// A separately selected exact numerical boundary. Native capture binds the
@@ -29,7 +29,9 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>
     let positions = args.iter().enumerate().filter(|(_, arg)| *arg == OPTION)
         .map(|(index, _)| index).collect::<Vec<_>>();
     if positions.is_empty() { return Ok((args.to_vec(), None)); }
-    if positions.len() != 1 || args.len() < 6 || args[0] != "create-learned-generated"
+    let single = args.first().map(String::as_str) == Some("create-learned-generated");
+    let resident = args.first().map(String::as_str) == Some("serve-learned-generated");
+    if positions.len() != 1 || args.len() < 6 || (!single && !resident)
         || args[3].starts_with("--") || positions[0] < 4 { return Err(USAGE.into()); }
     let at = positions[0];
     let path = args.get(at + 1).ok_or(USAGE)?;
@@ -38,8 +40,12 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>
     while index < args.len() {
         match args[index].as_str() {
             "--continue-generation" => index += 1,
-            "--after-message" | "--actor-profile" | "--precheck-profile"
-                | "--history-anchor" | "--retain-history-anchor" | "--topology-profile" | "--campaign-profile"
+            "--actor-profile" | "--precheck-profile" if single => {
+                let value = args.get(index + 1).ok_or(USAGE)?;
+                if value.is_empty() || value.starts_with("--") { return Err(USAGE.into()); }
+                index += 2;
+            }
+            "--after-message" | "--history-anchor" | "--retain-history-anchor" | "--topology-profile" | "--campaign-profile"
                 | OPTION => {
                 let value = args.get(index + 1).ok_or(USAGE)?;
                 if value.is_empty() || value.starts_with("--") { return Err(USAGE.into()); }

@@ -24,6 +24,8 @@ use fa_reference::action::consequence::oversight::{
 use std::{collections::BTreeSet, io::Write, os::unix::net::UnixStream,
     path::{Path, PathBuf}, thread::{self, JoinHandle}};
 
+#[path = "sequence/functional.rs"] mod functional;
+
 const DUE: [ElapsedTick; 3] = [ElapsedTick(50_000), ElapsedTick(49_000), ElapsedTick(48_000)];
 
 fn selected(root: &Root, mode: Option<bool>, predictions: Option<usize>)

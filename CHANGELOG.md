@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: create governed functional resident learned streams
+
+- Connect resident creation to explicit functional-restart bootstrap, bounded
+  campaign provisioning and one selected first-Message checkpoint boundary.
+- Preserve one original numerical/predictor lifetime, every independent native
+  and human review, exact recovery inventory and confirmed audience across the
+  finite Message/Message/Finish sequence; later entries cannot add guards or
+  checkpoint selections.
+- Add six regression functions and retain the existing-store causal refusal
+  with a complete valid resident declaration. Source, syntax and whitespace
+  checks passed; required RCH execution and production qualification are pending.
+
 ## 2026-11-04: promote complete independently reviewed learned policy campaigns
 
 - Add a separate explicit governor command that binds the original candidate,
