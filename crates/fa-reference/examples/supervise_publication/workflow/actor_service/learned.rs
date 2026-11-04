@@ -15,6 +15,7 @@
 #[path = "learned/review.rs"] mod review;
 #[path = "learned/process.rs"] mod process;
 #[path = "learned/ingress.rs"] mod ingress;
+#[path = "learned/precheck.rs"] mod precheck;
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
@@ -49,7 +50,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
@@ -68,6 +69,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    // An optional disclosure owns the complete live grammar before another
+    // mode can consume it. Without the option the original argv is unchanged.
+    let (args, precheck_path) = precheck::take_option(args)?;
+    let args = args.as_slice();
     // These independent historical and maintenance modes own the complete argv.
     // No live option stripper may remove an incompatible mode or output first.
     if args.iter().any(|arg| arg == "--recover-stopped-stream-reset") {
@@ -145,13 +150,17 @@ where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     let actor = actor_path.map(super::Profile::read).transpose()?;
     if let Some(actor) = actor.as_ref() { actor.check_host(&config)?; }
+    let precheck = precheck_path.map(precheck::Settings::read).transpose()?;
+    if let Some(settings) = precheck.as_ref() {
+        precheck::check(settings, &config, actor.as_ref(), &peers)?;
+    }
     let mut loaded = recipe::load(Path::new(&args[2]), &config, true)?;
     anchors.admit(&config, &mut loaded, live_continuation)?;
     topology::admit(&config, &mut loaded, topology_path.as_deref(),
         if live_continuation { topology::Mode::Live } else { topology::Mode::Create })?;
     let result = match actor.as_ref() {
-        Some(actor) => run_with_actor(config, loaded, &peers, live_continuation,
-            finishing, after_message, credibility, Some(actor), time)?,
+        Some(actor) => run_with_actor_precheck(config, loaded, &peers, live_continuation,
+            finishing, after_message, credibility, Some(actor), precheck.as_ref(), time)?,
         None => run_qualified(config, loaded, &peers, live_continuation,
             finishing, after_message, credibility, time)?,
     };
@@ -203,15 +212,25 @@ where F: FnMut() -> ElapsedTick {
     run_with_actor(config, loaded, peers, continuing, finishing, after_message, credibility, None, time)
 }
 
-fn run_with_actor<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+fn run_with_actor<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
     finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
-    actor: Option<&super::Profile>, mut time: F) -> Result<RunResult, String>
+    actor: Option<&super::Profile>, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_actor_precheck(config, loaded, peers, continuing, finishing, after_message,
+        credibility, actor, None, time)
+}
+
+fn run_with_actor_precheck<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
+    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>, mut time: F)
+    -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     if credibility.is_some() && !continuing {
         return Err("credibility activation requires explicit learned continuation or finish".into());
     }
     peers.check_host(&config)?;
     if let Some(actor) = actor { ingress::check(&config, &loaded, peers, actor)?; }
+    if let Some(settings) = precheck { precheck::check(settings, &config, actor, peers)?; }
     if let Some(after) = finishing { finish::check_ids(loaded.request, after)?; }
     if let Some(after) = after_message {
         continuation::check_ids(loaded.request, after)?;
@@ -244,6 +263,9 @@ where F: FnMut() -> ElapsedTick {
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
     let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
+    if let (Some(intake), Some(settings)) = (&mut intake, precheck) {
+        intake.select_precheck(settings, peers);
+    }
     let mut driver = FileSupervisedDriver::new(supervisor);
     topology::attach(&mut driver, topology_source)?;
     let mut wire = ActorWire::new(port);
@@ -344,6 +366,7 @@ where F: FnMut() -> ElapsedTick {
             if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
             topology::certify(&mut driver, deadline, time)?;
         }
+        if let Some(intake) = intake.as_ref() { intake.check_precheck_epoch(&driver)?; }
         let release = if let Some(after) = finishing {
             if !finish::prepare(&mut driver, reviewer, config, loaded, after,
                 control, deadline, time)? { return Ok(false); }

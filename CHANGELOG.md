@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-04: precheck actual learned releases through the actor service
+
+- Add a separate native learned-release disclosure that evaluates the original
+  cumulative frame and charge, while retaining raw-proposal refusal.
+- Serve authenticated bounded exact queries after generation/Finish and before
+  actor admission; preserve source reacquisition, native reviews and human keys.
+- Retire on owner mutation, Stop, expiry or exhausted work; reject unsupported
+  cached/full profiles and incompatible operator modes without fallback.
+- Add nine causal regression functions; syntax/whitespace checks passed, while
+  required RCH compilation and runtime validation remain unavailable.
+
 ## 2026-11-04: provision restart-capable native learned histories
 
 - Allow explicit functional_restart metadata in the single learned creation

@@ -53,6 +53,15 @@ loader and the original decoder, indexed reader and static adapter merger.
 
 ## Commands and ordinary operation
 
+Single live learned actor releases can select an authenticated exact-policy
+precheck endpoint with `--actor-profile ACTOR_PROFILE --precheck-profile
+PRECHECK_PROFILE`. It becomes available after generation and before Submit,
+evaluates the original full cumulative action, and retires before review or on
+Stop, expiry or owner mutation. A pass still requires fresh source admission,
+native helper review and the independent human key. Only the uncached v1 exact
+profile is supported for learned releases; see [the complete service contract
+and actor protocol](LIVE_ACTOR_PRECHECK.md#learned-actor-releases).
+
 For several independently selected releases in one invocation,
 [`serve-learned-generated`](RESIDENT_LEARNED_PUBLICATION.md) retains one original
 owner through 2..=16 Messages and an optional final Finish. It preserves the

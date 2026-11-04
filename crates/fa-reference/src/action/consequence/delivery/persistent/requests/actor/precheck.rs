@@ -10,6 +10,7 @@ use crate::Error;
 use std::{cell::Cell, fmt, rc::{Rc, Weak}};
 
 pub mod cache;
+mod learned;
 pub const MAX_PRECHECK_QUERIES: usize = 128;
 
 /// Only exact constraints at a disclosed cut are checked. Both outcomes still
@@ -47,6 +48,7 @@ struct Disclosure {
     remaining: Cell<usize>,
     projection: PrecheckProjection,
     cache: Option<cache::Binding>,
+    learned: Option<learned::Release>,
 }
 
 /// Keep this with the supervisor. Dropping or consuming it revokes ALL copies
@@ -127,7 +129,8 @@ impl FileActorSupervisor<FileOversight> {
                 owner.host.file_source_status().ok_or(Error::WrongState)?.policy)),
             None => None,
         };
-        let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache });
+        let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache,
+            learned: None });
         let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner), disclosure: Rc::downgrade(&grant) };
         Ok((port, FilePrecheckDisclosure { disclosure: grant }))
     }
@@ -148,18 +151,21 @@ impl FileActorPrecheckPort {
             if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
                 return Err(ActorError::Capacity);
             }
-            let action = FrozenAction::freeze(ActionSpec { version: VERSION, scope: projection.scope,
-                target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),
-                policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline, units: proposal.units })
-                .map_err(|_| ActorError::MalformedProposal)?;
+            let spec = match &grant.learned {
+                Some(release) => release.action(proposal)?,
+                None => ActionSpec { version: VERSION, scope: projection.scope,
+                    target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),
+                    policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline, units: proposal.units },
+            };
+            let action = FrozenAction::freeze(spec).map_err(|_| ActorError::MalformedProposal)?;
             if proposal.expected_policy_epoch != projection.epoch {
                 return Ok(Knowledge::Stale { generation: proposal.expected_policy_epoch, current: projection.epoch });
             }
             // These CURRENT grant screens always precede the optional cache.
             // The cache stores only policy evaluation, never the entire pass.
-            let denied = projection.stopped || proposal.target != projection.target
-                || projection.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(proposal.target))
-                || projection.now >= proposal.deadline || proposal.units > projection.available;
+            let denied = projection.stopped || action.spec().target != Some(projection.target)
+                || projection.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(projection.target))
+                || projection.now >= action.spec().deadline || action.spec().units > projection.available;
             let value = if denied { FilePrecheckOutcome::DeniedByPolicy } else {
                 let evaluated = match &grant.cache {
                     Some(cache) => cache.evaluate(projection, &action),

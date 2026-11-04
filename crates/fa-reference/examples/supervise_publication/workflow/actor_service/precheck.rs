@@ -7,9 +7,10 @@ pub(super) use profile::Settings;
 #[path = "precheck/client.rs"]
 pub(super) mod client;
 
-use super::{BoundSocket, Config, Deadline, Duration, ElapsedTick, FileSupervisedDriver,
+use super::{BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
     Instant, PeerProfile, Profile, debug, io, plus};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FilePrecheckDisclosure;
+use fa_reference::action::consequence::delivery::persistent::requests::actor::LearnedTextRelease;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
     FilePrecheckPeerSession, FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES,
 };
@@ -50,6 +51,22 @@ pub(super) struct Service {
     retirement: Option<Retirement>,
 }
 
+/// The selected learned-release port has no raw-policy or cache fallback. Its
+/// query evaluates the original cumulative frame through the native builder.
+pub(super) fn check_learned(settings: &Settings) -> Result<(), String> {
+    if settings.cache.is_some() || settings.full_policy {
+        return Err("learned release precheck requires the explicit v1 exact-predicate profile".into());
+    }
+    Ok(())
+}
+
+pub(super) fn check_owner_epoch(settings: &Settings, host: &FileOversight) -> Result<(), String> {
+    if host.inspect().control.ledger.epoch != settings.expected_policy_epoch {
+        return Err("precheck expected policy epoch does not match the original owner".into());
+    }
+    Ok(())
+}
+
 impl Service {
     /// One source/time bootstrap, one native grant, one finite peer session.
     /// Call only for a new selected ordinary request after independent stop has
@@ -58,12 +75,27 @@ impl Service {
         config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F)
         -> Result<Self, String>
     where F: FnMut() -> ElapsedTick {
+        Self::start_selected(settings, actor, reviewer, config, driver, deadline, time, None)
+    }
+
+    /// Start after original learned generation/Finish preparation and before its
+    /// selected actor admission. The separate Stop service must already be live.
+    pub(super) fn start_learned<F>(settings: &Settings, actor: &Profile, reviewer: &PeerProfile,
+        config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F,
+        release: LearnedTextRelease) -> Result<Self, String>
+    where F: FnMut() -> ElapsedTick {
+        check_learned(settings)?;
+        Self::start_selected(settings, actor, reviewer, config, driver, deadline, time, Some(release))
+    }
+
+    fn start_selected<F>(settings: &Settings, actor: &Profile, reviewer: &PeerProfile,
+        config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F,
+        learned: Option<LearnedTextRelease>) -> Result<Self, String>
+    where F: FnMut() -> ElapsedTick {
         settings.check_host(config, actor, reviewer)?;
         {
             let host = driver.supervisor().host().map_err(debug)?;
-            if host.inspect().control.ledger.epoch != settings.expected_policy_epoch {
-                return Err("precheck expected policy epoch does not match the original owner".into());
-            }
+            check_owner_epoch(settings, &host)?;
         }
         let started = Instant::now();
         let runtime_ms = settings.runtime_ms.min(actor.runtime_ms);
@@ -98,7 +130,12 @@ impl Service {
         // No request or reconnect can change disclosure or replenish work.
         let cache = settings.cache.map(|limits|
             driver.supervisor().precheck_cache(limits).map_err(debug)).transpose()?;
-        let (wire, disclosure) = if settings.full_policy {
+        let (wire, disclosure) = if let Some(release) = learned {
+            let (port, disclosure) = driver.supervisor().disclose_learned_text_stream_precheck(
+                revision, settings.disclosure_id, settings.query_limit, actor.request,
+                release, deadline.logical).map_err(debug)?;
+            (FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?, disclosure)
+        } else if settings.full_policy {
             let (port, disclosure) = driver.supervisor().disclose_full_precheck(
                 revision, settings.disclosure_id, settings.query_limit, cache.as_ref()).map_err(debug)?;
             (FilePrecheckWire::with_policy(port, settings.exchange_limit).map_err(debug)?, disclosure)

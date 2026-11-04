@@ -28,6 +28,16 @@ accepts actor-supplied scope, witnesses, source data, time or a policy. It retur
 `ActorBasis`. Existing actor observations and wire formats keep `ActorBasis` as
 the default generic parameter and retain their previous variants and meaning.
 
+Learned stream owners continue to reject that raw-proposal method. Their
+supervisor can instead call `disclose_learned_text_stream_precheck(revision,
+disclosure, queries, request, release, latest_deadline)` after original
+generation or Finish preparation. This grant freezes the original native
+cumulative release action and accepts only its canonical actor intent, with the
+independently selected current policy epoch. It evaluates the real frame,
+target and full charge without disclosing output bytes or granting submission
+authority. Every query and revocation rule below still applies. The uncached
+Linux service integration is documented in [live prechecks](LIVE_ACTOR_PRECHECK.md#learned-actor-releases).
+
 The capability is also available through a separate bounded byte adapter,
 `requests::actor::precheck_wire::FilePrecheckWire`. Existing Submit/Poll/Cancel
 commands and process transports do not silently gain policy access. An

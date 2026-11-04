@@ -77,7 +77,8 @@ impl Bound {
         let selected = LearnedStreamAdmission::new(self.profile.request, release, deadline).map_err(debug)?;
         let session = PeerSession::new(self.profile.actor, ActorWire::new(port),
             self.profile.channels(), self.profile.connections).map_err(debug)?;
-        Ok(Intake { profile: self.profile, socket: self.socket, session, selected, candidates: 0 })
+        Ok(Intake { profile: self.profile, socket: self.socket, session, selected, candidates: 0,
+            release, precheck: None })
     }
 }
 
@@ -87,8 +88,28 @@ pub(super) struct Intake {
     session: PeerSession<FileLearnedTextStreamActorPort>,
     selected: LearnedStreamAdmission,
     candidates: u64,
+    release: LearnedTextRelease,
+    precheck: Option<super::precheck::Selection>,
 }
 impl Intake {
+    pub(super) fn select_precheck(&mut self, settings: &super::precheck::Settings,
+        reviewer: &PeerProfile)
+    {
+        self.precheck = Some(super::precheck::Selection {
+            settings: settings.clone(), reviewer: reviewer.clone(),
+        });
+    }
+
+    /// Qualification may advance authority. Check its actual acknowledged epoch
+    /// before paying for generation; bootstrap checks it again at the final cut.
+    pub(super) fn check_precheck_epoch(&self, driver: &FileSupervisedDriver) -> Result<(), String> {
+        if let Some(selected) = &self.precheck {
+            let host = driver.supervisor().host().map_err(debug)?;
+            super::precheck::check_owner_epoch(&selected.settings, &host)?;
+        }
+        Ok(())
+    }
+
     fn accept(&mut self) -> Result<(), String> {
         if self.session.status().active.is_some() { return Ok(()); }
         match self.socket.listener.accept() {
@@ -118,9 +139,19 @@ impl Intake {
         reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F)
         -> Result<bool, String>
     where F: FnMut() -> ElapsedTick {
-        loop {
+        let mut precheck = None;
+        if let Some(selected) = self.precheck.take() {
+            // This one disclosure begins only after completed generation or
+            // explicit Finish preparation. Stop wins before its source capture.
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+            precheck = Some(super::precheck::Service::start_learned(&selected.settings,
+                &self.profile, &selected.reviewer, config, driver, deadline, time, self.release)?);
+        }
+        let result = (|| loop {
+            deadline.check(time())?;
+            if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+            if let Some(service) = &mut precheck { service.checkpoint(driver, time()); }
             self.accept()?;
             deadline.check(time())?;
             if self.session.status().active.is_some() {
@@ -136,7 +167,11 @@ impl Intake {
             }
             deadline.check(time())?;
             crate::workflow::pause(self.profile.poll_ms.min(50));
-        }
+        })();
+        // No query can cross into review or acquire a refreshed grant after
+        // source-aware Submit, a refusal that changed the owner, Stop or expiry.
+        if let Some(service) = &mut precheck { service.retire(); }
+        result
     }
 
     /// Drive only the original authenticated observation transport. A
