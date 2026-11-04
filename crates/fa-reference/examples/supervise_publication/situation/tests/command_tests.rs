@@ -28,7 +28,9 @@ fn live_owner_can_be_inspected_without_source_helper_or_recovery_work() {
     let mut fixture = Fixture::new(); fixture.clock();
     fixture.propose(1, false); fixture.propose(3, true); fixture.propose(2, true);
     let files = fixture.files(); let state = fixture.host.inspect(); let mut out = Vec::new();
-    command(&fixture.args(1), &mut out).unwrap(); let pages = lines(&out);
+    // Exercise the executable dispatcher, not only the previously disconnected
+    // module. The live writer lock also proves this remains a historical read.
+    crate::command_with_output(fixture.args(1), &mut out).unwrap(); let pages = lines(&out);
     assert_eq!(pages.len(), 3);
     for (index, page) in pages.iter().enumerate() {
         assert_eq!(text(page, "schema"), "fa.publication-situation/1");

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-04: restore operator reachability and guarded learned recovery
+
+- Connect situation reports, policy replay, actor-only prechecks and mixed learned
+  fleet shutdown to the executable, preserving complete role-specific arguments.
+- Register learned diagnosis, policy replay, credential maintenance, unknown
+  abandonment and fleet modules; keep incompatible live flags visible to each
+  command's original closed parser.
+- Connect live learned recovery to authenticated Stop before Fence/role issue;
+  preflight credential changes on Ready and finalize abandonment without a live
+  owner.
+- Route positive historical/precheck regressions through the real dispatcher and
+  add mixed-fleet create/resume plus invalid-flag coverage.
+- Changed Rust files parse with rustfmt. Cargo tests and canonical qualification
+  remain pending because the mandatory RCH runner is unavailable.
+
 ## 2026-10-30: add canonical typed FA addresses to publication situations
 
 - Add a dependency-free parser/printer for the normative

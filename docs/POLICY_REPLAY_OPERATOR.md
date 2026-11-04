@@ -1,5 +1,10 @@
 # Read-only policy replay operator
 
+The executable registers ordinary `policy-replay` and learned
+`create-learned-generated ... --policy-replay` before shared live-service option
+processing. Each receives the complete original argument list, so incompatible
+activation, generation, or terminal modes remain explicit refusals.
+
 `supervise_publication policy-replay CONFIG CANDIDATE_JSON` compares a candidate
 exact policy with every retained proposal and applied review belonging to the
 effective policy in one canonical publication journal image. It includes exact

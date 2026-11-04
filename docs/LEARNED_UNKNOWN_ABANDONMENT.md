@@ -1,5 +1,10 @@
 # Explicit abandonment after learned recovery
 
+The executable selects learned abandonment before live options are removed.
+Its recovery driver advances the original sealed abandonment cursor through
+bounded events and the final Ready checkpoint, then invokes the native terminal
+finalizer. It never recovers a live owner or re-executes an external effect.
+
 The original cooperative learned recovery cursors can now complete an explicit
 `Unknown -> IrrecoverablyUnknown` disposition without recovering a live owner.
 This is a durable statement that the existing charged obligation will remain

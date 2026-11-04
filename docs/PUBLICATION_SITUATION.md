@@ -1,5 +1,10 @@
 # Replay-verified publication situations
 
+The executable registers `situation` before shared live-service options.
+Ordinary, independently bound learned, and fleet views therefore reach the same
+historical parser with the complete argument list. Incompatible flags remain
+visible and cannot select a live owner or be silently discarded.
+
 This scoped FA-136 increment serves plan §17.8 and FI-A02/FI-A18: an operator can
 identify pending work and unresolved publication liabilities from one original
 journal cut, without opening a recovered owner or performing any effect. It is

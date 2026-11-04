@@ -243,7 +243,10 @@ fn operator_reports_all_original_proposals_reviews_and_exact_relaxations_read_on
     assert!(!root.0.join("helpers").exists());
     // A live writer still holds the owner lock, so acquiring/recovering a writer
     // or starting helpers instead of the native historical reader would fail.
-    let output = run(&case).unwrap();
+    // The actual executable must reach this historical reader while the live
+    // owner retains its lock. No recovery or shared live option path is valid.
+    let mut output = Vec::new();
+    crate::command_with_output(args(&case), &mut output).unwrap();
     let document = json(&output);
     let report = value(&document);
     assert_eq!(

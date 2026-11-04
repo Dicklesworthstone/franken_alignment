@@ -21,6 +21,9 @@
 #[path = "learned/identity.rs"] mod identity;
 #[path = "learned/checked.rs"] mod checked;
 #[path = "learned/credential.rs"] mod credential;
+#[path = "learned/credential_lifecycle.rs"] mod credential_lifecycle;
+#[path = "learned/abandonment.rs"] mod abandonment;
+#[path = "learned/fleet.rs"] mod fleet;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
 #[path = "learned/sequence.rs"] mod sequence;
@@ -47,6 +50,11 @@ use std::{io::Write, path::Path, rc::Rc};
 
 const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
 
+/// The shared fleet coordinator owns the complete create/recover/resume grammar.
+pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    fleet::command(args, output)
+}
+
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
 }
@@ -59,6 +67,20 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    // These independent historical and maintenance modes own the complete argv.
+    // No live option stripper may remove an incompatible mode or output first.
+    if args.iter().any(|arg| arg == "--policy-replay") {
+        return recovery::policy_replay::command(args, credibility, &mut std::io::stdout().lock());
+    }
+    if args.iter().any(|arg| arg == "--explain-proposal") {
+        return recovery::diagnosis::command(args, credibility, &mut std::io::stdout().lock());
+    }
+    if args.iter().any(|arg| arg == "--abandon-unknown") {
+        return abandonment::command(args, credibility);
+    }
+    if args.iter().any(|arg| credential_lifecycle::is_option(arg)) {
+        return credential_lifecycle::command(args, credibility);
+    }
     if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
         return recovery::readonly::command(args, credibility, &mut std::io::stdout().lock());
     }
@@ -66,13 +88,17 @@ where F: FnMut() -> ElapsedTick {
         if credibility.is_some() { return Err("historical audit cannot activate credibility".into()); }
         return audit::command(args, &mut std::io::stdout().lock());
     }
-    let (args, actor_path) = ingress::take_option(args)?;
-    let (args, anchors) = anchors::take_options(&args)?;
     if args.iter().any(|arg| stopped::is_option(arg)) {
-        // Explicit offline Stop never enters live continuation, consumes a
-        // credibility capsule or claims a reviewer/stop transport endpoint.
+        // Offline Stop owns the original argv too: a live actor option cannot
+        // be stripped into a valid terminal command.
+        if credibility.is_some() {
+            return Err("offline learned Stop cannot activate credibility".into());
+        }
+        let (args, anchors) = anchors::take_options(args)?;
         return stopped::command(&args, anchors);
     }
+    let (args, actor_path) = ingress::take_option(args)?;
+    let (args, anchors) = anchors::take_options(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
     let (args, after_message) = continuation::take_option(&args)?;
     let (args, finishing) = finish::take_option(args)?;

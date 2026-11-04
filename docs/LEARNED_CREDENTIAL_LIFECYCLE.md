@@ -1,5 +1,11 @@
 # Rotate and revoke learned publication credentials
 
+The executable selects credential maintenance before shared live-service options
+are removed. The selected recovery cursor verifies the complete guarded history
+and preflights the exact current/retry request at Ready before its native
+finalizer may append a Fence. Maintenance retains the host alone; this route
+does not issue an actor gateway or obtain fresh source evidence.
+
 The learned operator exposes the original durable credential lifecycle through
 an offline command. Rotation advances the native credential generation by one;
 revocation permanently closes that guard to live publication. Both use the

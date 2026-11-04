@@ -1,5 +1,10 @@
 # Exact prechecks in the live actor service
 
+The executable dispatches `actor-precheck` before any shared supervisor option
+processing. Single-query, batch, first-pass, capability and policy modes all
+retain their complete public-client grammar; a private or live-service option
+cannot be stripped into an accepted query.
+
 The Linux ordinary single-request publication service can explicitly provision a
 separate exact-precheck endpoint. It uses the original source-backed disclosure,
 bounded wire, peer authentication and one-shot client described in

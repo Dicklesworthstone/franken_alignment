@@ -631,5 +631,40 @@ fn archived_mixed_roster_keeps_busy_and_missing_domains_visible_then_recovers_on
     assert_eq!(fleet.coordinated(), coordinator);
 }
 
+
+#[test]
+fn executable_dispatch_stops_a_mixed_fleet_and_preserves_exact_resume() {
+    let fleet = Fleet::new(vec![
+        Member::new(1, Model::Ordinary, false),
+        Member::new(2, Model::Plain, false),
+    ]);
+    let mut args = vec!["shutdown-fleet".to_owned()];
+    args.extend(fleet.args("create", &[]));
+    let mut output = Vec::new();
+    crate::command_with_output(args, &mut output).unwrap();
+    let report = parse(&output);
+    assert_eq!(members(&report).len(), 2);
+    assert!(flag(&report, "all_observed_drained"));
+
+    let before = fleet.files();
+    let coordinator = fleet.coordinated();
+    let mut args = vec!["shutdown-fleet".to_owned()];
+    args.extend(fleet.args("resume", &[]));
+    output.clear();
+    crate::command_with_output(args.clone(), &mut output).unwrap();
+    assert!(flag(&parse(&output), "all_observed_drained"));
+    assert_eq!(fleet.files(), before);
+    assert_eq!(fleet.coordinated(), coordinator);
+
+    // The fleet grammar must see the original argv before live qualification
+    // stripping; an unrelated option cannot silently become a valid resume.
+    args.extend(["--credibility-activation".into(), "missing-capsule".into()]);
+    output.clear();
+    assert!(crate::command_with_output(args, &mut output).is_err());
+    assert!(output.is_empty());
+    assert_eq!(fleet.files(), before);
+    assert_eq!(fleet.coordinated(), coordinator);
+}
+
 #[path = "fleet/topology.rs"]
 mod topology;

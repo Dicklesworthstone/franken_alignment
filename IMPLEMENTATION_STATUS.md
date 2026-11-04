@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: connect operator commands to original native owners
+
+The executable now registers and dispatches the existing situation, policy-replay,
+actor-precheck, and learned fleet implementations. Ordinary proposal diagnosis
+and unknown-outcome abandonment also receive the complete argument list before
+shared live-service options can be removed. Learned historical inspection,
+credential rotation/revocation, unknown-outcome abandonment, and offline Stop
+likewise select their original closed grammars before live option processing.
+
+Learned recovery now uses the existing authenticated recovery-Stop driver at the
+fully verified Ready cut. A pending checked Stop consumes the original cursor
+before a recovery Fence or live role can be issued. Credential maintenance
+preflights the exact operation on that same guarded Ready cursor; abandonment
+uses its sealed terminal finalizer and never obtains a live owner.
+
+Positive situation, policy-replay and authenticated precheck cases now enter
+through the executable dispatcher. A mixed ordinary/learned fleet regression
+covers terminal create, exact no-write resume, and incompatible shared flags.
+Existing numerical recovery, diagnosis, maintenance and fleet suites are now
+registered with their production modules.
+
+All seven changed Rust files passed source parsing with rustfmt. Runtime tests,
+type checking and the canonical gate remain unexecuted: the required RCH runner
+is unavailable, and the repository prohibits local Cargo fallback. This is a
+source integration increment, not qualification or closure of the corresponding
+roadmap packets.
+
 ## 2026-10-28: expose actor-only exact prechecks through the operator command
 
 `supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`

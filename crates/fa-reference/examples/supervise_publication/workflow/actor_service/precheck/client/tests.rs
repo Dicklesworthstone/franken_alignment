@@ -133,7 +133,9 @@ fn public_profiles_drive_exactly_one_query_and_only_native_pass_output() {
     let response = observed(FilePrecheckOutcome::PrecheckPassed);
     let peer = server(fixture.listener(), frame(&response));
     let mut output = Vec::new();
-    command(&fixture.args(), &mut output).unwrap();
+    // Public actor input must reach the original client from the executable,
+    // without first trying to open a private supervisor Config.
+    crate::command_with_output(fixture.args(), &mut output).unwrap();
     assert_eq!(output, frame(&response));
     assert_eq!(decode_precheck_response(output.strip_suffix(b"\n").unwrap(), 97, 0).unwrap(), response);
     assert!(String::from_utf8(output).unwrap().contains("\"review_required\":true"));
@@ -155,7 +157,7 @@ fn valid_denials_and_coarse_refusals_render_without_success_or_resend() {
     ] {
         let fixture = Fixture::new(); let peer = server(fixture.listener(), frame(&response));
         let mut output = Vec::new();
-        assert!(command(&fixture.args(), &mut output).unwrap_err().contains("did not pass"));
+        assert!(crate::command_with_output(fixture.args(), &mut output).unwrap_err().contains("did not pass"));
         assert_eq!(output, frame(&response));
         assert_single_request(peer);
     }

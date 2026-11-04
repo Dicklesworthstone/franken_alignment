@@ -1,5 +1,10 @@
 # Runnable offline fleet shutdown and resume
 
+The executable's `shutdown-fleet` route now selects the learned-capable bridge
+and shared coordinator for mixed ordinary/learned rosters. It removes only the
+outer command name: `create|recover|resume` and every profile or option reach the
+coordinator unchanged, before shared live-service option processing.
+
 Unqualified source implementing the operator consumer of FA-014, plan
 16.4/16.5/16.9 and FI-A02. The `shutdown_fleet` example drives the existing
 registered-domain coordinator and cooperative recovery/resolution. It does not

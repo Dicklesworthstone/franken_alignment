@@ -3,10 +3,18 @@
 mod cooperative;
 #[path = "recovery/readonly.rs"]
 pub(super) mod readonly;
+#[path = "recovery/diagnosis.rs"]
+pub(super) mod diagnosis;
+#[path = "recovery/policy_replay.rs"]
+pub(super) mod policy_replay;
+#[path = "recovery/credential.rs"]
+pub(super) mod credential;
 #[path = "recovery/selected.rs"]
 mod selected;
 #[path = "recovery/terminal.rs"]
 mod terminal;
+#[path = "recovery/live.rs"]
+mod live;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,
@@ -216,8 +224,8 @@ pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody,
 }
 
 /// Recovery shares the active command's original deadline and authenticated
-/// stop transport. No owner exists yet: admission cancels replay, but cannot
-/// apply the durable Stop protocol or acknowledge a Stop receipt.
+/// stop transport. A pending checked peer selects the original admission Stop
+/// at the complete Ready cut, before a recovery Fence or live role is issued.
 pub(super) fn open_selected_live<F>(
     config: &Config,
     loaded: &Loaded,
@@ -228,13 +236,7 @@ pub(super) fn open_selected_live<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    open_selected_with_checkpoints(config, loaded, &mut |_| {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
-    })
+    live::open(config, loaded, control, deadline, time).map(|(custody, _)| custody)
 }
 
 /// Preserve the separately owned topology observer through the SAME one-event
@@ -249,21 +251,24 @@ pub(super) fn open_selected_live_with_topology<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let mut checkpoint = |_: Option<Progress>| {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
-    };
+    live::open(config, loaded, control, deadline, time)
+}
+
+/// Complete the original cursor without a Fence, staging cleanup or role issue.
+/// The final Ready checkpoint remains vetoable before any native finalizer.
+fn ready_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<selected::Cursor, String> {
     checkpoint(None)?;
     let recovery = selected::Cursor::begin(config, loaded)?;
     finish_replay(
         recovery,
-        &mut checkpoint,
+        checkpoint,
         |run| run.progress(),
         |run, done| run.advance(done),
-        |run| run.finish_with_topology(),
+        Ok,
     )
 }
 
@@ -335,6 +340,7 @@ fn receipt_replay<T>(
 /// after complete verification, before cleanup and the original recovery fence.
 /// An error or unwind drops the original exclusive recovery without finishing.
 /// One event, framing and final persistence remain synchronous operations.
+#[cfg(test)]
 pub(super) fn open_selected_with_checkpoints(
     config: &Config,
     loaded: &Loaded,
@@ -348,6 +354,40 @@ pub(super) fn open_selected_with_checkpoints(
         |run| run.progress(),
         |run, done| run.advance(done),
         |run| run.finish(),
+    )
+}
+
+/// Validate the exact credential operation on the original Ready cursor before
+/// its existing finalizer can clean staging or append the recovery Fence.
+/// Only maintenance keeps the host; no actor gateway or source read is created.
+pub(super) fn open_selected_credential_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: super::credential_lifecycle::Request,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<super::credential_lifecycle::Recovered, String> {
+    let recovery = ready_selected_with_checkpoints(config, loaded, checkpoint)?;
+    let (current, retry) = recovery.credential_preflight(request).map_err(debug)?;
+    let (host, _human, _consistency, _identity) = recovery.finish().map_err(debug)?;
+    Ok(super::credential_lifecycle::Recovered { host, current, retry })
+}
+
+/// Abandonment retains the sealed native cursor through the same event quantum
+/// and Ready checkpoint. It cannot finalize into a live owner or resend an effect.
+pub(super) fn abandon_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: fa_reference::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FileAbandonedHistory, String> {
+    checkpoint(None)?;
+    let recovery = selected::AbandonmentCursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        |run| run.finish(request),
     )
 }
 
