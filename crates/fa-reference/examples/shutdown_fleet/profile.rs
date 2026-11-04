@@ -138,7 +138,17 @@ impl Spec {
                 private_paths.push(fs::canonicalize(&topology.profile).map_err(err)?);
                 private_paths.push(fs::canonicalize(&topology.history_anchor).map_err(err)?);
             }
-            let config = Config::decode(&bytes)?;
+            let config = if member.learned_recipe.is_some() {
+                // Only an explicitly selected learned member may declare its
+                // original functional grade. Its independent recipe and anchor
+                // remain required, and native replay must finish before Stop.
+                #[cfg(target_os = "linux")]
+                { Config::decode_learned_recovery(&bytes)? }
+                #[cfg(not(target_os = "linux"))]
+                { return Err("learned fleet members require the Linux operator profile; no fallback".into()); }
+            } else {
+                Config::decode(&bytes)?
+            };
             check()?;
             if config.profile.delivery.clock_domain != CLOCK_DOMAIN { return Err("unsupported member clock".into()); }
             if config.store == self.coordinator || config.store.starts_with(&self.coordinator)

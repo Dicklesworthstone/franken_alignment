@@ -49,7 +49,7 @@ pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), Strin
         return Err("learned situation recipes require the Linux operator profile; no fallback".into());
     }
     let started = Instant::now();
-    let config = Config::read(selected.config)?;
+    let config = read_config(&selected)?;
     let wall = Duration::from_millis(config.timing.runtime_ms);
     let mut checkpoint = || check_elapsed(started.elapsed(), wall);
     checkpoint()?;
@@ -70,6 +70,17 @@ pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), Strin
     };
     let situation = finish_replay(replay, &mut checkpoint)?;
     emit(&situation, selected.page_size, out, MAX_OUTPUT_BYTES, &mut checkpoint)
+}
+
+fn read_config(selected: &Arguments<'_>) -> Result<Config, String> {
+    // A declared functional profile is admitted only alongside its explicit
+    // original numerical recipe. The native reader still proves the complete
+    // profile/history binding; ordinary observations retain their old boundary.
+    #[cfg(target_os = "linux")]
+    if selected.recipe.is_some() {
+        return Config::read_learned_recovery(selected.config);
+    }
+    Config::read(selected.config)
 }
 
 fn check_elapsed(elapsed: Duration, wall: Duration) -> Result<(), String> {

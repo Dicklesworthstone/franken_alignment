@@ -17,7 +17,9 @@ pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
     let round = args[4].parse::<u64>().map_err(debug)?;
     if round == 0 { return Err("audit round must be nonzero".into()); }
     let started = Instant::now();
-    let config = Config::read(Path::new(&args[1]))?;
+    // This closed command always binds the original learned recipe and exact
+    // external anchor before producing its immutable historical report.
+    let config = Config::read_learned_recovery(Path::new(&args[1]))?;
     let allowance = Duration::from_millis(config.timing.runtime_ms);
     let mut checkpoint = || {
         if started.elapsed() >= allowance { Err("historical audit deadline elapsed; no report or mutation".into()) }

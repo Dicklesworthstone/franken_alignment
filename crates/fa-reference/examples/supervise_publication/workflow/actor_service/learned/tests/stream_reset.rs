@@ -894,3 +894,6 @@ mod topology;
 
 #[path = "stream_reset/lifecycle.rs"]
 mod lifecycle;
+
+#[path = "stream_reset/observations.rs"]
+mod observations;

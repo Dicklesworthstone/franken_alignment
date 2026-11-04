@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: observe and stop functional learned histories across fleets
+
+- Admit explicitly selected learned functional profiles in historical review
+  audit, individual situations, fleet observation and terminal fleet intake.
+- Reuse budgeted Config bytes and full native numerical/profile replay; ordinary
+  members keep audit-only admission and mismatched histories remain refused or
+  Unknown under their existing report contracts.
+- Add four causal regressions covering real restored histories, unchanged reader
+  storage, original native review archives, native fleet admission Stop
+  and passive fleet reobservation without additional events or staging cleanup.
+- Independent source/API reviews completed; required compilation and runtime
+  validation remain unavailable with the executor and RCH runner absent.
+
 ## 2026-11-04: recover paired custody after a recorded stream reset and Stop
 
 - Add a sealed terminal-only native cursor requiring the exact reset intent,

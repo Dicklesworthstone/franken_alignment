@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: functional histories in audit, situations and terminal fleets
+
+Historical learned review audit and recipe-selected individual/fleet situation
+readers now accept an explicitly declared native functional-restart profile.
+Previously the generic audit-only Config intake rejected these histories before
+the native reader could verify them, and fleet observation reported otherwise
+readable members as Unknown. Shared terminal fleet intake had the same restriction
+and could not stop an explicitly selected functional learned member.
+
+The scoped decoder now serves these independently selected learned paths while
+retaining existing cumulative input-byte reservations and complete original
+profile, generation, archive and canonical replay checks. It does not infer a
+grade from history or manufacture effective-policy requirements for observation.
+Ordinary members retain audit-only admission; mismatches continue to refuse or
+emit Unknown under the original report contract. Terminal fleet members still
+require their independent recipe and anchor before the native coordinator acts.
+
+Four new regression functions use actual completed numerical resets and native
+review archives. They cover root audit/situation/fleet observation without live
+helper material or mutation, mismatched grade/model/unsupported declaration,
+explicit-recipe boundaries, native fleet admission Stop and passive replay of
+that same observed Stop. Passive fleet resume leaves canonical and staging bytes
+unchanged and acquires no settlement tick. Independent source/API reviews found
+no concrete blocker. The required RCH runner and executor remain unavailable;
+syntax/type checks, runtime execution and qualification of this increment remain
+pending, and no packet or bead is closed.
+
 ## 2026-11-04: terminal custody repair across stream reset and admission Stop
 
 A new sealed FileStoppedStreamResetRecovery repairs the documented compound

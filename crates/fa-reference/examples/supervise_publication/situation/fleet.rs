@@ -43,7 +43,16 @@ fn run(spec: &Profile, mut remaining: usize, elapsed: &mut impl FnMut() -> Durat
     for member in &spec.members {
         check_elapsed(elapsed(), wall)?;
         let selected = budgeted_read(&member.config, CONFIG_BYTES, &mut remaining)
-            .and_then(|bytes| Config::decode(&bytes));
+            .and_then(|bytes| {
+                // Keep the original cumulative read reservation. Only a member
+                // with an explicit learned recipe can select this profile; the
+                // same native binder/replay below must still prove its history.
+                #[cfg(target_os = "linux")]
+                if member.recipe.is_some() {
+                    return Config::decode_learned_recovery(&bytes);
+                }
+                Config::decode(&bytes)
+            });
         check_elapsed(elapsed(), wall)?;
         let config = match selected {
             Ok(mut config) => {

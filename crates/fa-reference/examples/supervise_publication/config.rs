@@ -80,14 +80,22 @@ pub(crate) fn assert_oversight_profiles_eq(actual: &FileOversightProfile, expect
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> { Self::decode(&read_regular(path, CONFIG_BYTES)?) }
 
-    /// Independent bootstrap expectation for original learned recovery only.
-    /// The caller must select a recovery path whose original native replay
-    /// binds this complete profile and numerical recipe before issuing a role.
+    /// Independent bootstrap expectation for an original learned history.
+    /// The selected native reader must bind this complete profile and numerical
+    /// recipe before returning a historical report or any recovered role.
     /// A declaration is never inferred, upgraded, or an external model attestation.
     /// Ordinary creation retains its audit-only admission contract.
     #[cfg(target_os = "linux")]
     pub(crate) fn read_learned_recovery(path: &Path) -> Result<Self, String> {
-        Self::decode_with_actor_profile(&read_regular(path, CONFIG_BYTES)?, true)
+        Self::decode_learned_recovery(&read_regular(path, CONFIG_BYTES)?)
+    }
+
+    /// Decode bytes already charged to a shared historical intake allowance.
+    /// The caller still selects an explicit learned recipe and original native
+    /// replay. This does not reopen a file or replenish a fleet member's budget.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn decode_learned_recovery(bytes: &[u8]) -> Result<Self, String> {
+        Self::decode_with_actor_profile(bytes, true)
     }
 
     /// Stream-reset completion uses the same explicit recovery expectation.

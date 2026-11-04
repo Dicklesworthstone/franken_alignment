@@ -215,6 +215,15 @@ requirements. Ordinary creation continues to use the audit-only Config reader.
 Changing a declaration, model generation or grade cannot relabel an existing
 journal, and `bit_exact` remains unsupported.
 
+Historical review audit and situation observation also accept the explicit
+functional profile when the original learned recipe is selected. They retain
+the original immutable replay and report no current effect authority. Fleet
+observation uses the same scoped decoding and existing input allowance; a wrong
+profile still produces an Unknown member under the existing fleet contract.
+Terminal shutdown fleets accept functional members only when their independent
+learned recipe and history anchor are declared. Native admission Stop and passive
+reobservation retain their existing full replay, accounting and custody rules.
+
 ## Outcomes and retained custody
 
 After native acknowledgment, the command attempts history-anchor retention and
