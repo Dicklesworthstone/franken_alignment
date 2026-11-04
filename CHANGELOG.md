@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-04: select finite verdict grammars in learned native rosters
+
+- Connect explicitly selected per-member verdict grammars to every original
+  in-process learned helper evaluation, including later rounds and epochs.
+- Add closed native-roster /3 with unchanged /1 and /2 behavior, complete
+  declaration admission before model reads, and immutable loaded selection.
+- Add five operator regression functions covering real native/human publication,
+  unrestricted invalid output, nonpermitting verdicts, frozen selection and
+  malformed profiles. Source/syntax checks passed; RCH execution is unavailable.
+
 ## 2026-11-04: constrain native helper verdict generation
 
 - Add an explicit finite byte grammar for allow/hold/deny/abstain plus a fully

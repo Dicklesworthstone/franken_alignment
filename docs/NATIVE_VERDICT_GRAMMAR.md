@@ -47,6 +47,26 @@ reject the new field. Grammar selection belongs to the independently registered
 helper/input profile and evaluation generation because it changes the model's
 judgment distribution. An input packet cannot select or change it.
 
+### Learned publication helpers
+
+The learned publication operator can select the same grammar for its in-process
+native reviewers using `fa.learned-native-roster/3`. Keep the complete `/2`
+member model, files and text budgets, change the root schema to `/3`, and add
+`"verdict_grammar": "finite-words-v1"` or `"verdict_grammar": "unrestricted"`
+to **each** member object, alongside `model`, `files` and `text`. Different
+registered members may select different modes. Every declaration is checked
+before any model asset is loaded; omission, unknown values and nontext values
+refuse. Roster versions `/1` and `/2` stay unrestricted and reject the new field.
+
+Each loaded member retains its original immutable selection. Every fresh
+evaluator in later rounds and message continuations applies that selection
+before input; mutable roster files cannot change it midway through a review.
+The original member input profile still binds the actual action epoch, and
+complete prompt/probe review, all numerical allowances, congress reduction and
+independent human approval remain required. Register and qualify the changed
+helper/input profile and evaluation generation independently before deployment.
+This manifest option does not authenticate registration or calibrate verdicts.
+
 ## Sampling and monitoring
 
 The finite grammar is compiled against the actual immutable tokenizer content
@@ -84,6 +104,13 @@ invalid `x` a higher output-head score than `allow`. Identical model bytes produ
 words, multi-token spelling, complete prompt review, input dependence, held
 answers and terminals, work exhaustion, unchanged legacy sampling, both weight
 layouts, both tokenizer inputs, and static LoRA with explicit rotary scaling.
+
+Five additional operator regression functions cover the actual learned native
+review followed by an authenticated human peer and durable publication; the
+same higher-scored invalid-token comparison through the loaded roster; all
+four verdicts and the separate human key; frozen mixed member choices across
+input epochs; and complete schema rejection before model reads or store
+creation. These new functions passed source and Rust syntax review only.
 
 Source/API review and Rust syntax checks are complete. The required RCH runner
 is unavailable, so compilation, runtime execution, formatting, Clippy and

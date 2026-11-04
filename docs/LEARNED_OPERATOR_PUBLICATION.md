@@ -353,7 +353,7 @@ and bounds bytes before accepting the complete file.
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
 | Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances |
-| Native roster | `fa.learned-native-roster/1` for single weight paths, or `/2` for explicit checkpoint-source selection; actual imported model/tokenizer/monitor/sampling files for every committee member |
+| Native roster | `fa.learned-native-roster/1` for single weight paths, `/2` for explicit checkpoint-source selection, or `/3` for explicit per-member verdict grammar; actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
 
@@ -783,15 +783,15 @@ the actual native sidecar query. A quiet probe result admits original numerical
 input to the helper evaluator; it is not the helper's final categorical judgment
 and is not either publication key.
 
-## Native model roster: fa.learned-native-roster/1 or /2
+## Native model roster: fa.learned-native-roster/1, /2 or /3
 
 `members` is an object keyed by the exact helper names already registered in
 `CONFIG.helpers`. Its keys must equal the complete committee roster.
 
 | Group | Required fields |
 | --- | --- |
-| Root | `schema: "fa.learned-native-roster/1"` or `"fa.learned-native-roster/2"`, `members` |
-| Each member | `model`, `files`, `text` |
+| Root | `schema: "fa.learned-native-roster/1"`, `"fa.learned-native-roster/2"` or `"fa.learned-native-roster/3"`, `members` |
+| Each member | `model`, `files`, `text`; version 3 also requires `verdict_grammar` |
 | Member `model` | `identity`, `context`, `stream` |
 | Member `model.identity` | `tenant`, `model`, `model_generation`, `tokenizer_generation`, `profile_generation` |
 | Member `files` | `model_config`, `weights`, `tokenizer`, `monitor`, `sampling` |
@@ -800,12 +800,21 @@ and is not either publication key.
 
 Each tokenizer is the same explicit format/path object described above.
 In version 1, `files.weights` is a single absolute SafeTensors path. In version
-2, it also accepts the explicit checkpoint-source object described above. Both
+2 or 3, it also accepts the explicit checkpoint-source object described above. Both
 forms feed the same complete effective model into the original native evaluator.
 `files.monitor` is the original `fa.decoder-monitor/1` configuration bound to
 that member's own decoder identity. `files.sampling` is its original
 `fa.decoder-sampling/1` configuration. Each member needs nonzero stream and
 output bounds and explicit controls accepted by its original tokenizer/evaluator.
+
+Version 3 requires each member to select `verdict_grammar` as either
+`finite-words-v1` or `unrestricted`. The finite grammar samples the exact words
+allow, hold, deny or abstain and a reviewed stop from the actual model logits.
+It preserves full input review, numerical budgets and both publication keys.
+Every round uses the same admitted selection; old versions remain unrestricted
+and reject this field. Grammar changes the judgment distribution, so its helper,
+input-profile and evaluation-generation registration must be independently
+selected and qualified. See [NATIVE_VERDICT_GRAMMAR.md](NATIVE_VERDICT_GRAMMAR.md).
 
 The primary recipe uses `decoder_products` and `vocabulary_scores` for its
 learned generation. The native member uses `scalar_products` and

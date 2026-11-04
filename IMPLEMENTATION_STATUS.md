@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: use finite verdict grammars in learned publication reviews
+
+The actual learned publication NativeRoster can now explicitly select the
+native finite verdict grammar per member through fa.learned-native-roster/3.
+Every member's declaration is closed before model reads, and the original
+loaded model retains it for every fresh evaluator and action epoch. Versions
+/1 and /2 keep their unrestricted semantics. This connects the prior native
+sampler/worker capability to the main learned generation and publication path.
+
+Five regression functions cover real constrained numerical inference followed
+by authenticated human review and durable publication, the identical model's
+higher-scored invalid output without the grammar, all nonpermitting verdicts
+and human rejection, frozen mixed member choices, and invalid declarations
+before asset/store access. Three Rust files passed syntax and whitespace checks;
+source/API review found no concrete blocker. The mandatory RCH command again
+exited 127 because rch is unavailable, before compilation. Runtime tests,
+formatting, Clippy, calibration and production qualification remain pending.
+The grammar option supplies no new authority or evidence of judgment accuracy.
+
 ## 2026-11-04: constrain native helper sampling to a finite verdict grammar
 
 NativeEvaluator can now explicitly select FiniteWordsV1 before input admission.
