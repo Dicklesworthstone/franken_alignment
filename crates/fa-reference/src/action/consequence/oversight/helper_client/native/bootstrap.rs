@@ -16,6 +16,8 @@ pub enum NativeTokenizerFormat {
     HuggingFaceGpt2Unicode17,
     HuggingFaceLlama3Unicode17,
     HuggingFaceLlama3Unicode17Bos,
+    HuggingFaceLlama3Unicode17WholePiece,
+    HuggingFaceLlama3Unicode17BosWholePiece,
 }
 
 use super::{NativeEvaluator, NativeHelperPolicy, TextDecoder};
@@ -24,7 +26,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::Monitored
 use crate::action::consequence::activation::monitor::decoder::sampled::config::{
     SamplingConfig, SamplingConfigError, MAX_SAMPLING_CONFIG_BYTES,
 };
-use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization};
+use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::{
     CheckpointError, LlamaConfig, PretrainedReceipt, PretrainedShardReceipt,
@@ -154,6 +156,11 @@ impl NativeHelperBootstrap<'_> {
                 expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Llama3Unicode17),
             NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
                 expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece => ByteBpe::from_huggingface_json_with_merge_policy(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+                PreTokenization::Llama3Unicode17, MergePolicy::WholePieceFirst),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, MergePolicy::WholePieceFirst),
         }.map_err(NativeBootstrapError::Tokenizer)?;
         self.policy.check_tokenizer(&tokenizer).map_err(NativeBootstrapError::Contract)?;
         SamplingConfig::decode(self.sampling, expected.shape().vocabulary)

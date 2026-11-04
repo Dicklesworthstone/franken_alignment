@@ -398,3 +398,47 @@ fn llama3_bos_campaign_preserves_original_token_cases_and_binds_the_prefix_in_th
     assert!(run(&native_args, &mut Vec::new()).unwrap());
     assert_eq!(fs::read(&native_args[7]).unwrap(), bytes);
 }
+
+#[test]
+fn whole_piece_campaign_binds_merge_policy_without_retokenizing_original_cases() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization};
+    for bos in [false, true] {
+        let root = Root::new(); let args = files(&root);
+        let raw = fixture::tokenizer_json();
+        let legacy_json = if bos { unicode_json::with_llama3_bos(&raw, "<|reserved|>", 259) }
+            else { unicode_json::select(&raw, PreTokenization::Llama3Unicode17) };
+        let json = legacy_json.replace("\"ignore_merges\":false", "\"ignore_merges\":true");
+        fs::write(&args[2], &json).unwrap();
+        let format = if bos { "huggingface_llama3_unicode17_bos_whole_piece" }
+            else { "huggingface_llama3_unicode17_whole_piece" };
+        replace(&args, "\"tokenizer_format\":\"native_archive\"", &format!("\"tokenizer_format\":\"{format}\""));
+        assert!(run(&args, &mut Vec::new()).unwrap());
+        let model = original::model(); let codec = original::codec(&model);
+        let tokenizer = if bos {
+            ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(model.profile(), json.as_bytes(),
+                json.len(), MergePolicy::WholePieceFirst)
+        } else {
+            ByteBpe::from_huggingface_json_with_merge_policy(model.profile(), json.as_bytes(),
+                json.len(), PreTokenization::Llama3Unicode17, MergePolicy::WholePieceFirst)
+        }.unwrap();
+        let old = if bos {
+            ByteBpe::from_huggingface_llama3_bos_json(model.profile(), legacy_json.as_bytes(), legacy_json.len())
+        } else {
+            ByteBpe::from_huggingface_json_with_pre_tokenization(model.profile(), legacy_json.as_bytes(),
+                legacy_json.len(), PreTokenization::Llama3Unicode17)
+        }.unwrap();
+        let bytes = fs::read(&args[7]).unwrap();
+        let artifact = KvMonitorArtifact::decode(&bytes, MAX_KV_MONITOR_ARTIFACT_BYTES).unwrap();
+        let expected = original::campaign().policy(codec.clone(), &fixture::settings()).unwrap();
+        artifact.verify(&model, &tokenizer, &expected).unwrap();
+        assert_eq!(artifact.verify(&model, &old, &expected), Err(Error::Binding));
+        // Even identical IDs for this prompt cannot conceal changed semantics.
+        assert_eq!(old.encode(b"a", Default::default()).unwrap().tokens(),
+            tokenizer.encode(b"a", Default::default()).unwrap().tokens());
+        let capture = selected(&rows(&args), "capture_completed_work");
+        assert_eq!(capture[0].get("original_tokens").unwrap().as_u64(), Some(12));
+        let restored = ByteBpe::from_bytes(model.profile(), &tokenizer.to_bytes().unwrap()).unwrap();
+        operator_monitor::MonitorInput::decode(&bytes).unwrap()
+            .bind_with_tokenizer(&model, &restored, codec).unwrap();
+    }
+}

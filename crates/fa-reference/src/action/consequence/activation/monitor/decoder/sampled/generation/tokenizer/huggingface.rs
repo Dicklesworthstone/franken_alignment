@@ -19,7 +19,7 @@ mod special;
 #[path = "huggingface/postprocessor.rs"]
 mod postprocessor;
 
-use super::{ByteBpe, Merge, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
+use super::{ByteBpe, Merge, MergePolicy, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
 use crate::Error;
@@ -84,7 +84,22 @@ impl ByteBpe {
         bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization)
         -> Result<Self, Error>
     {
-        Self::from_huggingface_profile(expected, bytes, max_bytes, pre_tokenization, false)
+        Self::from_huggingface_json_with_merge_policy(expected, bytes, max_bytes,
+            pre_tokenization, MergePolicy::RankedOnly)
+    }
+
+    /// Select the exact BPE interpretation as well as the input grammar. The
+    /// JSON's `ignore_merges` must equal this independently selected policy:
+    /// false for RankedOnly, true for WholePieceFirst. A rejected declaration is
+    /// never retried, inferred from the model name or silently treated as false.
+    /// WholePieceFirst matches each complete ordinary pretoken, after literal
+    /// controls, before the original ranked pass. All other admission is shared.
+    pub fn from_huggingface_json_with_merge_policy(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization,
+        merge_policy: MergePolicy) -> Result<Self, Error>
+    {
+        Self::from_huggingface_profile(expected, bytes, max_bytes, pre_tokenization,
+            false, merge_policy)
     }
 
     /// Select Llama-3/Unicode-17 plus the exact beginning-of-sequence template.
@@ -101,12 +116,22 @@ impl ByteBpe {
     pub fn from_huggingface_llama3_bos_json(expected: &DecoderProfile,
         bytes: &[u8], max_bytes: usize) -> Result<Self, Error>
     {
+        Self::from_huggingface_llama3_bos_json_with_merge_policy(expected, bytes,
+            max_bytes, MergePolicy::RankedOnly)
+    }
+
+    /// The same fixed Llama-3 BOS template with an independently selected BPE
+    /// policy. Existing BOS APIs still require `ignore_merges=false`.
+    pub fn from_huggingface_llama3_bos_json_with_merge_policy(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, merge_policy: MergePolicy) -> Result<Self, Error>
+    {
         Self::from_huggingface_profile(expected, bytes, max_bytes,
-            PreTokenization::Llama3Unicode17, true)
+            PreTokenization::Llama3Unicode17, true, merge_policy)
     }
 
     fn from_huggingface_profile(expected: &DecoderProfile, bytes: &[u8],
-        max_bytes: usize, pre_tokenization: PreTokenization, bos_template: bool)
+        max_bytes: usize, pre_tokenization: PreTokenization, bos_template: bool,
+        merge_policy: MergePolicy)
         -> Result<Self, Error>
     {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES || bytes.len() > max_bytes {
@@ -138,8 +163,13 @@ impl ByteBpe {
             let value = required(model, field)?;
             if !value.is_null() && value.as_str() != Some("") { return Err(Error::Binding); }
         }
-        for field in ["fuse_unk", "byte_fallback", "ignore_merges"] {
+        for field in ["fuse_unk", "byte_fallback"] {
             require_false(required(model, field)?)?;
+        }
+        match required(model, "ignore_merges")?.as_bool() {
+            Some(value) if value == (merge_policy == MergePolicy::WholePieceFirst) => {}
+            Some(_) => return Err(Error::Binding),
+            None => return Err(Error::InvalidInput),
         }
         let declared = required(model, "vocab")?.as_object().ok_or(Error::InvalidInput)?;
         let count = expected.shape().vocabulary;
@@ -205,11 +235,14 @@ impl ByteBpe {
             joined.push_str(right);
             merges.push(Merge { left: left_id, right: right_id, result: lookup(declared, &joined)? });
         }
-        // Reuse the original total-byte, singleton, ordering, duplicate-pair and
-        // reachability checks. A parsed JSON graph alone never admits a tokenizer.
+        // Reuse total-byte, singleton, ordering and duplicate-pair admission.
+        // Only the explicitly selected whole-piece policy can reach vocabulary
+        // content without a merge rule. No JSON field selects this policy.
         match bos {
-            Some(bos) => Self::new_with_bos_token(expected.clone(), vocabulary, merges, names, bos),
-            None => Self::new_with_pre_tokenization(expected.clone(), vocabulary, merges, names, pre_tokenization),
+            Some(bos) => Self::new_with_bos_token_and_merge_policy(expected.clone(), vocabulary,
+                merges, names, bos, merge_policy),
+            None => Self::new_with_merge_policy(expected.clone(), vocabulary, merges, names,
+                pre_tokenization, merge_policy),
         }
     }
 }

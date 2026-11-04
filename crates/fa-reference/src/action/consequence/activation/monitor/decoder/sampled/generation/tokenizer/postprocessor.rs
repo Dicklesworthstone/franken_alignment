@@ -1,6 +1,6 @@
 //! One explicit prefix operation, not an evaluator for arbitrary templates.
 
-use super::{ByteBpe, DecoderProfile, Error, Merge, PreTokenization, TokenBytes};
+use super::{ByteBpe, DecoderProfile, Error, Merge, MergePolicy, PreTokenization, TokenBytes};
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -17,11 +17,21 @@ impl ByteBpe {
         merges: Vec<Merge>, names: BTreeMap<u32, Vec<u8>>, bos: u32)
         -> Result<Self, Error>
     {
+        Self::new_with_bos_token_and_merge_policy(profile, vocabulary, merges, names,
+            bos, MergePolicy::RankedOnly)
+    }
+
+    /// Combine the same fixed BOS operation with an independently selected BPE
+    /// merge policy. The original constructor always remains RankedOnly.
+    pub fn new_with_bos_token_and_merge_policy(profile: DecoderProfile, vocabulary: Vec<TokenBytes>,
+        merges: Vec<Merge>, names: BTreeMap<u32, Vec<u8>>, bos: u32,
+        merge_policy: MergePolicy) -> Result<Self, Error>
+    {
         if !matches!(vocabulary.get(bos as usize), Some(TokenBytes::Control))
             || !names.contains_key(&bos)
         { return Err(Error::Binding); }
-        let mut tokenizer = Self::new_with_pre_tokenization(profile, vocabulary,
-            merges, names, PreTokenization::Llama3Unicode17)?;
+        let mut tokenizer = Self::new_with_merge_policy(profile, vocabulary,
+            merges, names, PreTokenization::Llama3Unicode17, merge_policy)?;
         Rc::get_mut(&mut tokenizer.0).expect("fresh unshared tokenizer").bos_token = Some(bos);
         Ok(tokenizer)
     }

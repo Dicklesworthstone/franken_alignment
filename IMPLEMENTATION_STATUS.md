@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: explicit whole-piece BPE through native operator intake
+
+An independently selected `MergePolicy::WholePieceFirst` now supports the
+Hugging Face BPE `ignore_merges: true` interpretation. Each complete ordinary
+pretoken first attempts its exact original vocabulary ID; a miss uses the
+unchanged ranked merge engine. Named controls and Unicode boundaries remain
+separate, and ordinary content reachable only through an exact whole-piece hit
+is admitted only under this explicit policy. Existing entry points continue to
+select ranked-only semantics and reject a mismatched imported flag.
+
+The canonical `FABBPE07` archive binds the merge policy together with the full
+original tokenizer, pretokenization and optional BOS. The six earlier archive
+formats retain their exact bytes. Explicit Llama3 whole-piece selectors, with
+and without automatic BOS, now reach native worker bootstrap, publication
+recipe intake and checkpoint-based K/V probe training. A monitor binding cannot
+silently substitute the old policy even when one prompt happens to yield the
+same IDs.
+
+Regression source covers exact IDs and spans, misses, direct-only content,
+controls, Unicode boundaries, BOS, original work accounting and cancellation,
+strict JSON/reader selection, every archive version, worker inference in both
+checkpoint layouts and training artifact binding. Source review, syntax parsing
+and whitespace checks are the available checks; the required RCH runner remains
+absent. Compile, runtime, formatting, Clippy and full qualification are pending.
+
 ## 2026-11-04: recover campaign-protected learned histories
 
 The closed `fa.learned-recovery-policy/2` envelope selects the original full

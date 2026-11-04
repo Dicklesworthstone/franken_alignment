@@ -34,6 +34,12 @@ The corresponding bounded-reader method is
 owner check precedes reader I/O. Programmatic immutable construction uses
 `new_with_pre_tokenization(profile, vocabulary, merges, names, mode)`.
 
+These original entry points keep `ignore_merges=false`. The separate
+[whole-piece-first BPE profile](WHOLE_PIECE_BPE.md) explicitly admits
+`ignore_merges=true`, including vocabulary content reachable only as a complete
+piece, and binds that choice through FA-BBPE/7. It does not change the grammar,
+named-control precedence or original APIs described here.
+
 No parser retry, filename inference or unknown regex chooses another profile.
 For the non-BOS entry points in this section, the complete version-1.0 schema, original model flags, vocabulary and merge graph,
 added-token restrictions, null normalizer, null postprocessor, null padding and

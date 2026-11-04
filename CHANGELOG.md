@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: support explicit whole-piece BPE in native workflows
+
+- Add immutable whole-piece-first BPE with exact original vocabulary IDs,
+  ordinary pretoken boundaries and ranked fallback for misses.
+- Require an explicit importer selection matching `ignore_merges: true`; retain
+  strict legacy defaults and freeze the new semantics in `FABBPE07` without
+  changing any of the six earlier archive encodings.
+- Wire Llama3 whole-piece formats with and without BOS through native workers,
+  publication recipes and checkpoint K/V probe training.
+- Add causal token, archive, worker and monitor-binding regression source.
+  Required RCH execution remains unavailable; runtime qualification stays open.
+
 ## 2026-11-04: recover campaign-protected learned histories
 
 - Add a closed recovery envelope selecting the exact native campaign guard and

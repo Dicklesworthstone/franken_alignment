@@ -2,7 +2,7 @@
 use super::{Failure, Plan, contract, fit, invalid};
 use super::checkpoint_source::{CheckpointSource, MAX_MANIFEST_BYTES};
 use fa_reference::action::consequence::activation::{
-    monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization},
+    monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization},
     tensor::kv::{decoder::{DecoderModel,
         safetensors::{MAX_WEIGHT_HEADER_BYTES,
             pretrained::{LlamaConfig, MAX_CONFIG_BYTES}, reader::WeightReadBudget}},
@@ -64,7 +64,9 @@ pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan,
         NativeTokenizerFormat::HuggingFaceRawByteLevel
             | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
             | NativeTokenizerFormat::HuggingFaceLlama3Unicode17
-            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
     };
     let tokenizer_bytes = auxiliary(Path::new(&args[2]), maximum)?;
     let tokenizer = match plan.tokenizer_format {
@@ -77,6 +79,11 @@ pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan,
             negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17),
         NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
             negotiated.profile(), &tokenizer_bytes, maximum),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece => ByteBpe::from_huggingface_json_with_merge_policy(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17,
+            MergePolicy::WholePieceFirst),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(
+            negotiated.profile(), &tokenizer_bytes, maximum, MergePolicy::WholePieceFirst),
     }.map_err(contract)?;
     // The independently retained codec source inventory must describe the exact
     // original cache profile and be disjoint from every declared probe origin.
