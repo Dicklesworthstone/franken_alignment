@@ -5,18 +5,20 @@
 pub mod learned;
 mod lifecycle;
 pub mod native_learned;
+pub mod process_learned;
 mod recovery_capacity;
 #[cfg(test)]
 mod unwind_tests;
 pub use recovery_capacity::{CapacityDrain, CapacityStop};
-pub mod evidence;
-mod provider;
-mod publication;
 mod workers;
-use crate::action::consequence::oversight::helper_processes::HelperChildren;
-use provider::EvidenceProvider;
+mod publication;
+mod provider;
+pub mod evidence;
+pub mod topology;
+pub use workers::{FileDriverProcessError, FileDriverRelease, FileDriverHandoffError};
 use workers::WorkerSet;
-pub use workers::{FileDriverProcessError, FileDriverRelease};
+use provider::EvidenceProvider;
+use crate::action::consequence::oversight::helper_processes::HelperChildren;
 
 use super::super::requests::actor::{FileActorPort, FileActorSupervisor};
 use super::super::requests::{FileRequestDisposition, FileRequestStatus};
@@ -180,6 +182,7 @@ pub struct FileSupervisedDriver {
     job: Option<Job>,
     retiring: Option<HelperChildren>,
     learned_review: Option<learned::RetainedReview>,
+    topology: Option<topology::FileDriverTopology>,
 }
 impl fmt::Debug for FileSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -198,17 +201,8 @@ impl FileOversight {
 }
 impl FileSupervisedDriver {
     /// Adopt an existing gateway without changing its port, identity or rights.
-    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self {
-        Self {
-            supervisor,
-            job: None,
-            retiring: None,
-            learned_review: None,
-        }
-    }
-    pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> {
-        &self.supervisor
-    }
+    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None, topology: None } }
+    pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { &self.supervisor }
     /// Trusted integration, including use of a separately held FileHumanReviewer.
     /// Do not pass this role or its mutable host to the actor/helper processes.
     pub fn supervisor_mut(&mut self) -> &mut FileActorSupervisor<FileOversight> {
@@ -418,10 +412,8 @@ impl FileSupervisedDriver {
             // Query-only recovery owns its clock and reconciliation in ONE
             // canonical cut. Do not consume a lone Time record before it can
             // preflight the complete operation, including reserved capacity.
-            if job.phase != Phase::Reconcile {
-                observe(&mut host, clock())?;
-            }
-            step_job(&mut host, job, &mut clock, provider, human, credential)
+            if job.phase != Phase::Reconcile { observe(&mut host, clock())?; }
+            step_job(&mut host, job, &mut clock, provider, human, credential, self.topology.as_mut())
         }));
         if result.is_err() {
             // The host borrow has unwound before maintenance. Never leave a
@@ -550,18 +542,10 @@ where
     })
 }
 
-fn step_job<F, P>(
-    host: &mut FileOversight,
-    job: &mut Job,
-    clock: &mut F,
-    provider: &mut P,
-    human: Option<&FileHumanPermit>,
-    credential: Option<&FileCredentialPermit>,
-) -> Result<FileDriverEvent, JournalError>
-where
-    F: FnMut() -> ElapsedTick,
-    P: EvidenceProvider,
-{
+fn step_job<F, P>(host: &mut FileOversight, job: &mut Job, clock: &mut F,
+    provider: &mut P, human: Option<&FileHumanPermit>, credential: Option<&FileCredentialPermit>,
+    topology: Option<&mut topology::FileDriverTopology>) -> Result<FileDriverEvent, JournalError>
+where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     match job.phase {
         Phase::Review => {
@@ -655,9 +639,7 @@ where
                 attempt: job.attempt,
             })
         }
-        Phase::Publish => Ok(publication::publish_job(
-            host, job, clock, provider, credential,
-        )),
+        Phase::Publish => Ok(publication::publish_job(host, job, clock, provider, credential, topology)),
         Phase::Reconcile => {
             let revision = host.revision();
             let outcome = host.reconcile_attempt_at(revision, job.attempt, clock())?;

@@ -24,7 +24,8 @@ fn review(peers: PeerProfile, decision: ReviewDecision) -> thread::JoinHandle<Re
             );
             thread::sleep(Duration::from_millis(1));
         }
-        let mut client = peers.connect_client(1).unwrap();
+        let remaining = Duration::from_secs(10).saturating_sub(started.elapsed());
+        let mut client = peers.connect_client_waiting(1, remaining).unwrap();
         let mut packet = None;
         loop {
             assert!(started.elapsed() < Duration::from_secs(12));
@@ -71,6 +72,12 @@ fn generated_publication_computes_original_text_then_requires_independent_human_
                 .unwrap()
                 .message(),
             Some("A")
+        );
+        assert!(
+            ReleaseFrame::decode(&packet.action().spec().payload)
+                .unwrap()
+                .prior_messages()
+                .is_empty()
         );
         assert_eq!(packet.views().len(), 2);
         assert_eq!(executed(&result), decision == ReviewDecision::Approve);
@@ -203,20 +210,27 @@ fn generated_publication_post_read_expiry_prevents_the_first_token() {
         let tokenizer = loaded.tokenizer.clone();
         let store = config.store.clone();
         let profile = config.profile.clone();
-        let mut calls = 0;
+        let mut now = 1000;
+        let mut pending_clock_samples = 0;
         let result = create(config, loaded, &peers, || {
-            calls += 1;
-            ElapsedTick(if calls >= 6 {
-                if expired { 1010 } else { 1009 }
-            } else {
-                1000
-            })
+            // Start the delay only after the real first intent is durable.
+            // Every adjacent pre/post-read sample is then 9 or 10 ticks apart,
+            // independent of unrelated clock calls during startup. Freeze after
+            // the first admitted step so the permitted case can finish normally.
+            if FileOversight::read_decoder_text_progress(&store, &profile, &decoder, &tokenizer, 7)
+                .is_ok_and(|progress| progress.text.generation_revision() == 0)
+            {
+                pending_clock_samples += 1;
+                now += if expired { 10 } else { 9 };
+            }
+            ElapsedTick(now)
         })
         .unwrap();
         if let Some(human) = human {
             human.join().unwrap();
         }
         assert_eq!(executed(&result), !expired);
+        assert!(pending_clock_samples >= 2);
         let native =
             FileOversight::read_decoder_text_progress(&store, &profile, &decoder, &tokenizer, 7)
                 .unwrap();

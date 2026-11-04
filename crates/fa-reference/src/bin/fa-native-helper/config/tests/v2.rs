@@ -284,3 +284,112 @@ fn worker_v2_unicode_selection_never_guesses_another_pipeline_before_weight_load
         );
     }
 }
+
+
+#[test]
+fn worker_v2_llama3_bos_is_an_original_monitored_prompt_token_in_every_weight_layout() {
+    for sharded in [false, true] {
+        let mut fixture = assets::Fixture::new(false); v2_assets::configure(&mut fixture, sharded, true);
+        let tokenizer = fixture.root.join("tokenizer.bin");
+        let raw = std::fs::read_to_string(&tokenizer).unwrap();
+        std::fs::write(&tokenizer, unicode_json::with_llama3_bos(&raw, "<eos>", 263)).unwrap();
+        fixture.manifest = fixture.manifest.replace("huggingface-raw-bytelevel", "huggingface-llama3-unicode17-bos");
+        let manifest = Manifest::parse(fixture.manifest.as_bytes()).unwrap();
+        assert_eq!(manifest.tokenizer_format, NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos);
+        for (prompt, verdict) in [("é<eos>?", Verdict::Allow), ("é<eos>!", Verdict::Deny)] {
+            let mut weights = weight_budget();
+            let mut worker = manifest.load(&mut manifest.asset_budget().unwrap(), &mut weights).unwrap();
+            assert_eq!(worker.position(), 0); assert_eq!(worker.sampled_draws(), 0);
+            assert_eq!(worker.evaluate(&assets::input(prompt.as_bytes())), Ok(verdict));
+            let report = worker.report().unwrap();
+            assert_eq!(report.prompt().source(), prompt.as_bytes());
+            assert_eq!(report.prompt().tokens(), &[263, 195, 169, 263, u32::from(*prompt.as_bytes().last().unwrap())]);
+            assert_eq!(report.prompt().spans(), &[0..0, 0..1, 1..2, 2..7, 7..8]);
+            assert!(report.prefix_controls().is_empty());
+            assert_eq!(report.generation().requested_prompt_tokens(), 5);
+            assert_eq!(report.generation().reviewed_prompt_tokens(), 5);
+            assert_eq!(worker.sampled_draws(), 2);
+            assert!(weights.usage().bytes_read > 0);
+        }
+    }
+}
+
+#[test]
+fn worker_v2_llama3_bos_requires_its_exact_declared_template_before_any_weight_read() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::PreTokenization;
+    for sharded in [false, true] {
+        let mut fixture = assets::Fixture::new(false); v2_assets::configure(&mut fixture, sharded, true);
+        let tokenizer = fixture.root.join("tokenizer.bin");
+        let raw = std::fs::read_to_string(&tokenizer).unwrap();
+        let exact = unicode_json::with_llama3_bos(&raw, "<eos>", 263);
+        let legacy = unicode_json::select(&raw, PreTokenization::Llama3Unicode17);
+        std::fs::remove_file(fixture.root.join("weights.safetensors")).unwrap();
+        if sharded { std::fs::remove_file(fixture.root.join("weights.index.json")).unwrap(); }
+        for (format, json) in [
+            ("huggingface-llama3-unicode17-bos", legacy),
+            ("huggingface-llama3-unicode17", exact.clone()),
+            ("huggingface-llama3-unicode17-bos", exact.replace("\"ids\":[263]", "\"ids\":[262]")),
+        ] {
+            std::fs::write(&tokenizer, json).unwrap();
+            let manifest = Manifest::parse(fixture.manifest.replace("huggingface-raw-bytelevel", format).as_bytes()).unwrap();
+            let mut weights = weight_budget();
+            let error = manifest.load(&mut manifest.asset_budget().unwrap(), &mut weights).unwrap_err();
+            assert!(error.to_string().contains("Tokenizer"), "{error}");
+            assert_eq!(weights.usage().read_calls, 0);
+        }
+        std::fs::write(&tokenizer, exact).unwrap();
+        let source = fixture.manifest.replace("huggingface-raw-bytelevel", "huggingface-llama3-unicode17-bos");
+        let valid = Manifest::parse(source.as_bytes()).unwrap();
+        let error = valid.load(&mut valid.asset_budget().unwrap(), &mut weight_budget()).unwrap_err();
+        assert!(!error.to_string().contains("Tokenizer"), "{error}"); // exact input reaches missing weight source
+        assert!(Manifest::parse(source.replace("huggingface-llama3-unicode17-bos", "huggingface-llama3-unicode18-bos").as_bytes()).is_err());
+    }
+}
+
+#[test]
+fn worker_v2_whole_piece_tokenizers_reach_original_monitored_inference_in_every_layout() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{MergePolicy, PreTokenization};
+    for sharded in [false, true] {
+        for bos in [false, true] {
+            let mut fixture = assets::Fixture::new(false); v2_assets::configure(&mut fixture, sharded, true);
+            let tokenizer = fixture.root.join("tokenizer.bin");
+            let raw = std::fs::read_to_string(&tokenizer).unwrap();
+            // The original allow ID survives, but no ranked rule can form it.
+            // Merely ignoring the true flag would refuse or encode other IDs.
+            assert!(raw.contains("[\"allo\",\"w\"],"));
+            let direct = raw.replace("\"ignore_merges\":false", "\"ignore_merges\":true")
+                .replace("[\"allo\",\"w\"],", "");
+            let selected = if bos { unicode_json::with_llama3_bos(&direct, "<eos>", 263) }
+                else { unicode_json::select(&direct, PreTokenization::Llama3Unicode17) };
+            std::fs::write(&tokenizer, selected).unwrap();
+            let (format, variant) = if bos {
+                ("huggingface-llama3-unicode17-bos-whole-piece", NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece)
+            } else {
+                ("huggingface-llama3-unicode17-whole-piece", NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece)
+            };
+            let source = fixture.manifest.replace("huggingface-raw-bytelevel", format);
+            let manifest = Manifest::parse(source.as_bytes()).unwrap();
+            assert_eq!(manifest.tokenizer_format, variant);
+            let mut weights = weight_budget();
+            let mut worker = manifest.load(&mut manifest.asset_budget().unwrap(), &mut weights).unwrap();
+            assert_eq!(worker.position(), 0); assert_eq!(worker.sampled_draws(), 0);
+            assert_eq!(worker.evaluate(&assets::input(b"allow<eos>?")), Ok(Verdict::Allow));
+            let report = worker.report().unwrap();
+            let ids: &[u32] = if bos { &[263, 259, 263, 63] } else { &[259, 263, 63] };
+            let spans = if bos { vec![0..0, 0..5, 5..10, 10..11] } else { vec![0..5, 5..10, 10..11] };
+            assert_eq!(report.prompt().tokens(), ids);
+            assert_eq!(report.prompt().spans(), spans);
+            assert_eq!(report.prompt().source(), b"allow<eos>?");
+            assert_eq!(report.prompt().tokenizer().merge_policy(), MergePolicy::WholePieceFirst);
+            assert_eq!(report.generation().reviewed_prompt_tokens(), ids.len());
+            assert_eq!(worker.sampled_draws(), 2);
+            assert!(weights.usage().bytes_read > 0);
+            // Removing the explicit policy selection refuses before weight I/O.
+            let wrong = Manifest::parse(source.replace("-whole-piece", "").as_bytes()).unwrap();
+            let mut untouched = weight_budget();
+            let error = wrong.load(&mut wrong.asset_budget().unwrap(), &mut untouched).unwrap_err();
+            assert!(error.to_string().contains("Tokenizer"), "{error}");
+            assert_eq!(untouched.usage().read_calls, 0);
+        }
+    }
+}

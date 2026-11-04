@@ -92,17 +92,11 @@ impl FileOversight {
             Rc::new(capture),
         ));
         self.check_source_admission(&event)?;
-        self.fault = Some(JournalFailure {
-            operation: JournalIo::Stage,
-            kind: std::io::ErrorKind::Other,
-            replacement_may_be_visible: false,
-        });
-        if self.events.len() >= self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
-        let bytes =
-            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+            kind: std::io::ErrorKind::Other, replacement_may_be_visible: false });
+        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let result = candidate.apply(&event)?;
         let revision = match &result {
             Transition::Inputs(revision) => *revision,
@@ -133,7 +127,7 @@ impl FileOversight {
             },
             _ => return Err(Error::Binding.into()),
         };
-        self.persist_candidate(event, bytes, candidate, result)?;
+        self.persist_control_candidate(event, bytes, candidate, result, retain_replay)?;
         Ok(FileCaptureObservation { identity, outcome })
     }
 }

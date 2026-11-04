@@ -2,6 +2,21 @@
 use super::*;
 #[path = "../../../../../tests/support/file_oversight.rs"]
 mod fixture;
+use fixture::{Directory, snapshot};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT: AtomicU64 = AtomicU64::new(0);
+fn directory() -> Directory {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    Directory(crate::test_directory::create(format!(
+        "fa-receipt-0-{}-{stamp}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    )))
+}
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::oversight::actor::{
     ActorOutcome, ActorProposal, Knowledge, UnknownReason,
@@ -174,7 +189,7 @@ fn authorized(root: &Directory, phase: u8) -> (FileOversight, ActorProposal) {
 #[test]
 fn actual_peer_receipt_and_cancel_retain_native_unknown_and_executed_liabilities() {
     for phase in 0..4 {
-        let root = Directory::new();
+        let root = directory();
         let (h, p) = authorized(&root, phase);
         let a = actor(&root, fixture::profile().delivery.scope);
         let before = h.inspect();
@@ -218,7 +233,7 @@ fn actual_peer_receipt_and_cancel_retain_native_unknown_and_executed_liabilities
 
 #[test]
 fn actual_open_serves_retained_refusal_without_live_assets_or_a_replacement_request() {
-    let root = Directory::new();
+    let root = directory();
     let c = configured(&root);
     let a = actor(&root, c.profile.delivery.scope);
     let (mut h, _) = prepare_host(&c, None, false).unwrap();
@@ -280,7 +295,7 @@ fn actual_open_serves_retained_refusal_without_live_assets_or_a_replacement_requ
 
 #[test]
 fn absent_selected_request_stays_withheld_and_never_allocates_after_open() {
-    let root = Directory::new();
+    let root = directory();
     let c = configured(&root);
     let a = actor(&root, c.profile.delivery.scope);
     let (h, _) = prepare_host(&c, None, false).unwrap();
@@ -361,7 +376,7 @@ fn closed_flags_foreign_scope_and_socket_collision_refuse_without_recovery() {
         )
         .is_err()
     );
-    let root = Directory::new();
+    let root = directory();
     let c = configured(&root);
     let (h, _) = prepare_host(&c, None, false).unwrap();
     drop(h);
@@ -389,7 +404,7 @@ fn closed_flags_foreign_scope_and_socket_collision_refuse_without_recovery() {
 #[test]
 fn startup_deadline_before_open_and_after_fence_are_not_conflated() {
     for cutoff in [0, 2, 3] {
-        let root = Directory::new();
+        let root = directory();
         let c = configured(&root);
         let a = actor(&root, c.profile.delivery.scope);
         let (h, _) = prepare_host(&c, None, false).unwrap();
@@ -422,7 +437,7 @@ fn startup_deadline_before_open_and_after_fence_are_not_conflated() {
 #[test]
 fn rejected_kernel_credentials_consume_quota_without_returning_request_data() {
     use std::io::Read;
-    let root = Directory::new();
+    let root = directory();
     let (h, p) = authorized(&root, 3);
     let mut a = actor(&root, fixture::profile().delivery.scope);
     a.actor = PeerPolicy::new(

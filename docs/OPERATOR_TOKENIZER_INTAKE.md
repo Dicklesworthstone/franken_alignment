@@ -43,23 +43,31 @@ The admitted formats are:
 
 | `format` | Exact input contract |
 | --- | --- |
-| `native_archive` | Original FA-BBPE reader, including a bound Unicode profile in `FABBPE05`. |
+| `native_archive` | Original FA-BBPE reader, including bound Unicode, BOS and whole-piece profiles in `FABBPE05`–`FABBPE07`. |
 | `huggingface_raw_bytelevel` | Original raw ByteLevel profile with all transformation flags false. |
 | `huggingface_gpt2_unicode17` | ByteLevel with `use_regex=true`, no inserted prefix space, and the fixed GPT-2/Unicode-17 grammar. |
 | `huggingface_llama3_unicode17` | The exact Llama-3 `Split` pattern followed by ByteLevel with `use_regex=false`, using frozen Unicode-17 properties. |
+| `huggingface_llama3_unicode17_bos` | The same grammar plus the exact configured BOS template. |
+| `huggingface_llama3_unicode17_whole_piece` | The same grammar with explicitly required `ignore_merges=true`, matching complete ordinary pieces before ranked BPE. |
+| `huggingface_llama3_unicode17_bos_whole_piece` | The same whole-piece policy plus the exact configured BOS template. |
 
 The [Unicode pretokenization contract](UNICODE_PRETOKENIZATION.md) specifies the
 two exact pipelines and frozen character properties. Both object fields are required; unknown fields or formats
 refuse. Legacy versions continue requiring a plain native-archive path string.
 The format is selected from the recipe, with no extension inference, content
 sniffing, conversion fallback or model-name lookup.
+All original JSON format values retain `ignore_merges=false`. The two new
+`whole_piece` values require true and use the
+[whole-piece BPE contract](WHOLE_PIECE_BPE.md); the file cannot choose that policy.
 
 ## Input and recovery contract
 
 Raw ByteLevel behavior is unchanged. Unicode profiles first recognize explicit
 literal controls, split ordinary UTF-8 spans according to the selected fixed
-grammar, then restrict the original BPE to those boundaries. They insert no
-prefix, normalize no text, and perform no padding, truncation or postprocessing.
+grammar, then restrict the original BPE to those boundaries. Explicit whole-piece
+profiles first look up each complete ordinary piece in the original vocabulary.
+Only the explicit BOS profiles insert a prefix. No profile normalizes text or
+performs padding, truncation or arbitrary postprocessing.
 Literal controls retain exact IDs and spellings; unsupported added-token
 transformations and arbitrary regex pipelines refuse. Unicode profiles require
 valid complete UTF-8; raw profiles continue accepting arbitrary bytes. Native
@@ -78,7 +86,7 @@ reserve future journal space.
 The resulting immutable tokenizer is encoded by the original native archive
 writer and pinned by the original durable bootstrap. Recovery compares the full
 effective tokenizer, including token IDs, merges, special-control spellings,
-model profile and complete named grammar/Unicode version. A changed tokenizer refuses before a canonical recovery write,
+model profile, complete named grammar/Unicode version, BOS and merge policy. A changed tokenizer refuses before a canonical recovery write,
 even if the particular saved prompt would happen to tokenize identically.
 Equivalent JSON whitespace or an explicitly selected native archive with the
 same complete tokenizer has the same durable semantics. Raw JSON bytes, input

@@ -292,10 +292,10 @@ impl Prefix for InterventionPrefix<'_> {
         self.plan.source().tokens().len()
     }
     fn bits(&self, layer: u64, cell: KvCell) -> Result<u32, Error> {
-        if self.arm == DecoderExperimentArm::Intervention {
-            if let Some(branch) = self.plan.data.branches.get(&layer) {
-                return branch.bits(cell);
-            }
+        if self.arm == DecoderExperimentArm::Intervention
+            && let Some(branch) = self.plan.data.branches.get(&layer)
+        {
+            return branch.bits(cell);
         }
         let row = self
             .plan

@@ -398,7 +398,7 @@ impl FileLearnedProcessReview {
             let active = self.active.as_mut().expect("running original round");
             let mut first = Some(now);
             let pumped = active.pump_with_clock(host, active.revision(), || {
-                first.take().unwrap_or_else(|| clock())
+                first.take().unwrap_or_else(&mut *clock)
             });
             self.capture();
             pumped.map_err(|failure| FileProcessFailure::Journal(failure.error))?;

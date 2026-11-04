@@ -163,7 +163,7 @@ impl PublicationEndpoint {
         #[cfg(unix)]
         if self.file_store.is_some() {
             return match self.file_transition(filesystem::Operation::Deliver(message.clone()))? {
-                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                filesystem::OperationResult::Receipt(receipt) => Ok(*receipt),
                 _ => unreachable!("delivery result"),
             };
         }
@@ -261,7 +261,7 @@ impl PublicationEndpoint {
         #[cfg(unix)]
         if self.file_store.is_some() {
             return match self.file_transition(filesystem::Operation::Seal(query.clone()))? {
-                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                filesystem::OperationResult::Receipt(receipt) => Ok(*receipt),
                 _ => unreachable!("seal result"),
             };
         }
@@ -295,7 +295,7 @@ impl PublicationEndpoint {
             return match self
                 .file_transition(filesystem::Operation::ResolveExpired(query.clone()))?
             {
-                filesystem::OperationResult::Receipt(receipt) => Ok(receipt),
+                filesystem::OperationResult::Receipt(receipt) => Ok(*receipt),
                 _ => unreachable!("expiry result"),
             };
         }
@@ -337,12 +337,11 @@ impl PublicationEndpoint {
 
     fn existing(&self, message: &DispatchEnvelope) -> Result<Option<&EndpointReceipt>, Error> {
         let receipt = self.receipts.get(&message.attempt);
-        if let Some(receipt) = receipt {
-            if receipt.request != message.request
-                || receipt.retained_until != message.retained_until
-            {
-                return Err(Error::Binding);
-            }
+        if let Some(receipt) = receipt
+            && (receipt.request != message.request
+                || receipt.retained_until != message.retained_until)
+        {
+            return Err(Error::Binding);
         }
         Ok(receipt)
     }

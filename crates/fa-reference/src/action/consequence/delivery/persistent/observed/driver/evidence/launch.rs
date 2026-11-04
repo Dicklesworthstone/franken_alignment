@@ -1,6 +1,6 @@
 //! Review launch captures through the same live source gate as later steps.
+use super::{FileOversight, FileReviewLaunch, FileSourceReviewError, durable_capture};
 use super::super::{FileDriverLaunch, FileSupervisedDriver, admitted};
-use super::{FileReviewLaunch, FileSourceReviewError, durable_capture};
 use crate::Error;
 use crate::action::consequence::delivery::persistent::JournalError;
 use crate::action::consequence::oversight::helper_processes::HelperProgram;
@@ -24,17 +24,18 @@ impl FileSupervisedDriver {
     /// workers. A changed observation can withdraw previous inputs; only revisions
     /// caused by THIS exclusively owned capture are adopted for the new review.
     /// No previously completed review, approval or reservation is reused here.
-    pub fn start_file_review<S, F>(
-        &mut self,
-        source: &mut S,
-        launch: FileReviewLaunch<UnixStream>,
-        mut clock: F,
-    ) -> Result<EvidenceIdentity, FileSourceReviewError>
-    where
-        S: EvidenceFile + ?Sized,
-        F: FnMut() -> ElapsedTick,
-    {
-        let prepared = self.file_review_inputs(source, &launch, &mut clock)?;
+    pub fn start_file_review<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<UnixStream>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        self.start_file_review_checked(source, launch, clock, |_| Ok(()))
+    }
+
+    pub(super) fn start_file_review_checked<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<UnixStream>, mut clock: F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
         let observation = prepared.capture.identity();
         self.start_review(
             FileDriverLaunch {
@@ -57,17 +58,18 @@ impl FileSupervisedDriver {
     /// Capture and commit before executable-helper admission or process creation.
     /// The original launcher retains every started child on partial failure and
     /// checks fresh time after spawn. No source read failure can launch a helper.
-    pub fn start_file_process_review<S, F>(
-        &mut self,
-        source: &mut S,
-        launch: FileReviewLaunch<HelperProgram>,
-        mut clock: F,
-    ) -> Result<EvidenceIdentity, FileSourceReviewError>
-    where
-        S: EvidenceFile + ?Sized,
-        F: FnMut() -> ElapsedTick,
-    {
-        let prepared = self.file_review_inputs(source, &launch, &mut clock)?;
+    pub fn start_file_process_review<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<HelperProgram>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        self.start_file_process_review_checked(source, launch, clock, |_| Ok(()))
+    }
+
+    pub(super) fn start_file_process_review_checked<S, F>(&mut self, source: &mut S,
+        launch: FileReviewLaunch<HelperProgram>, mut clock: F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        -> Result<EvidenceIdentity, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
         let observation = prepared.capture.identity();
         self.start_process_review(
             FileDriverLaunch {
@@ -87,19 +89,11 @@ impl FileSupervisedDriver {
         Ok(observation)
     }
 
-    fn file_review_inputs<S, W, F>(
-        &mut self,
-        source: &mut S,
-        launch: &FileReviewLaunch<W>,
-        clock: &mut F,
-    ) -> Result<PreparedInput, FileSourceReviewError>
-    where
-        S: EvidenceFile + ?Sized,
-        F: FnMut() -> ElapsedTick,
-    {
-        if self.job.is_some() {
-            return Err(Error::WrongState.into());
-        }
+    fn file_review_inputs<S, W, F>(&mut self, source: &mut S, launch: &FileReviewLaunch<W>, clock: &mut F,
+        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        -> Result<PreparedInput, FileSourceReviewError>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
+        if self.job.is_some() { return Err(Error::WrongState.into()); }
         self.ensure_child_slot()?;
         let mut host = self.supervisor.host_mut()?;
         if host.storage_failure().is_some() {
@@ -120,6 +114,7 @@ impl FileSupervisedDriver {
             return Err(Error::Binding.into());
         }
         let action = host.request_action(launch.request)?.clone();
+        before_capture(&mut host)?;
         // Retain the exclusive original owner across the read. A stale caller
         // cannot hide behind a subsequent source-driven input revision change.
         let captured = if host.file_source_required() {

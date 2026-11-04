@@ -109,14 +109,11 @@ impl FileOversight {
         // The caller already closed live admission. All following failures keep
         // it closed, including allocation/replay before entering Store::replace.
         let event = Event::PublicationWitness(WitnessEvent::Freshness(observation));
-        if self.events.len() >= self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
-        let bytes =
-            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let result = candidate.apply(&event)?;
-        self.persist_candidate(event, bytes, candidate, result)?;
+        self.persist_control_candidate(event, bytes, candidate, result, retain_replay)?;
         Ok(())
     }
 }

@@ -1,6 +1,7 @@
 //! One native-model review loop through the ORIGINAL source and effect gates.
 //! Numerical custody is retained across live policy reads and publication. No
 //! caller supplies helper packets, a verdict, a permit or a replacement source.
+mod publication;
 use super::super::evidence::FileEvidenceReport;
 use super::super::learned::evidence::{current_provider, policy_file_provider};
 use super::super::provider::EvidenceProvider;
@@ -216,10 +217,10 @@ impl FileNativeSupervisedDriver {
         if self.review.status() != NativeReviewStatus::Running {
             // A caught original numerical unwind may leave a Reviewing job,
             // never a usable result. Preserve Ready and query-only obligations.
-            if let Some(job) = &mut self.driver.job {
-                if job.phase == Phase::Review {
-                    job.close();
-                }
+            if let Some(job) = &mut self.driver.job
+                && job.phase == Phase::Review
+            {
+                job.close();
             }
             if self
                 .driver
@@ -303,10 +304,10 @@ impl Drop for NativeObservation<'_> {
         if self.owner.review.status() == NativeReviewStatus::Running {
             let _ = self.owner.review.cancel(self.owner.review.revision());
         }
-        if let Some(job) = &mut self.owner.driver.job {
-            if job.phase != Phase::Reconcile {
-                job.close();
-            }
+        if let Some(job) = &mut self.owner.driver.job
+            && job.phase != Phase::Reconcile
+        {
+            job.close();
         }
         self.owner.driver.reap_helpers();
     }

@@ -203,10 +203,10 @@ impl SampledArchive {
         if r.take(84)? != profile_bytes(model.profile()).as_slice() {
             return Err(Error::Binding);
         }
-        if let Some(binding) = scaling {
-            if r.take(binding.len())? != binding {
-                return Err(Error::Binding);
-            }
+        if let Some(binding) = scaling
+            && r.take(binding.len())? != binding
+        {
+            return Err(Error::Binding);
         }
         if expected.vocabulary() != model.profile().shape().vocabulary {
             return Err(Error::Binding);

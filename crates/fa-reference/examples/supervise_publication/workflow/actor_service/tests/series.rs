@@ -12,6 +12,10 @@ use fa_reference::action::consequence::oversight::actor::UnknownReason;
 use fa_reference::action::consequence::oversight::actor_wire::WireError;
 
 fn command(c: &Config, request: u64, version: u64, payload: &[u8], units: u64) -> Command {
+    assert!(
+        payload.len() as u64 <= units,
+        "fund the entire actual actor frame payload"
+    );
     let mut target = c.profile.delivery.target;
     target.expected_version = version;
     Command::Submit {
@@ -27,8 +31,9 @@ fn command(c: &Config, request: u64, version: u64, payload: &[u8], units: u64) -
 }
 fn human_for(profile: PeerProfile, request: u64) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
-        wait(&profile.socket(request));
-        let mut client = profile.connect_client(request).unwrap();
+        let mut client = profile
+            .connect_client_waiting(request, Duration::from_secs(10))
+            .unwrap();
         let started = Instant::now();
         loop {
             assert!(started.elapsed() < Duration::from_secs(10));
@@ -170,8 +175,8 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
     let c = configured(&root);
     evidence(&root, &c);
     let (actor, reviewer) = profiles(&root, &c);
-    let first = command(&c, 7, 1, b"cancel1", 7);
-    let second = command(&c, 8, 1, b"permit2", 7); // No first effect, so no version increment.
+    let first = command(&c, 7, 1, b"cancel", 7);
+    let second = command(&c, 8, 1, b"allowed", 7); // No first effect, so no version increment.
     let wait_for_human = reviewer.socket(7);
     let p = actor.clone();
     let peer = std::thread::spawn(move || {
@@ -209,7 +214,7 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
     let c = configured(&root);
     let disk = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(disk.executions, 1);
-    assert_eq!(disk.payload, b"permit2");
+    assert_eq!(disk.payload, b"allowed");
     assert_eq!(disk.control.ledger.charged, 7);
     assert_eq!(disk.control.ledger.reserved, 0);
     assert!(
@@ -224,51 +229,70 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
 
 #[test]
 fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
-    let root = Directory::new();
-    let mut c = configured(&root);
-    c.profile.delivery.total = 10;
-    evidence(&root, &c);
-    let (actor, reviewer) = profiles(&root, &c);
-    let first = command(&c, 7, 1, b"first", 7);
-    let second = command(&c, 8, 2, b"overcap", 7);
-    let p = actor.clone();
-    let profile = c.profile.clone();
-    let path = c.store.clone();
-    let peer = std::thread::spawn(move || {
-        let mut budget = ClientIoBudget::new(ClientIoLimits::default()).unwrap();
-        let (stream, response) = finish(connect(&p), first, &mut budget);
-        assert!(executed(&response));
-        let (_, response) = finish(stream, second, &mut budget);
-        assert!(!executed(&response));
-    });
-    let human = human_for(reviewer.clone(), 7);
-    series::serve(
-        c,
-        &actor,
-        &reviewer,
-        None,
-        Options {
-            requests: &[7, 8],
-            open: false,
-            credibility: None,
-        },
-        || ElapsedTick(1000),
-    )
-    .unwrap();
-    peer.join().unwrap();
-    human.join().unwrap();
-    let disk = FileOversight::read_publication(&path, &profile).unwrap();
-    assert_eq!(disk.executions, 1);
-    assert_eq!(disk.payload, b"first");
-    assert_eq!(disk.control.ledger.charged, 7);
-    assert_eq!(disk.control.ledger.available, 3);
-    assert_eq!(disk.control.ledger.reserved, 0);
-    assert!(!reviewer.socket(8).exists());
-    let (host, _) = FileOversight::open(&path, profile).unwrap();
-    assert!(matches!(
-        host.request_status(8).unwrap().disposition,
-        FileRequestDisposition::NotAdmitted(_)
-    ));
+    // Keep the original ten-unit case beside the exact one-short/equal pair.
+    // Plan 7.3 reserves effect rights at Authorize, not proposal admission.
+    for total in [10, 13, 14] {
+        let funded = total == 14;
+        let root = Directory::new();
+        let mut c = configured(&root);
+        c.profile.delivery.total = total;
+        evidence(&root, &c);
+        let (actor, reviewer) = profiles(&root, &c);
+        let first = command(&c, 7, 1, b"first", 7);
+        let second = command(&c, 8, 2, b"second", 7);
+        let p = actor.clone();
+        let profile = c.profile.clone();
+        let path = c.store.clone();
+        let peer = std::thread::spawn(move || {
+            let mut budget = ClientIoBudget::new(ClientIoLimits::default()).unwrap();
+            let (stream, response) = finish(connect(&p), first, &mut budget);
+            assert!(executed(&response));
+            let (_, response) = finish(stream, second, &mut budget);
+            assert!(matches!(response.result, Ok(Knowledge::Known { value, .. })
+                if value == if funded { ActorOutcome::Executed } else { ActorOutcome::CancelledBeforeDispatch }));
+        });
+        let first_human = human_for(reviewer.clone(), 7);
+        let second_human = human_for(reviewer.clone(), 8);
+        let result = series::serve(
+            c,
+            &actor,
+            &reviewer,
+            None,
+            Options {
+                requests: &[7, 8],
+                open: false,
+                credibility: None,
+            },
+            || ElapsedTick(1000),
+        );
+        if funded {
+            result.unwrap();
+        } else {
+            assert!(result.unwrap_err().contains("Contract(Limit)"));
+        }
+        peer.join().unwrap();
+        first_human.join().unwrap();
+        second_human.join().unwrap();
+        let disk = FileOversight::read_publication(&path, &profile).unwrap();
+        let charged = if funded { 14 } else { 7 };
+        assert_eq!(disk.executions, if funded { 2 } else { 1 });
+        assert_eq!(
+            disk.payload,
+            if funded {
+                b"second".as_slice()
+            } else {
+                b"first".as_slice()
+            }
+        );
+        assert_eq!(disk.control.ledger.charged, charged);
+        assert_eq!(disk.control.ledger.available, total - charged);
+        assert_eq!(disk.control.ledger.reserved, 0);
+        assert!(!reviewer.socket(8).exists());
+        let (host, _) = FileOversight::open(&path, profile).unwrap();
+        assert!(matches!(host.request_status(8).unwrap().disposition,
+            FileRequestDisposition::Admitted { stage, .. }
+                if stage == if funded { ActionState::Confirmed } else { ActionState::Cancelled }));
+    }
 }
 
 #[test]
@@ -421,7 +445,7 @@ fn second_source_failure_neither_reuses_first_capture_nor_refunds_first_publicat
     evidence(&root, &c);
     let (actor, reviewer) = profiles(&root, &c);
     let first = command(&c, 7, 1, b"first", 7);
-    let second = command(&c, 8, 2, b"missing", 7);
+    let second = command(&c, 8, 2, b"needs", 7);
     let p = actor.clone();
     let source = root.0.join("evidence.json");
     let stop_profile = reviewer.clone();

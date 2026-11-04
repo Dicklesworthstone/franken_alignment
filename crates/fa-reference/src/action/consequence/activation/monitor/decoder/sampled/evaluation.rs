@@ -665,10 +665,10 @@ impl PairedRolloutSuite {
                 break;
             }
         }
-        if let BaselineEnd::Failed { position, .. } = report.baseline_end {
-            if matches!(report.monitored_end, MonitoredEnd::Complete) {
-                report.monitored_end = MonitoredEnd::NotCompleted { position };
-            }
+        if let BaselineEnd::Failed { position, .. } = report.baseline_end
+            && matches!(report.monitored_end, MonitoredEnd::Complete)
+        {
+            report.monitored_end = MonitoredEnd::NotCompleted { position };
         }
         report.baseline_work = reference.work();
         report.monitored_work = monitored.decoder_work();

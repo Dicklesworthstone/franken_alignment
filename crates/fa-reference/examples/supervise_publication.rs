@@ -11,12 +11,18 @@ mod console;
 #[cfg(unix)]
 #[path = "supervise_publication/diagnosis.rs"]
 mod diagnosis;
+#[cfg(target_os = "linux")]
+#[path = "shutdown_fleet/operator.rs"]
+mod fleet_shutdown;
 #[cfg(unix)]
 #[path = "supervise_publication/guarded_resume.rs"]
 mod guarded_resume;
 #[cfg(unix)]
 #[path = "supervise_publication/peers.rs"]
 mod peers;
+#[cfg(unix)]
+#[path = "supervise_publication/policy_replay.rs"]
+mod policy_replay;
 #[cfg(unix)]
 #[path = "supervise_publication/proposal.rs"]
 mod proposal;
@@ -32,6 +38,12 @@ mod qualification;
 #[cfg(unix)]
 #[path = "supervise_publication/recover_stop.rs"]
 mod recover_stop;
+#[cfg(unix)]
+#[path = "supervise_publication/situation.rs"]
+mod situation;
+#[cfg(all(test, unix))]
+#[path = "supervise_publication/test_directory.rs"]
+mod test_directory;
 #[cfg(all(test, unix))]
 #[path = "supervise_publication/tests.rs"]
 mod tests;
@@ -53,7 +65,15 @@ fn main() {
 }
 
 #[cfg(unix)]
-fn command(mut args: Vec<String>) -> Result<(), String> {
+fn command(args: Vec<String>) -> Result<(), String> {
+    command_with_output(args, &mut std::io::stdout())
+}
+
+#[cfg(unix)]
+fn command_with_output(
+    mut args: Vec<String>,
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
     use config::{Config, debug, read_regular};
     use fa_reference::action::MAX_PAYLOAD_BYTES;
     use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
@@ -62,23 +82,85 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
     use peers::PeerProfile;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE] [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication stop-admission CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication inspect CONFIG\n       supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE]\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION [--history-anchor INPUT]";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE] [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-fleet FLEET_JSON\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication stop-admission CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication inspect CONFIG\n       supervise_publication situation CONFIG [--history-anchor INPUT] [--page-size 1..64] [--learned-recipe RECIPE]\n       supervise_publication situation --fleet FLEET_PROFILE\n       supervise_publication policy-replay CONFIG CANDIDATE_JSON\n       supervise_publication compare-learned-prompt PLAN\n       supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE\n       supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON\n       supervise_publication actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]\n       supervise_publication actor-precheck --capabilities|--policy ACTOR_PROFILE PRECHECK_PROFILE QUERY\n       supervise_publication shutdown-fleet create|recover|resume FLEET_PROFILE [--terminal-clocks | --admission-only | --drain-only] [--coordinator-anchor INPUT] [--retain-coordinator-anchor OUTPUT]\n       supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE]\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_JSON | --narrow-stream-checkpoint NARROW_JSON | --begin-stream-reset RESET_JSON) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset REQUEST_JSON --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE] [--stop-profile PEER_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stopped-stream-reset REQUEST_JSON STOP_OPERATION --history-anchor INPUT --retain-history-anchor NEW_OUTPUT --topology-profile TOPOLOGY_PROFILE";
+    // Role-specific and historical commands own the COMPLETE original argv.
+    // Shared live-service options must not be stripped before these parsers can
+    // reject them, and no supervisor Config is opened by the actor-only client.
+    match args.first().map(String::as_str) {
+        Some("situation") => return situation::command(&args, output),
+        Some("policy-replay") => return policy_replay::command(&args, output),
+        Some("explain-proposal") => return diagnosis::command(&args, output),
+        Some("compare-learned-prompt") => {
+            #[cfg(target_os = "linux")]
+            return workflow::actor_service::prompt_counterfactual_command(&args, output);
+            #[cfg(not(target_os = "linux"))]
+            return Err("learned prompt comparison requires the Linux operator build".into());
+        }
+        Some("abandon-unknown") => {
+            return recover_stop::guarded::abandonment::command(&args, output);
+        }
+        Some("actor-precheck") => {
+            #[cfg(target_os = "linux")]
+            return workflow::actor_service::precheck_command(&args, output);
+            #[cfg(not(target_os = "linux"))]
+            return Err("actor-precheck requires Linux peer credentials; no unchecked fallback".into());
+        }
+        Some("shutdown-fleet") => {
+            #[cfg(target_os = "linux")]
+            return workflow::actor_service::shutdown_fleet(&args[1..], output);
+            #[cfg(not(target_os = "linux"))]
+            return Err("learned fleet shutdown requires the Linux operator profile; no fallback".into());
+        }
+        Some("create-learned-generated")
+            if args.iter().skip(3).any(|value| {
+                matches!(
+                    value.as_str(),
+                    "--policy-replay"
+                        | "--explain-proposal"
+                        | "--abandon-unknown"
+                        | "--rotate-credential"
+                        | "--revoke-credential"
+                        | "--receipts-only"
+                        | "--reconcile-receipts"
+                        | "--audit-review"
+                        | "--recover-stop"
+                        | "--stop-admission"
+                        | "--drain-stopped"
+                        | "--serve-receipts"
+                        | "--recover-receipt-checkpoint"
+                        | "--recover-credential-checkpoint"
+                        | "--recover-terminal-checkpoint"
+                        | "--prepare-stream-checkpoint"
+                        | "--capture-stream-checkpoint"
+                        | "--narrow-stream-checkpoint"
+                        | "--begin-stream-reset"
+                        | "--complete-stream-reset"
+                        | "--recover-stopped-stream-reset"
+                )
+            }) =>
+        {
+            #[cfg(target_os = "linux")]
+            return workflow::actor_service::command(&args, None);
+            #[cfg(not(target_os = "linux"))]
+            return Err("learned operator modes require the Linux profile; no fallback".into());
+        }
+        _ => {}
+    }
+    // The independent fleet roster owns its complete grammar and never reads Config.
+    if args.first().is_some_and(|mode| mode == "stop-fleet") {
+        return peers::fleet::command(&args, output);
+    }
     // Native accounting owns its complete grammar before any option is removed.
     // Unsupported guard/activation combinations cannot fall back to legacy work.
     if args.iter().skip(3).any(|value| value == "--andon") {
-        return workflow::continuation::andon::command(&args, &mut std::io::stdout().lock());
+        return workflow::continuation::andon::command(&args, output);
     }
     // Terminal phases own a closed option set before any shared option removal.
     if args
         .first()
         .is_some_and(|mode| matches!(mode.as_str(), "stop-admission" | "drain-stopped"))
     {
-        return recover_stop::admission::command(&args, &mut std::io::stdout().lock());
-    }
-    // Read-only diagnosis has a closed option set and owns one elapsed budget
-    // beginning before CONFIG is read. No live-service profile can be substituted.
-    if args.first().is_some_and(|mode| mode == "explain-proposal") {
-        return diagnosis::command(&args, &mut std::io::stdout().lock());
+        return recover_stop::admission::command(&args, output);
     }
     // Initial custody is an explicit create-only intent with a closed flag set.
     // Do not consume/ignore recovery or credibility flags before validating it.
@@ -90,7 +172,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             .skip(3)
             .any(|value| value == "--retain-history-anchor")
     {
-        return workflow::continuation::creation::command(&args, &mut std::io::stdout().lock());
+        return workflow::continuation::creation::command(&args, output);
     }
     let credibility = qualification::take_option(&mut args)?;
     if args.first().is_some_and(|mode| {
@@ -103,6 +185,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
                 | "actor-submit"
                 | "create-generated"
                 | "create-learned-generated"
+                | "serve-learned-generated"
         )
     }) {
         #[cfg(target_os = "linux")]
@@ -122,7 +205,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
         return workflow::continuation::guarded::command(
             &args,
             credibility.as_deref(),
-            &mut std::io::stdout().lock(),
+            output,
         );
     }
     let peer_profile = if (args.len() == 5
@@ -160,7 +243,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             return Err("request must be nonzero".into());
         }
         if mode == "stop-peer" {
-            return peers::stop::request(&profile, request, &mut std::io::stdout().lock());
+            return peers::stop::request(&profile, request, output);
         }
         return console::review_peer(&profile, request);
     }
@@ -175,7 +258,7 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             &profile,
             &document,
             workflow::clock,
-            &mut std::io::stdout().lock(),
+            output,
         );
     }
     match mode {
@@ -248,10 +331,9 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
                     ..
                 })
             );
-            let mut stdout = std::io::stdout().lock();
-            stdout.write_all(&result.response.encode()).map_err(debug)?;
-            stdout.write_all(b"\n").map_err(debug)?;
-            stdout.flush().map_err(debug)?;
+            output.write_all(&result.response.encode()).map_err(debug)?;
+            output.write_all(b"\n").map_err(debug)?;
+            output.flush().map_err(debug)?;
             // An actor-visible result comes only from its original gateway.
             // A failed output cannot unwind committed work or trigger a resend.
             if let Some(error) = result.failure {
@@ -280,14 +362,14 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
                     &profile,
                     operation,
                     workflow::clock,
-                    &mut std::io::stdout().lock(),
+                    output,
                 )
             } else {
                 recover_stop::run(
                     &config,
                     operation,
                     workflow::clock,
-                    &mut std::io::stdout().lock(),
+                    output,
                 )
             }
         }
@@ -323,10 +405,9 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
                     proposal::document(&config, request, payload, ttl, workflow::clock(), basis)?
                 }
             };
-            let mut stdout = std::io::stdout().lock();
-            stdout.write_all(&bytes).map_err(debug)?;
-            stdout.write_all(b"\n").map_err(debug)?;
-            stdout.flush().map_err(debug)
+            output.write_all(&bytes).map_err(debug)?;
+            output.write_all(b"\n").map_err(debug)?;
+            output.flush().map_err(debug)
         }
         "inspect" => {
             // This is privileged, historical inspection, not an actor API or a
@@ -334,7 +415,8 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
             let state =
                 FileOversight::read_publication(&config.store, &config.profile).map_err(debug)?;
             let payload: String = state.payload.iter().map(|b| format!("{b:02x}")).collect();
-            println!(
+            writeln!(
+                output,
                 "{{\"revision\":\"{}\",\"executions\":\"{}\",\"version\":\"{}\",\"payload_hex\":\"{}\",\"charged\":\"{}\",\"reserved\":\"{}\"}}",
                 state.revision,
                 state.executions,
@@ -342,8 +424,8 @@ fn command(mut args: Vec<String>) -> Result<(), String> {
                 payload,
                 state.control.ledger.charged,
                 state.control.ledger.reserved
-            );
-            Ok(())
+            ).map_err(debug)?;
+            output.flush().map_err(debug)
         }
         _ => unreachable!("validated subcommand"),
     }

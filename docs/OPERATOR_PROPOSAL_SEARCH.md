@@ -167,3 +167,40 @@ selected source manifest are recorded in
 [the attempt receipt](../artifacts/execution/2026-10-13-proposal-search-attempt.json).
 The launcher is unavailable in this editing environment. No Rust test, formatter,
 Clippy, production gate or bead is reported complete by this source increment.
+
+
+## 2026-10-24 selected execution
+
+A qualified standard-backend RCH run passed all 21 selected `diagnosis::` tests
+(18 behavioral cases and three renderer cases), with zero failed/ignored and
+706 unrelated example functions filtered. Source: `b688a37bc7baea0efce2d53fc1b0bb769e40af86`
+plus the three owned diagnosis fixture/test paths, overlay fingerprint
+`69126149d57c429e2ae1d0227638da806ab08be68a914f04c3ab80717c972627`.
+The fixture repair funds payload bytes through the original adapter, preserves
+original policy limits and denial/search assertions, and retains occupied
+staging bytes before the separate positive writer phase. No production command,
+policy, budget, storage behavior or test registration changed.
+
+Earlier failed attempts remain retained. In particular, the complete original
+727-function example run recorded failures and aborted on a learned-test stack
+overflow; it has no complete suite result. The frozen full driver still refuses
+the initial package-admission boundary. This selected result does not qualify
+the complete example, roadmap packet, authorization-filtered agent API or release.
+Raw logs are outside the frozen root at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.
+
+## Learned publication histories
+
+The same menu, subset search, accounting and report renderer are available through
+`create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT --search MENU_JSON`.
+This route verifies the original learned/plain/raw/owned and optional topology
+history before producing the immutable investigation. It requires the original
+exclusive recovery lock and, for topology, an exact matching v2 pair. It never
+uses a source-only fallback for numerical history.
+
+For learned streams, payload candidates edit hypothetical historical
+`ActionSpec` release-frame bytes. They do not regenerate text, recompute
+forecasts, issue a valid release or inherit helper approval. Original admission
+and captured ending state remain distinct, and every successful hypothetical
+still requires fresh independent review. See
+[learned command admission and limits](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).

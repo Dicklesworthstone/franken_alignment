@@ -275,21 +275,20 @@ impl FileNativeSupervisedDriver {
                     else {
                         return Err(Error::Incomplete.into());
                     };
-                    if let Ok(receipt) = receipt {
-                        if receipt.policy.control.decision.consequence == Consequence::Continue {
-                            let input_revision = self.input_revision;
-                            if host.input_revision(job.attempt)? != input_revision
-                                || host.inspect().control.sequence
-                                    != receipt.policy.control.sequence
-                                || self.review.input().action() != &job.action
-                            {
-                                return Err(Error::Stale.into());
-                            }
-                            job.inputs = Some(self.review.input().clone());
-                            job.input_revision = input_revision;
-                            job.control_sequence = Some(receipt.policy.control.sequence);
-                            job.phase = Phase::Ready;
+                    if let Ok(receipt) = receipt
+                        && receipt.policy.control.decision.consequence == Consequence::Continue
+                    {
+                        let input_revision = self.input_revision;
+                        if host.input_revision(job.attempt)? != input_revision
+                            || host.inspect().control.sequence != receipt.policy.control.sequence
+                            || self.review.input().action() != &job.action
+                        {
+                            return Err(Error::Stale.into());
                         }
+                        job.inputs = Some(self.review.input().clone());
+                        job.input_revision = input_revision;
+                        job.control_sequence = Some(receipt.policy.control.sequence);
+                        job.phase = Phase::Ready;
                     }
                 }
             }
@@ -319,10 +318,10 @@ impl FileNativeSupervisedDriver {
         if self.review.status() == NativeReviewStatus::Running {
             return Err(Box::new(self));
         }
-        if let Some(job) = &mut self.driver.job {
-            if job.phase == Phase::Review {
-                job.close();
-            }
+        if let Some(job) = &mut self.driver.job
+            && job.phase == Phase::Review
+        {
+            job.close();
         }
         if self
             .driver

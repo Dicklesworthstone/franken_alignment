@@ -25,6 +25,7 @@
 )]
 
 pub mod action;
+pub mod address;
 pub mod address_resolver;
 pub mod adversarial_vertical_slice;
 pub mod canonical_json;

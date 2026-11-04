@@ -61,3 +61,13 @@ These are unqualified sources. Required targeted and full-gate RCH dispatches
 must execute before qualification; there is no local compiler fallback. This
 implements plan 11.3, 12.5, 17.7 and 17.9 experiment/evidence semantics and serves
 FI-A16 and FI-I11. No new dependency, runtime, journal format or authority path.
+
+## Learned histories
+
+The original non-locking reader above keeps its existing contract. Learned,
+raw-predictive, owned-predictive and topology-mediated histories now have a
+separate offline composition through their original complete guarded numerical
+recovery. It captures the same admission selector in one replay and returns the
+same immutable investigation after full guard and canonical checks, without a
+Fence or live owner. It holds the original exclusive recovery lock until finish
+or drop. See [learned policy diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md).

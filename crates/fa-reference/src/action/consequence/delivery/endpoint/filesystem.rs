@@ -188,7 +188,7 @@ pub(super) enum Operation {
 pub(super) enum OperationResult {
     Unit,
     Fence(FenceAcknowledgment),
-    Receipt(EndpointReceipt),
+    Receipt(Box<EndpointReceipt>),
 }
 
 impl Operation {
@@ -199,12 +199,17 @@ impl Operation {
             Self::Fence(request) => endpoint
                 .install_fence(request.clone())
                 .map(OperationResult::Fence),
-            Self::Deliver(message) => endpoint.deliver(message).map(OperationResult::Receipt),
+            Self::Deliver(message) => endpoint
+                .deliver(message)
+                .map(Box::new)
+                .map(OperationResult::Receipt),
             Self::Seal(query) => endpoint
                 .seal_unexecuted(query)
+                .map(Box::new)
                 .map(OperationResult::Receipt),
             Self::ResolveExpired(query) => endpoint
                 .resolve_expired(query)
+                .map(Box::new)
                 .map(OperationResult::Receipt),
         }
     }

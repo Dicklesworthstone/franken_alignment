@@ -1,14 +1,10 @@
 //! Same synthetic two-token helper construction as the existing native fixture.
 //! Real original tokenization/inference/monitoring supplies the parsed verdict.
-use fa_reference::action::consequence::activation::monitor::decoder::sampled::{
-    MonitoredSampledDecoder,
-    generation::{
-        GenerationBudget, MAX_SAMPLING_ENTRIES,
-        text::TextDecoder,
-        tokenizer::{ByteBpe, Merge, TokenBytes, TokenizationBudget},
-    },
-};
-use fa_reference::action::consequence::activation::monitor::{RefinementBudget, RefinementMonitor};
+use fa_reference::action::consequence::activation::{HEADER_BYTES,
+    monitor::{RefinementBudget, RefinementMonitor}};
+use fa_reference::action::consequence::activation::monitor::decoder::sampled::{MonitoredSampledDecoder,
+    generation::{GenerationBudget, MAX_SAMPLING_ENTRIES,
+        text::TextDecoder, tokenizer::{ByteBpe, Merge, TokenBytes, TokenizationBudget}}};
 use fa_reference::action::consequence::activation::probe::LinearProbe;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     DecoderIdentity, DecoderLayerWeights, DecoderModel, DecoderProfile, DecoderShape,
@@ -41,27 +37,9 @@ pub(super) fn evaluator(binding: InputProfileBinding) -> NativeEvaluator {
     let stop = vocabulary.len() as u32;
     vocabulary.push(TokenBytes::Control);
     let count = vocabulary.len();
-    let profile = DecoderProfile::new(
-        DecoderIdentity {
-            tenant: 1,
-            model: 2,
-            model_generation: 3,
-            tokenizer_generation: 4,
-            profile_generation: 5,
-        },
-        DecoderShape {
-            vocabulary: count,
-            hidden: 2,
-            intermediate: 2,
-            layers: 1,
-            query_heads: 1,
-            cache_heads: 1,
-            context: 4096,
-        },
-        0.00001,
-        10000.0,
-    )
-    .unwrap();
+    let profile = DecoderProfile::new(DecoderIdentity { tenant: 1, model: 2, model_generation: 3,
+        tokenizer_generation: 4, profile_generation: 5 }, DecoderShape { vocabulary: count, hidden: 2,
+        intermediate: 2, layers: 1, query_heads: 1, cache_heads: 1, context: 4096 }, 0.00001, 10000.0).unwrap();
     let tokenizer = ByteBpe::new(profile.clone(), vocabulary, merges).unwrap();
     let mut embeddings = vec![0.0; count * 2];
     for id in 0..count {
@@ -71,39 +49,21 @@ pub(super) fn evaluator(binding: InputProfileBinding) -> NativeEvaluator {
     embeddings[response as usize * 2 + 1] = -1.0;
     let mut output = vec![0.0; count * 2];
     output[response as usize * 2] = 10.0;
-    output[stop as usize * 2] = -10.0;
-    output[stop as usize * 2 + 1] = -10.0;
-    let model = DecoderModel::new(
-        profile.clone(),
-        embeddings,
-        vec![DecoderLayerWeights {
-            attention_norm: vec![1.0; 2],
-            queries: vec![0.0; 4],
-            keys: vec![0.0; 4],
-            values: vec![0.0; 4],
-            attention_output: vec![0.0; 4],
-            feed_forward_norm: vec![1.0; 2],
-            gate: vec![0.0; 4],
-            up: vec![0.0; 4],
-            down: vec![0.0; 4],
-        }],
-        vec![1.0; 2],
-        output,
-    )
-    .unwrap();
+    output[stop as usize * 2] = -10.0; output[stop as usize * 2 + 1] = -10.0;
+    let model = DecoderModel::new(profile.clone(), embeddings, vec![DecoderLayerWeights {
+        attention_norm: vec![1.0; 2], queries: vec![0.0; 4], keys: vec![0.0; 4], values: vec![0.0; 4],
+        attention_output: vec![0.0; 4], feed_forward_norm: vec![1.0; 2], gate: vec![0.0; 4],
+        up: vec![0.0; 4], down: vec![0.0; 4],
+    }], vec![1.0; 2], output).unwrap();
+    // Admit the finite context's exact residual monitoring cost up front:
+    // one full-precision block and one two-coordinate probe per original token.
+    let shape = profile.shape();
     let allowance = RefinementBudget {
-        encoded_bytes: 100_000,
-        probe_coordinates: 100_000,
+        encoded_bytes: shape.context * (HEADER_BYTES + shape.hidden * std::mem::size_of::<f32>()),
+        probe_coordinates: shape.context * shape.hidden,
     };
-    let probe = LinearProbe::new(
-        1,
-        1,
-        model.residual_contract(1).unwrap().profile(),
-        &[-1.0, -1.0],
-        0.0,
-        100.0,
-    )
-    .unwrap();
+    let probe = LinearProbe::new(1, 1, model.residual_contract(1).unwrap().profile(),
+        &[-1.0, -1.0], 0.0, 100.0).unwrap();
     let monitor = RefinementMonitor::new(vec![probe], vec![23], allowance).unwrap();
     let sampling = SamplingStart {
         policy: SamplingPolicy::new(1, 1, count, 1.0, 1, 1.0).unwrap(),

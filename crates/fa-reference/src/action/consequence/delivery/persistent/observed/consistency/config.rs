@@ -237,10 +237,8 @@ fn decode(bytes: &[u8]) -> Result<ConsistencyConfig, Error> {
     let raw = r.take(count.checked_mul(4).ok_or(Error::Limit)?)?;
     let mut weights = Vec::new();
     weights.try_reserve_exact(count).map_err(|_| Error::Limit)?;
-    for word in raw.chunks_exact(4) {
-        weights.push(f32::from_bits(u32::from_be_bytes([
-            word[0], word[1], word[2], word[3],
-        ])));
+    for word in raw.as_chunks::<4>().0 {
+        weights.push(f32::from_bits(u32::from_be_bytes(*word)));
     }
     let probe = LinearProbe::new(
         id,

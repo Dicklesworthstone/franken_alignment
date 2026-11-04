@@ -1,31 +1,68 @@
 //! Original learned replay, complete guard inventory and receipt-only settlement.
 #[path = "recovery/cooperative.rs"]
 mod cooperative;
+#[path = "recovery/readonly.rs"]
+pub(super) mod readonly;
+#[path = "recovery/diagnosis.rs"]
+pub(super) mod diagnosis;
+#[path = "recovery/policy_replay.rs"]
+pub(super) mod policy_replay;
+#[path = "recovery/policy_promotion.rs"]
+pub(super) mod policy_promotion;
+#[path = "recovery/credential.rs"]
+pub(super) mod credential;
 #[path = "recovery/selected.rs"]
 mod selected;
+#[path = "recovery/terminal.rs"]
+mod terminal;
+#[path = "recovery/live.rs"]
+mod live;
+#[path = "recovery/stream_reset.rs"]
+pub(super) mod stream_reset;
+#[path = "recovery/stream_checkpoint.rs"]
+pub(super) mod stream_checkpoint;
 use super::{
     ActorWire, Command, Config, Control, Deadline, Duration, ElapsedTick, FileHumanReviewer,
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,
     LearnedTextRelease, Loaded, RecoveryReserve, RunResult, cleanup, debug, encode_command,
 };
 use cooperative::{Progress, finish_replay};
-use fa_reference::action::consequence::delivery::persistent::observed::consistency::FileConsistencyObserver;
+use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
+    FileConsistencyConfig, FileConsistencyObserver, learned::FileLearnedConsistencyConfig,
+};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
 };
+use fa_reference::action::consequence::delivery::persistent::observed::identity::FileIdentityObserver;
+#[cfg(test)]
+use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
+use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
-    observed::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
+    observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory},
 };
-use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 
-type Custody = (
+pub(super) type Custody = (
     FileOversight,
     FileHumanReviewer,
     Option<FileConsistencyObserver>,
+    Option<FileIdentityObserver>,
 );
+pub(super) type TopologyCustody = (Custody,
+    Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    super::recipe::check_creation(config, loaded)?;
+    super::credential::check_creation(loaded)?;
+    if loaded
+        .generation
+        .required_computed_identity_registration()
+        .is_some()
+        || loaded.generation.required_credential_policy().is_some()
+        || loaded.creation_campaigns.is_some()
+    {
+        return create_with_guards(config, loaded);
+    }
     if loaded.generation.required_pre_output_forecast().is_some()
         || loaded
             .generation
@@ -42,16 +79,109 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
             RecoveryReserve::terminal(),
         )
         .map_err(debug)?;
-        return Ok((host, human, Some(observer)));
+        return Ok((host, human, Some(observer), None));
     }
     let (host, human) = create(config, loaded)?;
-    Ok((host, human, None))
+    Ok((host, human, None, None))
 }
 
+// Keep mutually exclusive native constructors out of the ordinary startup
+// frame. Each path retains its original reserve, guards and separate roles.
+fn create_with_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    if let Some(prediction) = loaded.generation.required_pre_output_forecast() {
+        create_with_raw_guards(config, loaded, prediction)
+    } else if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+        create_with_owned_guards(config, loaded, prediction)
+    } else {
+        create_with_plain_guards(config, loaded)
+    }
+}
+
+// Each mutually exclusive constructor owns its temporary owner/role bundle in
+// its own frame. Recombining these paths reserves all three native bootstrap
+// temporaries together in an unoptimized caller's already-deep startup stack.
+#[inline(never)]
+fn create_with_raw_guards(
+    config: &Config,
+    loaded: &Loaded,
+    prediction: &FileConsistencyConfig,
+) -> Result<Custody, String> {
+    let guards = requirements(config, loaded).guards;
+    let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) = FileOversight::create_predictive_guarded_with_learned_generation_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        registration,
+        prediction.clone(),
+        None,
+        loaded.generation.clone(),
+        reserve,
+    )
+    .map_err(debug)?;
+    Ok((
+        host,
+        roles.oversight.human,
+        Some(roles.consistency_observer),
+        roles.oversight.identity_observer,
+    ))
+}
+
+#[inline(never)]
+fn create_with_owned_guards(
+    config: &Config,
+    loaded: &Loaded,
+    prediction: &FileLearnedConsistencyConfig,
+) -> Result<Custody, String> {
+    let guards = requirements(config, loaded).guards;
+    let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) =
+        FileOversight::create_predictive_guarded_with_owned_learned_consistency_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            registration,
+            prediction.clone(),
+            None,
+            loaded.generation.clone(),
+            reserve,
+        )
+        .map_err(debug)?;
+    Ok((
+        host,
+        roles.oversight.human,
+        Some(roles.consistency_observer),
+        roles.oversight.identity_observer,
+    ))
+}
+
+#[inline(never)]
+fn create_with_plain_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
+    let guards = requirements(config, loaded).guards;
+    let reserve = RecoveryReserve::terminal();
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) = FileOversight::create_guarded_with_learned_generation_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        registration,
+        loaded.generation.clone(),
+        reserve,
+    )
+    .map_err(debug)?;
+    Ok((host, roles.human, None, roles.identity_observer))
+}
 pub(super) fn create(
     config: &Config,
     loaded: &Loaded,
 ) -> Result<(FileOversight, FileHumanReviewer), String> {
+    super::recipe::check_creation(config, loaded)?;
+    if loaded.creation_campaigns.is_some() {
+        let (host, human, _, _) = create_with_plain_guards(config, loaded)?;
+        return Ok((host, human));
+    }
     // The FIRST original image includes stream, numerical recipe, mandatory
     // learned provenance, policy-only source and terminal recovery reserve.
     // Reserve installation must precede the original learned Enable event.
@@ -69,29 +199,29 @@ pub(super) fn open(
     config: &Config,
     loaded: &Loaded,
 ) -> Result<(FileOversight, FileHumanReviewer), String> {
-    let (host, human, _) = finish_replay(
-        selected::Cursor::begin_plain(config, loaded)?,
-        &mut |_| Ok(()),
-        |run| run.progress(),
-        |run, done| run.advance(done),
-        |run| run.finish(),
-    )?;
+    let (host, human, _, _) = open_selected_with_checkpoints(config, loaded, &mut |_| Ok(()))?;
     Ok((host, human))
 }
 
-fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
+pub(super) fn requirements(config: &Config, loaded: &Loaded) -> FileRecoveryRequirements {
     FileRecoveryRequirements {
         guards: FileGuardSet {
             stream: Some(loaded.stream),
             decoder: None,
             decoder_stop: None,
             source: Some(config.source_policy),
-            identity: None,
-            campaigns: None,
-            credential: None,
+            identity: loaded
+                .generation
+                .required_computed_identity_registration()
+                .cloned(),
+            campaigns: loaded.expected_campaigns,
+            credential: loaded.generation.required_credential_policy().cloned(),
         },
-        effective_policy: config.profile.delivery.policy.clone(),
-        credential_epoch: None,
+        effective_policy: loaded.expected_policy.clone(),
+        credential_epoch: loaded
+            .credential
+            .as_ref()
+            .map(|credential| credential.epoch),
         minimum: loaded.floor,
     }
 }
@@ -106,8 +236,8 @@ pub(super) fn open_selected(config: &Config, loaded: &Loaded) -> Result<Custody,
 }
 
 /// Recovery shares the active command's original deadline and authenticated
-/// stop transport. No owner exists yet: admission cancels replay, but cannot
-/// apply the durable Stop protocol or acknowledge a Stop receipt.
+/// stop transport. A pending checked peer selects the original admission Stop
+/// at the complete Ready cut, before a recovery Fence or live role is issued.
 pub(super) fn open_selected_live<F>(
     config: &Config,
     loaded: &Loaded,
@@ -118,36 +248,121 @@ pub(super) fn open_selected_live<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    open_selected_with_checkpoints(config, loaded, &mut |_| {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned recovery interrupted by authenticated stop peer; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
+    live::open(config, loaded, control, deadline, time).map(|(custody, _)| custody)
+}
+
+/// Preserve the separately owned topology observer through the SAME one-event
+/// guarded replay. No source read or observer is issued before finalization.
+pub(super) fn open_selected_live_with_topology<F>(
+    config: &Config,
+    loaded: &Loaded,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<TopologyCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    live::open(config, loaded, control, deadline, time)
+}
+
+/// Complete the original cursor without a Fence, staging cleanup or role issue.
+/// The final Ready checkpoint remains vetoable before any native finalizer.
+fn ready_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<selected::Cursor, String> {
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        Ok,
+    )
+}
+
+/// The same original guarded Ready cursor completes its pending stream reset
+/// before the sole recovery Fence. No unguarded intermediate owner is exposed.
+pub(super) fn complete_stream_reset_live<F>(
+    config: &Config,
+    loaded: &Loaded,
+    intent: &fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent,
+    first_incident_sequence: u64,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<TopologyCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    live::complete_stream_reset(
+        config, loaded, intent, first_incident_sequence, control, deadline, time,
+    )
+}
+
+fn open_receipt(
+    config: &Config,
+    loaded: &Loaded,
+    after: Option<u64>,
+) -> Result<(Custody, FileStreamProposal), String> {
+    let started = Instant::now();
+    open_selected_receipt_with_elapsed(config, loaded, after, &mut || started.elapsed())
+}
+
+/// The actual receipt path: select the original request AFTER complete guarded
+/// replay and BEFORE the sole fence. No second read/replay or unchecked owner is
+/// used. An invalid key, release kind or finish predecessor consumes no reserve.
+pub(super) fn open_selected_receipt_with_elapsed(
+    config: &Config,
+    loaded: &Loaded,
+    after: Option<u64>,
+    elapsed: &mut impl FnMut() -> Duration,
+) -> Result<(Custody, FileStreamProposal), String> {
+    receipt_replay(config, loaded, elapsed, |run| {
+        let original = run.receipt(loaded.request, after)?;
+        Ok((run.finish()?, original))
     })
 }
 
-fn open_receipt(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
-    let started = Instant::now();
-    open_receipt_with_elapsed(config, loaded, &mut || started.elapsed())
-}
-
-/// Receipt replay has its own finite wall budget, without consulting a new
-/// logical clock, renewing the retained request deadline or reading evidence.
-/// The elapsed supplier keeps every cancellation cut deterministic in tests;
-/// production always uses the single Instant captured before guarded open.
+// Existing elapsed-budget tests deliberately recover histories before any
+// request exists. Keep that base-finalizer test surface, never use it for --resume.
+#[cfg(test)]
 pub(super) fn open_receipt_with_elapsed(
     config: &Config,
     loaded: &Loaded,
     elapsed: &mut impl FnMut() -> Duration,
 ) -> Result<Custody, String> {
+    receipt_replay(config, loaded, elapsed, |run| run.finish())
+}
+
+/// One finite wall budget, without a new logical clock, evidence read or renewed
+/// request deadline. Every original event and Ready cut share the same timer.
+fn receipt_replay<T>(
+    config: &Config,
+    loaded: &Loaded,
+    elapsed: &mut impl FnMut() -> Duration,
+    finish: impl FnOnce(selected::Cursor) -> Result<T, JournalError>,
+) -> Result<T, String> {
     let wall = Duration::from_millis(config.timing.runtime_ms);
-    open_selected_with_checkpoints(config, loaded, &mut |_| {
+    let mut checkpoint = |_: Option<Progress>| {
         if elapsed() >= wall {
-            return Err("learned receipt recovery replay deadline reached".into());
+            Err("learned receipt recovery replay deadline reached".into())
+        } else {
+            Ok(())
         }
-        Ok(())
-    })
+    };
+    checkpoint(None)?;
+    let recovery = selected::Cursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        &mut checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        finish,
+    )
 }
 
 /// Run the SAME guarded owner one original event at a time. None is the
@@ -156,6 +371,7 @@ pub(super) fn open_receipt_with_elapsed(
 /// after complete verification, before cleanup and the original recovery fence.
 /// An error or unwind drops the original exclusive recovery without finishing.
 /// One event, framing and final persistence remain synchronous operations.
+#[cfg(test)]
 pub(super) fn open_selected_with_checkpoints(
     config: &Config,
     loaded: &Loaded,
@@ -172,9 +388,44 @@ pub(super) fn open_selected_with_checkpoints(
     )
 }
 
+/// Validate the exact credential operation on the original Ready cursor before
+/// its existing finalizer can clean staging or append the recovery Fence.
+/// Only maintenance keeps the host; no actor gateway or source read is created.
+pub(super) fn open_selected_credential_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: super::credential_lifecycle::Request,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<super::credential_lifecycle::Recovered, String> {
+    let recovery = ready_selected_with_checkpoints(config, loaded, checkpoint)?;
+    let (current, retry) = recovery.credential_preflight(request).map_err(debug)?;
+    let (host, _human, _consistency, _identity) = recovery.finish().map_err(debug)?;
+    Ok(super::credential_lifecycle::Recovered { host, current, retry })
+}
+
+/// Abandonment retains the sealed native cursor through the same event quantum
+/// and Ready checkpoint. It cannot finalize into a live owner or resend an effect.
+pub(super) fn abandon_selected_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    request: fa_reference::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FileAbandonedHistory, String> {
+    checkpoint(None)?;
+    let recovery = selected::AbandonmentCursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        |run| run.finish(request),
+    )
+}
+
 /// Offline stop uses the same independently guarded replay and every wall-time
 /// checkpoint, including Ready. It never constructs live service custody, reads
 /// current helper/source evidence or consults the terminal clock during replay.
+#[cfg(test)]
 pub(super) fn stop_selected_with_elapsed<F>(
     config: &Config,
     loaded: &Loaded,
@@ -193,6 +444,7 @@ where
 /// Capture the exact acknowledged terminal image on the SAME sealed cursor.
 /// All original admission, one-event and Ready checkpoints are shared; only
 /// the successful native return value additionally carries its private anchor.
+#[cfg(test)]
 pub(super) fn stop_selected_with_anchor_with_elapsed<F>(
     config: &Config,
     loaded: &Loaded,
@@ -208,6 +460,89 @@ where
     })
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum StopPhase {
+    Combined,
+    Admission,
+    Drain,
+}
+
+pub(super) enum TerminalHistory {
+    Admission(FileAdmissionStoppedHistory),
+    Completed(FileStoppedHistory),
+}
+
+pub(super) const STOP_ACQUISITION_DEADLINE: &str = "learned stop recovery acquisition deadline reached; no additional native completion was acknowledged";
+
+/// All terminal modes consume the SAME complete guarded replay. Admission has
+/// no logical-clock dependency. Drain cannot manufacture a missing admission;
+/// combined completion stays one atomic native transaction, with no fallback.
+pub(super) fn terminal_selected_with_elapsed<F>(
+    config: &Config,
+    loaded: &Loaded,
+    phase: StopPhase,
+    operation: u64,
+    recover_checkpoint: bool,
+    clock: F,
+    elapsed: &mut impl FnMut() -> Duration,
+) -> Result<TerminalHistory, String>
+where
+    F: FnOnce() -> Result<ElapsedTick, JournalError>,
+{
+    if operation == 0 {
+        return Err("stop operation must be nonzero".into());
+    }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let mut checkpoint = |_: Option<Progress>| {
+        if elapsed() >= wall {
+            Err("learned stop recovery replay deadline reached".into())
+        } else {
+            Ok(())
+        }
+    };
+    checkpoint(None)?;
+    let run = terminal::Cursor::begin(config, loaded, operation, recover_checkpoint)?;
+    let run = finish_replay(
+        run,
+        &mut checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        Ok,
+    )?;
+    if phase == StopPhase::Admission {
+        return run
+            .finish_admission_stop()
+            .map(TerminalHistory::Admission)
+            .map_err(debug);
+    }
+    let wall = Duration::from_millis(config.timing.runtime_ms);
+    let mut expired = false;
+    let clock = || {
+        if elapsed() >= wall {
+            expired = true;
+            return Err(JournalError::Unavailable);
+        }
+        let tick = clock()?;
+        // A slow or stalled clock callback cannot extend the original runtime
+        // allowance. Native finalizers have not published any phase yet.
+        if elapsed() >= wall {
+            expired = true;
+            return Err(JournalError::Unavailable);
+        }
+        Ok(tick)
+    };
+    let history = match phase {
+        StopPhase::Combined => run.try_finish_stopped_with_anchor(clock),
+        StopPhase::Drain => run.finish_stopped_drain(clock),
+        StopPhase::Admission => unreachable!("admission returned before clock construction"),
+    };
+    if expired {
+        return Err(STOP_ACQUISITION_DEADLINE.into());
+    }
+    history.map(TerminalHistory::Completed).map_err(debug)
+}
+
+#[cfg(test)]
 fn stop_replay<T>(
     config: &Config,
     loaded: &Loaded,
@@ -241,19 +576,14 @@ pub(super) fn resume<F>(config: Config, loaded: Loaded, mut time: F) -> Result<R
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
-    let action = host.request_action(loaded.request).map_err(debug)?;
-    let frame = ReleaseFrame::decode(&action.spec().payload).map_err(debug)?;
-    if frame.profile() != loaded.stream || frame.is_finish() {
-        return Err("receipt recovery requires this original learned message request".into());
-    }
-    let deadline = action.spec().deadline;
+    // Selection includes policy refusals with no FrozenAction, before fencing.
+    let ((host, _reviewer, _observer, _identity), original) = open_receipt(&config, &loaded, None)?;
     resume_original(
         config,
         loaded,
         host,
         LearnedTextRelease::Message,
-        deadline,
+        original.deadline,
         &mut time,
     )
 }
@@ -268,12 +598,9 @@ where
     F: FnMut() -> ElapsedTick,
 {
     super::finish::check_ids(loaded.request, after)?;
-    let (host, _reviewer, _observer) = open_receipt(&config, &loaded)?;
-    // The original pre-policy request survives even if admission never created
-    // a FrozenAction. Only the exact predecessor receipt can select this finish.
-    let original = host
-        .learned_text_stream_finish_request(after, loaded.request)
-        .map_err(debug)?;
+    // A wrong predecessor cannot spend a fence or clean staged bytes.
+    let ((host, _reviewer, _observer, _identity), original) =
+        open_receipt(&config, &loaded, Some(after))?;
     resume_original(
         config,
         loaded,

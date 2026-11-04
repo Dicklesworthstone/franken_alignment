@@ -8,7 +8,7 @@ use crate::action::consequence::delivery::persistent::observed::decoder::learned
     FileLearnedConfig, bind_history,
 };
 use crate::action::consequence::delivery::persistent::observed::{
-    FileHumanReviewer, FileOversightProfile, journal, machine::Machine,
+    FileHumanReviewer, FileOversightProfile, journal, machine::Machine, storage,
 };
 use crate::action::consequence::delivery::{
     EndpointOutcome,
@@ -277,19 +277,160 @@ fn actual_likelihood_crossing_holds_the_effect_and_survives_reconstruction() {
     for crossing in [false, true] {
         let root = Directory::new();
         let config = config(false, 1);
-        let (mut host, _) = owner(&root, &config);
+        let (mut host, reviewer) = owner(&root, &config);
         let role = install(&mut host, crossing);
         step(&mut host).unwrap();
-        forecast(&role, &mut host, 1);
+        let prediction = forecast(&role, &mut host, 1);
+        assert_eq!(
+            prediction.observation().outcome(),
+            crate::action::consequence::activation::probe::ProbeOutcome::CertifiedAlarm,
+            "the crossing control must select its registered positive band: {prediction:?}"
+        );
+        assert_eq!(
+            prediction.forecast(),
+            parameters(crossing).forecast.positive
+        );
         let spec = action_spec(&host);
         let result = host
             .propose_consistent(host.revision(), 1, spec, snapshot())
             .unwrap();
         let evidence = host.action_consistency_snapshot().unwrap().evidence;
         assert_eq!(evidence.samples(), 1);
-        assert_eq!(evidence.crossed(), crossing);
-        assert_eq!(result.is_err(), crossing);
-        assert_eq!(host.inspect().executions, 0);
+        let observed = host.action_consistency_observation(1).unwrap();
+        assert_eq!(observed.prediction(), &prediction);
+        assert!(
+            observed.event(),
+            "the actual visible payload must match: {observed:?}"
+        );
+        assert_eq!(evidence.alpha(), parameters(crossing).alpha);
+        assert_eq!(
+            evidence.crossed(),
+            crossing,
+            "observed={observed:?}; numerator={:?}; denominator={:?}",
+            evidence.numerator_words(),
+            evidence.denominator_words()
+        );
+        // Recording the proposed category is not effect authorization. The
+        // original contract gates permitting review and authorization instead.
+        let action = result.unwrap();
+        let contracts = profile().committee;
+        let helper = &contracts.members()["reviewer"];
+        let mut bytes = action_frame(&action);
+        let boundary = bytes.len();
+        bytes.extend_from_slice(helper.question());
+        let end = bytes.len();
+        let actual = ActualHelperInput::new(
+            bytes,
+            helper.profile_at(action.spec().policy_epoch),
+            vec![
+                SubmittedPart {
+                    kind: PartKind::Other,
+                    span: ByteSpan {
+                        start: 0,
+                        end: boundary,
+                    },
+                },
+                SubmittedPart {
+                    kind: PartKind::Question,
+                    span: ByteSpan {
+                        start: boundary,
+                        end,
+                    },
+                },
+            ],
+            Vec::new(),
+        )
+        .unwrap();
+        let manifest = EvidenceViewManifest::new(
+            actual,
+            AuthorizationProjection {
+                projection_id: 7,
+                policy_epoch: action.spec().policy_epoch,
+                projected_originals: Vec::new(),
+            },
+            Vec::new(),
+        )
+        .unwrap();
+        let inputs = CommitteeInput::capture(
+            &action,
+            &contracts,
+            BTreeMap::from([("reviewer".to_owned(), manifest)]),
+        )
+        .unwrap();
+        host.record_inputs(host.revision(), 1, 0, inputs.clone())
+            .unwrap();
+        host.begin_review(
+            host.revision(),
+            1,
+            101,
+            [9; 32],
+            ReviewWindow {
+                commit_by: ElapsedTick(5),
+                reveal_by: ElapsedTick(8),
+            },
+            snapshot(),
+        )
+        .unwrap();
+        let digest = commitment(101, "reviewer", &[9; 32], Verdict::Allow, b"salt").unwrap();
+        host.commit_review(host.revision(), 101, "reviewer", digest)
+            .unwrap();
+        host.open_reveals(host.revision(), 101).unwrap();
+        host.reveal_review(
+            host.revision(),
+            101,
+            "reviewer",
+            Verdict::Allow,
+            b"salt".to_vec(),
+        )
+        .unwrap();
+        let reviewed = host
+            .finish_review(host.revision(), 101, Some(&inputs), snapshot())
+            .unwrap();
+        if crossing {
+            assert!(matches!(reviewed, Err(Error::Incomplete)));
+            let bytes = disk(&host);
+            assert!(matches!(
+                host.authorize(host.revision(), 1, &inputs, snapshot()),
+                Err(JournalError::Contract(Error::Incomplete))
+            ));
+            assert_eq!(disk(&host), bytes);
+            assert_eq!(host.inspect().executions, 0);
+        } else {
+            reviewed.unwrap();
+            let automatic = host
+                .authorize(host.revision(), 1, &inputs, snapshot())
+                .unwrap();
+            let request = host
+                .request_human_approval(host.revision(), 1001, 1, &inputs, ElapsedTick(10))
+                .unwrap();
+            let revision = host.revision();
+            let human = reviewer.approve(&mut host, revision, &request).unwrap();
+            host.dispatch(
+                host.revision(),
+                &automatic,
+                &human,
+                &action,
+                &inputs,
+                snapshot(),
+            )
+            .unwrap();
+            let result = host
+                .publish_checked(
+                    host.revision(),
+                    1,
+                    Some(&inputs),
+                    snapshot(),
+                    ElapsedTick(2),
+                )
+                .unwrap();
+            assert_eq!(
+                result.outcome,
+                EndpointOutcome::Executed {
+                    resulting_version: 2
+                }
+            );
+            assert_eq!(host.inspect().executions, 1);
+        }
         let replayed = read_machine(&host, &config);
         assert_eq!(
             replayed

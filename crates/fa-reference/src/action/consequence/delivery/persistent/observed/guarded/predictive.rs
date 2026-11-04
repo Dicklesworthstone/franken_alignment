@@ -1,6 +1,7 @@
 //! Atomic prediction bootstrap and recovery of separately held observer custody.
 pub mod learned;
 pub mod owned;
+mod bootstrap;
 mod stopping;
 use super::super::consistency::{
     ConsistencyEvent, FileConsistencyConfig, FileConsistencyObserver, FileConsistencySnapshot,

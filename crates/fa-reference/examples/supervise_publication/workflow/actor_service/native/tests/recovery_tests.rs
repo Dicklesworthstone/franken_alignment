@@ -58,6 +58,7 @@ fn native_recovery_continues_partial_and_complete_intents_with_independent_human
             let decoder = native.decoder.clone();
             let tokenizer = native.tokenizer.clone();
             seed(&mut config, &native, true, steps);
+            config.programs = native_programs_at_epoch(&root, 1);
             let before = FileOversight::read_decoder_text_progress(
                 &store, &bootstrap, &decoder, &tokenizer, 7,
             )
@@ -89,8 +90,15 @@ fn native_recovery_continues_partial_and_complete_intents_with_independent_human
                 &mut output,
             );
             assert!(result.is_ok(), "{result:?}");
-            human.join().unwrap();
+            let packet = human.join().unwrap();
+            assert_eq!(packet.action().spec().policy_epoch, 1);
             let response = client.join().unwrap();
+            assert_eq!(
+                ReleaseFrame::decode(&packet.action().spec().payload)
+                    .unwrap()
+                    .message(),
+                Some("A")
+            );
             let after = FileOversight::read_decoder_text_progress(
                 &store, &bootstrap, &decoder, &tokenizer, 7,
             )
@@ -111,6 +119,10 @@ fn native_recovery_continues_partial_and_complete_intents_with_independent_human
                     })
                 ));
                 assert_eq!(after.publication.payload, b"A");
+                assert_eq!(
+                    after.publication.control.ledger.charged,
+                    packet.action().spec().payload.len() as u64
+                );
             } else {
                 assert!(matches!(
                     response.result,

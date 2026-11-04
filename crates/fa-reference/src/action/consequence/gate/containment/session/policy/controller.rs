@@ -17,7 +17,8 @@ use super::{Evaluation, Policy, Truth};
 use crate::action::consequence::Consequence;
 use crate::action::consequence::congress::CongressPolicy;
 use crate::action::consequence::gate::containment::{
-    ActorState, CheckpointHandle, ContainmentAuthority, ResetReceipt, ResetRequest,
+    ActorState, CheckpointHandle, CheckpointNarrowReceipt, CheckpointNarrowRequest,
+    ContainmentAuthority, ResetReceipt, ResetRequest,
 };
 use crate::action::consequence::gate::{ControlInspection, TargetCeiling, undispatched};
 use crate::action::{
@@ -369,6 +370,16 @@ impl PolicyAuthority {
         expected: u64,
     ) -> Result<CheckpointHandle, Error> {
         self.host.capture_checkpoint(id, expected)
+    }
+
+    pub(crate) fn check_checkpoint_narrow(&self, request: &CheckpointNarrowRequest) -> Result<(), Error> {
+        self.host.check_checkpoint_narrow(request)
+    }
+
+    pub(crate) fn narrow_checkpoint(&mut self, request: CheckpointNarrowRequest)
+        -> Result<CheckpointNarrowReceipt, Error>
+    {
+        self.host.narrow_checkpoint(request)
     }
 
     /// The exact policy and its history are never in the actor checkpoint.

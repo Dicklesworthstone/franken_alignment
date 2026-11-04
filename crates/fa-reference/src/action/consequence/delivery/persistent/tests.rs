@@ -3,13 +3,13 @@
 use super::*;
 #[path = "governance/storage_tests.rs"]
 mod policy_update_storage_tests;
-#[path = "recovery_capacity/storage_tests.rs"]
-mod recovery_capacity_tests;
+#[path = "abandonment/tests.rs"]
+mod abandonment_tests;
+use crate::action::{Purpose, VERSION};
 use crate::action::consequence::congress::MemberPolicy;
 use crate::action::consequence::delivery::NonExecutionReason;
 use crate::action::consequence::gate::containment::session::policy::Predicate;
 use crate::action::consequence::gate::containment::{RestartGrade, RestartProfile};
-use crate::action::{Purpose, VERSION};
 use crate::reducer::Caps;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};

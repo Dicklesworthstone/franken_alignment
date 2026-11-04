@@ -1,8 +1,7 @@
 //! Original kernel-credential admission, bounded socket drive and live intake.
-use super::{
-    ElapsedTick, EvidenceFile, FileActorSupervisor, FileLearnedTextActorPort,
-    FileLearnedTextStreamActorPort, FileOversight, PolicyPort, prepare,
-};
+mod selected;
+use super::{EvidenceFile, ElapsedTick, FileActorSupervisor, FileLearnedTextActorPort,
+    FileLearnedTextStreamActorPort, FileOversight, PolicyPort, prepare};
 use crate::action::consequence::delivery::persistent::requests::actor::source_wire::{
     FileActorPeerDrive, FileActorPeerDriveError,
 };

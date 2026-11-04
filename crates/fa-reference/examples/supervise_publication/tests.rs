@@ -41,7 +41,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-run-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
@@ -130,11 +130,14 @@ fn synthetic_helper_process() {
         return;
     };
     let profile = Config::decode(TEMPLATE).unwrap().profile;
-    let epoch = std::env::var("FA_EXAMPLE_HELPER_EPOCH")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
-    let expected = profile.committee.members()[&member].profile_at(epoch);
+    // The fixture independently provisions its expected recovery epoch. Never
+    // learn this requirement from the untrusted helper request being checked.
+    let policy_epoch = match std::env::var("FA_EXAMPLE_HELPER_POLICY_EPOCH") {
+        Ok(value) => value.parse::<u64>().expect("explicit helper policy epoch"),
+        Err(std::env::VarError::NotPresent) => 0,
+        Err(error) => panic!("invalid helper policy epoch: {error}"),
+    };
+    let expected = profile.committee.members()[&member].profile_at(policy_epoch);
     let mut client = HelperClient::from_process_stdin(expected).unwrap();
     let start = Instant::now();
     loop {

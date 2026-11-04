@@ -72,22 +72,9 @@ pub(super) enum Event {
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
-    matches!(
-        event,
-        BaseEvent::Time(_)
-            | BaseEvent::Propose(..)
-            | BaseEvent::Publish(_)
-            | BaseEvent::Reconcile(_)
-            | BaseEvent::Seal(_)
-            | BaseEvent::Cancel(_)
-            | BaseEvent::Fence
-            | BaseEvent::Sweep
-            | BaseEvent::Stop(_)
-            | BaseEvent::StopProgress(_)
-            | BaseEvent::SubmitRequest(..)
-            | BaseEvent::ReplacePolicy(_)
-            | BaseEvent::ReserveRecovery(_)
-    )
+    matches!(event, BaseEvent::Time(_) | BaseEvent::Propose(..) | BaseEvent::Publish(_)
+        | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::AbandonUnknown(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
+        | BaseEvent::Sweep | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::SubmitRequest(..) | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_))
 }
 
 fn config(p: &FileOversightProfile) -> Result<Vec<u8>, Error> {
@@ -143,6 +130,7 @@ fn encode_iter<'a>(
     let mut admission = recovery_capacity::Admission::new(p.delivery.limits);
     let mut evidence_budget = HistoryBudget::default();
     for (index, event) in events.enumerate() {
+        check_stream_narrow_revision(index, event)?;
         record_credibility_budget(&mut evidence_budget, event)?;
         if let Event::PublicationWitness(event) = event {
             event.check_clock_domain(p.delivery.clock_domain)?;
@@ -199,9 +187,10 @@ pub(super) fn decode(
     let mut events = Vec::new();
     events.try_reserve_exact(count).map_err(|_| Error::Limit)?;
     let mut evidence_budget = HistoryBudget::default();
-    for _ in 0..count {
+    for index in 0..count {
         let mut record = Reader::new(r.blob(p.delivery.limits.bytes)?);
         let event = read_event(&mut record)?;
+        check_stream_narrow_revision(index, &event)?;
         record_credibility_budget(&mut evidence_budget, &event)?;
         events.push(event);
         record.end()?;
@@ -211,6 +200,17 @@ pub(super) fn decode(
         return Err(Error::Binding);
     }
     Ok(events)
+}
+
+// This new request independently selects its journal predecessor. Bind it to
+// the ORIGINAL record position on both encode and decode, before any replay;
+// legacy event formats and their bytes remain unchanged.
+fn check_stream_narrow_revision(index: usize, event: &Event) -> Result<(), Error> {
+    use super::decoder::learned::{LearnedEvent, checkpoint::CheckpointEvent};
+    if let Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+        CheckpointEvent::StreamNarrow { request, .. }))) = event
+        && request.revision() != index as u64 { return Err(Error::Binding); }
+    Ok(())
 }
 
 // Bound the complete archive before retaining arbitrarily many individually

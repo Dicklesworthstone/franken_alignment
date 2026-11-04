@@ -2,19 +2,21 @@
 //! The SAME durable driver performs stop and drain. No grant, evidence reader,
 //! alternative ledger, autonomous task or new effect capability exists here.
 mod client;
+mod recovery;
 mod wire;
-use super::super::super::driver::{CapacityDrain, CapacityStop, FileSupervisedDriver};
-use super::super::super::{FileHumanReviewer, FileOversight, JournalError};
-use super::super::client::ReviewerExpectation;
+pub use recovery::{FileRecoveryStop, StopRecoveryApplication, StopRecoveryConnection};
+pub use wire::{StopBinding, StopControlReceipt, StopStatus};
+pub use client::{StopClient, StopClientPhase, StopClientProgress};
+use wire::{OFFER_BYTES, RECEIPT_BYTES};
 use super::super::{ReviewerError, transient};
+use super::super::client::ReviewerExpectation;
+use super::super::super::{FileHumanReviewer, FileOversight, JournalError};
+use super::super::super::driver::{CapacityDrain, CapacityStop, FileSupervisedDriver};
 use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::StopRequest;
-pub use client::{StopClient, StopClientPhase, StopClientProgress};
 use std::io::{self, Read, Write};
 use std::rc::Rc;
-use wire::{OFFER_BYTES, RECEIPT_BYTES};
-pub use wire::{StopBinding, StopControlReceipt, StopStatus};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StopControlPhase {

@@ -154,6 +154,13 @@ impl OversightBroker {
             .run
             .observation())
     }
+    // Forecast-only fresh evidence. The ordinary observation handle remains
+    // unavailable until this owner accepts a new token after reset.
+    pub(crate) fn hosted_learned_restart_forecast_audit(&self)
+        -> Result<Option<&crate::action::consequence::activation::tensor::kv::decoder::monitoring::restart::RestartAudit>, Error>
+    {
+        Ok(self.learned_host.as_ref().ok_or(Error::Incomplete)?.run.restored_forecast_audit())
+    }
     pub fn hosted_learned_generation(&self) -> Result<HostedLearnedInspection, Error> {
         let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
         let actor = self.delivery.controller().actor();
@@ -231,17 +238,16 @@ impl OversightBroker {
                 return Err(error);
             }
         };
-        if let Some(actor) = actor {
-            if let Err(error) = self
+        if let Some(actor) = actor
+            && let Err(error) = self
                 .delivery
                 .replace_actor_state(expected_actor_revision, actor)
-            {
-                self.learned_host
-                    .as_mut()
-                    .expect("owned learned source")
-                    .fault = Some(error);
-                return Err(error);
-            }
+        {
+            self.learned_host
+                .as_mut()
+                .expect("owned learned source")
+                .fault = Some(error);
+            return Err(error);
         }
         self.learned_host
             .as_mut()

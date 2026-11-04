@@ -1,13 +1,15 @@
 //! Complete-message intents over the ORIGINAL actor wire and Unix transports.
 //! The trusted connection selects this profile; ordinary raw-submit ports keep
 //! their existing semantics. Intent bytes are not an execution-bearing frame.
-pub mod client;
 mod codec;
-pub mod process;
+mod recovery;
+pub use recovery::FileStreamActorRecoveryPort;
 mod source;
-pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal};
+pub mod process;
+pub mod client;
 #[cfg(target_os = "linux")]
 pub use source::{FileStreamPeerDrive, FileStreamPeerDriveError};
+pub use codec::{STREAM_INTENT_HEADER_BYTES, encode_stream_proposal, validate_stream_proposal};
 
 use super::super::super::requests::actor::{FileActorPort, FileActorSupervisor, FileActorTicket};
 use super::{FileOversight, FileStreamProposal, JournalError, StreamProfile};

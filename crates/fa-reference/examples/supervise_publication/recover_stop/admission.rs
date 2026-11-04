@@ -1,8 +1,7 @@
 //! Explicit clock-free stop and later drain; never a fallback from guarded recovery.
-#[path = "admission/custody.rs"]
-mod custody;
-use super::{Config, FileOversight, debug, ids, report};
+#[path = "admission/custody.rs"] mod custody;
 use custody::AnchorOutput;
+use super::{Config, FileOversight, debug, ids, report};
 use fa_reference::Error;
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::JournalError;
@@ -15,29 +14,24 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-const USAGE: &str = "usage: supervise_publication stop-admission|drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]";
+const USAGE: &str = "usage: supervise_publication stop-admission|drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE | --guarded RECOVERY_PROFILE]";
 const DEADLINE: &str = "terminal replay/acquisition deadline reached; no additional native completion was acknowledged";
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Phase {
-    Admission,
-    Drain,
-}
+pub(super) enum Phase { Admission, Drain }
 
 pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
     let started = Instant::now();
-    command_with(
-        args,
-        || {
-            let elapsed = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_err(|_| Error::Incomplete)?;
-            Ok(ElapsedTick(
-                u64::try_from(elapsed.as_millis()).map_err(|_| Error::Overflow)?,
-            ))
-        },
-        &mut || started.elapsed(),
-        out,
-    )
+    let clock = || {
+        let elapsed = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_| Error::Incomplete)?;
+        Ok(ElapsedTick(u64::try_from(elapsed.as_millis()).map_err(|_| Error::Overflow)?))
+    };
+    // Select the guarded route before ordinary option parsing. A guarded error
+    // is returned as-is, never retried with the ordinary reconstruction.
+    if args.iter().skip(3).any(|arg| arg == "--guarded") {
+        super::guarded::phases::command_with(args, clock, &mut || started.elapsed(), out)
+    } else {
+        command_with(args, clock, &mut || started.elapsed(), out)
+    }
 }
 
 fn command_with<F>(
@@ -178,10 +172,7 @@ where
     }
 }
 
-fn combine_report(
-    reported: Result<(), String>,
-    retained: Result<(), String>,
-) -> Result<(), String> {
+pub(super) fn combine_report(reported: Result<(), String>, retained: Result<(), String>) -> Result<(), String> {
     match (reported, retained) {
         (Ok(()), Ok(())) => Ok(()),
         (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
@@ -196,40 +187,23 @@ fn unconfirmed(error: JournalError) -> String {
     )
 }
 
-fn admission_report(
-    stopped: &FileAdmissionStoppedHistory,
-    out: &mut impl Write,
-) -> Result<(), String> {
-    let state = stopped.snapshot();
-    let progress = stopped.progress();
-    let document = format!(
-        concat!(
-            "{{\"schema_version\":\"fa.admission-stop/1\",\"status\":\"admission_stopped\",",
-            "\"stop_acknowledged\":true,\"drain_attempted\":false,\"drained\":{},",
-            "\"operation\":\"{}\",\"revision\":\"{}\",\"appended_events\":{},",
-            "\"endpoint_fenced\":{},\"dispatcher_epoch\":\"{}\",",
-            "\"executions\":\"{}\",\"reserved\":\"{}\",\"charged\":\"{}\",",
-            "\"unresolved\":[{}],\"irrecoverable\":[{}]}}\n"
-        ),
-        progress.drained(),
-        progress.receipt.request().operation,
-        state.revision,
-        stopped.appended_events(),
-        progress.endpoint_fenced,
-        progress.dispatcher_epoch,
-        state.executions,
-        progress.reserved_units,
-        progress.charged_units,
-        ids(&progress.unresolved),
-        ids(&progress.irrecoverable)
-    );
+pub(super) fn admission_report(stopped: &FileAdmissionStoppedHistory, out: &mut impl Write) -> Result<(), String> {
+    let state = stopped.snapshot(); let progress = stopped.progress();
+    let document = format!(concat!(
+        "{{\"schema_version\":\"fa.admission-stop/1\",\"status\":\"admission_stopped\",",
+        "\"stop_acknowledged\":true,\"drain_attempted\":false,\"drained\":{},",
+        "\"operation\":\"{}\",\"revision\":\"{}\",\"appended_events\":{},",
+        "\"endpoint_fenced\":{},\"dispatcher_epoch\":\"{}\",",
+        "\"executions\":\"{}\",\"reserved\":\"{}\",\"charged\":\"{}\",",
+        "\"unresolved\":[{}],\"irrecoverable\":[{}]}}\n"),
+        progress.drained(), progress.receipt.request().operation, state.revision, stopped.appended_events(),
+        progress.endpoint_fenced, progress.dispatcher_epoch, state.executions,
+        progress.reserved_units, progress.charged_units, ids(&progress.unresolved), ids(&progress.irrecoverable));
     out.write_all(document.as_bytes()).and_then(|_| out.flush()).map_err(|error| format!(
         "native admission stop acknowledged at revision {}, but output failed: {error:?}; do not resend an effect", state.revision))
 }
 
 #[cfg(test)]
-#[path = "admission/custody_tests.rs"]
-mod custody_tests;
+#[path = "admission/tests.rs"] mod tests;
 #[cfg(test)]
-#[path = "admission/tests.rs"]
-mod tests;
+#[path = "admission/custody_tests.rs"] mod custody_tests;

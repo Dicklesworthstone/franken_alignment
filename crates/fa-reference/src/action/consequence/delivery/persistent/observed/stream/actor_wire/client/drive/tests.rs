@@ -147,6 +147,58 @@ fn failure(error: FileClientError, stage: JournalIo) {
 }
 
 #[test]
+fn an_undercharged_large_request_preserves_the_client_image_and_performs_no_io() {
+    let root = Directory::new();
+    let peer = Peer::new(4096);
+    let trace = Rc::clone(&peer.trace);
+    let p = profile();
+    let mut client = FileActorClient::create(root.store(), p.clone())
+        .unwrap()
+        .connect(peer);
+    let before = fs::read(
+        root.store()
+            .join(crate::action::consequence::delivery::persistent::storage::CANONICAL),
+    )
+    .unwrap();
+    let live_before = client
+        .state()
+        .unwrap()
+        .encode_recovery(p.binding())
+        .unwrap();
+    let mut request = proposal();
+    request.units = 16;
+    assert_eq!(
+        client.submit(0, 7, &request),
+        Err(FileClientError::Client(ClientError::Command(
+            crate::action::consequence::oversight::actor_wire::WireError::Capacity
+        )))
+    );
+    assert_eq!(client.revision(), 0);
+    assert_eq!(
+        client
+            .state()
+            .unwrap()
+            .encode_recovery(p.binding())
+            .unwrap(),
+        live_before
+    );
+    assert_eq!(
+        fs::read(
+            root.store()
+                .join(crate::action::consequence::delivery::persistent::storage::CANONICAL)
+        )
+        .unwrap(),
+        before
+    );
+    let inspection = FileActorClient::read(root.store(), &p, 0).unwrap();
+    assert_eq!(inspection.revision(), 0);
+    assert_eq!(inspection.request_count(), 0);
+    assert!(inspection.reserved_work().is_none());
+    assert!(inspection.reserved_drive().is_none());
+    assert_eq!(*trace.borrow(), Trace::default());
+}
+
+#[test]
 fn a_complete_large_exchange_uses_one_pair_and_matches_native_steps() {
     for budget in [
         ClientDriveBudget::new(1).unwrap(),

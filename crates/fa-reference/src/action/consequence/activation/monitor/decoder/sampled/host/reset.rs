@@ -45,14 +45,11 @@ pub(crate) struct ReplayAttempt {
 }
 
 impl MonitoredSampledDecoder {
-    pub(crate) fn checkpoint_host(
-        &self,
-        cache_limit: usize,
-        sampler_limit: usize,
-    ) -> Result<(NumericalCheckpoint, CapturedState), Error> {
-        if self.status() != MonitoringStatus::Ready || self.position() == 0 {
-            return Err(Error::WrongState);
-        }
+    pub(crate) fn checkpoint_host(&self, cache_limit: usize, sampler_limit: usize)
+        -> Result<(NumericalCheckpoint, CapturedState), Error>
+    {
+        if self.status() != MonitoringStatus::Ready || self.position() == 0
+            || self.verdict_grammar.is_some() { return Err(Error::WrongState); }
         // Capturing confirms the live complete review, not a retained older one.
         self.observation().capture()?;
         let state = self.capture_host_state(cache_limit, sampler_limit)?;
@@ -88,8 +85,8 @@ impl MonitoredSampledDecoder {
         sampler_limit: usize,
     ) -> ReplayAttempt {
         let prepared = (|| {
-            if stream <= self.observation().stream()
-                || stream == checkpoint.numerical.stream()
+            if self.verdict_grammar.is_some() { return Err(Error::WrongState); }
+            if stream <= self.observation().stream() || stream == checkpoint.numerical.stream()
                 || self.profile() != checkpoint.numerical.model().profile()
                 || self.monitored.generation != checkpoint.generation
                 || self.sampler.snapshot().policy() != checkpoint.sampler.policy()
@@ -110,10 +107,7 @@ impl MonitoredSampledDecoder {
             )?;
             // Lifetime monitoring allowances, not the values at the checkpoint.
             monitored.work = self.monitored.work;
-            Ok(MonitoredSampledDecoder {
-                monitored,
-                sampler: Sampler::from_snapshot(&checkpoint.sampler),
-            })
+            Ok(MonitoredSampledDecoder { monitored, sampler: Sampler::from_snapshot(&checkpoint.sampler), verdict_grammar: None })
         })();
         let mut candidate = match prepared {
             Ok(candidate) => candidate,

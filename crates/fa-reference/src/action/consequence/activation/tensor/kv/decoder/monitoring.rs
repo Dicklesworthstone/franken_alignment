@@ -101,10 +101,10 @@ impl LearnedDecoderPolicy {
         {
             return Err(Error::Limit);
         }
-        if let LearnedStreamRetention::Heads(heads) = &retention {
-            if heads.iter().any(|head| !codec.groups().contains_key(head)) {
-                return Err(Error::Missing);
-            }
+        if let LearnedStreamRetention::Heads(heads) = &retention
+            && heads.iter().any(|head| !codec.groups().contains_key(head))
+        {
+            return Err(Error::Missing);
         }
         Ok(Self {
             codec,

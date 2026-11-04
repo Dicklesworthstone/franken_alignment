@@ -30,9 +30,28 @@ impl StateFreshness {
 /// Immutable evidence of one adapter closure's time bound, never a permit.
 /// It remains historical after expiry, withdrawal, replacement or writer loss.
 ///
-/// ```compile_fail,E0451
+/// Reading the original lease through its public API is permitted:
+///
+/// ```
 /// use fa_reference::action::consequence::oversight::policy_state::ObservationLease;
-/// fn forge() -> ObservationLease { ObservationLease {} }
+/// fn inspect(original: ObservationLease) {
+///     let _ = (original.frontier(), original.observed_at(), original.expires_at());
+/// }
+/// ```
+///
+/// A caller cannot renew it by constructing a replacement from the exposed
+/// observations. The complete literal must fail on the private fields.
+///
+/// ```compile_fail,E0451
+/// use fa_reference::action::ElapsedTick;
+/// use fa_reference::action::consequence::oversight::policy_state::ObservationLease;
+/// fn forge(original: ObservationLease) -> ObservationLease {
+///     ObservationLease {
+///         frontier: original.frontier(),
+///         observed_at: original.observed_at(),
+///         expires_at: ElapsedTick(u64::MAX),
+///     }
+/// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ObservationLease {

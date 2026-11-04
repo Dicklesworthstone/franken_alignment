@@ -5,9 +5,10 @@ use super::super::governance::{PolicyUpdateReceipt, PolicyUpdates};
 use super::super::requests::RequestBook;
 use super::super::{
     Event as BaseEvent, FileDeliverySnapshot, FileStopSweep, Reconciliation, project_status,
+    abandonment::{FileAbandonReceipt, FileAbandonRequest},
 };
 use super::{
-    FileOversightProfile,
+    FileOversightProfile, JournalError,
     journal::{Event, HumanDecision},
     views::Views,
 };
@@ -55,7 +56,7 @@ pub(super) enum Transition {
     ActorReset(ResetReceipt),
     Proposed(FrozenAction),
     Inputs(u64),
-    Reviewed(Result<ObservedReceipt, Error>),
+    Reviewed(Result<Box<ObservedReceipt>, Error>),
     HumanRequested(HumanRequest),
     HumansRevoked(HumanRevocation),
     Published(EndpointOutcome),
@@ -71,6 +72,7 @@ pub(super) enum Transition {
     IdentityApplied(Box<crate::action::consequence::oversight::identity::IdentityInstallation>),
     DecoderForced(Box<Result<crate::action::consequence::activation::monitor::decoder::MonitoredStep, Error>>),
     DecoderSampled(Box<Result<crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledStep, Error>>),
+    Abandoned(FileAbandonReceipt),
 }
 
 pub(super) struct Machine {
@@ -104,11 +106,13 @@ pub(super) struct Machine {
     campaigns: Option<campaigns::CampaignState>,
     file_source: Option<source::SourceState>,
     scope: Scope,
+    clock_domain: u64,
     endpoint: PublicationEndpoint,
     automatic: BTreeMap<u64, Permit>,
     human_keys: BTreeMap<u64, HumanPermit>,
     reviewer: HumanReviewer,
     envelopes: BTreeMap<u64, DispatchEnvelope>,
+    pub(super) abandonments: super::super::abandonment::Abandonments,
 }
 impl Machine {
     pub(super) fn new(p: &FileOversightProfile) -> Result<Self, Error> {
@@ -149,6 +153,7 @@ impl Machine {
             policy_updates: PolicyUpdates::default(),
             requests: RequestBook::default(),
             scope: d.scope,
+            clock_domain: d.clock_domain,
             broker,
             endpoint,
             reviewer,
@@ -174,6 +179,7 @@ impl Machine {
             learned_consistency: None,
             consistency_request: None,
             mediation: None,
+            abandonments: super::super::abandonment::Abandonments::default(),
         })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
@@ -298,10 +304,9 @@ impl Machine {
                 Event::Consistency(_)
                     | Event::Core(BaseEvent::Propose(..) | BaseEvent::SubmitRequest(..))
             )
+            && let Some(request) = self.broker.stop_receipt().map(|receipt| receipt.request())
         {
-            if let Some(request) = self.broker.stop_receipt().map(|receipt| receipt.request()) {
-                self.apply_core(&BaseEvent::Stop(request))?;
-            }
+            self.apply_core(&BaseEvent::Stop(request))?;
         }
         self.requests.refresh(&self.broker.inspect())?;
         self.bootstrap = None;
@@ -452,11 +457,11 @@ impl Machine {
                     .1
                     .finish(now)?;
                 self.sessions.remove(round);
-                return Ok(Transition::Reviewed(self.broker.apply_review(
-                    review,
-                    current.as_ref(),
-                    snapshot,
-                )));
+                return Ok(Transition::Reviewed(
+                    self.broker
+                        .apply_review(review, current.as_ref(), snapshot)
+                        .map(Box::new),
+                ));
             }
             Event::Authorize(id, revision, snapshot) => {
                 let current = self.current(*id, *revision)?;
@@ -511,9 +516,34 @@ impl Machine {
         Ok(Transition::Unit)
     }
 
+    pub(super) fn preflight_abandon_unknown(
+        &self,
+        request: FileAbandonRequest,
+    ) -> Result<Option<FileAbandonReceipt>, Error> {
+        self.abandonments.preflight(&request, &self.broker.inspect())
+    }
+
+    fn apply_abandonment(&mut self, request: FileAbandonRequest) -> Result<Transition, Error> {
+        let action = self.actions.get(&request.attempt).ok_or(Error::Missing)?;
+        let prepared = self
+            .abandonments
+            .prepare(request, action, &self.broker.inspect())?;
+        self.broker.abandon_unknown(request.attempt)?;
+        self.envelopes.remove(&request.attempt);
+        Ok(Transition::Abandoned(self.abandonments.record(prepared)))
+    }
+
+    pub(super) fn abandonment_receipt(
+        &self,
+        operation: u64,
+    ) -> Option<&FileAbandonReceipt> {
+        self.abandonments.receipt(operation)
+    }
+
     fn apply_core(&mut self, event: &BaseEvent) -> Result<Transition, Error> {
         match event {
             BaseEvent::ReserveRecovery(_) => {}
+            BaseEvent::AbandonUnknown(request) => return self.apply_abandonment(*request),
             BaseEvent::ReplacePolicy(update) => return self.apply_policy_update(update),
             BaseEvent::Time(tick) => self.observe(*tick)?,
             BaseEvent::Propose(id, spec, snapshot) => {

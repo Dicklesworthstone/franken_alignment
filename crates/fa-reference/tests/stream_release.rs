@@ -312,3 +312,26 @@ fn each_stream_unit_still_needs_its_own_human_key() {
     assert_eq!(endpoint.payload(), b"firstsecond");
     conserved(&broker);
 }
+
+#[test]
+fn the_last_delivery_slot_finishes_the_stream_after_its_complete_message_capacity() {
+    use fa_reference::action::consequence::delivery::PublicationEndpoint;
+    let profile = StreamProfile::new(9, 2, 2, 4, 8).unwrap();
+    assert!(matches!(
+        PublicationEndpoint::new_stream(target(1), profile, 200, 2),
+        Err(Error::Limit)
+    ));
+    let (mut broker, mut endpoint, contracts) = fixture_with_capacity(profile, 3);
+    publish(&mut broker, &mut endpoint, &contracts, 1, Some("A"));
+    publish(&mut broker, &mut endpoint, &contracts, 2, Some("B"));
+    assert_eq!(
+        broker.stream_message_spec("C", ElapsedTick(100)),
+        Err(Error::Limit)
+    );
+    publish(&mut broker, &mut endpoint, &contracts, 3, None);
+    assert_eq!(endpoint.execution_count(), 3);
+    assert_eq!(endpoint.payload(), b"AB");
+    assert!(endpoint.stream_view().unwrap().finished());
+    assert!(broker.stream_state().unwrap().1.finished());
+    conserved(&broker);
+}

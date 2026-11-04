@@ -273,8 +273,10 @@ fn exact_source_retry_restores_only_a_local_ticket_without_a_journal_transition(
     let poll = encode_command(&Command::Poll { request: 1 }).unwrap();
     assert!(matches!(
         wire.exchange(&poll).result,
-        Ok(Knowledge::Withheld { .. })
-    )); // A naked numeric ID is not a ticket.
+        Ok(Knowledge::Withheld {
+            authority_required: "own_request"
+        })
+    )); // A numeric ID is not a ticket.
     let mut wrong = source.clone();
     wrong.generation += 1;
     let wrong = encode_command(&Command::Submit {
@@ -285,7 +287,9 @@ fn exact_source_retry_restores_only_a_local_ticket_without_a_journal_transition(
     assert!(refused.exchange(&wrong).result.is_err());
     assert!(matches!(
         refused.exchange(&poll).result,
-        Ok(Knowledge::Withheld { .. })
+        Ok(Knowledge::Withheld {
+            authority_required: "own_request"
+        })
     ));
     let original = encode_command(&Command::Submit {
         request: 1,

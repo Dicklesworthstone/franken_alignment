@@ -165,7 +165,8 @@
         "propose",
         "resolve",
         "fence",
-        "tail"
+        "tail",
+        "stop-fleet"
       ],
       "packets": [
         "FA-012",
@@ -211,7 +212,8 @@
         "narrow",
         "suspend",
         "reset",
-        "precheck"
+        "precheck",
+        "serve-learned-generated"
       ],
       "packets": [
         "FA-009",

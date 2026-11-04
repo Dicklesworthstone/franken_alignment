@@ -148,7 +148,9 @@ fn exact_finish_retry_restores_only_its_local_ticket_even_after_deadline_expiry(
     let poll = encode_command(&Command::Poll { request: 2 }).unwrap();
     assert!(matches!(
         wire.exchange(&poll).result,
-        Ok(Knowledge::Withheld { .. })
+        Ok(Knowledge::Withheld {
+            authority_required: "own_request"
+        })
     ));
     let bad = encode_command(&Command::Submit {
         request: 2,
@@ -164,7 +166,9 @@ fn exact_finish_retry_restores_only_its_local_ticket_even_after_deadline_expiry(
     assert!(wrong.exchange(&bad).result.is_err());
     assert!(matches!(
         wrong.exchange(&poll).result,
-        Ok(Knowledge::Withheld { .. })
+        Ok(Knowledge::Withheld {
+            authority_required: "own_request"
+        })
     ));
     let exact = encode_command(&Command::Submit {
         request: 2,

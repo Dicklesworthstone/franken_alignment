@@ -227,3 +227,6 @@ fn storage_barriers(anchored: bool) {
         }
     }
 }
+
+#[path = "stopped/phases.rs"]
+mod phases;

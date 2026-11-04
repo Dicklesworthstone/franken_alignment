@@ -97,10 +97,10 @@ impl Capture {
         result: &Result<LearnedForecastReport, Error>,
         broker: &crate::action::consequence::oversight::OversightBroker,
     ) -> Result<(), Error> {
-        if let Some(saved) = &self.outcome {
-            if outcome::witness(result, broker)?.as_slice() != saved.as_ref() {
-                return Err(Error::Binding);
-            }
+        if let Some(saved) = &self.outcome
+            && outcome::witness(result, broker)?.as_slice() != saved.as_ref()
+        {
+            return Err(Error::Binding);
         }
         Ok(())
     }

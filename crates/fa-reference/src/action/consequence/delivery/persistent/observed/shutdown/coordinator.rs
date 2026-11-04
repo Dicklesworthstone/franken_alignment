@@ -12,8 +12,12 @@ pub use recovery::fleet::{
     FileShutdownRecoveryPass,
 };
 pub use recovery::resolution::FileShutdownVisitResolution;
+pub use recovery::learned::{FileShutdownLearnedInputs, FileShutdownLearnedRequirements,
+    FileShutdownLearnedMember, FileShutdownLearnedPass, FileShutdownLearnedVisitResolution};
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod custody_tests;
 
 use super::super::super::{MAX_JOURNAL_BYTES, storage};
 use super::*;
@@ -32,6 +36,10 @@ pub enum ShutdownVisitKind {
     },
     /// Intent has no claimed time; acquire it only at verified terminal completion.
     RecoverStoppedAtCompletion,
+    /// Clock-free withdrawal of admission, without a claimed settlement sweep.
+    StopAdmission,
+    /// Settle an existing stop; never create a stop or another fence.
+    DrainStoppedAtCompletion,
     InspectCanonical,
     Unavailable,
 }
@@ -64,6 +72,9 @@ pub struct FileShutdownCoordinatorReport {
     pub unavailable: bool,
 }
 impl FileShutdownCoordinatorReport {
+    pub fn all_observed_stopped(&self) -> bool {
+        !self.unavailable && self.current_session.all_observed_stopped()
+    }
     pub fn all_observed_drained(&self) -> bool {
         !self.unavailable && self.current_session.all_observed_drained()
     }
@@ -87,6 +98,9 @@ pub struct FileShutdownCoordinator {
     visits: Vec<ShutdownVisit>,
     unavailable: bool,
     acknowledged: FileShutdownCoordinatorReport,
+    // Exact bytes installed by the last acknowledged write or verified open.
+    // None exists only while initial creation has not yet acknowledged storage.
+    acknowledged_image: Option<Vec<u8>>,
 }
 impl fmt::Debug for FileShutdownCoordinator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -123,6 +137,7 @@ impl FileShutdownCoordinator {
         let mut owner = Self::assemble(store, campaign, plan_bytes, max_bytes, 0, Vec::new());
         let bytes = owner.encoded(0)?;
         owner.store.replace(&bytes)?;
+        owner.acknowledged_image = Some(bytes);
         owner.unavailable = false;
         Ok(owner)
     }
@@ -169,44 +184,24 @@ impl FileShutdownCoordinator {
                 &bytes,
             )?;
         }
-        // Validation precedes cleanup. Never promote a staged coordinator image.
+        // Validation precedes cleanup. A changed canonical image cannot be
+        // confirmed using validation of the earlier captured bytes.
+        if store.read(max_bytes)? != bytes { return Err(Error::Binding.into()); }
         store.confirm_and_cleanup()?;
-        let mut owner = Self::assemble(
-            store,
-            restored.campaign,
-            plan_bytes,
-            max_bytes,
-            restored.revision,
-            restored.visits,
-        );
+        let mut owner = Self::assemble(store, restored.campaign, plan_bytes, max_bytes,
+            restored.revision, restored.visits);
+        owner.acknowledged_image = Some(bytes);
         owner.unavailable = false;
         Ok(owner)
     }
 
-    fn assemble(
-        store: storage::Store,
-        campaign: FileShutdownCampaign,
-        plan_bytes: Vec<u8>,
-        max_bytes: usize,
-        revision: u64,
-        visits: Vec<ShutdownVisit>,
-    ) -> Self {
-        let acknowledged = FileShutdownCoordinatorReport {
-            revision,
-            visits: visits.clone(),
-            current_session: campaign.report(),
-            unavailable: false,
-        };
-        Self {
-            store,
-            campaign,
-            plan_bytes,
-            max_bytes,
-            revision,
-            visits,
-            unavailable: true,
-            acknowledged,
-        }
+    fn assemble(store: storage::Store, campaign: FileShutdownCampaign, plan_bytes: Vec<u8>,
+        max_bytes: usize, revision: u64, visits: Vec<ShutdownVisit>) -> Self
+    {
+        let acknowledged = FileShutdownCoordinatorReport { revision, visits: visits.clone(),
+            current_session: campaign.report(), unavailable: false };
+        Self { store, campaign, plan_bytes, max_bytes, revision, visits,
+            unavailable: true, acknowledged, acknowledged_image: None }
     }
     fn check_limit(limit: usize) -> Result<(), Error> {
         if limit == 0 || limit > MAX_JOURNAL_BYTES {
@@ -295,13 +290,12 @@ impl FileShutdownCoordinator {
             return Err(Error::Limit.into());
         }
         self.visits.try_reserve(1).map_err(|_| Error::Limit)?;
-        let step = match kind {
-            ShutdownVisitKind::Advance { .. } => FileShutdownStep::InspectOwner,
-            ShutdownVisitKind::InspectCanonical
-            | ShutdownVisitKind::RecoverStopped { .. }
-            | ShutdownVisitKind::RecoverStoppedAtCompletion => FileShutdownStep::InspectCanonical,
-            ShutdownVisitKind::Unavailable => FileShutdownStep::Unavailable,
-        };
+        let step = match kind { ShutdownVisitKind::Advance { .. } => FileShutdownStep::InspectOwner,
+            ShutdownVisitKind::InspectCanonical | ShutdownVisitKind::RecoverStopped { .. }
+                | ShutdownVisitKind::RecoverStoppedAtCompletion
+                | ShutdownVisitKind::StopAdmission | ShutdownVisitKind::DrainStoppedAtCompletion
+                => FileShutdownStep::InspectCanonical,
+            ShutdownVisitKind::Unavailable => FileShutdownStep::Unavailable };
         let pair = self.campaign.enter(domain, step)?;
         // Poison before encoding/storage/native work. Only completion acknowledgment
         // clears it; unwinding cannot reuse the old permitting coordinator report.
@@ -350,18 +344,30 @@ impl FileShutdownCoordinator {
             &self.campaign,
         )
     }
+    // Callers latch unavailable BEFORE this fallible read. A conflict or read
+    // error cannot be cleared by restoring bytes and reusing the same owner.
+    // This is an exact comparison, not a substitute for filesystem isolation or
+    // an atomic compare-and-swap against non-cooperating concurrent writers.
+    fn check_canonical_image(&self) -> Result<(), JournalError> {
+        let expected = self.acknowledged_image.as_deref().ok_or(Error::Incomplete)?;
+        if self.store.read(self.max_bytes)?.as_slice() != expected {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
     fn commit(&mut self) -> Result<(), JournalError> {
         self.unavailable = true;
         let revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
         let bytes = self.encoded(revision)?;
         // Preallocate returned reports before publishing their acknowledgment.
-        let next = FileShutdownCoordinatorReport {
-            revision,
-            visits: self.visits.clone(),
-            current_session: self.campaign.report(),
-            unavailable: false,
-        };
+        let next = FileShutdownCoordinatorReport { revision, visits: self.visits.clone(),
+            current_session: self.campaign.report(), unavailable: false };
+        // Intent is checked before domain work; completion is checked again
+        // afterward. Never replace a changed image with stale in-memory history.
+        self.check_canonical_image()?;
         self.store.replace(&bytes)?;
+        self.acknowledged_image = Some(bytes);
         self.revision = revision;
         self.acknowledged = next;
         Ok(())

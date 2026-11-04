@@ -300,6 +300,7 @@ fn native_sharded_checked_create_and_resume_keep_witnesses_and_independent_human
                 let (publication, _producer) = publication(&root, &config);
                 if open {
                     seed(&mut config, &native, &publication);
+                    config.programs = native_programs_at_epoch(&root, 1);
                 }
                 let store = config.store.clone();
                 let bootstrap = config.profile.clone();
@@ -334,8 +335,15 @@ fn native_sharded_checked_create_and_resume_keep_witnesses_and_independent_human
                     result.is_ok(),
                     "tied={tied} open={open} approve={approve}: {result:?}"
                 );
-                human.join().unwrap();
+                let packet = human.join().unwrap();
+                assert_eq!(packet.action().spec().policy_epoch, u64::from(open));
                 assert_eq!(executed(&client.join().unwrap()), approve);
+                assert_eq!(
+                    ReleaseFrame::decode(&packet.action().spec().payload)
+                        .unwrap()
+                        .message(),
+                    Some("A")
+                );
                 let image = FileOversight::read_decoder_text_progress(
                     &store, &bootstrap, &decoder, &tokenizer, 7,
                 )
@@ -350,8 +358,7 @@ fn native_sharded_checked_create_and_resume_keep_witnesses_and_independent_human
                     assert_eq!(image.publication.payload, b"A");
                     assert_eq!(
                         image.publication.control.ledger.charged,
-                        (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
-                            + image.publication.payload.len()) as u64
+                        packet.action().spec().payload.len() as u64
                     );
                 } else {
                     assert!(image.publication.payload.is_empty());

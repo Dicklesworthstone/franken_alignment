@@ -7,7 +7,7 @@ use crate::action::consequence::delivery::stream::{ReleaseFrame, StreamProfile};
 use crate::action::consequence::oversight::decoder_monitoring::LearnedDecoderBindingLimits;
 
 pub(super) fn stream_profile() -> StreamProfile {
-    StreamProfile::new(61, 1, 8, 32, 128).unwrap()
+    StreamProfile::new(61, 1, 7, 32, 128).unwrap()
 }
 pub(super) fn stream_config() -> FileLearnedConfig {
     let (model, tokenizer, source) = recipe();

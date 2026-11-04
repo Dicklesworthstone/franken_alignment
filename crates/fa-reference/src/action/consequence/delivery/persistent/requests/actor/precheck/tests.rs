@@ -675,3 +675,5 @@ fn a_source_backed_stream_cannot_obtain_a_raw_proposal_precheck_fallback() {
         1,
     );
 }
+
+mod wire;

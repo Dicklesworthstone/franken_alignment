@@ -28,6 +28,8 @@ use fa_reference::action::consequence::oversight::{
 use std::collections::BTreeSet;
 #[path = "continuation/forecast.rs"]
 mod forecast;
+#[path = "continuation/checkpoints.rs"]
+mod checkpoints;
 
 fn finite_model() -> DecoderModel {
     // Real attention retains earlier positions. The four distinct continuations

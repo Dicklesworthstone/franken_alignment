@@ -361,7 +361,7 @@ impl FileHelperPool {
         match result {
             Ok(Transition::Reviewed(review)) => {
                 self.close();
-                Ok(review)
+                Ok(review.map(|receipt| *receipt))
             }
             Ok(_) => unreachable!("durable worker review transition"),
             Err(JournalError::Contract(Error::Incomplete)) => Err(Error::Incomplete.into()),

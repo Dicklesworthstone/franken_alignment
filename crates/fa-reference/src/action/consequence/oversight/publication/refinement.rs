@@ -183,12 +183,11 @@ impl PublicationRefinement<'_> {
         mut outcome: PublicationOutcome,
         spent: RefinementBudget,
     ) -> PublicationProgress {
-        if let PublicationOutcome::NeedsRefinement { minimum } = outcome {
-            if minimum.steps > self.ceiling.steps - self.total.steps
-                || minimum.value_bytes > self.ceiling.value_bytes - self.total.value_bytes
-            {
-                outcome = PublicationOutcome::Refused(Error::Limit);
-            }
+        if let PublicationOutcome::NeedsRefinement { minimum } = outcome
+            && (minimum.steps > self.ceiling.steps - self.total.steps
+                || minimum.value_bytes > self.ceiling.value_bytes - self.total.value_bytes)
+        {
+            outcome = PublicationOutcome::Refused(Error::Limit);
         }
         if !matches!(outcome, PublicationOutcome::NeedsRefinement { .. }) {
             self.terminal = Some(outcome);

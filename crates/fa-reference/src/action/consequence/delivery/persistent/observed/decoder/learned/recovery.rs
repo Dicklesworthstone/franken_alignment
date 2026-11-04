@@ -2,14 +2,27 @@
 //! The existing locked store remains the only externally visible effect sink.
 mod reset;
 mod stopped;
+mod receipt;
+mod investigation;
+mod policy_replay;
+mod policy_promotion;
+mod abandonment;
+mod stream_control;
+pub use receipt::FileReconciledLearnedReceipt;
+pub use policy_promotion::{FileLearnedPolicyPromotionHistory, FileLearnedPolicyPromotionRequest,
+    FileLearnedPolicyPromotionReview};
+pub use stream_control::{FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
+    FileLearnedStreamControlReceipt};
 
+use super::{FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile,
+    JournalError, Machine, bind_history, journal, storage};
+use super::super::super::{BaseEvent, Event, Transition};
+use super::super::super::shutdown::FileShutdownDrain;
+use super::super::super::guarded::investigation::Selection;
 use super::super::super::super::MAX_JOURNAL_EVENTS;
-use super::super::super::{BaseEvent, Event};
-use super::{
-    FileHumanReviewer, FileLearnedConfig, FileOversight, FileOversightProfile, JournalError,
-    Machine, bind_history, journal, storage,
-};
 use crate::Error;
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
+use super::super::super::stream::FileStreamProposal;
 use std::fmt;
 use std::path::Path;
 
@@ -56,6 +69,9 @@ pub struct FileLearnedRecovery {
     canonical: Vec<u8>,
     replayed: usize,
     status: FileLearnedRecoveryStatus,
+    investigation: Option<Selection>,
+    promotion: Option<policy_promotion::Selection>,
+    last_drain: Option<FileShutdownDrain>,
 }
 
 impl fmt::Debug for FileLearnedRecovery {
@@ -81,16 +97,10 @@ impl FileOversight {
         let mut events = journal::decode(&profile, store.identity(), &canonical)?;
         bind_history(&mut events, expected)?;
         let machine = Machine::new(&profile)?;
-        Ok(FileLearnedRecovery {
-            profile,
-            store,
-            events,
-            machine,
-            expected: expected.clone(),
-            canonical,
-            replayed: 0,
-            status: FileLearnedRecoveryStatus::Replaying,
-        })
+        Ok(FileLearnedRecovery { profile, store, events, machine,
+            expected: expected.clone(), canonical, replayed: 0,
+            status: FileLearnedRecoveryStatus::Replaying, investigation: None,
+            promotion: None, last_drain: None })
     }
 }
 
@@ -156,9 +166,31 @@ impl FileLearnedRecovery {
             // Latch BEFORE the original reducer, including its numerical work.
             // An unwinding caller cannot retry partially applied history.
             self.status = FileLearnedRecoveryStatus::Interrupted;
-            if let Err(error) = self.machine.apply(&self.events[self.replayed]) {
+            if let Some(selection) = self.promotion.as_mut()
+                && let Err(error) = selection.capture(&self.machine, self.replayed) {
                 self.status = FileLearnedRecoveryStatus::Failed(error);
                 return Err(error.into());
+            }
+            // A selected investigation captures the admission in this SAME
+            // reducer pass; it never replays numerical history a second time.
+            let applied = match self.investigation.as_mut() {
+                Some(selection) => selection.apply_transition(&self.profile, &mut self.machine,
+                    self.replayed, &self.events[self.replayed]),
+                None => self.machine.apply(&self.events[self.replayed]).map_err(JournalError::from),
+            };
+            let transition = match applied {
+                Ok(transition) => transition,
+                Err(error) => {
+                    if let JournalError::Contract(cause) = &error {
+                        self.status = FileLearnedRecoveryStatus::Failed(*cause);
+                    }
+                    return Err(error);
+                }
+            };
+            if let Transition::StopProgressed(sweep) = transition {
+                self.last_drain = Some(FileShutdownDrain {
+                    journal_revision: (self.replayed + 1) as u64, sweep,
+                });
             }
             self.replayed += 1;
             self.status = FileLearnedRecoveryStatus::Replaying;
@@ -167,6 +199,11 @@ impl FileLearnedRecovery {
             if self.machine.learned_contract() != Some(&self.expected) {
                 self.status = FileLearnedRecoveryStatus::Failed(Error::Binding);
                 return Err(Error::Binding.into());
+            }
+            if let Some(selection) = self.promotion.as_mut()
+                && let Err(error) = selection.capture(&self.machine, self.replayed) {
+                self.status = FileLearnedRecoveryStatus::Failed(error);
+                return Err(error.into());
             }
             self.status = FileLearnedRecoveryStatus::Ready;
         }
@@ -214,6 +251,90 @@ impl FileLearnedRecovery {
         Ok((owner, reviewer))
     }
 
+    /// Historical message identity from a COMPLETE original replay, including
+    /// policy refusals. No live owner, fence, cleanup, clock or approval escapes.
+    /// The descriptor is not proof of publication. Finish still checks the exact
+    /// canonical cut; dropping this cursor after a bad selection writes nothing.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        Ok(self.verified_guarded_machine()?.learned_text_stream_message_request(
+            self.profile.delivery.scope, request)?)
+    }
+
+    /// Historical finish plus its exact accepted predecessor receipt. Missing,
+    /// wrong-kind or unconfirmed requests cannot consume a recovery fence.
+    /// As above, incomplete/failed replay supplies no descriptor or live role.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        Ok(self.verified_guarded_machine()?.learned_text_stream_finish_request(
+            self.profile.delivery.scope, after_request, request)?)
+    }
+
+    /// Consume a complete replay into the ORIGINAL redacted actor observation,
+    /// without recovering a live owner or spending any journal capacity.
+    /// `None` selects a message; `Some(previous_request)` explicitly selects a
+    /// finish with that exact confirmed predecessor. There is no format fallback.
+    ///
+    /// This is a historical observation at the verified canonical cut, not a
+    /// fresh evaluation or a reconciliation. Pending and unknown outcomes stay
+    /// pending and unknown even when publication is ahead of its receipt. No
+    /// clock, source, helper, fence, cleanup, sync, reset or new inference runs.
+    /// Numerical work needed to VERIFY the original history still runs in replay.
+    ///
+    /// The exact canonical bytes are re-read under the SAME exclusive lock before
+    /// anything escapes. Changed bytes or incomplete/failed replay return no
+    /// observation. The consumed private machine and lock are dropped on either
+    /// outcome. Full journals remain inspectable: no spare event or byte is needed.
+    /// Callers must still independently authenticate access to the selected run.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        match finish_after {
+            None => { self.learned_text_stream_message_request(request)?; }
+            Some(after) => { self.learned_text_stream_finish_request(after, request)?; }
+        }
+        let status = self.verified_guarded_machine()?.requests.status(request)?;
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(Error::Binding.into());
+        }
+        Ok(status.actor_observation())
+    }
+
+    /// Settle original endpoint receipts after complete numerical replay, using
+    /// the SAME fixed Fence -> Time -> Sweep transaction as guarded recovery.
+    /// Only the selected redacted actor outcome escapes; no live owner or role
+    /// is returned. A sweep covers existing liabilities, never sends an effect.
+    ///
+    /// Selection (including an exact finish predecessor) happens before the
+    /// trusted clock or any write. The clock is called once after replay and
+    /// canonical-cut validation. Every original prefix/byte/source check still
+    /// applies, and the canonical image is checked again before replacement.
+    /// A failed write may expose the whole new image but returns no receipt.
+    ///
+    /// This is MUTATING recovery, unlike finish_receipt: it spends three events
+    /// and needs ordinary capacity for Time/Sweep. Terminal-only reserve cannot
+    /// fund it. Missing receipts remain Unknown and charged; no numerical work,
+    /// source eligibility, old approval or lost forecast budget is reinstated.
+    /// Repeated calls are not zero-event retries. For observation without any
+    /// write use finish_receipt; for exhausted ordinary capacity use stopped
+    /// recovery. Independent access authorization remains the caller's duty.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> crate::action::ElapsedTick {
+        match finish_after {
+            None => { self.learned_text_stream_message_request(request)?; }
+            Some(after) => { self.learned_text_stream_finish_request(after, request)?; }
+        }
+        let Self { profile, store, events, machine, canonical, .. } = self;
+        let recovered = FileOversight::finish_reconciled_history(
+            profile, store, events, machine, canonical, clock)?;
+        // The retained book has no removal/reassignment operation. Reuse the
+        // original live-poll projection only AFTER the replacement acknowledges.
+        Ok(recovered.owner.request_status(request)?.actor_observation())
+    }
+
     // Immutable composition views stop at the original observed-owner family.
     // Framing is available before replay, but the machine only after full
     // verification. Neither method exposes a publicly executable candidate.
@@ -223,9 +344,15 @@ impl FileLearnedRecovery {
         (&self.profile, &self.events, self.store.identity())
     }
 
-    pub(in super::super::super) fn verified_guarded_machine(
-        &self,
-    ) -> Result<&Machine, JournalError> {
+    // Fleet admission inspects this SAME locked image before event zero.
+    // Only a fully checked wrapper may consume the later terminal handoff.
+    pub(in super::super::super) fn shutdown_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path, usize)
+    {
+        (&self.profile, &self.events, self.store.identity(), self.canonical.len())
+    }
+
+    pub(in super::super::super) fn verified_guarded_machine(&self) -> Result<&Machine, JournalError> {
         match self.status {
             FileLearnedRecoveryStatus::Ready => Ok(&self.machine),
             FileLearnedRecoveryStatus::Failed(error) => Err(error.into()),

@@ -50,9 +50,31 @@ impl NativeAndonBinding {
 /// No public constructor accepts caller-authored false-stop claims or a receipt
 /// made from an unapplied review. Clones copy evidence only, never authority.
 ///
+/// Retaining the original evidence through the public API is permitted:
+///
+/// ```
+/// use fa_reference::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
+/// fn retain(original: &NativeEvaluatedFalseHold) -> NativeEvaluatedFalseHold {
+///     original.clone()
+/// }
+/// ```
+///
+/// A caller cannot replace the accepted revision, even when it possesses all
+/// the original evidence. Name every field so the required diagnostic checks
+/// field privacy rather than the compiler's special empty-literal diagnostic.
+///
 /// ```compile_fail,E0451
 /// use fa_reference::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
-/// fn forge() -> NativeEvaluatedFalseHold { NativeEvaluatedFalseHold {} }
+/// fn forge(original: &NativeEvaluatedFalseHold) -> NativeEvaluatedFalseHold {
+///     NativeEvaluatedFalseHold {
+///         binding: std::rc::Rc::new(original.binding().clone()),
+///         case: original.case().clone(),
+///         assessment: original.assessment(),
+///         fact: original.confirmation().clone(),
+///         budget: original.budget(),
+///         accepted_revision: 0,
+///     }
+/// }
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeEvaluatedFalseHold {

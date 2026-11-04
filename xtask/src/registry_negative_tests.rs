@@ -55,6 +55,8 @@ impl Sandbox {
         let outside = base.join("outside");
         fs::create_dir(&outside).expect("create owned sandbox outside directory");
         copy_tree(&source.join("artifacts"), &root.join("artifacts"));
+        // Roadmap evidence can name any retained contract or operator source.
+        // Mirror those real inputs before applying exactly one mutation.
         copy_tree(&source.join("docs"), &root.join("docs"));
         copy_file(
             &source.join("registry/foundation_audit.json"),
@@ -63,6 +65,10 @@ impl Sandbox {
         copy_tree(
             &source.join("crates/fa-reference"),
             &root.join("crates/fa-reference"),
+        );
+        copy_tree(
+            &source.join("crates/fa-reference/examples"),
+            &root.join("crates/fa-reference/examples"),
         );
         copy_file(
             &source.join("IMPLEMENTATION_STATUS.md"),

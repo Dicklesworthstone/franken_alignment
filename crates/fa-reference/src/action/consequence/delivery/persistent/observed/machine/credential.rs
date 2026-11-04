@@ -1,5 +1,5 @@
 //! Replay semantics for the nonsecret credential publication contract and lifecycle.
-use super::super::credential::{FileCredentialChange, FileCredentialPolicy};
+use super::super::credential::{FileCredentialChange, FileCredentialPolicy, FileCredentialStatus};
 use super::{Machine, Transition};
 use crate::Error;
 use crate::action::ActionState;
@@ -116,6 +116,67 @@ impl Machine {
         self.credential_changes
             .push(FileCredentialChange::Revocation { request, receipt });
         Ok(Transition::Unit)
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn credential_status(
+        &self,
+    ) -> Option<FileCredentialStatus> {
+        self.credential_policy
+            .as_ref()
+            .map(|policy| FileCredentialStatus {
+                policy: policy.clone(),
+                generation: self.credential_generation,
+                revoked: self.credential_revoked,
+                retained_changes: self.credential_changes.len(),
+            })
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn check_credential_rotation(
+        &self,
+        request: CredentialRotationRequest,
+    ) -> Result<Option<CredentialChangeReceipt>, Error> {
+        if let Some(change) = self.credential_change(request.operation) {
+            return change.retry_rotation(request).map(Some);
+        }
+        self.credential_policy.as_ref().ok_or(Error::WrongState)?;
+        if request.operation == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.credential_revoked {
+            return Err(Error::WrongState);
+        }
+        if request.expected_generation != self.credential_generation
+            || request.next_generation != self.credential_generation.checked_add(1).ok_or(Error::Overflow)?
+        {
+            return Err(Error::Stale);
+        }
+        if self.credential_changes.len() >= MAX_CREDENTIAL_CHANGES {
+            return Err(Error::Limit);
+        }
+        Ok(None)
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn check_credential_revocation(
+        &self,
+        request: CredentialRevocationRequest,
+    ) -> Result<Option<CredentialChangeReceipt>, Error> {
+        if let Some(change) = self.credential_change(request.operation) {
+            return change.retry_revocation(request).map(Some);
+        }
+        self.credential_policy.as_ref().ok_or(Error::WrongState)?;
+        if request.operation == 0 {
+            return Err(Error::InvalidInput);
+        }
+        if self.credential_revoked {
+            return Err(Error::WrongState);
+        }
+        if request.expected_generation != self.credential_generation {
+            return Err(Error::Stale);
+        }
+        if self.credential_changes.len() >= MAX_CREDENTIAL_CHANGES {
+            return Err(Error::Limit);
+        }
+        Ok(None)
     }
 
     pub(in super::super) fn credential_change(

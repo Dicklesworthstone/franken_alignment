@@ -35,7 +35,11 @@ Source preparation and proposal admission are separate durable cuts. An intake
 report can be successful even when the ensuing submission refuses or faults.
 Reports retain the original observation and storage diagnostics for the supervisor;
 actor responses contain only the original redacted outcome/error representation.
-Source failure does not fabricate a NotAdmitted request record. A failed journal
+A complete false policy is an acknowledged proposal with stage `Denied` and a
+control-ledger basis; it is not a proposal-construction failure. Only an original
+recorded construction refusal projects `NotAdmitted` with an intake basis. Both
+retain exact request/retry identity, and neither permits an effect. Source failure
+does not fabricate a NotAdmitted request record. A failed journal
 replacement keeps the original fault latch and exposes no candidate ticket.
 
 Newline framing and write/flush backpressure remain unchanged. Partial frames and
@@ -113,3 +117,22 @@ compilation (`rch: command not found`, exit 127). The command above selects both
 the eight original integration tests and these five peer tests. No new dependency,
 journal encoding, actor verb, listener, runtime or production qualification is
 introduced; existing source and transport implementations are unchanged.
+
+
+## Executed continuation, 2026-10-25
+
+At frozen `93660bf5`, all thirteen original generated-source API functions and
+all seven named-listener functions pass inside the complete reference-library
+run. The two backpressure cases require the original retained `Denied` stage,
+exact control-ledger request/generation basis and immutable retry, with producer
+repair and no-effect/redaction checks preserved. The original reducer and wire
+behavior are unchanged; the old `NotAdmitted` expectation incorrectly described
+a complete false policy as proposal-construction failure.
+
+The complete library is 2,244 passed/81 failed of 2,325, zero ignored/filtered.
+All-target compilation, all 359 workspace doc tests and all nine public stream
+release tests pass at the same source; Clippy still fails on 25 library errors
+and canonical dependency admission refuses. Earlier source-only reports above
+remain historical, and no production or complete-project qualification follows.
+Exact commands, raw logs and remaining acceptance are in implementation status
+and the original P0 qualification Bead.

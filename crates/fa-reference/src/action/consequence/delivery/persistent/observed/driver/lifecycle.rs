@@ -136,10 +136,8 @@ impl FileSupervisedDriver {
                     })
                 })
         });
-        if closed {
-            if let Some(job) = &mut self.job {
-                job.close();
-            }
+        if closed && let Some(job) = &mut self.job {
+            job.close();
         }
         self.reap_helpers();
         if self

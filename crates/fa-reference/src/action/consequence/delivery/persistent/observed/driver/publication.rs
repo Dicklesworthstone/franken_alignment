@@ -6,28 +6,18 @@ use super::{FileDriverEvent, FileOversight, Job, JournalError, Phase};
 use crate::action::ElapsedTick;
 use crate::{Error, Snapshot};
 
-pub(super) fn publish_job<F, P>(
-    host: &mut FileOversight,
-    job: &mut Job,
-    clock: &mut F,
-    provider: &mut P,
-    credential: Option<&FileCredentialPermit>,
-) -> FileDriverEvent
-where
-    F: FnMut() -> ElapsedTick,
-    P: EvidenceProvider,
-{
+pub(super) fn publish_job<F, P>(host: &mut FileOversight, job: &mut Job,
+    clock: &mut F, provider: &mut P, credential: Option<&FileCredentialPermit>,
+    topology: Option<&mut super::topology::FileDriverTopology>) -> FileDriverEvent
+where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
     let request = job.request;
     // Retire the send path BEFORE invoking external provider code. Even a
     // caller-caught unwind may only be followed by original reconciliation.
     job.phase = Phase::Reconcile;
     if !host.publication_guard_required() {
         // A credential permit is meaningful only for a credential-guarded host.
-        if credential.is_some() {
-            return FileDriverEvent::PublicationUnknown {
-                request,
-                error: Error::WrongState.into(),
-            };
+        if credential.is_some() || topology.is_some() {
+            return FileDriverEvent::PublicationUnknown { request, error: Error::WrongState.into() };
         }
         let revision = host.revision();
         return match host.publish(revision, job.attempt) {
@@ -42,8 +32,7 @@ where
         let (inputs, snapshot, source_failure) = if needs_evidence {
             // Outer persistence failure is not an observation refusal. No
             // candidate source or endpoint result can escape that failed owner.
-            let captured = provider
-                .capture(host, &job.action, clock)?
+            let captured = provider.capture_for_publication(host, &job.action, clock)?
                 .and_then(|evidence| validate(evidence, &job.action, &host.profile.committee));
             match captured {
                 Ok(evidence) => (evidence.inputs, evidence.snapshot, None),
@@ -55,6 +44,14 @@ where
             // assertion or force secret availability for query-only recovery.
             (None, Snapshot::default(), None)
         };
+        // Selection belongs to this DRIVER, not to a caller's choice of step
+        // method. Refresh only after ordinary input acquisition/validation and
+        // only when the ORIGINAL endpoint still requires first-publication work.
+        // Acknowledged withdrawal reaches native sealing; persistence failure
+        // cannot proceed to clock acquisition or the endpoint.
+        if needs_evidence && let Some(topology) = topology {
+            topology.refresh_for_publication(host, request, job.attempt)?;
+        }
         // The original publication/sealing operation still samples current time
         // AFTER file reading and, for configured sources, durable observation.
         let now = clock();

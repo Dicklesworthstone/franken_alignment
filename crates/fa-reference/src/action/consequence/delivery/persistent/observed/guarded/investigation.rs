@@ -1,11 +1,10 @@
 //! Historical admission/review diagnosis through the ORIGINAL durable machine.
-//! No source refresh, helper inference, writer lock, recovery fence or effect.
-use super::super::FileDeliverySnapshot;
+//! No source refresh, helper inference, recovery fence or effect. Base readers
+//! avoid the writer lock; learned numerical recovery keeps its exclusive lock.
+use super::{FileRecoveryRequirements, FileOversight, FileOversightProfile, JournalError,
+    Machine, Event, BaseEvent, journal, storage};
 use super::super::replay::FileReviewReplay;
-use super::{
-    BaseEvent, Event, FileOversight, FileOversightProfile, FileRecoveryRequirements, JournalError,
-    Machine, journal, storage,
-};
+use super::super::FileDeliverySnapshot;
 use crate::Error;
 use crate::action::Purpose;
 use crate::action::consequence::delivery::persistent::requests::FileRequestDisposition;
@@ -95,6 +94,19 @@ impl FileProposalRepairReport {
         &self.search
     }
 }
+/// Historical policy input and experiments only. A diagnosis cannot supply a
+/// live owner, approval or effect permit, including after learned replay.
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
+/// fn recover_owner(report: FileProposalInvestigation) -> FileOversight { report }
+/// ```
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::delivery::persistent::FilePermit;
+/// use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
+/// fn approve(report: FileProposalInvestigation) -> FilePermit { report }
+/// ```
 #[derive(Clone, Debug)]
 pub struct FileProposalInvestigation {
     origin: Rc<FileProposalOrigin>,
@@ -232,11 +244,8 @@ impl FileReviewReplay {
 // Both eager and cooperative readers select the FIRST creation through the
 // same original machine. This state is private until the whole image qualifies.
 #[derive(Clone, Copy)]
-enum ProposalIdentity {
-    Attempt(u64),
-    Request(u64),
-}
-struct Selection {
+enum ProposalIdentity { Attempt(u64), Request(u64) }
+pub(in crate::action::consequence::delivery::persistent::observed) struct Selection {
     identity: ProposalIdentity,
     scope: InterventionScope,
     selected: Option<(Option<u64>, FileDeliverySnapshot, ProposalExperiment)>,
@@ -252,23 +261,22 @@ impl Selection {
             selected: None,
         })
     }
-    fn request(request: u64, scope: InterventionScope) -> Result<Self, Error> {
-        if request == 0 {
-            return Err(Error::InvalidInput);
-        }
-        Ok(Self {
-            identity: ProposalIdentity::Request(request),
-            scope,
-            selected: None,
-        })
+    pub(in crate::action::consequence::delivery::persistent::observed) fn request(request: u64, scope: InterventionScope) -> Result<Self, Error> {
+        if request == 0 { return Err(Error::InvalidInput); }
+        Ok(Self { identity: ProposalIdentity::Request(request), scope, selected: None })
     }
-    fn apply(
-        &mut self,
-        profile: &FileOversightProfile,
-        machine: &mut Machine,
-        index: usize,
-        event: &Event,
-    ) -> Result<(), JournalError> {
+    pub(in crate::action::consequence::delivery::persistent::observed) fn apply(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
+        index: usize, event: &Event) -> Result<(), JournalError>
+    {
+        self.apply_transition(profile, machine, index, event).map(|_| ())
+    }
+
+    // Preserve the original transition for a consuming learned fleet replay.
+    // Ordinary diagnosis still discards it; the reducer is called exactly once.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn apply_transition(&mut self, profile: &FileOversightProfile, machine: &mut Machine,
+        index: usize, event: &Event) -> Result<super::super::Transition, JournalError>
+    {
         // A durable actor key is NOT its allocated attempt. Resolve only the
         // first submission through the original request book, including a
         // retained NotAdmitted disposition. Neither a direct proposal with the
@@ -298,16 +306,14 @@ impl Selection {
                 }
                 _ => None,
             }
-        } else {
-            None
-        };
-        machine.apply(event)?;
+        } else { None };
+        let transition = machine.apply(event)?;
         if let Some((request, snapshot)) = source {
             let attempt = match self.identity {
                 ProposalIdentity::Attempt(attempt) => attempt,
                 ProposalIdentity::Request(key) => match machine.requests.status(key)?.disposition {
                     FileRequestDisposition::Admitted { attempt, .. } => attempt,
-                    FileRequestDisposition::NotAdmitted(_) => return Ok(()),
+                    FileRequestDisposition::NotAdmitted(_) => return Ok(transition),
                 },
             };
             if let Some(action) = machine.actions.get(&attempt) {
@@ -335,7 +341,7 @@ impl Selection {
                 self.selected = Some((request, admitted, experiment));
             }
         }
-        Ok(())
+        Ok(transition)
     }
     fn require_selected(&self) -> Result<(), Error> {
         if self.selected.is_some() {
@@ -344,12 +350,9 @@ impl Selection {
             Err(Error::Missing)
         }
     }
-    fn finish(
-        self,
-        directory: &Path,
-        machine: &Machine,
-        count: usize,
-    ) -> Result<FileProposalInvestigation, JournalError> {
+    pub(in crate::action::consequence::delivery::persistent::observed) fn finish(self, directory: &Path, machine: &Machine, count: usize)
+        -> Result<FileProposalInvestigation, JournalError>
+    {
         let (external_request, admitted, experiment) = self.selected.ok_or(Error::Missing)?;
         let origin = Rc::new(FileProposalOrigin {
             directory: directory.to_owned(),

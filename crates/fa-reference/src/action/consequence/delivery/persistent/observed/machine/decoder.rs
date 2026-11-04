@@ -115,42 +115,21 @@ impl Machine {
         // Recovery invalidates old qualification, so explicit reactivation must
         // be possible before resume. Bootstrap, assessment and promotion are NOT
         // blanket-admitted through this exception; their existing rules remain.
-        if matches!(
-            event,
-            Event::Decoder(
-                DecoderEvent::Learned(super::super::decoder::learned::LearnedEvent::Resume { .. })
-                    | DecoderEvent::Resume { .. }
-                    | DecoderEvent::CancelGeneration { .. }
-                    | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _)
-            ) | Event::Core(
-                BaseEvent::Time(_)
-                    | BaseEvent::Cancel(_)
-                    | BaseEvent::Fence
-                    | BaseEvent::Stop(_)
-                    | BaseEvent::StopProgress(_)
-                    | BaseEvent::Reconcile(_)
-                    | BaseEvent::Seal(_)
-                    | BaseEvent::Sweep
-                    | BaseEvent::ReplacePolicy(_)
-                    | BaseEvent::ReserveRecovery(_)
-            ) | Event::InputsUnavailable(..)
-                | Event::RevokeHumans
-                | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
-                | Event::Source(_)
-                | Event::Identity(_)
-                | Event::Campaign(_)
-                | Event::Credibility(
-                    CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_)
-                )
-                | Event::CredentialRotate(_)
-                | Event::CredentialRevoke(_)
-                | Event::PublishChecked(..)
-                | Event::PublishCredentialed(..)
-        ) {
-            Ok(())
-        } else {
-            Err(Error::Incomplete)
-        }
+        if matches!(event,
+            Event::Decoder(DecoderEvent::Learned(super::super::decoder::learned::LearnedEvent::Resume { .. })
+                | DecoderEvent::Resume { .. }
+                | DecoderEvent::CancelGeneration { .. }
+                | DecoderEvent::Checkpoint(CheckpointRequest::Reset { .. }, _))
+            | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
+                | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::Reconcile(_)
+                | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::AbandonUnknown(_))
+            | Event::InputsUnavailable(..) | Event::RevokeHumans
+            | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
+            | Event::Source(_) | Event::Identity(_) | Event::Campaign(_)
+            | Event::Credibility(CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_))
+            | Event::CredentialRotate(_) | Event::CredentialRevoke(_)
+            | Event::PublishChecked(..) | Event::PublishCredentialed(..)) { Ok(()) }
+        else { Err(Error::Incomplete) }
     }
 
     pub(super) fn apply_decoder(&mut self, event: &DecoderEvent) -> Result<Transition, Error> {

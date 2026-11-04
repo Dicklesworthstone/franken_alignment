@@ -14,8 +14,12 @@ use std::path::Path;
 mod andon;
 pub use andon::FileAndonRecovery;
 
-mod publication;
+pub mod mediated;
+
 mod stopped;
+mod abandonment;
+pub use abandonment::FileAbandonedHistory;
+mod publication;
 pub use publication::FilePublicationRecoveryRequirements;
 mod reconciled;
 pub use reconciled::ReconciledGuardedOwner;

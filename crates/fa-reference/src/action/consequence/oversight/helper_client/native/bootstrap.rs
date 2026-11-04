@@ -6,7 +6,8 @@ pub mod files;
 
 /// Operator-selected data format, never inferred from a filename or a failed
 /// parser. JSON supports raw ByteLevel BPE or either explicitly selected frozen
-/// Unicode grammar, including registered literal controls, not arbitrary pipelines.
+/// Unicode grammar, including registered literal controls and the explicit
+/// Llama-3 BOS template, not arbitrary pipelines.
 /// Selecting a format does not authenticate the tokenizer or its trained model.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum NativeTokenizerFormat {
@@ -14,6 +15,9 @@ pub enum NativeTokenizerFormat {
     HuggingFaceRawByteLevel,
     HuggingFaceGpt2Unicode17,
     HuggingFaceLlama3Unicode17,
+    HuggingFaceLlama3Unicode17Bos,
+    HuggingFaceLlama3Unicode17WholePiece,
+    HuggingFaceLlama3Unicode17BosWholePiece,
 }
 
 use super::{NativeEvaluator, NativeHelperPolicy, TextDecoder};
@@ -23,9 +27,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::Monitored
 use crate::action::consequence::activation::monitor::decoder::sampled::config::{
     MAX_SAMPLING_CONFIG_BYTES, SamplingConfig, SamplingConfigError,
 };
-use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{
-    ByteBpe, PreTokenization,
-};
+use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization};
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderModel;
 use crate::action::consequence::activation::tensor::kv::decoder::safetensors::pretrained::{
     CheckpointError, LlamaConfig, PretrainedReceipt, PretrainedShardReceipt,
@@ -190,31 +192,20 @@ impl NativeHelperBootstrap<'_> {
         let tokenizer = match format {
             NativeTokenizerFormat::NativeArchive => ByteBpe::from_bytes(expected, self.tokenizer),
             NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::from_huggingface_json(
-                expected,
-                self.tokenizer,
-                ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
-            ),
-            NativeTokenizerFormat::HuggingFaceGpt2Unicode17 => {
-                ByteBpe::from_huggingface_json_with_pre_tokenization(
-                    expected,
-                    self.tokenizer,
-                    ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
-                    PreTokenization::Gpt2Unicode17,
-                )
-            }
-            NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => {
-                ByteBpe::from_huggingface_json_with_pre_tokenization(
-                    expected,
-                    self.tokenizer,
-                    ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
-                    PreTokenization::Llama3Unicode17,
-                )
-            }
-        }
-        .map_err(NativeBootstrapError::Tokenizer)?;
-        self.policy
-            .check_tokenizer(&tokenizer)
-            .map_err(NativeBootstrapError::Contract)?;
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES),
+            NativeTokenizerFormat::HuggingFaceGpt2Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Gpt2Unicode17),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Llama3Unicode17),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece => ByteBpe::from_huggingface_json_with_merge_policy(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+                PreTokenization::Llama3Unicode17, MergePolicy::WholePieceFirst),
+            NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(
+                expected, self.tokenizer, ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, MergePolicy::WholePieceFirst),
+        }.map_err(NativeBootstrapError::Tokenizer)?;
+        self.policy.check_tokenizer(&tokenizer).map_err(NativeBootstrapError::Contract)?;
         SamplingConfig::decode(self.sampling, expected.shape().vocabulary)
             .map_err(NativeBootstrapError::Sampling)?;
         Ok(tokenizer)

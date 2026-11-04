@@ -72,3 +72,16 @@ The required RCH example-test and xtask commands were attempted and could not
 start because `rch` is unavailable (exit 127). Compilation, formatting, Clippy
 and Rust tests remain UNEXECUTED. Source/hash/lexical checks do not substitute
 for these gates, and no bead or production qualification is closed.
+
+## Later execution (2026-10-24)
+
+All seven original client entries passed as part of the complete 25-entry
+service/parser/client/peer selection described in
+[`SEQUENTIAL_ACTOR_SERVICE.md`](SEQUENTIAL_ACTOR_SERVICE.md#executed-sequence-boundary-2026-10-24).
+The stale-second-target case retains its unchanged document, one execution and
+seven-unit charge checks, supplies the second independent human approval, and
+additionally requires exact `ConfirmedNotExecuted`. The native endpoint decides
+ordinary expected-version conflicts after both keys; approval cannot repair the
+client's original target. No client rewrite, early-refusal shortcut or new
+authority was added. The original unavailable-toolchain history above remains
+historical; this scoped pass does not close complete project qualification.

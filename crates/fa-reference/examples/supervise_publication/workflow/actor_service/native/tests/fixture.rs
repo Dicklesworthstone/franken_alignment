@@ -7,7 +7,7 @@ use fa_reference::action::consequence::oversight::helper_processes::HelperProgra
 use fa_reference::Snapshot;
 use std::collections::BTreeMap;
 use std::ffi::OsString;
-use std::os::unix::fs::DirBuilderExt;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -15,7 +15,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 pub(super) struct Root(pub PathBuf);
 impl Root {
     pub(super) fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-native-{}-{}-{}",
             std::process::id(),
             crate::workflow::clock().0,
@@ -51,8 +51,8 @@ pub(super) fn configured(root: &Root) -> Config {
     .unwrap();
     config.timing.runtime_ms = 15000;
     config.timing.poll_ms = 1;
-    config.timing.cleanup_ms = 10000;
-    set_helper_epoch(&mut config, 0);
+    config.timing.cleanup_ms = 2000;
+    config.programs = native_programs_at_epoch(root, 0);
     let evidence = EvidenceSnapshot::new(
         EvidenceIdentity {
             scope: config.profile.delivery.scope,
@@ -78,16 +78,18 @@ pub(super) fn configured(root: &Root) -> Config {
     std::fs::write(root.0.join("evidence.json"), evidence.encode()).unwrap();
     config
 }
-pub(super) fn set_helper_epoch(config: &mut Config, epoch: u64) {
-    let dir = config.store.parent().unwrap().to_path_buf();
-    config.programs = ["alpha", "beta"]
+pub(super) fn native_programs_at_epoch(
+    root: &Root,
+    policy_epoch: u64,
+) -> BTreeMap<String, HelperProgram> {
+    ["alpha", "beta"]
         .into_iter()
         .map(|name| {
             (
                 name.to_owned(),
                 HelperProgram::new(
                     std::env::current_exe().unwrap(),
-                    dir.clone(),
+                    root.0.clone(),
                     vec![
                         "--exact".into(),
                         "tests::synthetic_helper_process".into(),
@@ -99,15 +101,15 @@ pub(super) fn set_helper_epoch(config: &mut Config, epoch: u64) {
                             OsString::from(name),
                         ),
                         (
-                            OsString::from("FA_EXAMPLE_HELPER_EPOCH"),
-                            OsString::from(epoch.to_string()),
+                            OsString::from("FA_EXAMPLE_HELPER_POLICY_EPOCH"),
+                            OsString::from(policy_epoch.to_string()),
                         ),
                     ]),
                 )
                 .unwrap(),
             )
         })
-        .collect();
+        .collect()
 }
 pub(super) fn profiles(root: &Root, config: &Config) -> (Profile, PeerProfile) {
     let (socket, _client) = UnixStream::pair().unwrap();
@@ -131,7 +133,7 @@ pub(super) fn profiles(root: &Root, config: &Config) -> (Profile, PeerProfile) {
     );
     let reviewer = format!(
         r#"{{"version":1,"clock":"unix_milliseconds","scope":{scope},"reviewer_id":77,
-      "socket_directory":"{}","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":15000,"poll_ms":1}}"#,
+      "socket_directory":"{}","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":5000,"poll_ms":1}}"#,
         root.0.display()
     );
     (

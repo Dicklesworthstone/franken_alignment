@@ -110,7 +110,7 @@ impl<P> ConsistencyObservation<P> {
 
 #[derive(Debug)]
 pub(super) struct ConsistencyState {
-    config: ConsistencyConfig,
+    pub(super) config: ConsistencyConfig,
     learned: Option<LearnedLane>,
     hosted_layer: Option<u64>,
     event_domain: ConsistencyEventDomain,
@@ -119,6 +119,7 @@ pub(super) struct ConsistencyState {
     observations: BTreeMap<u64, ForecastRecord>,
     jobs: usize,
     follow_learned_resets: bool,
+    owned_restart_audit: bool,
     last_stream: u64,
     last_sequence: u64,
     pub(super) coverage_lost: bool,
@@ -159,21 +160,8 @@ impl OversightBroker {
         }
         let evidence = LikelihoodEvidence::new(config.alpha);
         let last_stream = config.stream;
-        self.consistency = Some(ConsistencyState {
-            config,
-            learned: None,
-            hosted_layer: None,
-            event_domain: ConsistencyEventDomain::PayloadPrefix,
-            evidence,
-            pending: None,
-            observations: BTreeMap::new(),
-            jobs: 0,
-            follow_learned_resets: false,
-            last_stream,
-            last_sequence: 0,
-            coverage_lost: false,
-            automatic_stop: None,
-        });
+        self.consistency = Some(ConsistencyState { config, learned: None, hosted_layer: None, event_domain: ConsistencyEventDomain::PayloadPrefix, evidence, pending: None,
+            observations: BTreeMap::new(), jobs: 0, follow_learned_resets: false, owned_restart_audit: false, last_stream, last_sequence: 0, coverage_lost: false, automatic_stop: None });
         Ok(())
     }
 

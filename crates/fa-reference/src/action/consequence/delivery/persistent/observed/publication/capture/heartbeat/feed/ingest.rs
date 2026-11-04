@@ -1,11 +1,14 @@
 //! One acknowledged catch-up cut, using ONLY original notice/heartbeat events.
-use super::super::super::super::super::{Event, Machine, Transition, journal};
+use super::super::super::super::super::{Event, Transition, journal};
 use super::super::super::super::witness_gate::{WitnessEvent, freshness::FreshnessEvent};
 use super::super::super::{FilePublicationCapture, SourceBinding};
 use super::super::{FileCaptureError, FileOversight, JournalError, JournalFailure, JournalIo};
 use super::{MAX_FEED_RECORDS, PublicationFeedBatch, PublicationFeedFile};
 use crate::Error;
 use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::persistent::observed::decoder::{
+    DecoderEvent, learned::LearnedEvent,
+};
 use crate::action::consequence::delivery::publication_gate::changes::freshness::{
     PublicationFreshnessStatus, PublicationHeartbeat,
 };
@@ -29,7 +32,7 @@ pub struct PublicationFeedReport {
 // Initial requirements and current observations use different ORIGINAL events.
 // This private choice cannot be supplied by an actor or imported from a report.
 enum FeedObservation {
-    Current(FilePublicationCapture),
+    Current(Rc<FilePublicationCapture>),
     Original(u64, Rc<SourceBinding>),
 }
 
@@ -72,7 +75,11 @@ impl FileOversight {
         now: ElapsedTick,
         capture: Option<FilePublicationCapture>,
     ) -> Result<PublicationFeedReport, JournalError> {
-        self.install_feed(batch, now, capture.map(FeedObservation::Current))
+        self.install_feed(
+            batch,
+            now,
+            capture.map(Rc::new).map(FeedObservation::Current),
+        )
     }
 
     pub(in crate::action::consequence::delivery::persistent::observed) fn install_feed_binding(
@@ -128,7 +135,7 @@ impl FileOversight {
         // The original encoder checks EVERY prefix, including recovery reserves,
         // before candidate execution. No special batch exemption or new wire tag.
         let mut bytes = journal::encode(&self.profile, self.store.identity(), &history)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let mut changes = Vec::new();
         changes
             .try_reserve_exact(added - 1)
@@ -153,9 +160,7 @@ impl FileOversight {
                     let expected = candidate.broker.publication_input_revision(attempt)?;
                     (
                         Event::PublicationWitness(WitnessEvent::Captured(
-                            attempt,
-                            expected,
-                            Rc::new(capture),
+                            attempt, expected, capture,
                         )),
                         false,
                     )
@@ -200,9 +205,15 @@ impl FileOversight {
         for event in &history[self.events.len()..] {
             self.source_operation_committed(event);
         }
+        // The retired live owner represents the PRE-batch prefix. Every notice,
+        // heartbeat and capture in this acknowledged suffix still needs replay.
+        let through = self.events.len();
         self.events = history;
-        self.machine = candidate;
+        let retired = std::mem::replace(&mut self.machine, candidate);
         self.fault = None;
+        if retain_replay {
+            self.retain_control_replay(through, retired);
+        }
         Ok(report)
     }
 }
@@ -213,13 +224,28 @@ pub(in crate::action::consequence::delivery::persistent::observed) fn check_feed
     batch: &PublicationFeedBatch,
     through: u64,
 ) -> Result<(), Error> {
-    let bootstrap = history
-        .iter()
-        .find_map(|event| match event {
+    let mut bootstrap = None;
+    for event in history {
+        let after = match event {
             Event::PublicationWitness(WitnessEvent::ChangeProfile(policy)) => Some(policy.after),
+            Event::Decoder(DecoderEvent::Learned(LearnedEvent::Enable(config))) => {
+                // Learned Enable can own the original feed bootstrap. Read only
+                // its independently bound exact runtime recipe, never reconstruct
+                // a configuration or current evidence from saved journal bytes.
+                config
+                    .runtime()?
+                    .required_publication_validation()
+                    .and_then(|profile| profile.feed)
+                    .map(|feed| feed.changes.after)
+            }
             _ => None,
-        })
-        .ok_or(Error::Incomplete)?;
+        };
+        if after.is_some() {
+            bootstrap = after;
+            break;
+        }
+    }
+    let bootstrap = bootstrap.ok_or(Error::Incomplete)?;
     let mut seen = [false; MAX_FEED_RECORDS];
     for event in history {
         let Event::PublicationWitness(WitnessEvent::Change(prior)) = event else {

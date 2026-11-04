@@ -1,5 +1,7 @@
 //! Reviewer-only configuration and Linux credential admission for the runnable
 //! command. Contains no helper executable, environment, source path or ledger key.
+#[path = "stop_fleet.rs"]
+pub mod fleet;
 #[path = "stop_peer.rs"]
 pub mod stop;
 use super::config::{CLOCK_DOMAIN, Config, debug, read_regular};
@@ -188,6 +190,26 @@ impl PeerProfile {
         self.directory.join(format!("review-{request}.sock"))
     }
 
+    /// Connect ONCE to the original stop endpoint and authenticate this exact
+    /// socket before reading an offer. UnixStream::connect is synchronous;
+    /// nonblocking protocol I/O begins only after credential verification.
+    #[cfg(target_os = "linux")]
+    pub fn connect_stop_client(&self, operation: u64)
+        -> Result<fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::StopClient<UnixStream>, String>
+{
+        if operation == 0 {
+            return Err("stop operation must be nonzero".into());
+        }
+        self.check_directory()?;
+        let stream = UnixStream::connect(crate::workflow::control::socket_path(self, operation))
+            .map_err(|error| format!("no stop confirmation: {error}"))?;
+        let verified =
+            VerifiedReviewerSocket::verify(stream, self.supervisor.policy()?).map_err(debug)?;
+        verified
+            .into_stop_client(self.expected, operation)
+            .map_err(debug)
+    }
+
     /// Called only on the just-bound socket in the protected directory. No
     /// existing socket is unlinked or chmodded to make a conflicting launch work.
     pub fn secure_socket(&self, path: &Path) -> Result<(), String> {
@@ -203,6 +225,45 @@ impl PeerProfile {
     }
 
     pub fn connect_client(&self, request: u64) -> Result<ReviewerClient<UnixStream>, String> {
+        self.connect_client_using(request, |path| UnixStream::connect(path))
+    }
+
+    // A bound pathname can precede listen readiness. Integration fixtures wait
+    // within their existing deadline, then use the SAME directory, kernel peer
+    // and audience checks as the operator. Admission failures are never retried.
+    #[cfg(test)]
+    pub(crate) fn connect_client_waiting(
+        &self,
+        request: u64,
+        limit: std::time::Duration,
+    ) -> Result<ReviewerClient<UnixStream>, String> {
+        let started = std::time::Instant::now();
+        self.connect_client_using(request, |path| {
+            loop {
+                if started.elapsed() >= limit {
+                    return Err(std::io::ErrorKind::TimedOut.into());
+                }
+                match UnixStream::connect(path) {
+                    Ok(stream) => return Ok(stream),
+                    Err(error)
+                        if matches!(
+                            error.kind(),
+                            std::io::ErrorKind::NotFound | std::io::ErrorKind::ConnectionRefused
+                        ) =>
+                    {
+                        std::thread::sleep(std::time::Duration::from_millis(1));
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+        })
+    }
+
+    fn connect_client_using(
+        &self,
+        request: u64,
+        connect: impl FnOnce(&Path) -> std::io::Result<UnixStream>,
+    ) -> Result<ReviewerClient<UnixStream>, String> {
         supported()?;
         if request == 0 {
             return Err("review request must be nonzero".into());
@@ -210,22 +271,7 @@ impl PeerProfile {
         self.check_directory()?;
         #[cfg(target_os = "linux")]
         {
-            let path = self.socket(request);
-            let mut attempts = 0;
-            let stream = loop {
-                match UnixStream::connect(&path) {
-                    Ok(stream) => break stream,
-                    Err(err)
-                        if err.kind() == std::io::ErrorKind::ConnectionRefused
-                            && attempts < 50
-                            && path.exists() =>
-                    {
-                        attempts += 1;
-                        std::thread::sleep(std::time::Duration::from_millis(1));
-                    }
-                    Err(err) => return Err(debug(err)),
-                }
-            };
+            let stream = connect(&self.socket(request)).map_err(debug)?;
             let verified =
                 VerifiedReviewerSocket::verify(stream, self.supervisor.policy()?).map_err(debug)?;
             eprintln!("Verified supervisor connection: {:?}", verified.peer());

@@ -25,16 +25,10 @@ fn configured(root: &Directory) -> Config {
     c
 }
 fn owner(root: &Directory) -> Config {
-    let mut c = configured(root);
-    c.profile = fixture::profile();
-    let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
+    let c = configured(root);
+    let (mut host, _) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
     host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
         .unwrap();
-    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    let keys = fixture::ready(&mut host, &reviewer, 1, b"reviewed-effect");
-    fixture::dispatch(&mut host, &keys);
-    drop(keys);
-    drop(reviewer);
     drop(host);
     c
 }
@@ -46,7 +40,19 @@ fn read(path: &Path) -> FileHistoryAnchor {
 #[test]
 fn admission_and_drain_export_distinct_acknowledged_successors_without_overwrite() {
     let root = Directory::new();
-    let c = owner(&root);
+    let mut c = configured(&root);
+    c.profile = fixture::profile();
+    let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
+    host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
+        .unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    // A distinct drain acknowledgment needs an actual outstanding liability.
+    // An empty already-drained domain correctly has no new sweep to append.
+    let keys = fixture::ready(&mut host, &reviewer, 1, b"custody effect");
+    fixture::dispatch(&mut host, &keys);
+    drop(keys);
+    drop(reviewer);
+    drop(host);
     let parent = c.store.parent().unwrap();
     let first = parent.join("admission.anchor");
     let second = parent.join("drain.anchor");
@@ -64,6 +70,7 @@ fn admission_and_drain_export_distinct_acknowledged_successors_without_overwrite
     let a1 = read(&first);
     let stopped = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(a1.revision(), stopped.revision);
+    assert_eq!(stopped.control.ledger.charged, 16);
     let retained_first = fs::read(&first).unwrap();
 
     let out2 = AnchorOutput::admit(&c, &second).unwrap();
@@ -81,6 +88,8 @@ fn admission_and_drain_export_distinct_acknowledged_successors_without_overwrite
     let drained = FileOversight::read_publication(&c.store, &c.profile).unwrap();
     assert_eq!(a2.revision(), drained.revision);
     assert!(a2.revision() > a1.revision());
+    assert_eq!(drained.control.ledger.charged, 0);
+    assert_eq!(drained.executions, 0);
     assert_eq!(fs::read(&first).unwrap(), retained_first);
     assert!(AnchorOutput::admit(&c, &first).is_err());
 }

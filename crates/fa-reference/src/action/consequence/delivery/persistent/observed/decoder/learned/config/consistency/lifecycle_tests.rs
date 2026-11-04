@@ -493,7 +493,7 @@ fn both_wrapper_orders_preserve_real_policy_native_judgment_and_independent_huma
 #[test]
 fn stream_bootstrap_keeps_forecast_roles_and_distinct_keys_for_receipt_confirmed_finish() {
     let root = Directory::new();
-    let stream = StreamProfile::new(61, 1, 8, 32, 128).unwrap();
+    let stream = StreamProfile::new(61, 1, 7, 32, 128).unwrap();
     let (host, reviewer, observer, config, profile, mut source) =
         ready(&root, false, Some(stream), true);
     let (port, mut supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();

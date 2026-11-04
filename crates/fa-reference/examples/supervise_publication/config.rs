@@ -57,22 +57,82 @@ pub struct Config {
     pub programs: BTreeMap<String, HelperProgram>,
     pub timing: Timing,
 }
+
+// These bootstrap profiles do not implement equality. Exhaustive
+// patterns keep test fixture comparisons complete when either profile grows;
+// each original field is compared directly, including full policies and state.
+#[cfg(test)]
+#[track_caller]
+pub(crate) fn assert_oversight_profiles_eq(actual: &FileOversightProfile, expected: &FileOversightProfile) {
+    let FileOversightProfile { delivery, committee, human } = actual;
+    assert_eq!(committee, &expected.committee, "committee");
+    assert_eq!(human, &expected.human, "human");
+    let FileDeliveryProfile { scope, total, max_attempts, actor, suspend_at_incident, policy,
+        congress, narrowed_targets, target, initial_payload, retention_ticks, max_deliveries,
+        clock_domain, limits } = delivery;
+    let expected = &expected.delivery;
+    assert_eq!(scope, &expected.scope, "delivery.scope");
+    assert_eq!(total, &expected.total, "delivery.total");
+    assert_eq!(max_attempts, &expected.max_attempts, "delivery.max_attempts");
+    assert_eq!(actor, &expected.actor, "delivery.actor");
+    assert_eq!(suspend_at_incident, &expected.suspend_at_incident, "delivery.suspend_at_incident");
+    assert_eq!(policy, &expected.policy, "delivery.policy");
+    assert_eq!(congress, &expected.congress, "delivery.congress");
+    assert_eq!(narrowed_targets, &expected.narrowed_targets, "delivery.narrowed_targets");
+    assert_eq!(target, &expected.target, "delivery.target");
+    assert_eq!(initial_payload, &expected.initial_payload, "delivery.initial_payload");
+    assert_eq!(retention_ticks, &expected.retention_ticks, "delivery.retention_ticks");
+    assert_eq!(max_deliveries, &expected.max_deliveries, "delivery.max_deliveries");
+    assert_eq!(clock_domain, &expected.clock_domain, "delivery.clock_domain");
+    assert_eq!(limits, &expected.limits, "delivery.limits");
+}
+
 impl Config {
     pub fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, CONFIG_BYTES)?)
     }
 
+    /// Provision a fresh ORIGINAL learned numerical owner with an explicitly
+    /// selected restart grade. Only the learned creation command uses this
+    /// reader; its native bootstrap constructs the real model/cache/sampler
+    /// before publishing the first image. Metadata never imports numerical
+    /// state or establishes an external process's restart behavior.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_learned_generation(path: &Path) -> Result<Self, String> {
+        Self::decode_with_actor_profile(&read_regular(path, CONFIG_BYTES)?, true)
+    }
+
+    /// Independent bootstrap expectation for an original learned history.
+    /// The selected native reader must bind this complete profile and numerical
+    /// recipe before returning a historical report or any recovered role.
+    /// A declaration is never inferred, upgraded, or an external model attestation.
+    /// Ordinary non-learned creation retains its audit-only admission contract.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_learned_recovery(path: &Path) -> Result<Self, String> {
+        Self::decode_learned_recovery(&read_regular(path, CONFIG_BYTES)?)
+    }
+
+    /// Decode bytes already charged to a shared historical intake allowance.
+    /// The caller still selects an explicit learned recipe and original native
+    /// replay. This does not reopen a file or replenish a fleet member's budget.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn decode_learned_recovery(bytes: &[u8]) -> Result<Self, String> {
+        Self::decode_with_actor_profile(bytes, true)
+    }
+
+    /// Stream-reset completion uses the same explicit recovery expectation.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn read_learned_stream_reset(path: &Path) -> Result<Self, String> {
+        Self::read_learned_recovery(path)
+    }
+
     pub fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let json = strict_json::parse(
-            bytes,
-            Limits {
-                max_bytes: CONFIG_BYTES,
-                max_depth: 12,
-                max_items: 16_384,
-                max_string_bytes: 1_048_576,
-            },
-        )
-        .map_err(|e| format!("configuration JSON: {e:?}"))?;
+        Self::decode_with_actor_profile(bytes, false)
+    }
+
+    fn decode_with_actor_profile(bytes: &[u8], learned_recovery: bool) -> Result<Self, String> {
+        let json = strict_json::parse(bytes, Limits { max_bytes: CONFIG_BYTES, max_depth: 12,
+            max_items: 16_384, max_string_bytes: 1_048_576 }).map_err(|e| format!("configuration JSON: {e:?}"))?;
         let mut root = Fields::new(json, "configuration")?;
         if root.u64("version")? != 1 {
             return Err("unsupported configuration version".into());
@@ -97,14 +157,9 @@ impl Config {
         let retention_ticks = budget.u64("retention_ms")?;
         budget.end()?;
         let reserve = RecoveryReserve::terminal();
-        if limits.events <= reserve.events
-            || limits.events > 4096
-            || limits.bytes <= reserve.bytes
-            || limits.bytes > 16 * 1024 * 1024
-        {
-            return Err("invalid journal limits".into());
-        }
-        let actor = actor(root.object("actor")?)?;
+        if limits.events <= reserve.events || limits.events > 4096 || limits.bytes <= reserve.bytes
+            || limits.bytes > 16 * 1024 * 1024 { return Err("invalid journal limits".into()); }
+        let actor = actor(root.object("actor")?, learned_recovery)?;
         let policy = policy(root.object("policy")?)?;
         let mut congress = root.object("congress")?;
         let mut members = BTreeMap::new();
@@ -340,30 +395,28 @@ fn target(value: Json) -> Result<ResolvedTarget, String> {
     f.end()?;
     Ok(value)
 }
-fn actor(mut f: Fields) -> Result<ActorState, String> {
-    if f.text("grade")? != "audit_only" {
-        return Err("command accepts audit_only actor metadata, not a model restart claim".into());
-    }
-    let p = RestartProfile {
-        id: f.u64("id")?,
-        generation: f.u64("generation")?,
-        host_generation: f.u64("host_generation")?,
-        model_generation: f.u64("model_generation")?,
-        tokenizer_generation: f.u64("tokenizer_generation")?,
-        state_schema_generation: f.u64("state_schema_generation")?,
-        grade: RestartGrade::AuditOnly,
+fn actor(mut f: Fields, learned_recovery: bool) -> Result<ActorState, String> {
+    let grade = match f.text("grade")?.as_str() {
+        "audit_only" => RestartGrade::AuditOnly,
+        "functional_restart" if learned_recovery => RestartGrade::FunctionalRestart,
+        _ if learned_recovery => return Err("learned recovery accepts only explicitly declared audit_only or functional_restart metadata".into()),
+        _ => return Err("command accepts audit_only actor metadata, not a model restart claim".into()),
     };
-    let tokens = array(f.take("tokens")?)?
-        .iter()
-        .map(|j| {
-            u32::try_from(j.as_u64().ok_or("token must be an unsigned integer")?).map_err(debug)
-        })
-        .collect::<Result<Vec<_>, String>>()?;
+    let p = RestartProfile { id: f.u64("id")?, generation: f.u64("generation")?, host_generation: f.u64("host_generation")?,
+        model_generation: f.u64("model_generation")?, tokenizer_generation: f.u64("tokenizer_generation")?,
+        state_schema_generation: f.u64("state_schema_generation")?, grade };
+    let tokens = array(f.take("tokens")?)?.iter().map(|j| {
+        u32::try_from(j.as_u64().ok_or("token must be an unsigned integer")?).map_err(debug)
+    }).collect::<Result<Vec<_>, String>>()?;
     let cache = hex(&f.text("cache_hex")?)?;
     let sampler = hex(&f.text("sampler_hex")?)?;
     let position = f.u64("next_position")?;
     f.end()?;
     ActorState::new(p, tokens, cache, sampler, position).map_err(debug)
+}
+/// Candidate policy commands share the exact closed supervisor policy grammar.
+pub(crate) fn policy_from_json(value: Json) -> Result<Policy, String> {
+    policy(Fields::new(value, "candidate policy")?)
 }
 fn policy(mut f: Fields) -> Result<Policy, String> {
     let generation = f.u64("generation")?;

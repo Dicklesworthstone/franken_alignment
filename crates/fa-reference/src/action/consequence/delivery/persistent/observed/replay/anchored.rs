@@ -79,9 +79,7 @@ fn checked_history(
     )?;
     let events = journal::decode(profile, &identity, &bytes)?;
     anchor.check(profile, &identity, &events)?;
-    let finish = events
-        .iter()
-        .position(|event| super::cursor::is_round_finish(event, round))
+    let finish = events.iter().position(|event| super::finish_round(event) == Some(round))
         .ok_or(Error::Incomplete)?;
     let completed = u64::try_from(finish + 1).map_err(|_| Error::Limit)?;
     if anchor.revision() < completed {

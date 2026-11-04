@@ -267,16 +267,16 @@ impl FileDelivery {
     /// assert nonexecution, release a charge, delete a key or create a resend.
     pub fn cancel_request(&mut self, revision: u64, request: u64) -> Result<(), JournalError> {
         let status = self.request_status(request)?;
-        if let FileRequestDisposition::Admitted { attempt, stage } = status.disposition {
-            if matches!(
+        if let FileRequestDisposition::Admitted { attempt, stage } = status.disposition
+            && matches!(
                 stage,
                 ActionState::Proposed
                     | ActionState::Prepared
                     | ActionState::Reviewing
                     | ActionState::Authorized
-            ) {
-                return self.cancel(revision, attempt);
-            }
+            )
+        {
+            return self.cancel(revision, attempt);
         }
         Ok(())
     }
@@ -540,20 +540,12 @@ impl Machine {
             request,
             spec,
             self.broker.scope,
-            &inspection,
+            &self.broker.inspect(),
             self.broker.stop_receipt().is_some(),
         )?;
-        let result = if spec
-            .target
-            .is_some_and(|t| t.expected_version != self.endpoint.target().expected_version)
-        {
-            Err(Error::Stale)
-        } else if spec.units > inspection.ledger.available {
-            Err(Error::Limit)
-        } else {
-            self.broker
-                .propose(prepared.attempt(), spec.clone(), snapshot)
-        };
+        let result = self
+            .broker
+            .propose(prepared.attempt(), spec.clone(), snapshot);
         if let Some((attempt, action)) = self.requests.finish(prepared, result) {
             self.actions.insert(attempt, action);
         }

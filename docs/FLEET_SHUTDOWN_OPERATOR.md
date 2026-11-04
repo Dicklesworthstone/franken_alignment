@@ -1,9 +1,18 @@
 # Runnable offline fleet shutdown and resume
 
+The executable's `shutdown-fleet` route now selects the learned-capable bridge
+and shared coordinator for mixed ordinary/learned rosters. It removes only the
+outer command name: `create|recover|resume` and every profile or option reach the
+coordinator unchanged, before shared live-service option processing.
+
 Unqualified source implementing the operator consumer of FA-014, plan
 16.4/16.5/16.9 and FI-A02. The `shutdown_fleet` example drives the existing
 registered-domain coordinator and cooperative recovery/resolution. It does not
 introduce another stop reducer, rights ledger, runtime or journal format.
+
+For supervisors still holding their live journal locks, use the authenticated
+[online fleet Stop command](LIVE_FLEET_STOP.md). This offline coordinator
+requires journal ownership and does not contact active stop endpoints.
 
 ## Invocation and independent inputs
 
@@ -148,3 +157,14 @@ were attempted through `RCH_REQUIRE_REMOTE=1 rch exec`; the launcher is absent,
 so no Rust compilation, test, formatting or Clippy pass is claimed. This worktree
 contains selected files, not a full checkout. No FA-014 closure, production
 activation, authenticated producer or simultaneous cross-domain stop is claimed.
+
+## Learned numerical members
+
+The publication executable now provides
+`supervise_publication shutdown-fleet create|recover|resume PROFILE` using this
+same coordinator, custody and report machinery. Its closed version-three profile
+adds independent learned recipes, paired v2 topology/source custody for mediated
+members, and one shared allowance for numerical and historical topology input. That route defaults to terminal clocks; the standalone ordinary entry
+above retains its existing behavior and rejects learned recipe selection.
+See [the learned fleet contract](LEARNED_FLEET_RECOVERY.md#runnable-learned-fleet-operator)
+for the exact profile, phases, limitations and unexecuted verification scope.

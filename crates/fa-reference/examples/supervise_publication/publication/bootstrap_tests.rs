@@ -28,7 +28,7 @@ impl Directory {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-producer-bootstrap-{}-{stamp}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)

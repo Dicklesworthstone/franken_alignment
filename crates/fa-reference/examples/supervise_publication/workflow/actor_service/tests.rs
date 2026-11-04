@@ -32,8 +32,8 @@ impl Directory {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("fa-live-{}-{stamp}-{n}", std::process::id()));
-        fs::create_dir(&path).unwrap();
+        let path =
+            crate::test_directory::create(format!("fa-live-{}-{stamp}-{n}", std::process::id()));
         for name in ["actors", "reviewers"] {
             fs::DirBuilder::new()
                 .mode(0o750)
@@ -114,6 +114,36 @@ fn actor_json(root: &Directory, c: &Config) -> String {
         id.gid(),
         id.pid()
     )
+}
+
+#[test]
+fn actual_socket_path_accepts_100_bytes_and_refuses_101_before_any_journal() {
+    let root = Directory::new();
+    let config = configured(&root);
+    let document = actor_json(&root, &config);
+    let original = Profile::decode(document.as_bytes()).unwrap();
+    original.check_host(&config).unwrap();
+    let _short_listener = std::os::unix::net::UnixListener::bind(&original.socket).unwrap();
+    original.secure_socket().unwrap();
+
+    let directory = original.socket.parent().unwrap().to_str().unwrap();
+    let exact = format!("{directory}/{}", "x".repeat(100 - directory.len() - 1));
+    assert_eq!(exact.len(), 100);
+    let exact_document = document.replace(original.socket.to_str().unwrap(), &exact);
+    let admitted = Profile::decode(exact_document.as_bytes()).unwrap();
+    admitted.check_host(&config).unwrap();
+    let _exact_listener = std::os::unix::net::UnixListener::bind(&admitted.socket).unwrap();
+    admitted.secure_socket().unwrap();
+
+    let overlong = format!("{exact}x");
+    let refused = document.replace(original.socket.to_str().unwrap(), &overlong);
+    assert!(
+        Profile::decode(refused.as_bytes())
+            .unwrap_err()
+            .contains("at most 100 bytes")
+    );
+    assert!(!std::path::Path::new(&overlong).exists());
+    assert!(!config.store.exists());
 }
 fn profiles(root: &Directory, c: &Config) -> (Profile, PeerProfile) {
     let id = credentials();
@@ -554,3 +584,6 @@ fn failed_actor_output_does_not_retransmit_an_executed_request() {
 
 #[path = "tests/series.rs"]
 mod sequential;
+
+#[path = "tests/precheck_service.rs"]
+mod precheck_service;

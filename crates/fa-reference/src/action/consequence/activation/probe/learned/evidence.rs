@@ -585,7 +585,7 @@ impl LearnedKvView {
             return Err(Error::Binding);
         }
         let mut previous = None;
-        for record in payload.chunks_exact(8) {
+        for record in payload.as_chunks::<8>().0 {
             let channel =
                 u32::from_be_bytes(record[..4].try_into().map_err(|_| Error::Incomplete)?) as usize;
             let xor = u32::from_be_bytes(record[4..].try_into().map_err(|_| Error::Incomplete)?);

@@ -24,9 +24,11 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     }
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
-        Some("submit-checked" | "serve-open" | "create-learned-generated") => 4,
+        Some("submit-checked" | "serve-open" | "create-learned-generated" | "serve-learned-generated") => 4,
         Some("proposal-next" | "serve-open-checked") => 5,
-        Some("resume") if args.get(3).map(String::as_str) == Some("--guarded") => 5,
+        // Guarded resume is receipt-only: the caller never reads or activates
+        // this capsule. Keep unguarded resume and other queries closed.
+        Some("resume") if args.get(3).is_some_and(|arg| arg == "--guarded") => 5,
         _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked or learned recovery".into()),
     };
     if index < positional
@@ -144,6 +146,34 @@ mod tests {
                 FLAG,
                 "capsule",
             ],
+            vec![
+                "resume",
+                "config",
+                "proposal",
+                "--guarded",
+                "history",
+                FLAG,
+                "capsule",
+            ],
+            vec![
+                "serve-learned-generated",
+                "config",
+                "sequence",
+                "peer",
+                "--after-message",
+                "1",
+                FLAG,
+                "capsule",
+            ],
+            vec![
+                "serve-learned-generated",
+                "config",
+                "sequence",
+                "peer",
+                FLAG,
+                "capsule",
+                "--continue-generation",
+            ],
         ] {
             let mut values = args(&values);
             let before = values.clone();
@@ -165,6 +195,8 @@ mod tests {
     fn unsupported_missing_and_duplicate_options_refuse_without_argument_mutation() {
         for values in [
             vec!["resume", "config", "proposal", FLAG, "capsule"],
+            vec!["resume", "config", "proposal", "--guarded", FLAG, "capsule"],
+            vec!["resume", "config", "proposal", "--guarded", "history", FLAG],
             vec!["create", "config", "proposal", FLAG, "capsule"],
             vec!["actor-submit", "profile", "proposal", FLAG, "capsule"],
             vec!["review-peer", "profile", "1", FLAG, "capsule"],
@@ -174,6 +206,28 @@ mod tests {
                 "submit", "config", "proposal", FLAG, "capsule", FLAG, "capsule",
             ],
             vec!["submit", FLAG, "capsule"],
+            vec![
+                "serve-learned-generated",
+                "config",
+                "sequence",
+                FLAG,
+                "capsule",
+            ],
+            vec![
+                "serve-learned-generated",
+                "config",
+                "sequence",
+                "peer",
+                FLAG,
+            ],
+            vec![
+                "serve-learned-generated",
+                "config",
+                "sequence",
+                "peer",
+                FLAG,
+                "--continue-generation",
+            ],
         ] {
             let mut values = args(&values);
             let before = values.clone();

@@ -1,14 +1,12 @@
 //! Runnable actor-only custody of exact requests through the original durable client.
 //! No supervisor config, evidence reader, human role or effect owner is loaded.
-#[path = "durable/cancel.rs"]
-mod cancel;
-#[path = "durable/report.rs"]
-mod report;
-#[path = "durable/settings.rs"]
-mod settings;
+#[path = "durable/settings.rs"] mod settings;
+#[path = "durable/report.rs"] mod report;
+#[path = "durable/cancel.rs"] mod cancel;
 #[cfg(test)]
-#[path = "durable/tests.rs"]
-mod tests;
+#[path = "durable/tests.rs"] mod tests;
+#[cfg(test)]
+#[path = "durable/stream_tests.rs"] mod stream_tests;
 use settings::Settings;
 use super::{Profile, Duration, Instant, debug, pause};
 use crate::config::read_regular;
@@ -101,37 +99,34 @@ fn command_with(
     let actor = Profile::read(call.actor)?;
     let settings = Settings::read(call.settings, &actor)?;
     check_time(&actor, elapsed)?;
-    let command = call
-        .document
-        .map(|path| {
-            let bytes = read_regular(path, MAX_FRAME_BYTES)?;
-            let command = decode_command(&bytes).map_err(debug)?;
-            if !matches!(&command, Command::Submit { request, .. } if *request == actor.request) {
-                return Err(
-                    "durable intake requires the selected request's original Submit document"
-                        .into(),
-                );
-            }
-            Ok::<_, String>(command)
-        })
-        .transpose()?;
+    let command = call.document.map(|path| {
+        let bytes = read_regular(path, MAX_FRAME_BYTES)?;
+        let command = decode_command(&bytes).map_err(debug)?;
+        if !matches!(&command, Command::Submit { request, .. } if *request == actor.request) {
+            return Err("durable intake requires the selected request's original Submit document".into());
+        }
+        if let Command::Submit { proposal, .. } = &command {
+            settings.validate_proposal(proposal)?;
+        }
+        Ok::<_, String>(command)
+    }).transpose()?;
     check_time(&actor, elapsed)?;
     if call.mode == Mode::Inspect {
         // No listener directory, socket, owner lock, cleanup, clock or send here.
-        let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum)
-            .map_err(debug)?;
+        let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum).map_err(debug)?;
+        settings.validate_retained(cut.original_proposal(actor.request))?;
         return report::write(&cut, actor.request, "inspection", out);
     }
-    if call.mode == Mode::Cancel {
-        // Refuse an unacknowledged request before socket checks, writer custody
-        // or staging cleanup. Recheck the locked image below after opening.
-        let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum)
-            .map_err(debug)?;
-        cancel::check_record(
-            cut.original_proposal(actor.request).is_some(),
-            cut.last_response(actor.request),
-            actor.request,
-        )?;
+    if call.mode == Mode::Cancel || (settings.stream.is_some() && call.mode != Mode::Create) {
+        // Preflight this canonical cut before socket checks or writer acquisition.
+        // Native open still checks the exact binding under its lock; check the
+        // selected intent again afterwards before preparing any socket command.
+        let cut = FilePeerClient::read(&settings.directory, &settings.profile, call.minimum).map_err(debug)?;
+        settings.validate_retained(cut.original_proposal(actor.request))?;
+        if call.mode == Mode::Cancel {
+            cancel::check_record(cut.original_proposal(actor.request).is_some(),
+                cut.last_response(actor.request), actor.request)?;
+        }
     }
     actor.check_directory()?;
     check_time(&actor, elapsed)?;
@@ -141,8 +136,8 @@ fn command_with(
             FilePeerClient::open(&settings.directory, settings.profile.clone(), call.minimum)
         }
         Mode::Inspect => unreachable!("inspection does not acquire a writer"),
-    }
-    .map_err(debug)?;
+    }.map_err(debug)?;
+    settings.validate_retained(client.state().original_proposal(actor.request))?;
     // Resume never accepts replacement document bytes, creates a new key, or
     // treats absence as nonexecution. Missing keys refuse before connecting.
     if call.mode == Mode::Resume && client.state().original_proposal(actor.request).is_none() {
@@ -190,11 +185,8 @@ fn command_with(
     // This is history, not a new server observation or an automatic reconnect.
     let cut = FilePeerClient::read(&settings.directory, &settings.profile, floor).map_err(|error|
         format!("client result inspection failed: {error:?}; transport result={result:?}; do not replace the request"))?;
-    let status = if result.is_ok() {
-        "observed"
-    } else {
-        "interrupted"
-    };
+    settings.validate_retained(cut.original_proposal(actor.request))?;
+    let status = if result.is_ok() { "observed" } else { "interrupted" };
     report::write(&cut, actor.request, status, out)?;
     let response = result?;
     if call.mode == Mode::Cancel {
@@ -227,9 +219,13 @@ fn exchange(
     check_time(actor, elapsed)?;
     match command {
         Some(Command::Submit { request, proposal }) if *request == actor.request => {
+            settings.validate_proposal(proposal)?;
             client.submit(client.revision(), *request, proposal)
         }
-        None => client.retry_submission(client.revision(), actor.request),
+        None => {
+            settings.validate_retained(client.state().map_err(debug)?.original_proposal(actor.request))?;
+            client.retry_submission(client.revision(), actor.request)
+        }
         _ => return Err("expected exact selected Submit".into()),
     }
     .map_err(debug)?;

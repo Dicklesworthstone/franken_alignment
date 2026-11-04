@@ -9,6 +9,12 @@ reserve, exact validation limits, optional change-feed/freshness/snapshot-fallba
 policies, and exact model/monitor/sampler and tokenizer configuration. No token
 runs and no successfully initialized image omits a selected guard.
 
+Semantic replay checks the publication freshness clock against the journal's
+original clock domain before any witness mutation or store creation. A foreign
+clock returns the same `Binding` refusal as canonical encoding. Correcting that
+configuration can therefore create at the same destination without deleting a
+partial store. Matching profiles retain their original canonical bytes.
+
 The public `GeneratedPublicationProfile` and `GeneratedPublicationFeed` types
 live in `observed::stream::generated::checked`. They contain operator-selected
 bootstrap contracts, not source captures, approvals or live authority. Structured

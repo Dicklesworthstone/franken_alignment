@@ -316,3 +316,4 @@ fn only_a_learned_text_profile_can_create_this_source_only_port() {
 
 mod pipeline;
 mod stream;
+mod stream_checkpoint;

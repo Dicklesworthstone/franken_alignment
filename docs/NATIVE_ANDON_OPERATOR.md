@@ -138,3 +138,64 @@ assessment command routing. Sixteen regressions are now authored for this exampl
 Both new RCH test/gate launches also exit 127 before Cargo; compilation, Rust
 runtime tests, rustfmt and Clippy remain unexecuted. Numerical/joint/other guard
 compositions and cryptographically authenticated evaluator intake are not added.
+
+
+## Peer-verified evaluator intake
+
+On Linux, the same native operator can accept one assessment over a separately
+provisioned Unix socket instead of trusting a local assessment file:
+
+```sh
+cargo run --locked -p fa-reference --example native_andon -- \
+  serve-assess CONFIG ANDON_PROFILE RECOVERY_PROFILE EVALUATOR_PEER_PROFILE
+```
+
+`EVALUATOR_PEER_PROFILE` uses schema `fa.native-evaluator-peer/1`. It pins the
+publication scope, Andon deployment/evaluator identity, socket path, supervisor
+UID/GID/optional PID, evaluator UID/GID/optional PID, candidate limit and finite
+runtime/poll bounds. The socket directory must already exist, be owned by the
+declared supervisor identity and have no group/other write bit. Existing socket
+paths are never unlinked to make launch succeed. A socket created by this command
+is removed only by its own owner on exit.
+
+The server checks Linux kernel peer credentials **before reading any assessment
+bytes**. Credential-refused candidates receive no response and cannot consume the
+assessment document; each refusal spends the finite candidate allowance. The
+accepted peer sends exactly one bounded `fa.native-assessment/1` JSON document,
+then half-closes/closes its write side so framing cannot depend on an attacker
+holding the stream open indefinitely. The assessment remains subject to the same
+case binding, expected evaluation revision, fresh-time requirement for new benign
+labels, anchored recovery, immutable windows and independent successor-anchor
+custody as the file command. The result is returned on that verified socket.
+
+This is local process authentication, not cryptographic evaluator attestation.
+`SO_PEERCRED` identifies the process at connection creation; it does not prove
+an executable image, human identity, institutional independence, or a remote
+principal, and transferred descriptors remain an operator trust boundary. The
+profile is independently supplied rather than learned from the peer or journal.
+No dependency, evaluator semantics, authority rule or journal encoding changes.
+
+Five focused regressions cover strict audience/profile binding, credential refusal
+before byte consumption, assessment-size framing, socket collision/cleanup and
+exact PID credential matching. The existing assessment engine regressions remain
+the evidence for durable label/accounting transitions. Required runtime execution
+must still use the repository's RCH gate; source review alone is not qualification.
+
+
+### Verified evaluator client
+
+The companion client verifies the supervisor's independently configured kernel
+identity before sending any label bytes:
+
+```sh
+cargo run --locked -p fa-reference --example native_andon -- \
+  send-assess EVALUATOR_PEER_PROFILE ASSESSMENT_JSON
+```
+
+The client validates the closed assessment schema locally, connects to the pinned
+socket, checks the server UID/GID/optional PID with the same kernel credential
+primitive, and only then writes the assessment. It half-closes the write side and
+reads one bounded mutation result. A supervisor-identity mismatch therefore
+discloses zero assessment bytes and cannot be treated as a retry or accepted
+evaluation. This remains local-process authentication, not remote cryptographic
+attestation.

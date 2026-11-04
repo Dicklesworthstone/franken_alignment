@@ -1,9 +1,8 @@
 //! Complete original guarded replay and reconcile existing deliveries in one cut.
 //! A sweep queries the original endpoint; it cannot recreate sendable envelopes.
-use super::{
-    BaseEvent, Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus, FileOversight,
-    FileOversightRoles, JournalError, Machine, Transition, journal,
-};
+use super::{BaseEvent, Error, Event, FileGuardedRecovery, FileGuardedRecoveryStatus,
+    FileOversight, FileOversightRoles, JournalError, Machine, Transition, journal};
+use super::super::super::{FileHumanReviewer, FileOversightProfile, storage};
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::{
     JournalFailure, JournalIo, requests::PendingReconciliations,
@@ -96,22 +95,38 @@ impl FileGuardedRecovery {
             _ => return Err(Error::Incomplete.into()),
         }
         check(&self)?;
-        let count = self.events.len().checked_add(3).ok_or(Error::Overflow)?;
-        if count > self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
-        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+        let Self { profile, store, canonical, events, machine, .. } = self;
+        let recovered = FileOversight::finish_reconciled_history(
+            profile, store, events, machine, canonical, clock)?;
+        let roles = FileOversightRoles::provision(&recovered.owner, recovered.human);
+        Ok(ReconciledGuardedOwner { owner: recovered.owner, roles, outcomes: recovered.outcomes })
+    }
+}
+
+// Internal handoff only. Both admitted replay families move their ORIGINAL
+// machine/store here. No public candidate importer or guard bypass is exposed.
+pub(in crate::action::consequence::delivery::persistent::observed) struct ReconciledHistory {
+    pub(in crate::action::consequence::delivery::persistent::observed) owner: FileOversight,
+    pub(in crate::action::consequence::delivery::persistent::observed) human: FileHumanReviewer,
+    pub(in crate::action::consequence::delivery::persistent::observed) outcomes: PendingReconciliations,
+    pub(in crate::action::consequence::delivery::persistent::observed) anchor: super::super::anchored::FileHistoryAnchor,
+}
+
+impl FileOversight {
+    // One fixed Fence/Time/Sweep implementation for plain and numerical recovery.
+    // Callers must have completely replayed and independently admitted history.
+    // Nothing invokes numerical replay or a caller-controlled transition here.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn finish_reconciled_history<F>(profile: FileOversightProfile, store: storage::Store,
+        events: Vec<Event>, mut machine: Machine, canonical: Vec<u8>, clock: F)
+        -> Result<ReconciledHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        let count = events.len().checked_add(3).ok_or(Error::Overflow)?;
+        if count > profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        if store.read(profile.delivery.limits.bytes)? != canonical {
             return Err(Error::Binding.into());
         }
         let now = clock();
-        let Self {
-            profile,
-            store,
-            canonical,
-            events,
-            mut machine,
-            ..
-        } = self;
         // The original full machine stays private. As in live finish(), an
         // empty placeholder allows only the acknowledged candidate to become
         // the owner; no historical or numerical event is executed twice.
@@ -168,12 +183,8 @@ impl FileGuardedRecovery {
         host.events = history;
         host.machine = machine;
         host.fault = None;
-        let roles = FileOversightRoles::provision(&host, human);
-        Ok(ReconciledGuardedOwner {
-            owner: host,
-            roles,
-            outcomes,
-        })
+        let anchor = super::super::anchored::FileHistoryAnchor::from_acknowledged(count, bytes);
+        Ok(ReconciledHistory { owner: host, human, outcomes, anchor })
     }
 }
 

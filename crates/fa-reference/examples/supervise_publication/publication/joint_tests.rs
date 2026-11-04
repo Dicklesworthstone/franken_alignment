@@ -34,7 +34,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {
-        let root = std::env::temp_dir().join(format!(
+        let root = crate::test_directory::create(format!(
             "fa-joint-supervisor-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)

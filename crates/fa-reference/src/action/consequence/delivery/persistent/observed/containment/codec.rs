@@ -77,8 +77,10 @@ pub(in super::super) fn read_update(r: &mut Reader<'_>) -> Result<FileStateUpdat
         return Err(Error::Binding);
     }
     let tokens = tokens
-        .chunks_exact(4)
-        .map(|bytes| u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| u32::from_be_bytes(*bytes))
         .collect();
     let state = ActorState::new(profile, tokens, cache.to_vec(), sampler.to_vec(), position)?;
     Ok(FileStateUpdate {

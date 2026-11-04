@@ -277,7 +277,7 @@ impl FileLearnedSocketReview {
                 unused_round(host, next.expect("selected next round").round)?;
             }
             let finished = current.finish_bound(host, current.revision(), more, snapshot.clone());
-            let finished = finished.map(Clone::clone);
+            let finished = finished.cloned();
             self.records
                 .get_mut(&current.round())
                 .expect("fixed record")

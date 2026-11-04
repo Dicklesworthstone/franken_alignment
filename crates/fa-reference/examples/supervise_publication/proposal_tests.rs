@@ -9,12 +9,12 @@ const TEMPLATE: &[u8] = include_bytes!("../../fixtures/supervised_publication.js
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-proposal-next-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed),
         ));
-        std::fs::create_dir(&path).unwrap();
+
         Self(path)
     }
     fn config(&self) -> Config {

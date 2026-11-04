@@ -75,8 +75,10 @@ impl FileGeneratedTextActorPort {
     /// different request. Conflicting source identities and ordinary request IDs
     /// refuse before taking it. Once a new admission is attempted its snapshot
     /// is consumed even on refusal; a failed request cannot reuse that observation.
-    /// Recorded policy refusal still returns a ticket with the original redacted
-    /// NotAdmitted outcome. No model, source reader or clock callback runs here.
+    /// A complete policy violation retains an admitted Denied proposal and its
+    /// original control-ledger basis. A recorded proposal-construction refusal
+    /// instead projects NotAdmitted from intake. Both return their original ticket;
+    /// no model, source reader or clock callback runs here.
     /// Existing journal replay can recompute historical tokens, not new inference.
     pub fn submit(
         &self,

@@ -135,8 +135,8 @@ impl RotaryScaling {
             return Err(Error::Incomplete);
         }
         let mut words = [0_u64; 5];
-        for (word, source) in words.iter_mut().zip(bytes.chunks_exact(8)) {
-            *word = u64::from_be_bytes(source.try_into().map_err(|_| Error::Incomplete)?);
+        for (word, source) in words.iter_mut().zip(bytes.as_chunks::<8>().0) {
+            *word = u64::from_be_bytes(*source);
         }
         match words[0] {
             1 if words[2..] == [0, 0, 0] => Self::linear(f64::from_bits(words[1])),

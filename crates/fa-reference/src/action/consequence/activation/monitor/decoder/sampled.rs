@@ -6,6 +6,7 @@ pub mod config;
 pub mod evaluation;
 pub mod generation;
 pub(crate) mod host;
+mod verdict_grammar;
 
 use super::super::{RefinementBudget, RefinementMonitor};
 use super::observation::DecoderObservation;
@@ -87,6 +88,9 @@ impl MonitoredSampledStep {
 pub struct MonitoredSampledDecoder {
     monitored: MonitoredDecoder,
     sampler: Sampler,
+    // Installed only inside a private NativeEvaluator. That owner cannot export
+    // a numerical decoder or checkpoint, so existing replay formats stay exact.
+    verdict_grammar: Option<verdict_grammar::VerdictGrammar>,
 }
 impl fmt::Debug for MonitoredSampledDecoder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -109,9 +113,8 @@ impl MonitoredSampledDecoder {
             return Err(Error::Binding);
         }
         let sampler = Sampler::seeded(sampling.policy, sampling.stream, sampling.seed)?;
-        let monitored =
-            MonitoredDecoder::new(model, stream, generation, monitors, monitoring_budget)?;
-        Ok(Self { monitored, sampler })
+        let monitored = MonitoredDecoder::new(model, stream, generation, monitors, monitoring_budget)?;
+        Ok(Self { monitored, sampler, verdict_grammar: None })
     }
 
     pub fn profile(&self) -> &DecoderProfile {
@@ -172,18 +175,19 @@ impl MonitoredSampledDecoder {
         // The original owner is Ready only after the previous token's complete
         // quiet review. Preparation mutates a private copy, not the live sampler.
         let mut staged = Sampler::from_snapshot(&self.sampler.snapshot());
-        let choice = staged.sample(self.monitored.session.logits()?, budget.sampling)?;
-        let Self { monitored, sampler } = self;
-        let result = monitored.advance_with_commit(
-            expected_position,
-            choice.token,
-            budget.decoder,
-            || {
-                // Called immediately after the SAME decoder's numeric commit, before
-                // any fallible monitoring or evidence publication. No reroll on hold.
-                *sampler = staged;
-            },
-        )?;
+        let logits = self.monitored.session.logits()?;
+        let choice = match &self.verdict_grammar {
+            Some(grammar) => staged.sample_allowed(logits, budget.sampling, grammar.allowed()?)?,
+            None => staged.sample(logits, budget.sampling)?,
+        };
+        let next = self.verdict_grammar.as_ref().map(|grammar| grammar.next(choice.token)).transpose()?;
+        let Self { monitored, sampler, verdict_grammar } = self;
+        let result = monitored.advance_with_commit(expected_position, choice.token, budget.decoder, || {
+            // Called immediately after the SAME decoder's numeric commit, before
+            // any fallible monitoring or evidence publication. No reroll on hold.
+            *sampler = staged;
+            if let (Some(grammar), Some(next)) = (verdict_grammar, next) { grammar.commit(next); }
+        })?;
         Ok(match result {
             MonitoredStep::Released(reviewed) => {
                 MonitoredSampledStep::Released(ReviewedSampledStep { reviewed, choice })

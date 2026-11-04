@@ -1,11 +1,12 @@
 //! A fixed original native sidecar sequence, preserving numerical custody to handoff.
+use super::{Config, Loaded, Deadline, ElapsedTick, FileSupervisedDriver, FileHumanReviewer,
+    debug, plus, refresh};
+use super::ingress::{self, Intake};
 use super::super::super::control::Control;
-use super::{
-    Config, Deadline, ElapsedTick, FileHumanReviewer, FileSupervisedDriver, Loaded, debug, plus,
-    refresh,
-};
+use crate::publication::PreparedPublication;
 use fa_reference::action::consequence::activation::monitor::learned::model::KvTap;
 use fa_reference::action::consequence::delivery::persistent::observed::{
+    credential::FileCredentialPermit,
     driver::native_learned::{FileNativeDriverLaunch, FileNativeSupervisedDriver},
     helpers::learned::native::{
         NativeReviewMember, NativeReviewStatus, sequence::FileNativeSidecarSequence,
@@ -22,6 +23,7 @@ use std::collections::BTreeSet;
 pub(super) struct Reviewed {
     pub driver: FileSupervisedDriver,
     pub history: Option<FileNativeSidecarSequence>,
+    pub process: Option<super::process::ProcessHistory>,
     pub stop_requested: bool,
     pub failure: Option<String>,
 }
@@ -153,64 +155,101 @@ where
         })
 }
 
-pub(super) fn run<F>(
-    driver: FileSupervisedDriver,
-    config: &mut Config,
-    loaded: &Loaded,
-    reviewer: &FileHumanReviewer,
-    control: &mut Control,
-    deadline: &Deadline,
-    time: &mut F,
-) -> Reviewed
-where
-    F: FnMut() -> ElapsedTick,
-{
+#[cfg(test)]
+pub(super) fn run<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    if loaded.process.is_some() {
+        return super::process::run(driver, config, loaded, reviewer, control, deadline, time);
+    }
+    run_serviced(driver, config, loaded, reviewer, control, deadline, time, &mut None)
+}
+
+pub(super) fn run_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, &mut None, publication)
+}
+
+#[cfg(test)]
+pub(super) fn run_serviced<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked(driver, config, loaded, reviewer, control, deadline, time, intake, None)
+}
+
+pub(super) fn run_serviced_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked_with_credential(driver, config, loaded, reviewer, control,
+        deadline, time, intake, publication, None)
+}
+
+pub(super) fn run_serviced_checked_with_credential<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
+    credential: Option<&FileCredentialPermit>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    if loaded.publication.is_some() != publication.is_some() {
+        return Reviewed { driver, history: None, process: None, stop_requested: false,
+            failure: Some("learned review requires its original selected publication source".into()) };
+    }
+    if loaded.process.is_some() {
+        return super::process::run_serviced_checked_with_credential(driver, config, loaded, reviewer,
+            control, deadline, time, intake, publication, credential);
+    }
+    match ingress::observe(intake, driver.supervisor_mut()) {
+        Ok(false) => {},
+        result => return Reviewed { driver, history: None, process: None,
+            stop_requested: false, failure: result.err() },
+    }
     let mut run = match start(driver, config, loaded, deadline, time) {
-        Ok(run) => run,
-        Err((driver, error)) => {
-            return Reviewed {
-                driver,
-                history: None,
-                stop_requested: false,
-                failure: Some(error),
-            };
-        }
+        Ok(run) => run, Err((driver, error)) => return Reviewed {
+            driver, history: None, process: None, stop_requested: false, failure: Some(error) },
     };
     let mut stop_requested = false;
     let result = (|| {
         for _ in 0..loaded.native_limits.polls {
             deadline.check(time())?;
-            // Preserve the original private native owner. Only an authenticated
-            // stop peer triggers cancellation and terminal handoff; the existing
-            // driver then handles its original nonce-bound stop application.
+            // Preserve separate run-wide authenticated stop and request-local
+            // actor cancellation. Neither path exposes the private native owner.
             if control.pending_peer()? {
                 stop_requested = true;
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
-            if run.review().status() != NativeReviewStatus::Running {
+            if ingress::observe(intake, run.supervisor_mut())? {
+                run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
+            if run.review().status() != NativeReviewStatus::Running { break; }
             let round = run.review().round().round;
             let before = run
                 .review()
                 .records()
                 .get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
-            run.step_from_policy_file(&mut config.source, &mut *time, None)
-                .result
-                .map_err(debug)?;
-            let after = run
-                .review()
-                .records()
-                .get(&round)
+            match publication {
+                Some(publication) => { publication.step_native_learned_with_credential(&mut run,
+                    &mut config.source, time, None, credential)?; }
+                None => { match credential {
+                    Some(credential) => run.step_from_policy_file_with_credential(&mut config.source, &mut *time, None, credential),
+                    None => run.step_from_policy_file(&mut config.source, &mut *time, None),
+                }.result.map_err(debug)?; }
+            }
+            let after = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
-            if run.review().status() == NativeReviewStatus::Running
-                && before == after
-                && wait_for_phase(&mut run, control, config.timing.poll_ms, deadline, time)?
-            {
-                stop_requested = true;
-                break;
+            if run.review().status() == NativeReviewStatus::Running && before == after {
+                let stopped = if intake.is_some() {
+                    wait_for_phase_serviced(&mut run, control, config.timing.poll_ms, deadline, time, intake)?
+                } else { wait_for_phase(&mut run, control, config.timing.poll_ms, deadline, time)? };
+                if stopped { stop_requested = true; break; }
+                // Request-local cancellation may retire the review while the
+                // wait correctly reports that no run-wide Stop was received.
+                if run.review().status() != NativeReviewStatus::Running { break; }
             }
         }
         if run.review().status() == NativeReviewStatus::Running {
@@ -242,31 +281,23 @@ where
             Err(error) => failure = Some(error),
         }
     }
-    Reviewed {
-        driver,
-        history: Some(handoff.review),
-        stop_requested,
-        failure,
-    }
+    Reviewed { driver, history: Some(handoff.review), process: None, stop_requested, failure }
 }
 
 // Polls and review revisions advance even when the protocol cannot. The caller
 // compares only ORIGINAL member progress and worker phases before entering here.
 // Waiting spends no numerical quantum or source lease; the next real quantum
 // reacquires policy and time through the original owner.
-pub(super) fn wait_for_phase<F>(
-    run: &mut FileNativeSupervisedDriver,
-    control: &mut Control,
-    poll_ms: u64,
-    deadline: &Deadline,
-    time: &mut F,
-) -> Result<bool, String>
-where
-    F: FnMut() -> ElapsedTick,
-{
-    let due = run
-        .next_review_deadline()
-        .ok_or("running native review has no original phase deadline")?;
+pub(super) fn wait_for_phase<F>(run: &mut FileNativeSupervisedDriver, control: &mut Control,
+    poll_ms: u64, deadline: &Deadline, time: &mut F) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    wait_for_phase_serviced(run, control, poll_ms, deadline, time, &mut None)
+}
+
+fn wait_for_phase_serviced<F>(run: &mut FileNativeSupervisedDriver, control: &mut Control,
+    poll_ms: u64, deadline: &Deadline, time: &mut F, intake: &mut Option<Intake>) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    let due = run.next_review_deadline().ok_or("running native review has no original phase deadline")?;
     loop {
         let now = time();
         deadline.check(now)?;
@@ -274,9 +305,13 @@ where
             run.cancel(run.review().revision()).map_err(debug)?;
             return Ok(true);
         }
-        if now >= due {
+        if ingress::observe(intake, run.supervisor_mut())? {
+            run.cancel(run.review().revision()).map_err(debug)?;
+            // Request cancellation is already recorded by its original gateway;
+            // it must not masquerade as a nonce-bearing run-wide Stop command.
             return Ok(false);
         }
+        if now >= due { return Ok(false); }
         // Bound stop responsiveness independently of an unusually large poll
         // interval. Never advance a logical clock to simulate elapsed time.
         super::super::super::pause(poll_ms.min(50).max(1).min(due.0 - now.0));

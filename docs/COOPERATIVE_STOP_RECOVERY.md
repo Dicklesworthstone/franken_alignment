@@ -58,11 +58,14 @@ revision remote-only RCH verifier. Source review is not executed qualification.
 
 `recover-stop CONFIG OPERATION` now uses this stop-only cursor directly. One
 monotonic elapsed budget from CONFIG's existing `timing.runtime_ms` is checked
-before open, before each original event and at Ready. The command executes one
-event per checkpoint; it does not reset the budget on progress or sample logical
-time during replay. Expiry drops exclusive custody without cleanup, a new stop,
-a terminal clock call or an output acknowledgment. A later explicit retry starts
-from the actual canonical file, not a serialized partial replay or saved permit.
+before open, before each original event, at Ready, and immediately before and
+after a required terminal clock acquisition. The command executes one event per
+checkpoint; it does not reset the budget on progress or sample logical time during
+replay. Expiry before acquisition makes no terminal clock call. Expiry during
+acquisition can follow one clock call, but its tick is not accepted and no cleanup,
+new stop or output acknowledgment follows. A later explicit retry starts from the
+actual canonical file, not a serialized partial replay or saved permit. Matching
+already-drained retries skip acquisition and its two checkpoints entirely.
 
 After Ready, the exact stop request comes from the same locked reconstruction,
 not a separate `read_publication` scan. Finalization and JSON reporting keep their
@@ -84,3 +87,11 @@ actual executed versus irrecoverably unknown effects, and elapsed/terminal-clock
 unwinds with corrected retries. Existing command tests are unchanged except for
 registering this new test module. These 14 new tests and the ownership doctests
 remain unexecuted until exact-revision RCH verification; missing RCH is not a pass.
+
+On 2026-10-24, source `81365a31` executed the complete original 50-function
+operator stop namespace on qualified RCH: 48 passed, two retention-state
+disagreements failed, zero ignored. The cumulative budget/lock case and original
+executed/unknown accounting case passed with all original state assertions.
+The complete operator inventory at this source failed 726/8. This is later scoped
+operator evidence; the preparation-time nonexecution statements above remain
+historical, and no library/doctest or full qualification pass is inferred.

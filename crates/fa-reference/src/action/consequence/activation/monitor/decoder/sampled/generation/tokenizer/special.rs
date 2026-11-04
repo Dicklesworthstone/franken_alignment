@@ -67,10 +67,8 @@ impl ByteBpe {
 }
 
 impl SpecialTokens {
-    fn new(vocabulary: &[TokenBytes], names: BTreeMap<u32, Vec<u8>>) -> Result<Self, Error> {
-        if names.len() > MAX_CONTROL_TOKENS {
-            return Err(Error::Limit);
-        }
+    pub(super) fn new(vocabulary: &[TokenBytes], names: BTreeMap<u32, Vec<u8>>) -> Result<Self, Error> {
+        if names.len() > MAX_CONTROL_TOKENS { return Err(Error::Limit); }
         let mut bytes = 0_usize;
         for (id, name) in &names {
             if !matches!(vocabulary.get(*id as usize), Some(TokenBytes::Control)) {

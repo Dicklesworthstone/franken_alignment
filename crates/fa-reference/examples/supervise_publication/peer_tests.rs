@@ -5,7 +5,7 @@ use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::PeerCredentials;
 use std::fs;
 use std::io::Read;
-use std::os::unix::fs::{DirBuilderExt, PermissionsExt};
+use std::os::unix::fs::{DirBuilderExt, MetadataExt, PermissionsExt};
 use std::os::unix::net::UnixListener;
 use std::process::{Child, Command as ProcessCommand};
 
@@ -60,6 +60,43 @@ fn peer_profile(root: &Directory, c: &Config, candidates: u32) -> PeerProfile {
 }
 const WRONG_CHILD: &str = "tests::peer_tests::wrong_reviewer_process";
 const WRONG_SOCKET: &str = "FA_WRONG_REVIEWER_SOCKET";
+
+#[test]
+fn fixture_readiness_wait_preserves_stale_socket_and_then_verifies_the_real_peer() {
+    let root = Directory::new();
+    let config = configured(&root);
+    let profile = peer_profile(&root, &config, 3);
+    let path = profile.socket(1);
+    let stale = UnixListener::bind(&path).unwrap();
+    drop(stale);
+    let inode = fs::symlink_metadata(&path).unwrap().ino();
+    assert_eq!(
+        UnixStream::connect(&path).unwrap_err().kind(),
+        io::ErrorKind::ConnectionRefused
+    );
+    assert!(
+        profile
+            .connect_client_waiting(1, Duration::from_millis(2))
+            .unwrap_err()
+            .contains("TimedOut")
+    );
+    assert_eq!(fs::symlink_metadata(&path).unwrap().ino(), inode);
+    // Only this fixture removes the stale socket it created, never the client.
+    fs::remove_file(&path).unwrap();
+    let listener = UnixListener::bind(&path).unwrap();
+    profile.secure_socket(&path).unwrap();
+    let client = profile
+        .connect_client_waiting(1, Duration::from_secs(10))
+        .unwrap();
+    let (mut stream, _) = listener.accept().unwrap();
+    stream.set_nonblocking(true).unwrap();
+    assert_eq!(
+        stream.read(&mut [0; 1]).unwrap_err().kind(),
+        io::ErrorKind::WouldBlock
+    );
+    drop(client);
+}
+
 #[test]
 fn wrong_reviewer_process() {
     let Some(path) = std::env::var_os(WRONG_SOCKET) else {

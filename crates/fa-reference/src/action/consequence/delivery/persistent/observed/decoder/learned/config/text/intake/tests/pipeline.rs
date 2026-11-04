@@ -34,6 +34,7 @@ use std::collections::BTreeSet;
 
 #[path = "../../../../../../driver/native_learned/native_fixture.rs"]
 mod native_fixture;
+mod policy_promotion;
 
 fn review(
     mut driver: FileSupervisedDriver,

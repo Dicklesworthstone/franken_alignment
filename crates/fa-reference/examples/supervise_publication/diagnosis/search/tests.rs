@@ -508,6 +508,16 @@ fn search_output_failures_and_later_writer_progress_do_not_change_or_relabel_the
         );
         unchanged(&case, &before, "output_failure");
     }
+    // The preceding negative phase retained occupied staging byte-for-byte.
+    // Release only that owned fixture blocker for actual writer progress,
+    // keeping the bytes as an independently checked file in the same directory.
+    let retained_staging = case.config.store.join("retained-test-staging");
+    fs::rename(
+        case.config.store.join("delivery.pending"),
+        &retained_staging,
+    )
+    .unwrap();
+    let staging_bytes = fs::read(&retained_staging).unwrap();
     let revision = case.host.revision();
     let mut calls = 0;
     let mut out = Vec::new();
@@ -535,6 +545,7 @@ fn search_output_failures_and_later_writer_progress_do_not_change_or_relabel_the
     .unwrap();
     assert_eq!(text(&json(&out), "journal_revision"), revision.to_string());
     assert_eq!(case.host.revision(), revision + 1);
+    assert_eq!(fs::read(&retained_staging).unwrap(), staging_bytes);
     let after = case.files();
     let mut next = Vec::new();
     invoke(&args, &mut next).unwrap();
@@ -564,9 +575,9 @@ fn subset_minimality_is_not_relabelled_as_global_minimum_cardinality() {
         ],
     )
     .unwrap();
-    let case = Case::with_policy(Some(policy));
+    let case = Case::with_policy(Some(policy), b"x", 1);
     let before = case.files();
-    let candidates = r#"{"kind":"units","value":1},{"kind":"payload","bytes_hex":"79"},{"kind":"key","key":7,"expected_hex":"6f6b","replacement_hex":"6e6f"}"#;
+    let candidates = r#"{"kind":"units","value":1},{"kind":"payload","bytes_hex":"6f6b"},{"kind":"key","key":7,"expected_hex":"6f6b","replacement_hex":"6e6f"}"#;
     let menu = Menu::decode(document(candidates).as_bytes()).unwrap();
     let investigation = case.investigation(901, &menu);
     let report = evaluate(&investigation, &menu, Duration::from_secs(60), &mut elapsed).unwrap();
@@ -605,12 +616,12 @@ fn deleting_a_positive_range_witness_does_not_manufacture_closed_world_evidence(
         1,
         vec![
             Predicate::EmptyRange { start: 7, end: 9 },
-            Predicate::PayloadIs(b"y".to_vec()),
+            Predicate::PayloadIs(b"ok".to_vec()),
             Predicate::Any(vec![0, 1]),
         ],
     )
     .unwrap();
-    let case = Case::with_policy(Some(policy));
+    let case = Case::with_policy(Some(policy), b"ok", 2);
     let before = case.files();
     let menu = Menu::decode(
         document(r#"{"kind":"key","key":7,"expected_hex":"6f6b","replacement_hex":null}"#)

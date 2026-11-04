@@ -143,6 +143,32 @@ fn executed(response: &WireResponse) -> bool {
         })
     )
 }
+// Preserve the exact frame the independent human reviewed. The append sink holds
+// its message bytes, while the ledger charges the whole frozen action frame.
+fn reviewing_action(profile: PeerProfile, store: std::path::PathBuf,
+    bootstrap: fa_reference::action::consequence::delivery::persistent::observed::FileOversightProfile,
+    decision: ReviewDecision) -> std::thread::JoinHandle<fa_reference::action::FrozenAction>
+{
+    std::thread::spawn(move || {
+        let started = Instant::now();
+        while !profile.socket(91).exists() {
+            assert!(started.elapsed() < Duration::from_secs(10)); pause(1);
+        }
+        let mut client = profile.connect_client(91).unwrap(); let mut action = None;
+        loop {
+            assert!(started.elapsed() < Duration::from_secs(12));
+            match client.step().unwrap() {
+                ReviewClientProgress::NeedsDecision => {
+                    assert_eq!(FileOversight::read_publication(&store, &bootstrap).unwrap().executions, 0);
+                    action = Some(client.packet().unwrap().action().clone());
+                    client.respond(decision).unwrap();
+                }
+                ReviewClientProgress::Complete => return action.expect("the human reviewed the original frozen action"),
+                _ => pause(1),
+            }
+        }
+    })
+}
 
 #[test]
 fn native_checked_create_and_recovery_keep_producer_witnesses_and_independent_human_approval() {
@@ -153,48 +179,27 @@ fn native_checked_create_and_recovery_keep_producer_witnesses_and_independent_hu
             let native = inputs(&root, &config);
             let (actor, reviewer) = profiles(&root, &config);
             let (publication, _producer) = publication(&root, &config, false);
+            let policy_epoch = u64::from(steps.is_some());
             if let Some(steps) = steps {
                 seed(&mut config, &native, &publication, steps);
+                // The one original recovery fence advances the action epoch.
+                // Helpers remain independently bound to that exact expectation.
+                config.programs = native_programs_at_epoch(&root, policy_epoch);
             }
-            let store = config.store.clone();
-            let bootstrap = config.profile.clone();
-            let decoder = native.decoder.clone();
-            let tokenizer = native.tokenizer.clone();
-            let (sender, receiver) = mpsc::channel();
-            let client = actor_thread(actor.clone(), receiver);
-            let human = reviewing(
-                reviewer.clone(),
-                store.clone(),
-                bootstrap.clone(),
-                if approve {
-                    ReviewDecision::Approve
-                } else {
-                    ReviewDecision::Reject
-                },
-            );
-            let mut output = ReferenceOutput {
-                bytes: Vec::new(),
-                sender: Some(sender),
-            };
-            let result = serve_selected(
-                config,
-                &actor,
-                &reviewer,
-                native,
-                (steps.is_some(), Some(&publication)),
-                || ElapsedTick(1001),
-                &mut output,
-            );
-            assert!(
-                result.is_ok(),
-                "steps={steps:?} approve={approve}: {result:?}"
-            );
-            human.join().unwrap();
-            assert_eq!(executed(&client.join().unwrap()), approve);
-            let image = FileOversight::read_decoder_text_progress(
-                &store, &bootstrap, &decoder, &tokenizer, 7,
-            )
-            .unwrap();
+            let store = config.store.clone(); let bootstrap = config.profile.clone();
+            let decoder = native.decoder.clone(); let tokenizer = native.tokenizer.clone();
+            let (sender, receiver) = mpsc::channel(); let client = actor_thread(actor.clone(), receiver);
+            let human = reviewing_action(reviewer.clone(), store.clone(), bootstrap.clone(),
+                if approve { ReviewDecision::Approve } else { ReviewDecision::Reject });
+            let mut output = ReferenceOutput { bytes: Vec::new(), sender: Some(sender) };
+            let result = serve_selected(config, &actor, &reviewer, native,
+                (steps.is_some(), Some(&publication)), || ElapsedTick(1001), &mut output);
+            assert!(result.is_ok(), "steps={steps:?} approve={approve}: {result:?}");
+            let action = human.join().unwrap(); assert_eq!(executed(&client.join().unwrap()), approve);
+            assert_eq!(action.spec().policy_epoch, policy_epoch);
+            assert_eq!(ReleaseFrame::decode(&action.spec().payload).unwrap().message(), Some("A"));
+            assert_eq!(action.spec().units, action.spec().payload.len() as u64);
+            let image = FileOversight::read_decoder_text_progress(&store, &bootstrap, &decoder, &tokenizer, 7).unwrap();
             assert_eq!(image.text.generation_revision(), 4);
             assert_eq!(image.text.finish(), Some(Ok(GenerationFinish::StopToken)));
             assert_eq!(image.text.bytes().unwrap(), b"A");
@@ -202,11 +207,7 @@ fn native_checked_create_and_recovery_keep_producer_witnesses_and_independent_hu
             assert_eq!(image.publication.control.ledger.reserved, 0);
             if approve {
                 assert_eq!(image.publication.payload, b"A");
-                assert_eq!(
-                    image.publication.control.ledger.charged,
-                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
-                        + image.publication.payload.len()) as u64
-                );
+                assert_eq!(image.publication.control.ledger.charged, action.spec().units);
             } else {
                 assert!(image.publication.payload.is_empty());
                 assert_eq!(image.publication.control.ledger.charged, 0);
@@ -226,78 +227,31 @@ fn native_checked_final_publication_rejects_a_late_phantom_but_preserves_disjoin
             let native = inputs(&root, &config);
             let (actor, reviewer) = profiles(&root, &config);
             let (publication, mut producer) = publication(&root, &config, fallback);
-            let store = config.store.clone();
-            let bootstrap = config.profile.clone();
-            let scope = config.profile.delivery.scope;
-            let (sender, receiver) = mpsc::channel();
-            let client = actor_thread(actor.clone(), receiver);
-            let human = reviewing(
-                reviewer.clone(),
-                store.clone(),
-                bootstrap.clone(),
-                ReviewDecision::Approve,
-            );
-            let mut output = ReferenceOutput {
-                bytes: Vec::new(),
-                sender: Some(sender),
-            };
+            let store = config.store.clone(); let bootstrap = config.profile.clone(); let scope = config.profile.delivery.scope;
+            let (sender, receiver) = mpsc::channel(); let client = actor_thread(actor.clone(), receiver);
+            let human = reviewing_action(reviewer.clone(), store.clone(), bootstrap.clone(), ReviewDecision::Approve);
+            let mut output = ReferenceOutput { bytes: Vec::new(), sender: Some(sender) };
             let mut changed = false;
-            let mut last_len = 0;
-            let result = serve_selected(
-                config,
-                &actor,
-                &reviewer,
-                native,
-                (false, Some(&publication)),
-                || {
-                    let len = std::fs::metadata(store.join("delivery.bin"))
-                        .map(|m| m.len())
-                        .unwrap_or(0);
-                    if !changed
-                        && len != last_len
-                        && {
-                            last_len = len;
-                            true
-                        }
-                        && let Ok(image) = FileOversight::read_publication(&store, &bootstrap)
-                        && image.control.ledger.charged != 0
-                        && image.executions == 0
-                    {
-                        let keys: &[u64] = if phantom {
-                            &[0, 1, 2, 4]
-                        } else {
-                            &[0, 2, 4, 99]
-                        };
-                        producer
-                            .publish(1, witness_inputs(scope, 2, keys), ElapsedTick(1001))
-                            .unwrap();
-                        changed = true;
-                    }
-                    ElapsedTick(if changed { 1001 } else { 1000 })
-                },
-                &mut output,
-            );
-            human.join().unwrap();
-            let response = client.join().unwrap();
+            let result = serve_selected(config, &actor, &reviewer, native, (false, Some(&publication)), || {
+                if !changed && let Ok(image) = FileOversight::read_publication(&store, &bootstrap)
+                    && image.control.ledger.charged != 0 && image.executions == 0 {
+                    let keys: &[u64] = if phantom { &[0, 1, 2, 4] } else { &[0, 2, 4, 99] };
+                    producer.publish(1, witness_inputs(scope, 2, keys), ElapsedTick(1001)).unwrap();
+                    changed = true;
+                }
+                ElapsedTick(if changed { 1001 } else { 1000 })
+            }, &mut output);
+            let action = human.join().unwrap(); let response = client.join().unwrap();
+            assert_eq!(ReleaseFrame::decode(&action.spec().payload).unwrap().message(), Some("A"));
+            assert_eq!(action.spec().units, action.spec().payload.len() as u64);
             assert!(changed, "must cross actual dispatch before the mutation");
             assert_eq!(executed(&response), !phantom, "{result:?}");
             let image = FileOversight::read_publication(&store, &bootstrap).unwrap();
             assert_eq!(image.executions, u64::from(!phantom));
             assert_eq!(image.control.ledger.reserved, 0);
-            assert_eq!(
-                image.control.ledger.charged,
-                if phantom {
-                    0
-                } else {
-                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
-                        + image.payload.len()) as u64
-                }
-            );
-            if phantom {
-                assert!(image.payload.is_empty());
-            } else {
-                assert!(result.is_ok(), "{result:?}");
-            }
+            assert_eq!(image.control.ledger.charged, if phantom { 0 } else { action.spec().units });
+            if phantom { assert!(image.payload.is_empty()); }
+            else { assert_eq!(image.payload, b"A"); assert!(result.is_ok(), "{result:?}"); }
         }
     }
 }

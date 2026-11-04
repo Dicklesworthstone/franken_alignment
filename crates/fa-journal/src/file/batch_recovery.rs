@@ -1,10 +1,9 @@
 //! Compare an independently retained group with the ORIGINAL locked journal.
 //! Prefix reconstructions stay private; no partial ledger or effect key escapes.
 mod cooperative;
-pub use cooperative::{
-    BatchInspectionBudget, BatchInspectionReport, BatchInspectionStatus, BatchInspectionWork,
-    FileBatchInspection,
-};
+mod resume;
+pub use cooperative::{BatchInspectionBudget, BatchInspectionReport, BatchInspectionStatus,
+    BatchInspectionWork, FileBatchInspection};
 
 use super::{Error, FileJournal};
 use crate::batch::{BatchLimits, MAX_BATCH_RECORDS};

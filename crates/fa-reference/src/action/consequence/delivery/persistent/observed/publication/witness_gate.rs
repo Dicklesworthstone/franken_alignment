@@ -155,29 +155,23 @@ impl FileOversight {
             inputs.map(Rc::new),
         ));
         self.check_source_admission(&event)?;
-        self.fault = Some(JournalFailure {
-            operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other,
-            replacement_may_be_visible: false,
-        });
-        if self.events.len() >= self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
-        let bytes =
-            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let result = candidate.apply(&event)?;
-        match self.persist_candidate(event, bytes, candidate, result)? {
+        match self.persist_control_candidate(event, bytes, candidate, result, retain_replay)? {
             Transition::Inputs(revision) => Ok(revision),
             _ => unreachable!("publication input transition"),
         }
     }
 
-    pub fn publication_validation_profile(
-        &self,
-    ) -> Result<Option<PublicationLimits>, JournalError> {
-        if self.fault.is_some() {
-            return Err(JournalError::Unavailable);
+    pub fn publication_validation_profile(&self) -> Result<Option<PublicationLimits>, JournalError> {
+        if self.fault.is_some() { return Err(JournalError::Unavailable); }
+        if let Some(profile) = self.machine.learned_contract()
+            .and_then(super::super::decoder::learned::FileLearnedConfig::required_publication_validation) {
+            return Ok(Some(profile.limits));
         }
         Ok(self.events.iter().find_map(|event| match event {
             Event::PublicationWitness(WitnessEvent::Enable(limits)) => Some(*limits),

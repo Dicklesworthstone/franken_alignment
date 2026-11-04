@@ -86,10 +86,10 @@ impl<P: ActorRequestPort> ActorChannel<P> {
     }
 
     pub fn state(&self) -> ChannelState {
-        if let Some(reason) = self.closed {
-            if reason != CloseReason::PeerClosed || self.output.is_empty() {
-                return ChannelState::Closed(reason);
-            }
+        if let Some(reason) = self.closed
+            && (reason != CloseReason::PeerClosed || self.output.is_empty())
+        {
+            return ChannelState::Closed(reason);
         }
         if !self.output.is_empty() {
             return ChannelState::ReplyReady;

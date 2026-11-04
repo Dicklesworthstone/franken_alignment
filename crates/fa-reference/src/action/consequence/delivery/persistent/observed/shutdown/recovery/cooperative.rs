@@ -268,14 +268,20 @@ impl FileStopRecovery {
     /// at capacity. Intent and canonical identity are checked before the clock;
     /// the original finalizer repeats canonical comparison after preflight and
     /// before cleanup/replacement. I/O failure may still leave a visible result.
-    pub fn finish_stopped_with_anchor<F>(
-        self,
-        request: StopRequest,
-        clock: F,
-    ) -> Result<FileStoppedHistory, JournalError>
-    where
-        F: FnOnce() -> ElapsedTick,
-    {
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.try_finish_stopped_with_anchor(request, || Ok(clock()))
+    }
+
+    /// The same fixed terminal transaction with fallible time acquisition.
+    /// A clock refusal returns before cleanup or mutation and releases custody;
+    /// no timestamp, stop receipt or candidate anchor is manufactured. A caller
+    /// may reject time acquired past its unchanged elapsed deadline. Completed
+    /// drained retries still require neither time nor additional journal space.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
         self.check_ready()?;
         if request.operation == 0 {
             return Err(Error::InvalidInput.into());
@@ -312,15 +318,8 @@ impl FileStopRecovery {
         if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
             return Err(Error::Binding.into());
         }
-        let now = clock();
-        let Self {
-            profile,
-            store,
-            events,
-            machine,
-            canonical,
-            ..
-        } = self;
+        let now = clock()?;
+        let Self { profile, store, events, machine, canonical, .. } = self;
         let (host, _reviewer) = FileOversight::owner(profile, store, events, machine);
         host.finish_verified_stopped(request, now, &canonical)
     }

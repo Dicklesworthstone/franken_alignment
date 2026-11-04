@@ -372,7 +372,7 @@ fn reject_early_finish(run: &mut FileNativeSupervisedDriver, role: &FileConsiste
 #[test]
 fn stream_finish_requires_receipt_confirmation_a_later_kv_forecast_and_new_review_keys() {
     let root = Directory::new();
-    let stream = StreamProfile::new(61, 1, 8, 32, 128).unwrap();
+    let stream = StreamProfile::new(61, 1, 7, 32, 128).unwrap();
     let (mut host, human, role, generation, predictor, profile) = fresh(&root, false, Some(stream));
     forecast(&mut host, &role, 71)
         .unwrap()

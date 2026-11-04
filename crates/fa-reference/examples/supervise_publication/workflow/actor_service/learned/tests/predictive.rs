@@ -32,7 +32,7 @@ fn start(
     FileSupervisedDriver,
     Wire,
 ) {
-    let (host, reviewer, observer) = recovery::create_selected(config, loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(config, loaded).unwrap();
     assert!(host.action_consistency_required());
     let prediction = prediction::Session::new(loaded.request, observer.unwrap());
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
@@ -55,7 +55,7 @@ fn reopen(
     Wire,
 ) {
     assert_eq!(cleanup(driver, 1000, 1), 0);
-    let (host, reviewer, observer) = recovery::open_selected(config, loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::open_selected(config, loaded).unwrap();
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert!(!host.action_consistency_snapshot().unwrap().coverage_lost);
     let prediction = prediction::Session::new(loaded.request, observer.unwrap());
@@ -640,7 +640,7 @@ fn owned_forecast_budget_exhaustion_retains_original_inconclusive_report_without
             }
             assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
             assert_eq!(cleanup(driver, 1000, 1), 0);
-            let (host, _, _) = recovery::open_selected(&config, &loaded).unwrap();
+            let (host, _, _, _identity) = recovery::open_selected(&config, &loaded).unwrap();
             let recovered = host.learned_action_consistency_snapshot().unwrap();
             assert_eq!(recovered.work, charged.work);
             assert_eq!(
@@ -788,13 +788,33 @@ fn predictive_recovery_retains_unanswered_forecast_and_spent_work_without_rearmi
             let forecast = host.action_consistency_deadline().unwrap();
             let evidence = host.action_consistency_snapshot().unwrap().evidence;
             let learned = owned.then(|| host.learned_action_consistency_snapshot().unwrap());
+            let revision = host.revision();
             drop(host);
             assert_eq!(cleanup(driver, 1000, 1), 0);
             drop(prediction);
             let disk = fs::read(config.store.join("delivery.bin")).unwrap();
-            assert!(recovery::open(&config, &loaded).is_err());
+            let staged = config.store.join("delivery.pending");
+            let pending = b"unacknowledged forecast recovery";
+            fs::write(&staged, pending).unwrap();
+            // The operator's test helper now selects predictive recovery. The
+            // forbidden downgrade is the ORIGINAL nonpredictive guarded API,
+            // supplied with the same complete guard and generation contracts.
+            assert_eq!(
+                FileOversight::open_guarded_with_learned_generation(
+                    &config.store,
+                    config.profile.clone(),
+                    &recovery::requirements(&config, &loaded),
+                    &loaded.generation
+                )
+                .err(),
+                Some(JournalError::Contract(Error::Binding))
+            );
             assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
-            let (host, reviewer, observer) = recovery::open_selected(&config, &loaded).unwrap();
+            assert_eq!(fs::read(&staged).unwrap(), pending);
+            let (host, reviewer, observer, _identity) =
+                recovery::open_selected(&config, &loaded).unwrap();
+            assert_eq!(host.revision(), revision + 1);
+            assert!(!staged.exists());
             assert!(host.learned_generation_inspection().unwrap().paused);
             assert_eq!(
                 host.learned_generation_inspection().unwrap().numerical,
@@ -855,7 +875,7 @@ fn independent_predictor_changes_and_recipe_downgrade_refuse_before_recovery_wri
     for owned in [false, true] {
         let root = Root::new();
         let (config, path, loaded) = fixture(&root, owned, 60_000);
-        let (host, _, _) = recovery::create_selected(&config, &loaded).unwrap();
+        let (host, _, _, _identity) = recovery::create_selected(&config, &loaded).unwrap();
         let numerical = host.learned_generation_inspection().unwrap().numerical;
         drop(host);
         let disk = fs::read(config.store.join("delivery.bin")).unwrap();
@@ -907,7 +927,7 @@ fn independent_predictor_changes_and_recipe_downgrade_refuse_before_recovery_wri
         assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), disk);
         fs::write(&path, recipe).unwrap();
         let original = recipe::load(&path, &config, false).unwrap();
-        let (host, _, observer) = recovery::open_selected(&config, &original).unwrap();
+        let (host, _, observer, _identity) = recovery::open_selected(&config, &original).unwrap();
         assert!(observer.is_some());
         assert_eq!(
             host.learned_generation_inspection().unwrap().numerical,

@@ -2,8 +2,9 @@
 //!
 //! The legacy entry point keeps raw-byte semantics. An explicitly selected
 //! Unicode-17 entry point admits exactly the named GPT-2 or Llama-3 grammar.
-//! Neither admits normalization, prefix insertion, padding, truncation or
-//! postprocessing. Literal non-normalized special tokens are admitted explicitly;
+//! Those APIs admit no normalization, prefix insertion, padding, truncation or
+//! postprocessing. A separate Llama-3 BOS API admits one fixed prefix template.
+//! Literal non-normalized special tokens are admitted explicitly;
 //! other added-token transformations and arbitrary pipelines refuse.
 //! The vocabulary's reversible ByteLevel alphabet is converted to original bytes,
 //! then the ORIGINAL ByteBpe constructor validates the entire token/merge graph.
@@ -15,10 +16,10 @@
 mod reader;
 #[path = "huggingface/special.rs"]
 mod special;
+#[path = "huggingface/postprocessor.rs"]
+mod postprocessor;
 
-use super::{
-    ByteBpe, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES, Merge, PreTokenization, TokenBytes,
-};
+use super::{ByteBpe, Merge, MergePolicy, PreTokenization, TokenBytes, MAX_MERGES, MAX_TOKEN_BYTES, MAX_VOCABULARY_BYTES};
 use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::DecoderProfile;
 use crate::strict_json::{self, ErrorKind, Json, Limits};
@@ -101,12 +102,60 @@ impl ByteBpe {
     /// trim_offsets flag and decoder's unused flags must still be present booleans.
     /// Native spans remain a complete original-byte partition; this API does not
     /// expose upstream character offsets or lossy string decoding.
-    pub fn from_huggingface_json_with_pre_tokenization(
-        expected: &DecoderProfile,
-        bytes: &[u8],
-        max_bytes: usize,
-        pre_tokenization: PreTokenization,
-    ) -> Result<Self, Error> {
+    pub fn from_huggingface_json_with_pre_tokenization(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization)
+        -> Result<Self, Error>
+    {
+        Self::from_huggingface_json_with_merge_policy(expected, bytes, max_bytes,
+            pre_tokenization, MergePolicy::RankedOnly)
+    }
+
+    /// Select the exact BPE interpretation as well as the input grammar. The
+    /// JSON's `ignore_merges` must equal this independently selected policy:
+    /// false for RankedOnly, true for WholePieceFirst. A rejected declaration is
+    /// never retried, inferred from the model name or silently treated as false.
+    /// WholePieceFirst matches each complete ordinary pretoken, after literal
+    /// controls, before the original ranked pass. All other admission is shared.
+    pub fn from_huggingface_json_with_merge_policy(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, pre_tokenization: PreTokenization,
+        merge_policy: MergePolicy) -> Result<Self, Error>
+    {
+        Self::from_huggingface_profile(expected, bytes, max_bytes, pre_tokenization,
+            false, merge_policy)
+    }
+
+    /// Select Llama-3/Unicode-17 plus the exact beginning-of-sequence template.
+    /// The single template must be BOS:0, A:0 and the declared pair template
+    /// BOS:0, A:0, BOS:1, B:1. Its sole special-token record must resolve to the
+    /// same original ID and spelling as an admitted named control. The template
+    /// may be bare or follow one ByteLevel postprocessor with trim_offsets=false;
+    /// the latter's other two flags must be booleans and are semantically inert.
+    ///
+    /// This API encodes a single byte input, never a pair or arbitrary template.
+    /// It always prefixes BOS, even for empty input or a literal BOS at the start.
+    /// That prefix has a synthetic 0..0 span, followed by original byte spans.
+    /// All other model, grammar, source and work bounds retain their owner.
+    pub fn from_huggingface_llama3_bos_json(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize) -> Result<Self, Error>
+    {
+        Self::from_huggingface_llama3_bos_json_with_merge_policy(expected, bytes,
+            max_bytes, MergePolicy::RankedOnly)
+    }
+
+    /// The same fixed Llama-3 BOS template with an independently selected BPE
+    /// policy. Existing BOS APIs still require `ignore_merges=false`.
+    pub fn from_huggingface_llama3_bos_json_with_merge_policy(expected: &DecoderProfile,
+        bytes: &[u8], max_bytes: usize, merge_policy: MergePolicy) -> Result<Self, Error>
+    {
+        Self::from_huggingface_profile(expected, bytes, max_bytes,
+            PreTokenization::Llama3Unicode17, true, merge_policy)
+    }
+
+    fn from_huggingface_profile(expected: &DecoderProfile, bytes: &[u8],
+        max_bytes: usize, pre_tokenization: PreTokenization, bos_template: bool,
+        merge_policy: MergePolicy)
+        -> Result<Self, Error>
+    {
         if max_bytes == 0 || max_bytes > MAX_JSON_BYTES || bytes.len() > max_bytes {
             return Err(Error::Limit);
         }
@@ -130,20 +179,13 @@ impl ByteBpe {
             _ => Error::InvalidInput,
         })?;
         let root = exact_object(&value, ROOT_FIELDS)?;
-        if required(root, "version")?.as_str() != Some("1.0") {
-            return Err(Error::Binding);
-        }
-        for field in ["truncation", "padding", "normalizer", "post_processor"] {
+        if required(root, "version")?.as_str() != Some("1.0") { return Err(Error::Binding); }
+        for field in ["truncation", "padding", "normalizer"] {
             require_null(required(root, field)?)?;
         }
-        let added = required(root, "added_tokens")?
-            .as_array()
-            .ok_or(Error::InvalidInput)?;
-        pipeline(
-            required(root, "pre_tokenizer")?,
-            required(root, "decoder")?,
-            pre_tokenization,
-        )?;
+        if !bos_template { require_null(required(root, "post_processor")?)?; }
+        let added = required(root, "added_tokens")?.as_array().ok_or(Error::InvalidInput)?;
+        pipeline(required(root, "pre_tokenizer")?, required(root, "decoder")?, pre_tokenization)?;
         let model = exact_object(required(root, "model")?, MODEL_FIELDS)?;
         if required(model, "type")?.as_str() != Some("BPE") {
             return Err(Error::Binding);
@@ -157,12 +199,15 @@ impl ByteBpe {
                 return Err(Error::Binding);
             }
         }
-        for field in ["fuse_unk", "byte_fallback", "ignore_merges"] {
+        for field in ["fuse_unk", "byte_fallback"] {
             require_false(required(model, field)?)?;
         }
-        let declared = required(model, "vocab")?
-            .as_object()
-            .ok_or(Error::InvalidInput)?;
+        match required(model, "ignore_merges")?.as_bool() {
+            Some(value) if value == (merge_policy == MergePolicy::WholePieceFirst) => {}
+            Some(_) => return Err(Error::Binding),
+            None => return Err(Error::InvalidInput),
+        }
+        let declared = required(model, "vocab")?.as_object().ok_or(Error::InvalidInput)?;
         let count = expected.shape().vocabulary;
         if declared.len() > count {
             return Err(Error::Binding);
@@ -177,6 +222,9 @@ impl ByteBpe {
             return Err(Error::Limit);
         }
         let names = special::names(added, declared, count)?;
+        let bos = if bos_template {
+            Some(postprocessor::bos_token(required(root, "post_processor")?, &names)?)
+        } else { None };
         let alphabet = alphabet_inverse();
         let mut slots = Vec::new();
         slots.try_reserve_exact(count).map_err(|_| Error::Limit)?;
@@ -257,15 +305,15 @@ impl ByteBpe {
                 result: lookup(declared, &joined)?,
             });
         }
-        // Reuse the original total-byte, singleton, ordering, duplicate-pair and
-        // reachability checks. A parsed JSON graph alone never admits a tokenizer.
-        Self::new_with_pre_tokenization(
-            expected.clone(),
-            vocabulary,
-            merges,
-            names,
-            pre_tokenization,
-        )
+        // Reuse total-byte, singleton, ordering and duplicate-pair admission.
+        // Only the explicitly selected whole-piece policy can reach vocabulary
+        // content without a merge rule. No JSON field selects this policy.
+        match bos {
+            Some(bos) => Self::new_with_bos_token_and_merge_policy(expected.clone(), vocabulary,
+                merges, names, bos, merge_policy),
+            None => Self::new_with_merge_policy(expected.clone(), vocabulary, merges, names,
+                pre_tokenization, merge_policy),
+        }
     }
 }
 

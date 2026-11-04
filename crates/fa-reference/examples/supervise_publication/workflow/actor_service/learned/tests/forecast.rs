@@ -1,9 +1,7 @@
 //! Actual artifact admission and exact original predictor configuration.
 //! Runtime publication/forecast ordering is exercised in the predictive tests.
-use super::super::{
-    fields::{Assets, Fields, MAX_DATA_BYTES},
-    forecast::ForecastInput,
-};
+#[path = "forecast/restart.rs"]
+mod restart;
 use super::*;
 use fa_reference::action::consequence::activation::{
     CaptureProfile,
@@ -73,6 +71,15 @@ pub(super) fn install(
     )
     .unwrap();
     path
+}
+
+pub(super) fn install_restart(root: &Root, recipe: &Path, age: u64) -> PathBuf {
+    let file = install(root, recipe, true, age);
+    let original = fs::read_to_string(&file).unwrap();
+    fs::write(&file, original.replacen(
+        r#""schema":"fa.learned-forecast/1""#,
+        r#""schema":"fa.learned-forecast/2","reset":"owned_prompt_audit""#, 1)).unwrap();
+    file
 }
 
 fn expected(stream: StreamProfile, owned: bool) -> FileConsistencyConfig {

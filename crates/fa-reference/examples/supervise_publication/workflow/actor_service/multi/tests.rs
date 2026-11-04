@@ -23,7 +23,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-multi-{}-{}-{}",
             std::process::id(),
             crate::workflow::clock().0,

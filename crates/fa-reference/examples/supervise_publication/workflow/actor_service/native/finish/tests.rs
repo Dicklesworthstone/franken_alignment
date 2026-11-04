@@ -100,7 +100,7 @@ fn synthetic_finish_helper_process() {
     .unwrap();
     let start = Instant::now();
     loop {
-        assert!(start.elapsed() < Duration::from_secs(30));
+        assert!(start.elapsed() < Duration::from_secs(10));
         client.step().unwrap();
         if client.phase() == ClientPhase::NeedsInference {
             let input = client.input().unwrap();
@@ -183,7 +183,7 @@ fn actor(
             command = Command::Poll {
                 request: profile.request,
             };
-            pause(5);
+            pause(1);
         }
     })
 }
@@ -205,7 +205,7 @@ fn human(
     std::thread::spawn(move || {
         let start = Instant::now();
         while !profile.socket(request).exists() {
-            assert!(start.elapsed() < Duration::from_secs(30));
+            assert!(start.elapsed() < Duration::from_secs(10));
             pause(1);
         }
         let mut client = profile.connect_client(request).unwrap();
@@ -383,6 +383,41 @@ fn publication(root: &Root, joint: bool) -> (PublicationProfile, FilePublication
         PublicationProfile::decode(json.as_bytes()).unwrap(),
         producer,
     )
+}
+
+#[test]
+fn native_full_stream_still_rejects_an_undersized_generation_allocation() {
+    let root = Root::new();
+    let mut config = configured(&root);
+    config.programs.clear();
+    let mut input = native(&root, &config, true);
+    input.request.max_output_bytes = 1;
+    let decoder = input.decoder.clone();
+    let tokenizer = input.tokenizer.clone();
+    let store = config.store.clone();
+    let profile = config.profile.clone();
+    let (peer, reviewer) = profiles(&root, &config);
+    let mut output = Vec::new();
+    let result = serve_selected(
+        config,
+        &peer,
+        &reviewer,
+        input,
+        (false, None),
+        || ElapsedTick(1000),
+        &mut output,
+    );
+    assert!(result.unwrap_err().contains("Contract(Limit)"));
+    assert!(output.is_empty());
+    let disk = FileOversight::read_publication(&store, &profile).unwrap();
+    assert_eq!(disk.executions, 0);
+    assert!(disk.payload.is_empty());
+    assert_eq!(disk.control.ledger.charged, 0);
+    assert_eq!(disk.control.ledger.reserved, 0);
+    assert!(matches!(
+        FileOversight::read_decoder_text_progress(&store, &profile, &decoder, &tokenizer, 7),
+        Err(JournalError::Contract(Error::Missing))
+    ));
 }
 
 #[test]

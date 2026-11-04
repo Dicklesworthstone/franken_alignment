@@ -38,7 +38,7 @@ impl Directory {
         let extra = output
             .map(|p| format!(",\"retain_history_anchor\":\"{}\"", p.display()))
             .unwrap_or_default();
-        fs::write(&path, format!("{{\"schema_version\":\"fa.guarded-resume/1\",\"minimum\":{{\"journal_revision\":0,\"control_sequence\":0,\"authority_epoch\":0}},\"history_anchor\":\"{}\"{extra}}", self.anchor().display())).unwrap();
+        fs::write(&path, format!("{{\"schema_version\":\"fa.guarded-resume/1\",\"minimum\":{{\"journal_revision\":0,\"control_sequence\":0,\"authority_epoch\":0}},\"history_anchor\":\"{}\"{extra}}}", self.anchor().display())).unwrap();
         path
     }
     fn bytes(&self) -> Vec<u8> {

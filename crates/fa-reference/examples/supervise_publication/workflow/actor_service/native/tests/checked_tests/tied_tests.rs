@@ -98,6 +98,7 @@ fn native_tied_checked_creation_and_recovery_still_require_independent_human_app
             let (publication, _producer) = publication(&root, &config, false);
             if let Some(steps) = steps {
                 seed(&mut config, &native, &publication, steps);
+                config.programs = native_programs_at_epoch(&root, 1);
             }
             let store = config.store.clone();
             let bootstrap = config.profile.clone();
@@ -132,8 +133,18 @@ fn native_tied_checked_creation_and_recovery_still_require_independent_human_app
                 result.is_ok(),
                 "steps={steps:?}, approve={approve}: {result:?}"
             );
-            human.join().unwrap();
+            let packet = human.join().unwrap();
+            assert_eq!(
+                packet.action().spec().policy_epoch,
+                u64::from(steps.is_some())
+            );
             assert_eq!(executed(&client.join().unwrap()), approve);
+            assert_eq!(
+                ReleaseFrame::decode(&packet.action().spec().payload)
+                    .unwrap()
+                    .message(),
+                Some("A")
+            );
             let image = FileOversight::read_decoder_text_progress(
                 &store, &bootstrap, &decoder, &tokenizer, 7,
             )
@@ -148,8 +159,7 @@ fn native_tied_checked_creation_and_recovery_still_require_independent_human_app
                 assert_eq!(image.publication.payload, b"A");
                 assert_eq!(
                     image.publication.control.ledger.charged,
-                    (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
-                        + image.publication.payload.len()) as u64
+                    packet.action().spec().payload.len() as u64
                 );
             } else {
                 assert!(image.publication.payload.is_empty());

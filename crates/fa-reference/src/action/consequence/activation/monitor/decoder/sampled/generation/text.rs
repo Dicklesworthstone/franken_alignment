@@ -180,6 +180,19 @@ impl TextDecoder {
         self.decoder.decoder_work()
     }
 
+    // The sole caller is the fresh native helper evaluator, which never returns
+    // its decoder. Grammar state therefore cannot escape into replay profiles
+    // that bind only the original sampler. Prompt ingestion remains unchanged.
+    pub(crate) fn install_native_verdict_grammar(&mut self, stops: &[u32]) -> Result<(), Error> {
+        if self.position() != 0 || self.sampled_draws() != 0 || self.status() != MonitoringStatus::Ready {
+            return Err(Error::WrongState);
+        }
+        if self.decoder.verdict_grammar.is_some() { return Err(Error::Duplicate); }
+        let grammar = super::super::verdict_grammar::VerdictGrammar::new(&self.tokenizer, stops)?;
+        self.decoder.verdict_grammar = Some(grammar);
+        Ok(())
+    }
+
     /// Own the decoder while tokenizing the fixed prompt cooperatively. This
     /// consumes ownership even on refusal, like into_generation. The original
     /// numerical admission still runs only after the whole prompt is available.

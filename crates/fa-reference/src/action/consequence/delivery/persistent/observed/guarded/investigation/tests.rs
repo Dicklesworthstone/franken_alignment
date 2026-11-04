@@ -160,7 +160,7 @@ fn profile() -> FileOversightProfile {
         },
     }
 }
-fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
+fn setup_writer(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
     let p = profile();
     let (mut host, _) =
         FileOversight::create_guarded(root.store(), p.clone(), &guards(), None).unwrap();
@@ -177,7 +177,7 @@ fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAn
                 required_witnesses: Vec::new(),
                 policy_epoch: 0,
                 deadline: ElapsedTick(100),
-                units: 8,
+                units: b"blocked".len() as u64,
             },
             Snapshot {
                 semantic_epoch: 1,
@@ -204,12 +204,16 @@ fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAn
         },
     };
     let anchor = host.history_anchor().unwrap();
+    (host, expected, anchor)
+}
+fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
+    let original = setup_writer(root);
     fs::write(
         root.store().join("delivery.pending"),
         b"never promote or delete investigation staging",
     )
     .unwrap();
-    (host, expected, anchor)
+    original
 }
 fn begin(
     root: &Root,
@@ -487,16 +491,10 @@ fn an_unwind_after_any_native_event_permanently_disqualifies_the_private_read() 
 #[test]
 fn later_writer_progress_never_becomes_the_captured_diagnosis_or_a_new_source_observation() {
     let root = Root::new();
-    let (mut host, expected, anchor) = setup(&root);
+    let (mut host, expected, anchor) = setup_writer(&root);
     let original = host.investigate_proposal(1, scope()).unwrap();
     let mut read = begin(&root, &expected, &anchor);
-    fs::remove_file(root.store().join("delivery.pending")).unwrap();
     host.observe_time(host.revision(), ElapsedTick(3)).unwrap();
-    fs::write(
-        root.store().join("delivery.pending"),
-        b"never promote or delete investigation staging",
-    )
-    .unwrap();
     let later = root.files();
     complete(&mut read, 1);
     let captured = read.finish().unwrap();
@@ -518,6 +516,28 @@ fn later_writer_progress_never_becomes_the_captured_diagnosis_or_a_new_source_ob
     );
     assert_eq!(successor.origin().journal_snapshot(), &host.inspect());
     assert_eq!(root.files(), later);
+}
+
+#[test]
+fn occupied_staging_blocks_the_writer_but_not_the_original_captured_diagnosis() {
+    let root = Root::new();
+    let (mut host, expected, anchor) = setup(&root);
+    let original = host.investigate_proposal(1, scope()).unwrap();
+    let mut read = begin(&root, &expected, &anchor);
+    let files = root.files();
+    let before = host.inspect();
+    assert!(matches!(
+        host.observe_time(host.revision(), ElapsedTick(3)),
+        Err(JournalError::Io(failure))
+            if failure.operation == crate::action::consequence::delivery::persistent::JournalIo::Stage
+                && failure.kind == std::io::ErrorKind::AlreadyExists
+                && !failure.replacement_may_be_visible
+    ));
+    assert_eq!(host.inspect(), before);
+    assert!(host.storage_failure().is_some());
+    complete(&mut read, 1);
+    assert_eq!(read.finish().unwrap().origin(), original.origin());
+    assert_eq!(root.files(), files);
 }
 
 #[test]

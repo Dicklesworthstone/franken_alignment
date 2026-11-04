@@ -21,6 +21,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "guarded/mediated.rs"] pub(crate) mod mediated;
+
 pub(crate) struct Submission<'a> {
     pub document: &'a [u8],
     pub profile: &'a SubmitProfile,
@@ -197,11 +199,12 @@ const USAGE: &str = "usage: supervise_publication submit CONFIG SUBMIT_JSON --gu
 /// The outer command has already removed the existing credibility option. Only
 /// these explicit remaining options select this mode; no rejected guarded call
 /// can return to the legacy opener or guess a profile from the journal.
-pub(crate) fn command(
-    args: &[String],
-    credibility: Option<&Path>,
-    out: &mut impl std::io::Write,
-) -> Result<(), String> {
+pub(crate) fn command(args: &[String], credibility: Option<&Path>, out: &mut impl std::io::Write)
+    -> Result<(), String>
+{
+    if args.iter().skip(3).any(|argument| argument == "--topology-profile") {
+        return mediated::command(args, credibility, out);
+    }
     let (recovery_path, peer_path) = arguments(args)?;
     let config = Config::read(Path::new(&args[1]))?;
     let document = crate::config::read_regular(

@@ -296,7 +296,7 @@ fn unhex(text: &str) -> Result<Vec<u8>, WireError> {
         _ => Err(WireError::MalformedRequest),
     };
     let mut bytes = Vec::with_capacity(text.len() / 2);
-    for pair in text.as_bytes().chunks_exact(2) {
+    for pair in text.as_bytes().as_chunks::<2>().0 {
         bytes.push((digit(pair[0])? << 4) | digit(pair[1])?);
     }
     Ok(bytes)

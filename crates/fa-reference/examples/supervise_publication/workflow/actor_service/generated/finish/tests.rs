@@ -52,6 +52,8 @@ fn review(
 }
 fn recipe(full: bool) -> Loaded {
     let mut r = loaded(false);
+    // Generation allocation covers every possible sampled token. The separate
+    // publication limit still admits only the actual one-byte message.
     if full {
         r.stream = StreamProfile::new(9, 1, 1, 1, 1).unwrap();
     }
@@ -101,6 +103,39 @@ fn position(
         .unwrap()
         .numerical
         .numerical
+}
+
+#[test]
+fn full_stream_still_rejects_an_undersized_native_generation_allocation() {
+    let root = Root::new();
+    let mut c = configured(&root);
+    let p = peers(&root, &c);
+    c.programs.clear();
+    let mut input = recipe(true);
+    input.text.max_output_bytes = 1;
+    let decoder = input.decoder.clone();
+    let tokenizer = input.tokenizer.clone();
+    let store = c.store.clone();
+    let profile = c.profile.clone();
+    let result = super::super::create(c, input, &p, || ElapsedTick(1000)).unwrap();
+    assert!(
+        result
+            .failure
+            .as_deref()
+            .unwrap()
+            .contains("Contract(Limit)")
+    );
+    assert!(!executed(&result));
+    assert_eq!(result.cleanup_pending, 0);
+    let disk = FileOversight::read_publication(&store, &profile).unwrap();
+    assert_eq!(disk.executions, 0);
+    assert!(disk.payload.is_empty());
+    assert_eq!(disk.control.ledger.charged, 0);
+    assert_eq!(disk.control.ledger.reserved, 0);
+    assert!(matches!(
+        FileOversight::read_decoder_text_progress(&store, &profile, &decoder, &tokenizer, 7),
+        Err(JournalError::Contract(Error::Missing))
+    ));
 }
 
 #[test]

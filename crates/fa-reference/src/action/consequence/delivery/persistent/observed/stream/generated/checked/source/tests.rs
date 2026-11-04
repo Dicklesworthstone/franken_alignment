@@ -188,7 +188,7 @@ fn source_bootstrap_installs_every_selected_contract_without_inference_or_captur
 
 #[test]
 fn source_bootstrap_invalid_configuration_refuses_before_creating_the_store() {
-    for which in 0..5 {
+    for which in 0..6 {
         let root = Directory::new();
         let selected = selection(5);
         let mut bad = selected;
@@ -198,7 +198,14 @@ fn source_bootstrap_invalid_configuration_refuses_before_creating_the_store() {
             1 => bad.source.source.source = 0,
             2 => bad.source.source.generation = 0,
             3 => bad.source.limits.events = 0,
-            _ => p.delivery.limits.events = 1,
+            4 => p.delivery.limits.events = 1,
+            _ => {
+                let GeneratedSourcePublication::Joint { publication, .. } = &mut bad.publication
+                else {
+                    panic!("joint fixture required");
+                };
+                publication.feed.as_mut().unwrap().freshness.clock_domain += 1;
+            }
         }
         assert!(
             FileOversight::create_generated_text_stream_from_source(
@@ -213,6 +220,8 @@ fn source_bootstrap_invalid_configuration_refuses_before_creating_the_store() {
         assert!(!root.store().exists());
         let host = create(&root, selected); // same destination, valid near-control
         assert!(host.file_source_required());
+        assert_eq!(host.decoder_inspection().unwrap().numerical.position, 0);
+        assert_eq!(host.inspect().executions, 0);
     }
 }
 

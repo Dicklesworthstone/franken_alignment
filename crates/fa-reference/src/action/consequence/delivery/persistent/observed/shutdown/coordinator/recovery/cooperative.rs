@@ -33,14 +33,10 @@ impl FileShutdownCoordinator {
     /// acknowledged native refusals; outer errors leave completion unconfirmed.
     /// Only the registered path/profile and newest retained prefix are accepted.
     /// Construction performs bounded synchronous read/decode, not event replay.
-    pub fn begin_recover_and_drain(
-        &mut self,
-        revision: u64,
-        domain: u64,
-        at: ElapsedTick,
-    ) -> Result<Result<FileShutdownVisitRecovery<'_>, JournalError>, JournalError> {
-        let (index, attempt) =
-            self.begin(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
+    pub fn begin_recover_and_drain(&mut self, revision: u64, domain: u64, at: ElapsedTick)
+        -> Result<Result<FileShutdownVisitRecovery<'_>, JournalError>, JournalError>
+    {
+        let (index, attempt) = self.begin_registered_terminal(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
         let result = storage::Store::open(&self.campaign.plan.domains[index].directory)
             .and_then(|store| FileStopRecovery::begin_registered(store, &self.campaign, index));
         match result {

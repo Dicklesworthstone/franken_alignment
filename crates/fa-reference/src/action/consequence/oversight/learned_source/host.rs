@@ -4,7 +4,10 @@ use super::{LearnedAvailability, ObservedLearnedGeneration, Prefix, Shared};
 use crate::Error;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::SAMPLER_SNAPSHOT_BYTES;
 use crate::action::consequence::activation::tensor::kv::decoder::sampling::monitored::{
-    LearnedGeneration, restart::GenerationKvRestartReceipt,
+    GenerationStatus, LearnedGeneration, restart::GenerationKvRestartReceipt,
+};
+use crate::action::consequence::activation::tensor::kv::decoder::monitoring::{
+    LearnedDecoderAllowance, restart::{RestartAudit, audit_restart_source},
 };
 use crate::action::consequence::activation::tensor::kv::model::{
     MODEL_DESCRIPTOR_HEADER_BYTES, MODEL_LAYER_DESCRIPTOR_BYTES,
@@ -86,13 +89,48 @@ impl ObservedLearnedGeneration {
         // The full-prefix restart audit names its ORIGINAL stream and stays in
         // the receipt. It is not a latest-position observation for the resumed
         // stream. A NEW original accepted token must produce that evidence.
-        let source = Self {
-            run,
-            shared,
-            text: prior.text.clone(),
-        };
+        let source = Self { run, shared, text: prior.text.clone(), restart_forecast_audit: None };
         source.check_host_horizon()?;
         Ok(source)
+    }
+
+    /// A second, bounded audit over the ACTUAL restored cache, with its new
+    /// stream. Only the explicit owned predictor profile can request this before
+    /// authority restoration. Ordinary LearnedObservation remains Empty; the
+    /// full-prefix audit is never turned into a last-token generation event.
+    pub(crate) fn audit_restored_forecast(&mut self, budget: LearnedDecoderAllowance)
+        -> Result<RestartAudit, Error>
+    {
+        if self.restart_forecast_audit.is_some() || self.run.last_event().is_some()
+            || self.shared.availability.get() != LearnedAvailability::Empty
+            || self.run.status() != GenerationStatus::Generating
+            || self.run.position() != self.run.spec().prompt().len() as u64
+            || self.run.work().sampling_attempts != 0 || !self.run.samples().is_empty() {
+            return Err(Error::WrongState);
+        }
+        let image = self.run.accepted_cache_image()?;
+        let count = self.run.accepted_tokens().len();
+        if image.descriptor().layers().values().any(|layer| {
+            layer.stream != self.shared.stream || layer.first_position != 0
+                || layer.first_sequence != 1 || layer.token_count != count
+        }) { return Err(Error::Binding); }
+        let audit = audit_restart_source(self.run.policy(), self.shared.evaluation_origin, &image, budget)?;
+        if audit.monitoring().source().descriptor() != &image.descriptor()
+            || audit.monitoring().first_position() != 0
+            || audit.monitoring().end_position() != self.run.position() {
+            return Err(Error::Binding);
+        }
+        // Return a completed hold too so the owner can account for its actual
+        // cost before refusing restoration. Only a completely quiet audit can
+        // become a forecast source; no saved generation verdict is adopted.
+        if audit.monitoring().complete_quiet() {
+            self.restart_forecast_audit = Some(Rc::new(audit.clone()));
+        }
+        Ok(audit)
+    }
+
+    pub(crate) fn restored_forecast_audit(&self) -> Option<&RestartAudit> {
+        self.restart_forecast_audit.as_deref()
     }
 
     /// Check the complete originally declared horizon before ownership changes.

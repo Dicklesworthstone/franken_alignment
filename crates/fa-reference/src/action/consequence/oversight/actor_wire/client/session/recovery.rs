@@ -119,10 +119,10 @@ impl ActorClientState {
         state.interrupted = if r.flag()? {
             let command = read_command(&mut r)?;
             let entry = state.requests.get(&command.request()).ok_or_else(invalid)?;
-            if let Command::Submit { proposal, .. } = &command {
-                if proposal != &entry.proposal {
-                    return Err(invalid());
-                }
+            if let Command::Submit { proposal, .. } = &command
+                && proposal != &entry.proposal
+            {
+                return Err(invalid());
             }
             Some(command)
         } else {

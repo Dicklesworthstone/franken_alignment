@@ -2,15 +2,16 @@
 //! The live owner remains available; any journal mutation invalidates this cut.
 mod catch_up;
 mod continuation;
+mod checkpoint;
+mod reset;
 mod intent;
+pub use reset::{FileLearnedResetPreparation, FileLearnedResetPreparationProgress};
+pub use checkpoint::{FileLearnedCheckpointPreparation, FileLearnedCheckpointPreparationProgress};
 pub use continuation::FileLearnedReplayContinuation;
 pub use intent::FileLearnedIntentPreparation;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum Operation {
-    Intent,
-    Completion,
-}
+enum Operation { Intent, Completion, Checkpoint { checkpoint: u64, authority_epoch: u64 }, ResetCompletion { operation: u64 } }
 
 use super::super::super::super::MAX_JOURNAL_EVENTS;
 use super::{
@@ -131,11 +132,11 @@ impl FileLearnedStepPreparation {
         }
         let event = match self.operation {
             Operation::Intent => LearnedEvent::Begin(self.intent),
-            Operation::Completion => LearnedEvent::Step {
-                actor_revision: self.intent.actor_revision,
-                position: self.intent.position,
-                witness: Rc::from(&b""[..]),
-            },
+            Operation::Completion => LearnedEvent::Step { actor_revision: self.intent.actor_revision,
+                position: self.intent.position, witness: Rc::from(&b""[..]) },
+            Operation::Checkpoint { checkpoint, authority_epoch } =>
+                checkpoint::shape(checkpoint, self.intent.actor_revision, authority_epoch),
+            Operation::ResetCompletion { operation } => reset::shape(operation),
         };
         host.check_source_admission(&Event::Decoder(DecoderEvent::Learned(event)))?;
         Ok(())

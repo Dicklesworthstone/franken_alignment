@@ -1,11 +1,10 @@
 //! Compose original joint promotion safeguards with durable native Andon accounting.
 //! All requirements are independently chosen; absence is not a wildcard. The
 //! existing journal, native reweighting rule and joint replay remain authoritative.
-use super::{
-    CredibilityEvent, EvaluationProtocol, Event, FileAndonConfig, FileAndonRecoveryRequirements,
-    FileCredentialRegistration, FileEvaluatedOversightRoles, FileGuardSet, FileOversight,
-    FileOversightProfile, JointPromotionPolicy, JournalError, PreparedGuardedBootstrap, storage,
-};
+use super::{CredibilityEvent, EvaluationProtocol, Event, FileAndonConfig,
+    FileAndonRecoveryRequirements, FileCredentialRegistration, FileEvaluatedOversightRoles,
+    FileGuardSet, FileOversight, FileOversightProfile, JointPromotionPolicy, JournalError,
+    PreparedGuardedBootstrap, PublicationLimits, storage};
 use crate::Error;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::path::Path;
@@ -48,6 +47,34 @@ pub(super) fn check_protocol(
 }
 
 impl FileOversight {
+    /// Atomically install checked witnesses, joint evaluation and accounting
+    /// with no implicit reserve. This never upgrades or resets an existing owner.
+    pub fn create_checked_joint_andon_guarded(
+        directory: impl AsRef<Path>, profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>, protocol: EvaluationProtocol,
+        joint: JointPromotionPolicy, config: &FileAndonConfig, publication: PublicationLimits,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
+        let prepared = PreparedGuardedBootstrap::prepare_publication(
+            profile, guards, registration, publication)?.jointly_evaluated(protocol, joint)?
+            .with_andon(config)?;
+        publish(prepared, directory.as_ref())
+    }
+
+    pub fn create_checked_joint_andon_guarded_reserved(
+        directory: impl AsRef<Path>, profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>, protocol: EvaluationProtocol,
+        joint: JointPromotionPolicy, config: &FileAndonConfig, publication: PublicationLimits,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
+        let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(
+            profile, guards, registration, reserve, publication)?
+            .jointly_evaluated(protocol, joint)?.with_andon(config)?;
+        let store = storage::Store::create(directory.as_ref())?;
+        let (host, oversight) = prepared.publish(store)?;
+        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
+        Ok((host, roles))
+    }
+
     /// Publish ordinary guards, the ORIGINAL jointly evaluated protocol and
     /// native accounting in one first image. Never return a pre-accounting or
     /// marginal-only owner. This is NEW domain creation, not history recovery.

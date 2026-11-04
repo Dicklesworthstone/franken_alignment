@@ -2,6 +2,21 @@
 use super::*;
 #[path = "../../../../../tests/support/file_oversight.rs"]
 mod fixture;
+use fixture::{Directory, snapshot};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT: AtomicU64 = AtomicU64::new(0);
+fn directory() -> Directory {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    Directory(crate::test_directory::create(format!(
+        "fa-durable-peer-{}-{stamp}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    )))
+}
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::{
     FileHumanReviewer, FileOversight,
@@ -171,7 +186,7 @@ fn json(bytes: &[u8]) -> Json {
 #[test]
 fn runnable_exchange_keeps_two_key_publication_and_unknown_until_native_reconciliation() {
     for steps in [1, 16, 64] {
-        let root = Directory::new();
+        let root = directory();
         let a = actor(&root);
         let mut config = settings(&root, &a);
         config.drive = fa_reference::action::consequence::oversight::actor_wire::client::drive::ClientDriveBudget::new(steps).unwrap();
@@ -235,7 +250,7 @@ fn runnable_exchange_keeps_two_key_publication_and_unknown_until_native_reconcil
 
 #[test]
 fn command_timeout_then_document_free_resume_returns_original_execution_without_resend() {
-    let root = Directory::new();
+    let root = directory();
     let a = actor(&root);
     let config = settings(&root, &a);
     configure(&root, &a);
@@ -318,7 +333,7 @@ fn command_timeout_then_document_free_resume_returns_original_execution_without_
 
 #[test]
 fn offline_inspection_uses_no_socket_or_cleanup_and_output_failure_preserves_the_record() {
-    let root = Directory::new();
+    let root = directory();
     let mut a = actor(&root);
     a.socket = root.0.join("absent").join("actor.sock");
     configure(&root, &a);
@@ -378,7 +393,7 @@ fn offline_inspection_uses_no_socket_or_cleanup_and_output_failure_preserves_the
 
 #[test]
 fn exact_domain_scope_peer_and_lifetime_limits_are_pinned_but_request_selection_is_not() {
-    let root = Directory::new();
+    let root = directory();
     let a = actor(&root);
     let config = settings(&root, &a);
     let client = FilePeerClient::create(&config.directory, config.profile.clone()).unwrap();
@@ -420,7 +435,7 @@ fn exact_domain_scope_peer_and_lifetime_limits_are_pinned_but_request_selection_
 
 #[test]
 fn closed_options_and_documents_refuse_before_storage_or_connection() {
-    let root = Directory::new();
+    let root = directory();
     let a = actor(&root);
     configure(&root, &a);
     let mut wrong = args(&root, "resume", &["00"]);
@@ -482,7 +497,7 @@ fn closed_options_and_documents_refuse_before_storage_or_connection() {
 fn expiry_before_prepare_or_before_io_retains_the_exact_difference() {
     use std::io::Read;
     for cutoff in [0, 1] {
-        let root = Directory::new();
+        let root = directory();
         let a = actor(&root);
         let config = settings(&root, &a);
         let (_port, _s, _reviewer, cmd) = setup(&root);

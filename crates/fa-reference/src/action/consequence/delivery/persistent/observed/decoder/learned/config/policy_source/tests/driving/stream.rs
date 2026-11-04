@@ -10,7 +10,7 @@ fn configured_stream() -> FileLearnedConfig {
         tokenizer,
         source,
         LearnedDecoderBindingLimits::default(),
-        StreamProfile::new(61, 1, 8, 32, 128).unwrap(),
+        StreamProfile::new(61, 1, 7, 32, 128).unwrap(),
     )
     .unwrap()
     .with_required_sidecar()

@@ -198,7 +198,7 @@
       "idempotency": "expected predecessor",
       "cost_class": "cheap",
       "response": "Consequence",
-      "note": ""
+      "note": "supervise_publication create-learned-generated --narrow-stream-checkpoint is the trusted local learned-stream mapping: it binds the original complete unsampled prompt and exact predecessor; original-gate target intersection and epoch revocation preserve policy/predictor generations, charged liabilities and incident count; mediated control retains an exact source/history pair, preserves source expenditure and withdraws the accepted topology cut until current-epoch certification; an exact retained operation retry adds no event"
     },
     {
       "verb": "suspend",
@@ -218,7 +218,7 @@
       "idempotency": "expected predecessor",
       "cost_class": "moderate",
       "response": "ResetEvent",
-      "note": "never rewinds ledger (FA-INV-034)"
+      "note": "never rewinds ledger (FA-INV-034); supervise_publication create-learned-generated --prepare-stream-checkpoint is create-only preparation of a quiet original prompt with independent checkpoint custody and no reset authority; --begin-stream-reset records the separately selected intent; --complete-stream-reset is its guarded recovery form, with exact request/incident matching and a Fence-only completed retry; owned prediction requires the explicit unsampled prompt-audit recipe, and mediated preparation/control/recovery retain exact paired source/history custody without source rereads or renewed allowances"
     },
     {
       "verb": "fence",
@@ -229,6 +229,16 @@
       "cost_class": "moderate",
       "response": "FenceRecord",
       "note": ""
+    },
+    {
+      "verb": "stop-fleet",
+      "layer": "L5",
+      "class": "mutation",
+      "authority": "independently configured operator with authenticated stop-only peer sessions",
+      "idempotency": "one original operation per member session; no automatic reconnect or retry after uncertain transmission",
+      "cost_class": "bounded roster and per-peer protocol work",
+      "response": "Per-domain native stop receipts and explicit unconfirmed outcomes",
+      "note": "supervise_publication operator adapter; preserves original per-domain Stop/drain, not a distributed ordered fence or persistent acknowledgement frontier"
     },
     {
       "verb": "resolve",
@@ -379,6 +389,26 @@
       "cost_class": "cheap",
       "response": "ExperimentRow",
       "note": ""
+    },
+    {
+      "verb": "serve-learned-generated",
+      "layer": "L4",
+      "class": "mutation",
+      "authority": "independently configured operator; fresh authenticated actor, native or process review, and independent human approval per release",
+      "idempotency": "original distinct request identity and expected predecessor; no effect retry after an ambiguous receipt",
+      "cost_class": "expensive",
+      "response": "Vec<WireResponse> retaining original Knowledge<ActorOutcome>",
+      "note": "bounded resident operator adapter; one original generation, forecast observer and topology custodian; no lifetime allowance refill or branch authority"
+    },
+    {
+      "verb": "compare-learned-prompt",
+      "layer": "L7",
+      "class": "rehearsal",
+      "authority": "independently configured experiment operator; no production capability is loaded or issued",
+      "idempotency": "one immutable in-memory campaign per invocation; fixed trial slots are never retried; a new invocation spends new work",
+      "cost_class": "expensive, bounded by complete paired campaign reservation and original per-arm limits",
+      "response": "PromptCampaignReport with typed observed, censored, interrupted and unstarted outcomes",
+      "note": "supervise_publication maps exact source-token intervention and paired replay to the original monitored numerical engine; seeds share one source lineage and do not establish independent tasks or a calibrated causal claim"
     }
   ],
   "reason_codes": [

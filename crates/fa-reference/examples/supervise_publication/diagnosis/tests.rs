@@ -69,7 +69,7 @@ fn spec(config: &Config, payload: &[u8]) -> ActionSpec {
         required_witnesses: Vec::new(),
         policy_epoch: 0,
         deadline: ElapsedTick(100000),
-        units: 8,
+        units: payload.len().max(1) as u64,
     }
 }
 fn profile_bytes(floor: FileRecoveryFloor, anchor: &Path, output: Option<&Path>) -> Vec<u8> {
@@ -120,6 +120,7 @@ fn setup(root: &Root) -> Case {
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
     host.refresh_file_source(host.revision(), &mut config.source, ElapsedTick(1))
         .unwrap();
+    // Resource accounting must cover bytes even for a policy-denied proposal.
     host.propose(host.revision(), 1, spec(&config, b"prior"), snapshot())
         .unwrap();
     let denied = host
@@ -657,6 +658,16 @@ fn output_write_and_flush_failures_are_errors_without_any_effect_or_journal_chan
 fn concurrent_writer_progress_and_elapsed_unwind_do_not_relabel_or_mutate_the_captured_read() {
     let root = Root::new();
     let mut case = setup(&root);
+    // Other read-only cases preserve an occupied canonical staging path. This
+    // positive writer case must release that deliberate fixture blocker first,
+    // retaining its bytes rather than asking storage to overwrite it.
+    let retained_staging = case.config.store.join("retained-test-staging");
+    fs::rename(
+        case.config.store.join("delivery.pending"),
+        &retained_staging,
+    )
+    .unwrap();
+    let staging_bytes = fs::read(&retained_staging).unwrap();
     let profile = Profile::read(&case.profile_file).unwrap();
     let original = case.host.revision();
     let mut calls = 0;
@@ -689,6 +700,7 @@ fn concurrent_writer_progress_and_elapsed_unwind_do_not_relabel_or_mutate_the_ca
         original.to_string()
     );
     assert_eq!(case.host.revision(), original + 1);
+    assert_eq!(fs::read(&retained_staging).unwrap(), staging_bytes);
     let before = files(&case);
     let mut calls = 0;
     let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {

@@ -23,7 +23,7 @@ use fa_reference::action::consequence::activation::tensor::kv::decoder::{
     },
 };
 use fa_reference::action::consequence::oversight::helper_client::native::{
-    NativeEvaluator, NativeHelperPolicy,
+    NativeEvaluator, NativeHelperPolicy, NativeVerdictGrammar,
 };
 use fa_reference::full_input::InputProfileBinding;
 use std::collections::BTreeMap;
@@ -34,37 +34,25 @@ pub(super) struct NativeRoster {
 }
 struct NativeInput {
     identity: fa_reference::action::consequence::activation::tensor::kv::decoder::DecoderIdentity,
-    context: usize,
-    stream: u64,
-    configuration: PathBuf,
-    weights: WeightsInput,
-    monitoring: PathBuf,
-    sampling: PathBuf,
-    tokenizer: TokenizerInput,
-    max_new_tokens: usize,
-    max_output_bytes: usize,
-    stop_tokens: Vec<u32>,
-    tokenization: TokenizationBudget,
-    generation: GenerationBudget,
+    context: usize, stream: u64, configuration: PathBuf, weights: WeightsInput,
+    monitoring: PathBuf, sampling: PathBuf, tokenizer: TokenizerInput,
+    max_new_tokens: usize, max_output_bytes: usize, stop_tokens: Vec<u32>,
+    tokenization: TokenizationBudget, generation: GenerationBudget,
+    verdict_grammar: NativeVerdictGrammar,
 }
 struct NativeModel {
-    model: DecoderModel,
-    tokenizer: ByteBpe,
-    monitoring: Vec<u8>,
-    sampling: Vec<u8>,
-    stream: u64,
-    max_new_tokens: usize,
-    max_output_bytes: usize,
-    stop_tokens: Vec<u32>,
-    tokenization: TokenizationBudget,
-    generation: GenerationBudget,
+    model: DecoderModel, tokenizer: ByteBpe, monitoring: Vec<u8>, sampling: Vec<u8>,
+    stream: u64, max_new_tokens: usize, max_output_bytes: usize, stop_tokens: Vec<u32>,
+    tokenization: TokenizationBudget, generation: GenerationBudget,
+    verdict_grammar: NativeVerdictGrammar,
 }
 impl NativeRoster {
     pub(super) fn load(file: &Path, config: &Config, assets: &mut Assets) -> Result<Self, String> {
         let mut root = Fields::parse(&assets.read(file, MAX_DATA_BYTES)?, MAX_DATA_BYTES)?;
-        let source_enabled = match root.text("schema")?.as_str() {
-            "fa.learned-native-roster/1" => false,
-            "fa.learned-native-roster/2" => true,
+        let (source_enabled, grammar_enabled) = match root.text("schema")?.as_str() {
+            "fa.learned-native-roster/1" => (false, false),
+            "fa.learned-native-roster/2" => (true, false),
+            "fa.learned-native-roster/3" => (true, true),
             _ => return Err("unsupported learned native roster".into()),
         };
         let members = root.object("members")?.entries();
@@ -75,14 +63,8 @@ impl NativeRoster {
             );
         }
         // Finish closed schema/path admission for ALL members before model reads.
-        let inputs = members
-            .into_iter()
-            .map(|(name, value)| {
-                Ok((
-                    name,
-                    NativeInput::decode(Fields::new(value)?, source_enabled)?,
-                ))
-            })
+        let inputs = members.into_iter().map(|(name, value)| Ok((name,
+            NativeInput::decode(Fields::new(value)?, source_enabled, grammar_enabled)?)))
             .collect::<Result<BTreeMap<_, _>, String>>()?;
         let mut members = BTreeMap::new();
         for (name, input) in inputs {
@@ -149,7 +131,17 @@ impl NativeRoster {
     }
 }
 impl NativeInput {
-    fn decode(mut fields: Fields, source_enabled: bool) -> Result<Self, String> {
+    fn decode(mut fields: Fields, source_enabled: bool, grammar_enabled: bool) -> Result<Self, String> {
+        // This independently provisioned member setting is frozen before any
+        // original helper input exists. Legacy versions remain unrestricted and
+        // reject the new field through their original closed schema.
+        let verdict_grammar = if grammar_enabled {
+            match fields.text("verdict_grammar")?.as_str() {
+                "unrestricted" => NativeVerdictGrammar::Unrestricted,
+                "finite-words-v1" => NativeVerdictGrammar::FiniteWordsV1,
+                _ => return Err("unsupported native verdict grammar".into()),
+            }
+        } else { NativeVerdictGrammar::Unrestricted };
         let mut model = fields.object("model")?;
         let identity = identity(model.object("identity")?)?;
         let context = model.size("context")?;
@@ -179,21 +171,9 @@ impl NativeInput {
                 "native review requires explicit finite generation and control stops".into(),
             );
         }
-        Ok(Self {
-            identity,
-            context,
-            stream,
-            configuration,
-            weights,
-            monitoring,
-            sampling,
-            tokenizer,
-            max_new_tokens,
-            max_output_bytes,
-            stop_tokens,
-            tokenization,
-            generation,
-        })
+        Ok(Self { identity, context, stream, configuration, weights, monitoring, sampling,
+            tokenizer, max_new_tokens, max_output_bytes, stop_tokens, tokenization, generation,
+            verdict_grammar })
     }
     fn load(self, assets: &mut Assets) -> Result<NativeModel, String> {
         let configuration = assets.read(&self.configuration, MAX_CONFIG_BYTES)?;
@@ -210,45 +190,21 @@ impl NativeInput {
         let sampling = assets.read(&self.sampling, MAX_SAMPLING_CONFIG_BYTES)?;
         let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
             .min(MAX_WEIGHT_FILE_BYTES);
-        let model = self
-            .weights
-            .load(&configuration, &negotiated, assets, bound)?;
-        Ok(NativeModel {
-            model,
-            tokenizer,
-            monitoring,
-            sampling,
-            stream: self.stream,
-            max_new_tokens: self.max_new_tokens,
-            max_output_bytes: self.max_output_bytes,
-            stop_tokens: self.stop_tokens,
-            tokenization: self.tokenization,
-            generation: self.generation,
-        })
+        let model = self.weights.load(&configuration, &negotiated, assets, bound)?;
+        Ok(NativeModel { model, tokenizer, monitoring, sampling, stream: self.stream,
+            max_new_tokens: self.max_new_tokens, max_output_bytes: self.max_output_bytes,
+            stop_tokens: self.stop_tokens, tokenization: self.tokenization, generation: self.generation,
+            verdict_grammar: self.verdict_grammar })
     }
 }
 impl NativeModel {
     fn build(&self, input_profile: InputProfileBinding) -> Result<NativeEvaluator, String> {
-        let policy = NativeHelperPolicy {
-            input_profile,
-            decoder_profile: self.model.profile().clone(),
-            max_new_tokens: self.max_new_tokens,
-            stop_tokens: self.stop_tokens.clone(),
-            tokenization: self.tokenization,
-            generation: self.generation,
-            max_output_bytes: self.max_output_bytes,
-        };
-        let decoder = MonitoredSampledDecoder::from_json(
-            self.model.clone(),
-            self.stream,
-            &self.monitoring,
-            &self.sampling,
-        )
-        .map_err(debug)?;
-        NativeEvaluator::new(
-            TextDecoder::new(decoder, self.tokenizer.clone()).map_err(debug)?,
-            policy,
-        )
-        .map_err(debug)
+        let policy = NativeHelperPolicy { input_profile, decoder_profile: self.model.profile().clone(),
+            max_new_tokens: self.max_new_tokens, stop_tokens: self.stop_tokens.clone(),
+            tokenization: self.tokenization, generation: self.generation, max_output_bytes: self.max_output_bytes };
+        let decoder = MonitoredSampledDecoder::from_json(self.model.clone(), self.stream,
+            &self.monitoring, &self.sampling).map_err(debug)?;
+        NativeEvaluator::new(TextDecoder::new(decoder, self.tokenizer.clone()).map_err(debug)?, policy)
+            .and_then(|evaluator| evaluator.with_verdict_grammar(self.verdict_grammar)).map_err(debug)
     }
 }

@@ -132,11 +132,9 @@ impl MonitoredSampledDecoder {
     ) -> Result<Self, SamplingConfigError> {
         let config = SamplingConfig::decode(sampling_bytes, model.profile().shape().vocabulary)?;
         let start = config.start;
-        let sampler = Sampler::seeded(start.policy, start.stream, start.seed)
-            .map_err(SamplingConfigError::Sampling)?;
-        let monitored = MonitoredDecoder::from_json(model, stream, monitor_bytes)
-            .map_err(SamplingConfigError::Monitor)?;
-        Ok(Self { monitored, sampler })
+        let sampler = Sampler::seeded(start.policy, start.stream, start.seed).map_err(SamplingConfigError::Sampling)?;
+        let monitored = MonitoredDecoder::from_json(model, stream, monitor_bytes).map_err(SamplingConfigError::Monitor)?;
+        Ok(Self { monitored, sampler, verdict_grammar: None })
     }
 }
 

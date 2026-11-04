@@ -275,12 +275,12 @@ impl FileSupervisedDriver {
         }
         // An interrupted advance can leave terminal native state while this
         // driver's phase was not updated. Never route that state to socket I/O.
-        if saved.review.status() != FileLearnedProbeStatus::Running {
-            if let Some(job) = &mut self.job {
-                if job.request == saved.request && job.phase == Phase::Review {
-                    job.close();
-                }
-            }
+        if saved.review.status() != FileLearnedProbeStatus::Running
+            && let Some(job) = &mut self.job
+            && job.request == saved.request
+            && job.phase == Phase::Review
+        {
+            job.close();
         }
     }
 }

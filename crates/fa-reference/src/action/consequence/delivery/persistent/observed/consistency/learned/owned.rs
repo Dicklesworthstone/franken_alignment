@@ -164,10 +164,10 @@ pub(in super::super::super) fn verify_witness(
     result: &Result<LearnedForecastReport, Error>,
     broker: &OversightBroker,
 ) -> Result<(), Error> {
-    if let Some(saved) = saved {
-        if outcome::witness(result, broker)?.as_slice() != saved {
-            return Err(Error::Binding);
-        }
+    if let Some(saved) = saved
+        && outcome::witness(result, broker)?.as_slice() != saved
+    {
+        return Err(Error::Binding);
     }
     Ok(())
 }

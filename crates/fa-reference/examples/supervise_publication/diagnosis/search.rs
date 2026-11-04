@@ -1,27 +1,19 @@
 //! Exhaustive native subset search over an independently reconstructed admission.
 //! No alternate evaluator, early-success shortcut, or effect-bearing result.
-#[path = "search/menu.rs"]
-mod menu;
-#[path = "search/render.rs"]
-mod render;
-use super::{
-    FileProposalInvestigation, Intervention, InterventionScope, checkpoint, debug, unavailable,
-};
+#[path = "search/menu.rs"] mod menu;
+#[path = "search/render.rs"] mod render;
+pub(crate) use menu::Menu;
+use super::{FileProposalInvestigation, Intervention, InterventionScope, checkpoint, debug, unavailable};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalRepairReport;
 use fa_reference::action::consequence::experiment::proposal::search::{
     MAX_PROPOSAL_SEARCH_CASES, MAX_PROPOSAL_SEARCH_EDIT_BYTES, ProposalSearchBudget,
     ProposalSearchStatus,
 };
-pub(super) use menu::Menu;
 use std::{io::Write, time::Duration};
 
-pub(super) fn run(
-    investigation: &FileProposalInvestigation,
-    menu: &Menu,
-    wall: Duration,
-    elapsed: &mut impl FnMut() -> Duration,
-    out: &mut impl Write,
-) -> Result<(), String> {
+pub(crate) fn run(investigation: &FileProposalInvestigation, menu: &Menu, wall: Duration,
+    elapsed: &mut impl FnMut() -> Duration, out: &mut impl Write) -> Result<(), String>
+{
     let report = evaluate(investigation, menu, wall, elapsed)?;
     let complete = report.search().status() == ProposalSearchStatus::Complete;
     let bytes = render::encode(&report, menu)?;
@@ -82,5 +74,4 @@ fn evaluate(
 }
 
 #[cfg(test)]
-#[path = "search/tests.rs"]
-mod tests;
+#[path = "search/tests.rs"] mod tests;

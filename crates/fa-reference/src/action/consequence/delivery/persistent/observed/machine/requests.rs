@@ -21,7 +21,7 @@ impl Machine {
             request,
             spec,
             self.scope,
-            &inspection,
+            &self.broker.inspect(),
             self.broker.stop_receipt().is_some(),
         )?;
         let allocated = prepared.attempt();
@@ -89,16 +89,15 @@ impl FileOversight {
     pub fn cancel_request(&mut self, revision: u64, request: u64) -> Result<(), JournalError> {
         if let FileRequestDisposition::Admitted { attempt, stage } =
             self.request_status(request)?.disposition
-        {
-            if matches!(
+            && matches!(
                 stage,
                 ActionState::Proposed
                     | ActionState::Prepared
                     | ActionState::Reviewing
                     | ActionState::Authorized
-            ) {
-                return self.cancel(revision, attempt);
-            }
+            )
+        {
+            return self.cancel(revision, attempt);
         }
         Ok(())
     }

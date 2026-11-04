@@ -38,6 +38,14 @@ completed preflight, not success of every visit: inspect `stopped_on_error()` an
 each visit's exact result. The report keeps all preceding successful visits. Closed
 transports disconnect without deleting accepted work or refunding effects.
 
+A source-preparation write failure may already have queued an actor-visible
+`Unavailable` reply before the inbox discovers the new journal fault. The inbox
+propagates that original I/O failure to the coordinator even when no ready hint
+was added. The pool then stops before later peers and conservatively charges the
+whole issued allowance. The same individual inbox can subsequently drain its
+queued redacted response; this grants no new ticket or recovered owner. The pool
+continues to reject a faulted shared owner before any further peer I/O.
+
 `next_request(driver)` uses a separate fair cursor and the original journal-backed
 queue checks. It requires the original driver to be Idle. FIFO order is retained
 inside a peer; peers alternate when several have work. Cancelled and terminal hints
@@ -132,3 +140,19 @@ installed (exit 127). Rust compilation, formatting, Clippy and the full gate sti
 have no new execution evidence. No historical receipt is reused as qualification;
 no Beads state or production gate is closed. The existing single-peer publication
 CLI, runtime/dependency admission and deployment isolation are not changed here.
+
+
+The 2026-10-25 continuation exposed this propagation gap with the original real
+staging-file collision test after repairing its rooted policy fixture. The
+regression keeps its original stop, second-peer, full-allowance and canonical-byte
+assertions and additionally checks the exact Stage/AlreadyExists I/O failure. A
+matched no-collision control requires both peers to admit and charges actual
+socket work. At frozen `66b2ae6a`, the complete library executes with 2,211 passed/113
+failed of 2,324, zero ignored/filtered. The original collision, new matched
+positive and generated-inbox queued-refusal drain all pass. The fixed
+inbox/pool/socket selection is 34 passed/one failed; the latter is an unchanged
+named-listener backpressure outcome assertion. All-target compilation and all
+359 workspace doc tests pass; Clippy and canonical admission still fail. The
+historical source-only status above is retained; no complete workspace,
+production or packet qualification follows. Exact logs and remaining work are
+in the implementation status and original P0 Bead.

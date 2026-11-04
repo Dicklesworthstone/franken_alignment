@@ -13,8 +13,45 @@ use crate::action::consequence::oversight::actor_wire::{
     ChannelLimits, Command, WireError, WireResponse, decode_response, encode_command,
 };
 use std::io::{self, Read, Write};
+use std::os::unix::fs::DirBuilderExt;
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_SOCKET_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+
+// RCH's data TMPDIR can exceed SUN_LEN before a socket filename is appended.
+// Only socket files use this private short directory; source evidence and journals
+// keep their original operator-selected locations and lifetime.
+struct SocketDirectory(PathBuf);
+impl SocketDirectory {
+    fn new() -> Self {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let path = PathBuf::from("/tmp").join(format!(
+            "fgs-{:x}-{stamp:x}-{:x}",
+            std::process::id(),
+            NEXT_SOCKET_DIRECTORY.fetch_add(1, Ordering::Relaxed)
+        ));
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .create(&path)
+            .unwrap();
+        Self(path)
+    }
+    fn path(&self, name: &str) -> PathBuf {
+        self.0.join(name)
+    }
+}
+impl Drop for SocketDirectory {
+    fn drop(&mut self) {
+        if let Err(error) = std::fs::remove_dir_all(&self.0) {
+            eprintln!("generated listener socket cleanup: {error}");
+        }
+    }
+}
 
 // Compile the original fixture unchanged under this test module. It still runs
 // the real native generator from synthetic weights and uses actual source files.
@@ -47,7 +84,11 @@ fn bound(
         limit,
     )
     .unwrap();
-    UnixPeerListener::new(UnixListener::bind(path).unwrap(), session).unwrap()
+    UnixPeerListener::new(
+        UnixListener::bind(path).unwrap_or_else(|error| panic!("bind {path:?}: {error}")),
+        session,
+    )
+    .unwrap()
 }
 
 fn connect(path: &Path) -> UnixStream {
@@ -106,12 +147,13 @@ fn drain(listener: &mut Listener, client: &mut UnixStream) -> WireResponse {
 
 #[test]
 fn named_generated_listener_reaches_publication_only_after_both_original_keys() {
+    let sockets = SocketDirectory::new();
     use crate::action::consequence::delivery::EndpointOutcome;
     use crate::action::consequence::delivery::stream::ReleaseFrame;
     use crate::action::consequence::oversight::ReviewWindow;
     use crate::round::{Verdict, commitment};
     let mut s = setup();
-    let path = s.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(s.port.clone(), &path, policy(), 4);
     let before = disk(&s);
     let idle = s
@@ -265,11 +307,12 @@ fn named_generated_listener_reaches_publication_only_after_both_original_keys() 
 
 #[test]
 fn named_listener_credentials_are_checked_before_source_intake() {
+    let sockets = SocketDirectory::new();
     let mut s = setup();
     let matching = policy();
     let wrong_uid = if matching.uid() == 0 { 1 } else { 0 };
     let wrong = PeerPolicy::new(wrong_uid, matching.gid(), matching.pid()).unwrap();
-    let refused_path = s.root.source().with_file_name("refused.sock");
+    let refused_path = sockets.path("refused.sock");
     let mut refused = bound(s.port.clone(), &refused_path, wrong, 4);
     let mut client = connect(&refused_path);
     send(&mut client, &document(&s.input));
@@ -288,7 +331,7 @@ fn named_listener_credentials_are_checked_before_source_intake() {
     assert_eq!(disk(&s), before);
     assert_eq!(s.source.status().read_attempts, reads);
 
-    let path = s.root.source().with_file_name("matching.sock");
+    let path = sockets.path("matching.sock");
     let mut listener = bound(s.port.clone(), &path, matching, 4);
     let mut client = connect(&path);
     send(&mut client, &document(&s.input));
@@ -311,9 +354,10 @@ fn named_listener_credentials_are_checked_before_source_intake() {
 
 #[test]
 fn named_listener_foreign_owner_invalid_budget_and_unscheduled_accept_leave_backlog_untouched() {
+    let sockets = SocketDirectory::new();
     let mut a = setup();
     let mut b = setup();
-    let path = b.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(b.port.clone(), &path, policy(), 4);
     let mut client = connect(&path);
     send(&mut client, &document(&b.input));
@@ -385,8 +429,9 @@ fn named_listener_foreign_owner_invalid_budget_and_unscheduled_accept_leave_back
 
 #[test]
 fn named_listener_fragments_and_reply_backpressure_preserve_source_read_boundaries() {
+    let sockets = SocketDirectory::new();
     let mut s = setup();
-    let path = s.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(s.port.clone(), &path, policy(), 4);
     let mut client = connect(&path);
     let doc = document(&s.input);
@@ -456,20 +501,33 @@ fn named_listener_fragments_and_reply_backpressure_preserve_source_read_boundari
         report.drive.unwrap().unwrap().intakes[0].result,
         Ok(capture(2, true, b"deny").identity())
     );
+    let denied = s.supervisor.host().unwrap().request_status(92).unwrap();
     assert!(matches!(
+        denied.disposition,
+        FileRequestDisposition::Admitted {
+            stage: crate::action::ActionState::Denied,
+            ..
+        }
+    ));
+    assert_eq!(
         drain(&mut listener, &mut client).result,
         Ok(Knowledge::Known {
             value: ActorOutcome::Denied,
-            ..
+            basis: crate::action::consequence::oversight::actor::ActorBasis {
+                request: 92,
+                generation: denied.generation,
+                source: crate::action::consequence::oversight::actor::BasisSource::ControlLedger,
+            },
         })
-    ));
+    );
     assert_eq!(s.supervisor.host().unwrap().inspect().executions, 0);
 }
 
 #[test]
 fn named_listener_busy_rejection_does_not_starve_the_existing_peer_or_reset_reconnect_limits() {
+    let sockets = SocketDirectory::new();
     let mut s = setup();
-    let path = s.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(s.port.clone(), &path, policy(), 2);
     let mut client = connect(&path);
     send(&mut client, &document(&s.input));
@@ -564,8 +622,9 @@ fn named_listener_busy_rejection_does_not_starve_the_existing_peer_or_reset_reco
 
 #[test]
 fn named_listener_reports_admission_even_when_the_trusted_drive_callback_fails() {
+    let sockets = SocketDirectory::new();
     let mut s = setup();
-    let path = s.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(s.port.clone(), &path, policy(), 4);
     let mut client = connect(&path);
     send(&mut client, &document(&s.input));
@@ -597,13 +656,14 @@ fn named_listener_reports_admission_even_when_the_trusted_drive_callback_fails()
 
 #[test]
 fn named_listener_recovery_retains_the_durable_source_floor_and_paused_decoder() {
+    let sockets = SocketDirectory::new();
     use crate::action::consequence::delivery::persistent::observed::guarded::{
         FileGuardSet, FileRecoveryFloor, FileRecoveryRequirements,
     };
     use crate::action::consequence::oversight::evidence_source::FileEvidenceSource;
     let mut s = setup();
     s.root.replace(&capture(2, true, b"allow"));
-    let path = s.root.source().with_file_name("actor.sock");
+    let path = sockets.path("actor.sock");
     let mut listener = bound(s.port.clone(), &path, policy(), 4);
     let mut client = connect(&path);
     let doc = document(&s.input);
@@ -660,7 +720,7 @@ fn named_listener_recovery_retains_the_durable_source_floor_and_paused_decoder()
     s.root.replace(&capture(1, true, b"allow"));
     let mut source =
         FileEvidenceSource::new(s.root.source(), 7, profile().delivery.scope, 4096).unwrap();
-    let path = s.root.source().with_file_name("recovered.sock");
+    let path = sockets.path("recovered.sock");
     let mut listener = bound(port, &path, policy(), 4);
     let mut client = connect(&path);
     send(&mut client, &doc);

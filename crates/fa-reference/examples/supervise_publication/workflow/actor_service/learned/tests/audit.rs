@@ -3,7 +3,8 @@ use super::super::audit as audit_command;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::{
     guarded::anchored::{FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES},
-    replay::FileReviewReplay,
+    replay::{FileReviewReplay, FileReviewReplayStatus},
+    decoder::learned::sidecar::FileLearnedSidecarFinish,
 };
 use fa_reference::strict_json::{self, Json, Limits};
 use std::{collections::BTreeMap, io, path::PathBuf};
@@ -26,9 +27,8 @@ fn recorded(mode: Option<bool>, spelling: &[u8], publish: bool) -> Case {
     }
     evidence(&root, &config, 1, true, false);
     let loaded = recipe::load(&path, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &loaded).unwrap();
-    let mut prediction =
-        observer.map(|observer| prediction::Session::new(loaded.request, observer));
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &loaded).unwrap();
+    let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);
@@ -118,7 +118,28 @@ fn recorded(mode: Option<bool>, spelling: &[u8], publish: bool) -> Case {
         assert!(executed(&mut wire, loaded.request));
     }
     let host = driver.supervisor().host().unwrap();
-    let expected = host.review_replay(loaded.rounds[0]).unwrap();
+    let mut cursor = host.begin_review_replay(loaded.rounds[0]).unwrap();
+    while cursor.progress().status == FileReviewReplayStatus::Replaying {
+        cursor.advance(cursor.progress().replayed_events, 1).unwrap();
+    }
+    let audit = cursor.finish_with_effects().unwrap();
+    let expected = audit.review().clone();
+    let FileLearnedSidecarFinish::Applied { receipt, archive, .. } = &native.history()[0]
+        else { panic!("the actual native round must apply its result"); };
+    assert_eq!(expected.archive(), archive); assert_eq!(expected.application(), receipt);
+    assert_eq!(expected.application_inputs(), Some(archive.inputs.as_ref()));
+    assert_eq!(audit.effect().selected_review_dispatched(), publish);
+    if publish {
+        let dispatch = audit.effect().dispatch().unwrap();
+        assert_eq!(dispatch.authorization().round(), loaded.rounds[0]);
+        assert_eq!(dispatch.authorization().review_revision(), expected.completed_snapshot().revision);
+        assert_eq!(dispatch.authorization().input_revision(), archive.input_revision);
+        assert_eq!(dispatch.human(), &host.human_status(701).unwrap());
+        assert!(audit.effect().outcome().is_some());
+        assert!(audit.effect().reconciliation().is_some());
+    } else {
+        assert!(audit.effect().dispatch().is_none()); assert!(audit.effect().outcome().is_none());
+    }
     let anchor = host.history_anchor().unwrap();
     assert_eq!(expected.journal_snapshot(), &host.inspect());
     drop(host);
@@ -198,18 +219,10 @@ fn write_config(root: &Root) -> PathBuf {
 fn actual_cli_audits_all_original_modes_after_live_helper_and_evidence_removal() {
     for mode in [None, Some(false), Some(true)] {
         let case = recorded(mode, b"allow", true);
-        let anchor = anchor_file(&case);
-        let config = write_config(&case.root);
-        assert_eq!(Config::read(&config).unwrap().profile, case.config.profile);
-        for name in [
-            "evidence.json",
-            "native-roster.json",
-            "helper-model.json",
-            "helper-weights.safetensors",
-            "helper-tokenizer.bbpe",
-            "helper-sampling.json",
-            "helper-monitor.json",
-        ] {
+        let anchor = anchor_file(&case); let config = write_config(&case.root);
+        crate::config::assert_oversight_profiles_eq(&Config::read(&config).unwrap().profile, &case.config.profile);
+        for name in ["evidence.json", "native-roster.json", "helper-model.json",
+            "helper-weights.safetensors", "helper-tokenizer.bbpe", "helper-sampling.json", "helper-monitor.json"] {
             fs::remove_file(case.root.0.join(name)).unwrap();
         }
         fs::remove_dir(case.root.0.join("peers")).unwrap();

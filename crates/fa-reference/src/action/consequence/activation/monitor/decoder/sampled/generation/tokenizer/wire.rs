@@ -1,6 +1,8 @@
 //! Strict FA-BBPE/1 and named-control FA-BBPE/2 interchange. Static scaled model
 //! profiles use /3 and /4 with an exact numerical extension; legacy bytes stay.
 //! Explicit Unicode-17 input grammars use /5 and bind their whole interpretation.
+//! The opt-in Llama-3 BOS prefix uses /6; /1 through /5 stay byte-identical.
+//! Explicit whole-piece-first BPE uses /7; /1 through /6 stay byte-identical.
 //! A file cannot choose its model identity,
 //! dimensions or numerical profile: compare the independently supplied header
 //! before allocating its vocabulary. This encoding provides no authentication.
@@ -14,8 +16,11 @@ const NAMED_DOMAIN: &[u8; 8] = b"FABBPE02";
 const SCALED_DOMAIN: &[u8; 8] = b"FABBPE03";
 const SCALED_NAMED_DOMAIN: &[u8; 8] = b"FABBPE04";
 const UNICODE_DOMAIN: &[u8; 8] = b"FABBPE05";
+const BOS_DOMAIN: &[u8; 8] = b"FABBPE06";
+const WHOLE_PIECE_DOMAIN: &[u8; 8] = b"FABBPE07";
 const HEADER_BYTES: usize = 120;
 const UNICODE_BINDING_BYTES: usize = 6;
+const WHOLE_PIECE_BINDING_BYTES: usize = 8;
 pub(super) const MAX_FILE_BYTES: usize = HEADER_BYTES
     + 5 * MAX_DECODER_VOCABULARY
     + MAX_VOCABULARY_BYTES
@@ -24,15 +29,20 @@ pub(super) const MAX_FILE_BYTES: usize = HEADER_BYTES
     + 4
     + 8 * MAX_CONTROL_TOKENS
     + MAX_SPECIAL_TOKEN_BYTES
-    + UNICODE_BINDING_BYTES;
+    + WHOLE_PIECE_BINDING_BYTES
+    + 4;
 
 impl ByteBpe {
     pub fn to_bytes(&self) -> Result<Vec<u8>, Error> {
         let scaling = self.profile().rotary_scaling().binding_bytes();
         let unicode = self.pre_tokenization() != PreTokenization::RawBytes;
+        let bos = self.bos_token();
+        let whole_piece = self.merge_policy() == MergePolicy::WholePieceFirst;
         let mut count = HEADER_BYTES
             + scaling.as_ref().map_or(0, |bytes| bytes.len())
-            + if unicode { UNICODE_BINDING_BYTES } else { 0 }
+            + if whole_piece { WHOLE_PIECE_BINDING_BYTES }
+                else if unicode { UNICODE_BINDING_BYTES } else { 0 }
+            + if bos.is_some() { 4 } else { 0 }
             + 4
             + 12 * self.0.merges.len();
         for token in &self.0.vocabulary {
@@ -56,14 +66,26 @@ impl ByteBpe {
         let mut output = Vec::new();
         output.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut encoded_header = header(self.profile());
-        encoded_header[..8].copy_from_slice(domain(named, scaling.is_some(), unicode));
+        encoded_header[..8].copy_from_slice(if whole_piece { WHOLE_PIECE_DOMAIN } else { domain(
+            named,
+            scaling.is_some(),
+            unicode,
+            bos.is_some(),
+        ) });
         output.extend_from_slice(&encoded_header);
-        if unicode {
+        if whole_piece {
+            output.extend_from_slice(&whole_piece_binding(self.pre_tokenization(),
+                named, scaling.is_some(), bos.is_some())?);
+        } else if unicode {
             output.extend_from_slice(&unicode_binding(
                 self.pre_tokenization(),
                 named,
                 scaling.is_some(),
+                bos.is_some(),
             )?);
+        }
+        if let Some(bos) = bos {
+            output.extend_from_slice(&bos.to_be_bytes());
         }
         if let Some(binding) = scaling {
             output.extend_from_slice(&binding);
@@ -104,30 +126,42 @@ impl ByteBpe {
         }
         let mut reader = Reader { bytes, at: 0 };
         let supplied = reader.take(HEADER_BYTES)?;
-        let unicode = &supplied[..8] == UNICODE_DOMAIN;
-        let (named, scaled, pre_tokenization) = match &supplied[..8] {
-            domain if domain == DOMAIN => (false, false, PreTokenization::RawBytes),
-            domain if domain == NAMED_DOMAIN => (true, false, PreTokenization::RawBytes),
-            domain if domain == SCALED_DOMAIN => (false, true, PreTokenization::RawBytes),
-            domain if domain == SCALED_NAMED_DOMAIN => (true, true, PreTokenization::RawBytes),
-            domain if domain == UNICODE_DOMAIN => {
-                read_unicode_binding(reader.take(UNICODE_BINDING_BYTES)?)?
+        let whole_piece = &supplied[..8] == WHOLE_PIECE_DOMAIN;
+        let legacy_bos = &supplied[..8] == BOS_DOMAIN;
+        let (named, scaled, pre_tokenization, has_bos) = match &supplied[..8] {
+            domain if domain == DOMAIN => (false, false, PreTokenization::RawBytes, false),
+            domain if domain == NAMED_DOMAIN => (true, false, PreTokenization::RawBytes, false),
+            domain if domain == SCALED_DOMAIN => (false, true, PreTokenization::RawBytes, false),
+            domain if domain == SCALED_NAMED_DOMAIN => (true, true, PreTokenization::RawBytes, false),
+            domain if domain == UNICODE_DOMAIN || domain == BOS_DOMAIN => {
+                let (named, scaled, mode) = read_unicode_binding(reader.take(UNICODE_BINDING_BYTES)?, legacy_bos)?;
+                (named, scaled, mode, legacy_bos)
+            }
+            domain if domain == WHOLE_PIECE_DOMAIN => {
+                read_whole_piece_binding(reader.take(WHOLE_PIECE_BINDING_BYTES)?)?
             }
             _ => return Err(Error::Binding),
         };
+        let unicode = pre_tokenization != PreTokenization::RawBytes;
+        let merge_policy = if whole_piece { MergePolicy::WholePieceFirst } else { MergePolicy::RankedOnly };
+        let bos = if has_bos { Some(reader.u32()?) } else { None };
+        if bos.is_some_and(|id| id as usize >= expected.shape().vocabulary) {
+            return Err(Error::Binding);
+        }
         let scaling = expected.rotary_scaling().binding_bytes();
         if scaled != scaling.is_some() {
             return Err(Error::Binding);
         }
         let mut expected_header = header(expected);
-        expected_header[..8].copy_from_slice(domain(named, scaled, unicode));
+        expected_header[..8].copy_from_slice(if whole_piece { WHOLE_PIECE_DOMAIN }
+            else { domain(named, scaled, unicode, has_bos) });
         if supplied != expected_header.as_slice() {
             return Err(Error::Binding);
         }
-        if let Some(binding) = scaling {
-            if reader.take(binding.len())? != binding {
-                return Err(Error::Binding);
-            }
+        if let Some(binding) = scaling
+            && reader.take(binding.len())? != binding
+        {
+            return Err(Error::Binding);
         }
         let count = expected.shape().vocabulary;
         if count < 256 {
@@ -182,12 +216,13 @@ impl ByteBpe {
             });
         }
         if !named {
-            return Self::new_with_pre_tokenization(
+            return Self::new_with_merge_policy(
                 expected.clone(),
                 vocabulary,
                 merges,
                 BTreeMap::new(),
                 pre_tokenization,
+                merge_policy,
             );
         }
         let count = reader.u32()? as usize;
@@ -230,17 +265,25 @@ impl ByteBpe {
         if reader.at != bytes.len() {
             return Err(Error::InvalidInput);
         }
-        Self::new_with_pre_tokenization(
-            expected.clone(),
-            vocabulary,
-            merges,
-            names,
-            pre_tokenization,
-        )
+        match bos {
+            Some(bos) => Self::new_with_bos_token_and_merge_policy(expected.clone(), vocabulary,
+                merges, names, bos, merge_policy),
+            None => Self::new_with_merge_policy(
+                expected.clone(),
+                vocabulary,
+                merges,
+                names,
+                pre_tokenization,
+                merge_policy,
+            ),
+        }
     }
 }
 
-fn domain(named: bool, scaled: bool, unicode: bool) -> &'static [u8; 8] {
+fn domain(named: bool, scaled: bool, unicode: bool, bos: bool) -> &'static [u8; 8] {
+    if bos {
+        return BOS_DOMAIN;
+    }
     if unicode {
         return UNICODE_DOMAIN;
     }
@@ -256,26 +299,30 @@ fn unicode_binding(
     mode: PreTokenization,
     named: bool,
     scaled: bool,
+    bos: bool,
 ) -> Result<[u8; UNICODE_BINDING_BYTES], Error> {
+    if bos && (mode != PreTokenization::Llama3Unicode17 || !named) {
+        return Err(Error::Binding);
+    }
     let algorithm = match mode {
         PreTokenization::RawBytes => return Err(Error::Binding),
         PreTokenization::Gpt2Unicode17 => 1,
         PreTokenization::Llama3Unicode17 => 2,
     };
     let (major, minor, patch) = mode.unicode_version().ok_or(Error::Binding)?;
-    // Prefix insertion is explicitly false. The two low flags retain the
-    // original named-control and static numerical extensions; no other bits exist.
+    // Version 5 keeps prefix insertion disabled. Version 6 requires precisely
+    // one named BOS and its following original u32 ID. All other bits refuse.
     Ok([
         algorithm,
         major,
         minor,
         patch,
         u8::from(named) | (u8::from(scaled) << 1),
-        0,
+        u8::from(bos),
     ])
 }
 
-fn read_unicode_binding(bytes: &[u8]) -> Result<(bool, bool, PreTokenization), Error> {
+fn read_unicode_binding(bytes: &[u8], bos: bool) -> Result<(bool, bool, PreTokenization), Error> {
     let mode = match bytes[0] {
         1 => PreTokenization::Gpt2Unicode17,
         2 => PreTokenization::Llama3Unicode17,
@@ -283,10 +330,40 @@ fn read_unicode_binding(bytes: &[u8]) -> Result<(bool, bool, PreTokenization), E
     };
     let named = bytes[4] & 1 != 0;
     let scaled = bytes[4] & 2 != 0;
-    if bytes != unicode_binding(mode, named, scaled)? {
+    if bytes != unicode_binding(mode, named, scaled, bos)? {
         return Err(Error::Binding);
     }
     Ok((named, scaled, mode))
+}
+
+fn whole_piece_binding(mode: PreTokenization, named: bool, scaled: bool, bos: bool)
+    -> Result<[u8; WHOLE_PIECE_BINDING_BYTES], Error>
+{
+    if bos && (mode != PreTokenization::Llama3Unicode17 || !named) {
+        return Err(Error::Binding);
+    }
+    let algorithm = match mode {
+        PreTokenization::RawBytes => 0,
+        PreTokenization::Gpt2Unicode17 => 1,
+        PreTokenization::Llama3Unicode17 => 2,
+    };
+    let (major, minor, patch) = mode.unicode_version().unwrap_or((0, 0, 0));
+    Ok([algorithm, major, minor, patch, u8::from(named) | (u8::from(scaled) << 1),
+        u8::from(bos), 1, 0])
+}
+
+fn read_whole_piece_binding(bytes: &[u8]) -> Result<(bool, bool, PreTokenization, bool), Error> {
+    let mode = match bytes[0] {
+        0 => PreTokenization::RawBytes,
+        1 => PreTokenization::Gpt2Unicode17,
+        2 => PreTokenization::Llama3Unicode17,
+        _ => return Err(Error::Binding),
+    };
+    let named = bytes[4] & 1 != 0;
+    let scaled = bytes[4] & 2 != 0;
+    let bos = bytes[5] != 0;
+    if bytes != whole_piece_binding(mode, named, scaled, bos)? { return Err(Error::Binding); }
+    Ok((named, scaled, mode, bos))
 }
 
 fn header(profile: &DecoderProfile) -> [u8; HEADER_BYTES] {

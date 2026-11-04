@@ -163,7 +163,11 @@ fn complete(run: &mut FileNativeSupervisedDriver) {
         if run.review().status() != NativeReviewStatus::Running { return; }
         run.advance(run.review().revision(), ElapsedTick(1), snapshot()).unwrap();
     }
-    panic!("original numerical review exceeded its fixed schedule");
+    panic!(
+        "original numerical review exceeded its fixed schedule: {:?}; member records: {:?}",
+        run.progress(),
+        native_records(run.review()).collect::<Vec<_>>()
+    );
 }
 fn progress(
     driver: &mut FileSupervisedDriver,
@@ -281,6 +285,77 @@ fn refinement_hands_the_original_actor_ticket_to_both_keys_and_one_real_publicat
     ));
     assert_eq!(driver.supervisor().host().unwrap().inspect().executions, 1);
     assert!(native_records(&review).any(|r| r.progress.completed_probes > 0));
+    for record in native_records(&review)
+        .filter(|r| r.progress.basis == Some(SidecarDecisionBasis::NativeModel))
+    {
+        let native = record.progress.native;
+        assert!(native.requested_prompt_tokens > 0);
+        assert_eq!(
+            native.reviewed_prompt_tokens,
+            native.requested_prompt_tokens
+        );
+        let tokens = usize::try_from(native.work.decoder.tokens).unwrap();
+        let frame_bytes =
+            crate::action::consequence::activation::HEADER_BYTES + 2 * std::mem::size_of::<f32>();
+        assert_eq!(native.work.monitoring.encoded_bytes, tokens * frame_bytes);
+        assert_eq!(native.work.monitoring.probe_coordinates, tokens * 2);
+        assert!(tokens <= 4096);
+    }
+}
+
+#[test]
+fn underfunded_whole_input_review_keeps_the_original_hold_and_cannot_handoff_a_vote() {
+    let root = Directory::new();
+    let (port, ticket, _, driver, mut launch) = pending(&root, 1, b"allow");
+    for roster in launch.rosters.values_mut() {
+        for member in roster.values_mut() {
+            let profile = member.evaluator.policy().input_profile.clone();
+            member.evaluator =
+                native_fixture::evaluator_with_monitor_bytes(profile, b"allow", Some(100_000));
+        }
+    }
+    let mut run = driver
+        .start_native_learned_sequence(launch, snapshot(), ElapsedTick(1))
+        .unwrap();
+    let reserved = run.review().reservation();
+    for _ in 0..crate::action::consequence::oversight::learned_host::sidecar::workers::MAX_LEARNED_REVIEW_POLLS {
+        if native_records(run.review()).any(|record| record.failure.is_some()) { break; }
+        run.advance(run.review().revision(), ElapsedTick(1), snapshot()).unwrap();
+    }
+    let failed: Vec<_> = native_records(run.review())
+        .filter(|record| record.failure.is_some())
+        .collect();
+    assert!(!failed.is_empty());
+    for record in failed {
+        let native = record.progress.native;
+        assert_eq!(native.status, NativeEvaluationStatus::Failed(
+            crate::action::consequence::oversight::helper_client::native::NativeEvaluationError::Incomplete(
+                crate::action::consequence::activation::monitor::decoder::sampled::generation::GenerationFinish::Held)));
+        assert!(native.reviewed_prompt_tokens < native.requested_prompt_tokens);
+        assert_eq!(native.work.sampled_draws, 0);
+        assert!(native.work.monitoring.encoded_bytes <= 100_000);
+        assert_eq!(record.progress.basis, None);
+        assert!(!record.commitment_queued);
+        assert!(!record.reveal_queued);
+    }
+    assert!(
+        native_records(run.review())
+            .all(|record| record.progress.basis != Some(SidecarDecisionBasis::NativeModel))
+    );
+    assert_eq!(run.supervisor().host().unwrap().inspect().executions, 0);
+    assert!(matches!(
+        port.poll(&ticket),
+        Knowledge::Pending { request: 41 }
+    ));
+    let mut run = *run.into_handoff().unwrap_err();
+    let before = costs(run.review());
+    run.cancel(run.review().revision()).unwrap();
+    assert_eq!(run.review().reservation(), reserved);
+    assert_eq!(costs(run.review()), before);
+    assert_eq!(
+        run.into_handoff().unwrap().driver.phase(),
+        FileDriverPhase::Idle
+    );
 }
 
 #[test]

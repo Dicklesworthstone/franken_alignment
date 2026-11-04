@@ -15,6 +15,8 @@ use std::{
     rc::{Rc, Weak},
 };
 
+pub mod cache;
+mod learned;
 pub const MAX_PRECHECK_QUERIES: usize = 128;
 
 /// Only exact constraints at a disclosed cut are checked. Both outcomes still
@@ -54,6 +56,8 @@ struct Disclosure {
     id: u64,
     remaining: Cell<usize>,
     projection: PrecheckProjection,
+    cache: Option<cache::Binding>,
+    learned: Option<learned::Release>,
 }
 
 /// Keep this with the supervisor. Dropping or consuming it revokes ALL copies
@@ -124,38 +128,29 @@ impl FileActorSupervisor<FileOversight> {
     /// a new grant after fresh observation, but cannot refresh the old port.
     /// Source-only ordinary publications are supported; numerical/generated and
     /// stream/predictive lanes have no raw-proposal disclosure fallback.
-    pub fn disclose_exact_precheck(
-        &self,
-        expected_revision: u64,
-        disclosure: u64,
-        queries: usize,
+    pub fn disclose_exact_precheck(&self, expected_revision: u64, disclosure: u64, queries: usize)
+        -> Result<(FileActorPrecheckPort, FilePrecheckDisclosure), JournalError>
+    {
+        self.disclose_exact_precheck_with_cache(expected_revision, disclosure, queries, None)
+    }
+
+    fn disclose_exact_precheck_with_cache(&self, expected_revision: u64, disclosure: u64,
+        queries: usize, cache: Option<cache::Shared>,
     ) -> Result<(FileActorPrecheckPort, FilePrecheckDisclosure), JournalError> {
-        if disclosure == 0 || queries == 0 {
-            return Err(Error::InvalidInput.into());
-        }
-        if queries > MAX_PRECHECK_QUERIES {
-            return Err(Error::Limit.into());
-        }
-        let owner = self
-            .owner
-            .try_borrow()
-            .map_err(|_| JournalError::Unavailable)?;
-        if owner.host.storage_failure().is_some() {
-            return Err(JournalError::Unavailable);
-        }
-        if owner.host.revision() != expected_revision {
-            return Err(Error::Stale.into());
-        }
+        if disclosure == 0 || queries == 0 { return Err(Error::InvalidInput.into()); }
+        if queries > MAX_PRECHECK_QUERIES { return Err(Error::Limit.into()); }
+        let owner = self.owner.try_borrow().map_err(|_| JournalError::Unavailable)?;
+        if owner.host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
+        if owner.host.revision() != expected_revision { return Err(Error::Stale.into()); }
         let projection = owner.host.actor_precheck_projection()?;
-        let grant = Rc::new(Disclosure {
-            id: disclosure,
-            remaining: Cell::new(queries),
-            projection,
-        });
-        let port = FileActorPrecheckPort {
-            owner: Rc::downgrade(&self.owner),
-            disclosure: Rc::downgrade(&grant),
+        let cache = match cache {
+            Some(state) => Some(cache::Binding::new(state,
+                owner.host.file_source_status().ok_or(Error::WrongState)?.policy)),
+            None => None,
         };
+        let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache,
+            learned: None });
+        let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner), disclosure: Rc::downgrade(&grant) };
         Ok((port, FilePrecheckDisclosure { disclosure: grant }))
     }
 }
@@ -163,13 +158,59 @@ impl FileActorSupervisor<FileOversight> {
 impl FileActorPrecheckPort {
     /// One bounded read, not a submission or an idempotent effect request.
     /// Labels are echoed as read provenance only; repeated labels still spend
-    /// query work. Invalid proposals and evaluator failures spend their entered
-    /// query too. Revoked/stale/unavailable grants perform no evaluation.
-    pub fn check(
-        &self,
-        query: u64,
-        proposal: &ActorProposal,
-    ) -> Result<FilePrecheckObservation, ActorError> {
+    /// query work, including cache hits. Invalid proposals and evaluator failures
+    /// spend their entered query too. Revoked/stale grants do no evaluation.
+    pub fn check(&self, query: u64, proposal: &ActorProposal)
+        -> Result<FilePrecheckObservation, ActorError>
+    {
+        self.with_disclosure(|grant| {
+            let projection = &grant.projection;
+            let unknown = || Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable };
+            if query == 0 { return Err(ActorError::MalformedProposal); }
+            if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
+                return Err(ActorError::Capacity);
+            }
+            let spec = match &grant.learned {
+                Some(release) => release.action(proposal)?,
+                None => ActionSpec { version: VERSION, scope: projection.scope,
+                    target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),
+                    policy_epoch: proposal.expected_policy_epoch, deadline: proposal.deadline, units: proposal.units },
+            };
+            let action = FrozenAction::freeze(spec).map_err(|_| ActorError::MalformedProposal)?;
+            if proposal.expected_policy_epoch != projection.epoch {
+                return Ok(Knowledge::Stale { generation: proposal.expected_policy_epoch, current: projection.epoch });
+            }
+            // These CURRENT grant screens always precede the optional cache.
+            // The cache stores only policy evaluation, never the entire pass.
+            let denied = projection.stopped || action.spec().target != Some(projection.target)
+                || projection.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(projection.target))
+                || projection.now >= action.spec().deadline || action.spec().units > projection.available;
+            let value = if denied { FilePrecheckOutcome::DeniedByPolicy } else {
+                let evaluated = match &grant.cache {
+                    Some(cache) => cache.evaluate(projection, &action),
+                    None => cache::evaluate_uncached(projection, &action),
+                };
+                match evaluated {
+                    Ok(Some(value)) => value,
+                    Ok(None) => return Ok(unknown()),
+                    Err(Error::Limit | Error::Overflow) => return Err(ActorError::Capacity),
+                    Err(_) => return Ok(unknown()),
+                }
+            };
+            // Every result receives this query's original live disclosure basis;
+            // a cached evaluation cannot replay an earlier response or label.
+            Ok(Knowledge::Known { value, basis: FilePrecheckBasis {
+                disclosure: grant.id, query, policy_epoch: projection.epoch, observed_at: projection.now,
+            } })
+        })
+    }
+
+    // One eligibility and lifetime-accounting boundary for exact evaluation and
+    // capability discovery. Keep the original owner borrow through the read.
+    // No callback can obtain a mutable owner or reset this disclosure's budget.
+    fn with_disclosure<T>(&self,
+        read: impl FnOnce(&Disclosure) -> Result<Knowledge<T, FilePrecheckBasis>, ActorError>,
+    ) -> Result<Knowledge<T, FilePrecheckBasis>, ActorError> {
         let Some(grant) = self.disclosure.upgrade() else {
             return Ok(Knowledge::Withheld {
                 authority_required: "exact_policy_disclosure",
@@ -192,78 +233,14 @@ impl FileActorPrecheckPort {
             return Ok(unknown());
         }
         let remaining = grant.remaining.get();
-        if remaining == 0 {
-            return Err(ActorError::Capacity);
-        }
-        // Charge before any fallible freeze/evaluation (including an unwind).
+        if remaining == 0 { return Err(ActorError::Capacity); }
+        // Charge before any fallible validation/evaluation, including an unwind.
         grant.remaining.set(remaining - 1);
-        if query == 0 {
-            return Err(ActorError::MalformedProposal);
-        }
-        if proposal.payload.len() > MAX_PAYLOAD_BYTES
-            || proposal.payload.len() as u64 > proposal.units
-        {
-            return Err(ActorError::Capacity);
-        }
-        let action = FrozenAction::freeze(ActionSpec {
-            version: VERSION,
-            scope: projection.scope,
-            target: Some(proposal.target),
-            payload: proposal.payload.clone(),
-            required_witnesses: Vec::new(),
-            policy_epoch: proposal.expected_policy_epoch,
-            deadline: proposal.deadline,
-            units: proposal.units,
-        })
-        .map_err(|_| ActorError::MalformedProposal)?;
-        if proposal.expected_policy_epoch != projection.epoch {
-            return Ok(Knowledge::Stale {
-                generation: proposal.expected_policy_epoch,
-                current: projection.epoch,
-            });
-        }
-        // Exact resource/target screens use the captured ORIGINAL owner state.
-        // They do not create a shadow admission or reserve available units.
-        let denied = projection.stopped
-            || proposal.target != projection.target
-            || projection
-                .ceiling
-                .as_ref()
-                .is_some_and(|ceiling| !ceiling.contains(proposal.target))
-            || projection.now >= proposal.deadline
-            || proposal.units > projection.available;
-        let value = if denied {
-            FilePrecheckOutcome::DeniedByPolicy
-        } else {
-            let evaluation = match projection.policy.evaluate(&action, &projection.snapshot) {
-                Ok(evaluation) => evaluation,
-                Err(Error::Limit | Error::Overflow) => return Err(ActorError::Capacity),
-                Err(_) => return Ok(unknown()),
-            };
-            if evaluation
-                .trace()
-                .iter()
-                .any(|step| step.result == Truth::Unknown)
-            {
-                return Ok(unknown());
-            }
-            if evaluation.certifiable() {
-                FilePrecheckOutcome::PrecheckPassed
-            } else {
-                FilePrecheckOutcome::DeniedByPolicy
-            }
-        };
-        Ok(Knowledge::Known {
-            value,
-            basis: FilePrecheckBasis {
-                disclosure: grant.id,
-                query,
-                policy_epoch: projection.epoch,
-                observed_at: projection.now,
-            },
-        })
+        read(&grant)
     }
 }
+
+pub mod wire;
 
 #[cfg(test)]
 mod tests;

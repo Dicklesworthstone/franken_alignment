@@ -44,7 +44,7 @@ impl KvContract {
         {
             return Err(Error::Binding);
         }
-        if query_heads == 0 || query_heads % keys.heads() != 0 {
+        if query_heads == 0 || !query_heads.is_multiple_of(keys.heads()) {
             return Err(Error::InvalidInput);
         }
         if query_heads > super::MAX_VALUES {

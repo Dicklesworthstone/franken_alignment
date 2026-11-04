@@ -2,7 +2,10 @@
 //! Independent labels and helper answers are synthetic enforcement fixtures.
 use super::super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;
-use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
+use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::{
+    ReviewDecision, ReviewPacket,
+};
+use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge, UnknownReason};
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     ActorExchange, ClientIoBudget, ClientIoLimits, ClientProgress,
@@ -76,7 +79,11 @@ fn actor(
         }
     })
 }
-fn human(profile: PeerProfile, config: &Config, approve: bool) -> std::thread::JoinHandle<()> {
+fn human(
+    profile: PeerProfile,
+    config: &Config,
+    approve: bool,
+) -> std::thread::JoinHandle<ReviewPacket> {
     let store = config.store.clone();
     let bootstrap = config.profile.clone();
     std::thread::spawn(move || {
@@ -86,6 +93,7 @@ fn human(profile: PeerProfile, config: &Config, approve: bool) -> std::thread::J
             pause(1);
         }
         let mut client = profile.connect_client(91).unwrap();
+        let mut packet = None;
         loop {
             assert!(start.elapsed() < Duration::from_secs(12));
             match client.step().unwrap() {
@@ -96,6 +104,7 @@ fn human(profile: PeerProfile, config: &Config, approve: bool) -> std::thread::J
                             .executions,
                         0
                     );
+                    packet = Some(client.packet().unwrap().clone());
                     client
                         .respond(if approve {
                             ReviewDecision::Approve
@@ -104,7 +113,7 @@ fn human(profile: PeerProfile, config: &Config, approve: bool) -> std::thread::J
                         })
                         .unwrap();
                 }
-                ReviewClientProgress::Complete => return,
+                ReviewClientProgress::Complete => return packet.unwrap(),
                 _ => pause(1),
             }
         }
@@ -199,7 +208,13 @@ fn native_joint_requalification_resumes_original_work_but_never_replaces_the_hum
                 &mut output,
             );
             assert!(result.is_ok(), "{result:?}");
-            human.join().unwrap();
+            let packet = human.join().unwrap();
+            assert_eq!(
+                ReleaseFrame::decode(&packet.action().spec().payload)
+                    .unwrap()
+                    .message(),
+                Some("A")
+            );
             assert_eq!(executed(&actor.join().unwrap()), approve);
             let after = FileOversight::read_decoder_text_progress(
                 &store, &bootstrap, &decoder, &tokenizer, 7,
@@ -214,6 +229,10 @@ fn native_joint_requalification_resumes_original_work_but_never_replaces_the_hum
             assert_eq!(after.publication.control.ledger.reserved, 0);
             if approve {
                 assert_eq!(after.publication.payload, b"A");
+                assert_eq!(
+                    after.publication.control.ledger.charged,
+                    packet.action().spec().payload.len() as u64
+                );
             } else {
                 assert!(after.publication.payload.is_empty());
                 assert_eq!(after.publication.control.ledger.charged, 0);

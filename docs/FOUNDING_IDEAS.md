@@ -143,6 +143,7 @@ Not every mechanism is a literal essay idea. These additions exist to make an es
 | Address scheme, vocabulary and journal | §17.2, §17.8 | Evidence report (FI-A06), post-round record (FI-A14), least expenditure (FI-A17) |
 | Situation report, explain trees and affordances | §17.4, §17.8, §22.1 | External control an operator can actually drive (FI-A02, FI-A13, FI-A17); language as debugger (FI-I18) |
 | Rehearsal via branches | §12.4, §17.8 | Save, rewind, branch and try before acting without a production-credential leak (FI-I03, FI-I09) |
+| File-backed prompt counterfactual campaigns | §12.2, §12.4 | One-way investigation (FI-A16) and causal debugging (FI-I11) through exact source edits, original paired generators and a complete censored-outcome denominator, without production rights |
 | Codec-worker containment | §10.8 | Codec workers have no permit or production-egress path (FI-A02); their activation representation remains subject to identity binding and independent raw-sample audit (FI-A05) |
 | Numerical probe error bounds | §10.12 | Functional-fidelity claims require registered conservative bounds, not average reconstruction error (FI-I07) |
 | Distributed authority rights and fencing | §§15.3–15.4 | Fleet control retains exact spend rights and live ownership across partitions (FI-A02) |
@@ -157,6 +158,7 @@ Not every mechanism is a literal essay idea. These additions exist to make an es
 | Purpose-bound privacy and retention | §16.6 | Authorization and separately governed deletion prevent retention from widening access (FI-A02); live evidence and replay promises remain explicit when retention changes (FI-A06) |
 | Single-owner repair contract | §16.8 | Repair profiles expose authenticated recovery dependencies (FI-A06) and the multiplied redundancy overhead their named failure-layer ownership incurs (FI-A17) |
 | Recovery nonresurrection fence | §16.9 | Restored state never revives old authority or guessed outcomes (FI-A02) |
+| Prompt-boundary containment before reset | §9.8, §11.10, §§15.2/15.6 | External control (FI-A02), typed consequences (FI-A09) and one-way rewind containment (FI-A16) preserve spent rights, actor/predictor state, original incident history and exact topology-source custody while narrowing the target ceiling and withdrawing its old cut |
 | Discovery-versus-proof-complete retrieval | §17.6 | Approximate discovery cannot stand in for the closed evidence domain required by a hard report (FI-A06) |
 | Scaling topology boundaries | §18.5 | Costed control is partitioned before inventing global consensus machinery (FI-A17) |
 | Preallocation asymptotic budgets | §18.7 | Control costs include bounded graph/tensor/decoder working sets before allocation (FI-A17) |

@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 #[path = "mediated_learned_recovery/support.rs"]
 mod custody;
+use custody::{graph, protocol, assessment, certify, replacement, update, fresh_identity, snapshot};
 #[path = "mediated_predictive_learned_recovery/native_fixture.rs"]
 mod native_fixture;
 #[path = "support/learned_text_model.rs"]
@@ -13,9 +14,8 @@ mod native_fixture;
 mod numerical;
 #[path = "mediated_predictive_learned_recovery/support.rs"]
 mod support;
-use custody::{
-    assessment, certify, fresh_identity, graph, protocol, replacement, snapshot, update,
-};
+#[path = "mediated_predictive_learned_recovery/stream_control.rs"]
+mod stream_control;
 use support::*;
 
 use fa_reference::action::consequence::activation::{

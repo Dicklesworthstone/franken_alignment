@@ -350,7 +350,7 @@
       "id": "FA-014",
       "gate": "G1",
       "title": "Implement crash recovery and unknown reconciliation",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-010",
         "FA-012",
@@ -383,7 +383,61 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/tests/recovery/stopped.rs",
         "crates/fa-reference/tests/learned_text_stream_durable/continuation/forecast_reserve/stop_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stopped.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stopped.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stopped.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/predictive.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
+        "crates/fa-reference/tests/mediated_learned_reserve.rs",
+        "docs/MEDIATED_LEARNED_RECOVERY.md",
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/peer_intake.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/creation/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated/profile.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts.rs",
+        "docs/LEARNED_OPERATOR_PUBLICATION.md",
+        "docs/LEARNED_RECEIPT_SERVICE.md",
+        "docs/DURABLE_UNKNOWN_ABANDONMENT.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/abandonment/tests/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/recover_stop/guarded/abandonment/operator_tests.rs",
+        "docs/LEARNED_UNKNOWN_ABANDONMENT.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/abandonment.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/topology/checkpoint/abandonment.rs",
+        "crates/fa-reference/tests/learned_unknown_abandonment.rs",
+        "docs/LEARNED_RECOVERY_STOP_PEER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/abandonment/custody.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/receipt_selection/reconciled/operator/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology/receipts/abandonment.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs",
+        "docs/LEARNED_RECOVERY_POLICY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery_policy.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_policy.rs"
       ]
     },
     {
@@ -464,7 +518,7 @@
       "id": "FA-018",
       "gate": "G2",
       "title": "Implement isolated bounded helper workers",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-008",
         "FA-011",
@@ -481,7 +535,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A03"
       ]
@@ -490,7 +549,7 @@
       "id": "FA-019",
       "gate": "G2",
       "title": "Implement native frozen congress rounds",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-004",
         "FA-018"
@@ -506,7 +565,12 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A06",
         "FI-A13",
@@ -643,7 +707,7 @@
       "id": "FA-025",
       "gate": "G3",
       "title": "Establish original-token recomputation baseline",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-023",
         "FA-024"
@@ -659,13 +723,17 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/UNICODE_PRETOKENIZATION.md",
+        "crates/fa-reference/tests/llama3_bos.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ]
     },
     {
       "id": "FA-026",
       "gate": "G3",
       "title": "Implement lossless restart manifest and serialization",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-016",
         "FA-024",
@@ -683,7 +751,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/UNICODE_PRETOKENIZATION.md",
+        "crates/fa-reference/tests/llama3_bos.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-I03",
         "FI-I05"
@@ -693,7 +765,7 @@
       "id": "FA-027",
       "gate": "G3",
       "title": "Validate real resumed continuations and isolated branches",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-011",
         "FA-025",
@@ -710,7 +782,14 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/prediction.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence.rs"
+      ],
       "founding_ideas": [
         "FI-I03",
         "FI-I07",
@@ -1738,7 +1817,7 @@
       "id": "FA-073",
       "gate": "G2",
       "title": "Implement independent cut checker",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-072"
       ],
@@ -1750,7 +1829,33 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/predictive.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/receipt.rs",
+        "crates/fa-reference/tests/mediated_learned_reserve.rs",
+        "docs/MEDIATED_LEARNED_RECOVERY.md",
+        "docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stopped.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/peer_intake.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/creation/topology.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated/profile.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts.rs",
+        "docs/LEARNED_OPERATOR_PUBLICATION.md",
+        "docs/LEARNED_RECEIPT_SERVICE.md"
+      ]
     },
     {
       "id": "FA-074",
@@ -2442,7 +2547,7 @@
       "id": "FA-107",
       "gate": "G2",
       "title": "Enforce one-directional control flow",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-018",
         "FA-049"
@@ -2458,7 +2563,12 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A15",
         "FI-A16"
@@ -2468,7 +2578,7 @@
       "id": "FA-108",
       "gate": "G3",
       "title": "Implement rewind as containment (ResetToCheckpoint)",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-027",
         "FA-104",
@@ -2487,7 +2597,26 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "gate",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LEARNED_STREAM_CONTAINMENT.md",
+        "docs/DURABLE_LEARNED_RESET.md",
+        "crates/fa-reference/src/action/consequence/oversight/broker/learned_host/checkpoint/stream.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/checkpoint/stream.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/machine/learned/checkpoint/stream.rs",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint.rs",
+        "docs/PENDING_LEARNED_RESET_RECOVERY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/reset.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/learned_recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/tests/learned_text_stream_durable/continuation/checkpoints/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/tests/stream_checkpoint/recovery.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/stream_reset_recovery.rs",
+        "docs/LEARNED_STREAM_RESET_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset/request.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset.rs"
+      ],
       "founding_ideas": [
         "FI-A09",
         "FI-A16",
@@ -2626,7 +2755,7 @@
       "id": "FA-113",
       "gate": "G4",
       "title": "Implement and measure the sidecar-to-congress pipeline",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-030",
         "FA-019",
@@ -2644,7 +2773,12 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "research",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/PROCESS_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/tests/file_process_learned_driver.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A05",
         "FI-I04"
@@ -2828,7 +2962,7 @@
       "id": "FA-120",
       "gate": "G5",
       "title": "Fleet fence with acknowledgment frontier",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-034",
         "FA-041"
@@ -2844,7 +2978,22 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LIVE_FLEET_STOP.md",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet.rs",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/stop_fleet/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/peers.rs",
+        "docs/LEARNED_RECOVERY_STOP_PEER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery/tests/native/profiled.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/control/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/live.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs"
+      ],
       "founding_ideas": [
         "FI-A02"
       ]
@@ -3111,7 +3260,7 @@
       "id": "FA-130",
       "gate": "G2",
       "title": "Policy replay campaigns before promotion",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-020",
         "FA-104",
@@ -3129,7 +3278,32 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "governance",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/POLICY_CAMPAIGN_REFERENCE.md",
+        "docs/DURABLE_POLICY_CAMPAIGN_GUARD.md",
+        "docs/POLICY_REPLAY_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/policy_replay.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/input.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/render.rs",
+        "crates/fa-reference/examples/supervise_publication/policy_replay/tests.rs",
+        "crates/fa-reference/fixtures/policy_replay_candidate.json",
+        "docs/DURABLE_POLICY_REPLAY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery/policy_replay.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/learned_recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/predictive/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/predictive/owned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/mediated/predictive.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/diagnosis.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/diagnosis/policy_replay.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/diagnosis.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/policy_replay.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/diagnosis/policy_replay.rs"
+      ],
       "founding_ideas": [
         "FI-A14",
         "FI-A18"
@@ -3433,7 +3607,7 @@
       "id": "FA-142",
       "gate": "G2",
       "title": "Policy disclosure profile and actor precheck",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-008",
         "FA-107",
@@ -3450,7 +3624,34 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "gate",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/ACTOR_EXACT_PRECHECK.md",
+        "docs/LIVE_ACTOR_PRECHECK.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/client.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/client/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/tests/client_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/precheck_service.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/codec.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/response.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/channel.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/transport.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/peer.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/client.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/client/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests/channel.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests/transport.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/wire/tests/peer.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests/wire.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs",
+        "crates/fa-reference/src/action/consequence/oversight/actor.rs"
+      ],
       "founding_ideas": [
         "FI-A13",
         "FI-A15"

@@ -3,10 +3,8 @@
 use super::*;
 #[path = "containment/storage_tests.rs"]
 mod containment_storage_tests;
-#[path = "governance_storage_tests.rs"]
-mod policy_update_storage_tests;
-#[path = "recovery_capacity_faults.rs"]
-mod recovery_capacity_tests;
+#[path = "abandonment/tests.rs"]
+mod abandonment_tests;
 use super::super::JournalLimits;
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use crate::action::consequence::gate::containment::session::policy::{Policy, Predicate};

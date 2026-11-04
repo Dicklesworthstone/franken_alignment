@@ -21,10 +21,10 @@ pub(super) fn configuration(
         .filter(|value| !value.is_null())
         .map(|value| parameters(value, "rope_parameters", true, defaults, trained_context))
         .transpose()?;
-    if let (Some((_, old)), Some((_, new))) = (&legacy, &modern) {
-        if old != new {
-            return Err(config_error("rope_scaling", ConfigIssue::Unsupported));
-        }
+    if let (Some((_, old)), Some((_, new))) = (&legacy, &modern)
+        && old != new
+    {
+        return Err(config_error("rope_scaling", ConfigIssue::Unsupported));
     }
     let theta = match modern.as_ref().and_then(|(theta, _)| *theta) {
         Some(theta) => {

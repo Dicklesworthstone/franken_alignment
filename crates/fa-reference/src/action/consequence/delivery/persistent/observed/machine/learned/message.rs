@@ -28,10 +28,10 @@ impl Machine {
             // A raw attempt cannot stand in for the request named by the
             // recorded message intent. The request reducer uses the broker
             // directly and does not pass through this unkeyed Propose route.
-            Event::Core(BaseEvent::Propose(_, spec, _)) => {
-                if !ReleaseFrame::decode(&spec.payload)?.is_finish() {
-                    return Err(Error::Binding);
-                }
+            Event::Core(BaseEvent::Propose(_, spec, _))
+                if !ReleaseFrame::decode(&spec.payload)?.is_finish() =>
+            {
+                return Err(Error::Binding);
             }
             _ => {}
         }
@@ -58,14 +58,14 @@ impl Machine {
         if !learned.config.allows_text_stream_continuation() {
             return Err(Error::Binding);
         }
-        if let Some(current) = learned.message_continuation {
-            if current.request() == request {
-                return if current.after_request() == after_request {
-                    Ok(current)
-                } else {
-                    Err(Error::Binding)
-                };
-            }
+        if let Some(current) = learned.message_continuation
+            && current.request() == request
+        {
+            return if current.after_request() == after_request {
+                Ok(current)
+            } else {
+                Err(Error::Binding)
+            };
         }
         self.check_pre_output_message_continuation()?;
         match self.requests.status(request) {

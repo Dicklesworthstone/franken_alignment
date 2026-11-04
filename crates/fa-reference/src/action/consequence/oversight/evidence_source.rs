@@ -95,7 +95,7 @@ impl EvidenceSnapshot {
     /// The action/session separately binds full scope, policy and actual bytes.
     pub fn reference_root(&self) -> [u8; 32] {
         let mut root = [0; 32];
-        for (chunk, value) in root.chunks_exact_mut(8).zip([
+        for (chunk, value) in root.as_chunks_mut::<8>().0.iter_mut().zip([
             self.identity.source,
             self.identity.generation,
             self.identity.scope.tenant,
@@ -535,7 +535,9 @@ fn unhex(json: &Json, max: usize) -> Result<Vec<u8>, Error> {
         _ => Err(Error::InvalidInput),
     };
     text.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|p| Ok((digit(p[0])? << 4) | digit(p[1])?))
         .collect()
 }

@@ -1,8 +1,7 @@
 //! Bounded orchestration only: the native capture and effect gates decide.
-use super::{
-    ElapsedTick, FileDriverEvent, FileEvidenceSource, FileHumanPermit, FileSupervisedDriver,
-    PreparedPublication, debug,
-};
+use super::{PreparedPublication, FileDriverEvent, FileSupervisedDriver,
+    FileEvidenceSource, FileHumanPermit, ElapsedTick, debug};
+use fa_reference::action::consequence::delivery::persistent::observed::driver::evidence::publication::deferred::FileDeferrableDriverReport;
 
 const MAX_RETRIES: u64 = 64;
 #[derive(Clone, Copy, Debug)]
@@ -42,27 +41,22 @@ impl PreparedPublication<'_> {
     /// None means an acknowledged native deferral, never a successful event.
     /// Return to the original loop so it checks its unchanged logical/wall
     /// deadline and services independent stop control before any next read.
-    pub fn step_or_wait<F>(
-        &mut self,
-        driver: &mut FileSupervisedDriver,
-        evidence: &mut FileEvidenceSource,
-        time: &mut F,
-        human: Option<&FileHumanPermit>,
-    ) -> Result<Option<FileDriverEvent>, String>
-    where
-        F: FnMut() -> ElapsedTick,
+    pub fn step_or_wait<F>(&mut self, driver: &mut FileSupervisedDriver,
+        evidence: &mut FileEvidenceSource, time: &mut F, human: Option<&FileHumanPermit>)
+        -> Result<Option<FileDriverEvent>, String>
+    where F: FnMut() -> ElapsedTick {
+        if self.wait.is_none() { return self.step(driver, evidence, time, human).map(Some); }
+        let report = driver.step_from_files_with_publication_deferral(evidence,
+            self.current.reader(), self.feed.map(|feed| &feed.reader), time, human, None);
+        self.finish_deferral(report)
+    }
+
+    /// All callers consume the same finite request budget only when the native
+    /// driver acknowledges that its ready job can still wait with the original
+    /// human approval. Other errors and successful review progress stay intact.
+    pub(super) fn finish_deferral<T>(&mut self, report: FileDeferrableDriverReport<T>)
+        -> Result<Option<T>, String>
     {
-        if self.wait.is_none() {
-            return self.step(driver, evidence, time, human).map(Some);
-        }
-        let report = driver.step_from_files_with_publication_deferral(
-            evidence,
-            self.current.reader(),
-            self.feed.map(|feed| &feed.reader),
-            time,
-            human,
-            None,
-        );
         if let Some(observed) = report.waiting_for_producer() {
             self.wait
                 .as_mut()

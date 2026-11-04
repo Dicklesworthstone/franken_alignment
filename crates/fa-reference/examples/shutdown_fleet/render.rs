@@ -15,16 +15,8 @@ pub(super) fn encode(mode: &str, timed_out: bool, pass: &FileShutdownRecoveryPas
         mode, pass.operation(), pass.initial_revision(), pass.final_revision(), timed_out,
         pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
     for (index, member) in pass.members().iter().enumerate() {
-        if index != 0 {
-            out.push(',');
-        }
-        record(
-            &mut out,
-            member.clock.domain,
-            member.clock.clock_domain,
-            &member.result,
-            None,
-        );
+        if index != 0 { out.push(','); }
+        record(&mut out, member.clock.domain, member.clock.clock_domain, &member.result, None, false);
     }
     out.push_str("]}\n");
     out
@@ -41,28 +33,54 @@ pub(super) fn encode_clocked(
         mode, pass.operation(), pass.initial_revision(), pass.final_revision(), timed_out,
         pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
     for (index, member) in pass.members().iter().enumerate() {
-        if index != 0 {
-            out.push(',');
-        }
-        record(
-            &mut out,
-            member.binding.domain,
-            member.binding.clock_domain,
-            &member.result,
-            Some(member.acquired_tick),
-        );
+        if index != 0 { out.push(','); }
+        record(&mut out, member.binding.domain, member.binding.clock_domain, &member.result, Some(member.acquired_tick), false);
+    }
+    out.push_str("]}\n"); out
+}
+
+pub(super) fn encode_phased(mode: &str, phase: super::phases::Phase, timed_out: bool,
+    pass: &FileShutdownClockedRecoveryPass) -> String {
+    let mut out = String::new();
+    write!(out, concat!("{{\"schema_version\":\"fa.shutdown-fleet-result/3\",\"mode\":\"{}\",",
+        "\"phase\":\"{}\",\"settlement_requested\":{},\"operation\":\"{}\",",
+        "\"initial_revision\":\"{}\",\"final_revision\":\"{}\",\"deadline_reached\":{},",
+        "\"all_observed_stopped\":{},\"all_observed_drained\":{},\"members\":["),
+        mode, phase.label(), phase == super::phases::Phase::Drain, pass.operation(),
+        pass.initial_revision(), pass.final_revision(), timed_out,
+        pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
+    for (index, member) in pass.members().iter().enumerate() {
+        if index != 0 { out.push(','); }
+        record(&mut out, member.binding.domain, member.binding.clock_domain, &member.result,
+            Some(member.acquired_tick), true);
+    }
+    out.push_str("]}\n"); out
+}
+
+pub(super) fn encode_selected(mode: &str, phase: Option<super::phases::Phase>,
+    selected: &[u64], timed_out: bool, pass: &FileShutdownClockedRecoveryPass) -> String {
+    let mut out = String::new();
+    write!(out, concat!("{{\"schema_version\":\"fa.shutdown-fleet-result/4\",\"mode\":\"{}\",",
+        "\"phase\":\"{}\",\"settlement_requested\":{},\"operation\":\"{}\",",
+        "\"initial_revision\":\"{}\",\"final_revision\":\"{}\",\"deadline_reached\":{},",
+        "\"all_observed_stopped\":{},\"all_observed_drained\":{},\"selected_domains\":["),
+        mode, phase.map_or("combined", super::phases::Phase::label),
+        phase != Some(super::phases::Phase::Admission), pass.operation(),
+        pass.initial_revision(), pass.final_revision(), timed_out,
+        pass.all_observed_stopped(), pass.all_observed_drained()).expect("String write");
+    // Requested new work is not proof it ran. All original outcomes follow.
+    ids(&mut out, selected); out.push_str("],\"members\":[");
+    for (index, member) in pass.members().iter().enumerate() {
+        if index != 0 { out.push(','); }
+        record(&mut out, member.binding.domain, member.binding.clock_domain, &member.result,
+            Some(member.acquired_tick), true);
     }
     out.push_str("]}\n");
     out
 }
 
-fn record(
-    out: &mut String,
-    domain: u64,
-    clock_domain: u64,
-    result: &FileShutdownPassResult,
-    acquisition: Option<Option<fa_reference::action::ElapsedTick>>,
-) {
+fn record(out: &mut String, domain: u64, clock_domain: u64, result: &FileShutdownPassResult,
+    acquisition: Option<Option<fa_reference::action::ElapsedTick>>, include_fence: bool) {
     let label = match result {
         FileShutdownPassResult::NotVisited => "not_visited",
         FileShutdownPassResult::Observed(_) => "observed",
@@ -104,6 +122,10 @@ fn record(
             Some(at) => write!(out, ",\"acquired_tick\":\"{}\"", at.0).expect("String write"),
             None => out.push_str(",\"acquired_tick\":null"),
         }
+    }
+    if include_fence && let FileShutdownPassResult::Observed(observation) = result
+        && let Some(stop) = &observation.stop {
+        write!(out, ",\"endpoint_fenced\":{}", stop.endpoint_fenced).expect("String write");
     }
     out.push('}');
 }

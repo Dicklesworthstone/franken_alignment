@@ -209,6 +209,15 @@ fn empty_recipe_without_original_opaque_input_refuses_before_helper_launch() {
             "{:?}",
             result.failure
         );
+        assert!(
+            result
+                .failure
+                .as_ref()
+                .unwrap()
+                .contains("Contract(Incomplete)"),
+            "{:?}",
+            result.failure
+        );
         assert!(!executed(&result));
         assert_eq!(result.cleanup_pending, 0);
         let disk = FileOversight::read_publication(&store, &bootstrap).unwrap();

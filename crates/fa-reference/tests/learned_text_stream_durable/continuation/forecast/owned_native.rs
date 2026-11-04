@@ -10,14 +10,14 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewLimits, NativeReviewMember, NativeReviewStatus},
 };
 use fa_reference::action::consequence::oversight::{
-    learned_host::sidecar::{
-        LearnedSidecarRequest,
-        workers::{LearnedWorkerRound, MAX_LEARNED_REVIEW_POLLS},
-    },
-    sidecar::{SidecarCongressBudget, SidecarIdentity, receiver::native::SidecarProbeQuery},
+    learned_host::sidecar::{LearnedSidecarRequest, workers::{LearnedWorkerRound, MAX_LEARNED_REVIEW_POLLS}},
+    sidecar::{SidecarIdentity, SidecarCongressBudget,
+        receiver::native::{SidecarDecisionBasis, SidecarProbeQuery}},
 };
 #[path = "native.rs"]
 mod native;
+#[path = "owned_native/reset.rs"]
+mod reset;
 
 fn pinned(owned: bool) -> FileLearnedConfig {
     let base = finite_recipe(4, false, false)
@@ -165,86 +165,33 @@ fn reviewed(
 ) {
     let (attempt, action) = super::super::request(host, request, text);
     let n = host.learned_generation_inspection().unwrap().numerical;
-    let priority = host
-        .learned_text_message(LearnedEvidenceLimits::default())
-        .unwrap()
-        .evidence()
-        .audit()
-        .source()
-        .groups()
-        .collect();
-    let sidecar = host
-        .begin_learned_sidecar_plan(
-            host.revision(),
-            attempt,
-            n.actor_revision,
-            LearnedSidecarRequest {
-                identity: SidecarIdentity {
-                    object_id: 1000 + request,
-                    generation: 1,
-                    transform_id: 7,
-                },
-                priority,
-                budget: SidecarCongressBudget::default(),
-            },
-        )
-        .unwrap();
-    let message = host
-        .learned_text_message(LearnedEvidenceLimits::default())
-        .unwrap();
+    let message = host.learned_text_message(LearnedEvidenceLimits::default()).unwrap();
     let source = message.evidence().audit().source();
-    let input = host.current_learned_sidecar(&sidecar).unwrap();
+    let priority = source.groups().collect();
+    let sidecar = host.begin_learned_sidecar_plan(host.revision(), attempt, n.actor_revision,
+        LearnedSidecarRequest { identity: SidecarIdentity { object_id: 1000 + request,
+            generation: 1, transform_id: 7 }, priority, budget: SidecarCongressBudget::default() }).unwrap();
+    // Public live evidence supplies the checked original row shapes; the
+    // acknowledged plan supplies its exact current helper input. Native review
+    // independently checks both without exporting internal planner custody.
+    let original = host.current_learned_sidecar(&sidecar).unwrap().clone();
     let rows: BTreeSet<_> = source.groups().map(|group| group.row).collect();
-    let members = input
-        .views()
-        .iter()
-        .enumerate()
-        .map(|(index, (name, view))| {
-            let queries = rows
-                .iter()
-                .map(|row| {
-                    let (frame, heads, channels) = source.row_shape(*row).unwrap();
-                    SidecarProbeQuery {
-                        row: *row,
-                        probe: LinearProbe::new(
-                            1,
-                            1,
-                            frame.profile,
-                            &vec![0.0; heads * channels],
-                            0.0,
-                            1.0,
-                        )
-                        .unwrap(),
-                    }
-                })
-                .collect();
-            (
-                name.clone(),
-                NativeReviewMember {
-                    evaluator: native::evaluator(view.actual_input().input_profile().clone()),
-                    queries,
-                    salt: vec![16 + index as u8; 32],
-                },
-            )
+    let members = original.views().iter().enumerate().map(|(index, (name, view))| {
+        let queries = rows.iter().map(|row| {
+            let (frame, heads, channels) = source.row_shape(*row).unwrap();
+            SidecarProbeQuery { row: *row, probe: LinearProbe::new(1, 1, frame.profile,
+                &vec![0.0; heads * channels], 0.0, 1.0).unwrap() }
+        }).collect();
+        (name.clone(), NativeReviewMember {
+            evaluator: native::evaluator(view.actual_input().input_profile().clone()),
+            queries, salt: vec![16 + index as u8; 32],
         })
-        .collect();
-    let mut review = host
-        .begin_native_sidecar_review(
-            host.revision(),
-            sidecar,
-            LearnedWorkerRound {
-                round: 100 + request,
-                evidence_root: [7; 32],
-                window: ReviewWindow {
-                    commit_by: ElapsedTick(20),
-                    reveal_by: ElapsedTick(30),
-                },
-            },
-            members,
-            NativeReviewLimits::default(),
-            snapshot(),
-        )
-        .unwrap();
+    }).collect();
+    let mut review = host.begin_native_sidecar_review(host.revision(), sidecar,
+        LearnedWorkerRound { round: 100 + request, evidence_root: [7; 32],
+            window: ReviewWindow { commit_by: ElapsedTick(20), reveal_by: ElapsedTick(30) } },
+        members, NativeReviewLimits::default(), snapshot()).unwrap();
+    assert_eq!(review.input(), &original);
     for _ in 0..MAX_LEARNED_REVIEW_POLLS {
         if review.status() != NativeReviewStatus::Running {
             break;
@@ -255,14 +202,19 @@ fn reviewed(
     }
     assert_eq!(review.status(), NativeReviewStatus::Finished);
     assert!(review.outcome().is_some());
-    assert!(
-        review
-            .records()
-            .values()
-            .all(|record| record.failure.is_none()
-                && record.commitment_queued
-                && record.reveal_queued)
-    );
+    assert!(review.records().values().all(|record| record.failure.is_none()
+        && record.commitment_queued && record.reveal_queued), "{:?}", review.records());
+    for (member, record) in review.records() {
+        let progress = record.progress;
+        assert_eq!(progress.basis, Some(SidecarDecisionBasis::NativeModel));
+        assert!(progress.native_started);
+        assert_eq!(progress.native.tokenization.input_bytes,
+            original.views()[member].actual_input().submitted_bytes().len());
+        assert!(progress.native.requested_prompt_tokens > 0);
+        assert_eq!(progress.native.reviewed_prompt_tokens, progress.native.requested_prompt_tokens);
+        assert_eq!(progress.native.work.sampled_draws, 2);
+        assert_eq!(progress.native.work.monitoring.frame_reviews, progress.native.work.decoder.tokens);
+    }
     let inputs = review.input().clone();
     let automatic = host
         .authorize(host.revision(), attempt, &inputs, snapshot())

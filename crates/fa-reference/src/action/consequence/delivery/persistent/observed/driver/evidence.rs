@@ -4,6 +4,7 @@ mod computed;
 mod intake;
 mod launch;
 pub mod publication;
+pub mod topology;
 use super::super::credential::FileCredentialPermit;
 use super::super::helpers::FileHelperSetupError;
 use super::super::source::FileSourceError;
@@ -140,20 +141,23 @@ impl FileSupervisedDriver {
     /// approve a request, reserve automatic rights, or contact a human endpoint.
     /// A changed/missing source withdraws eligibility through the same sample
     /// operation used at dispatch. The original context-deduplication rule stays.
-    pub fn request_human_approval_from_file<S, F>(
-        &mut self,
-        source: &mut S,
-        key: u64,
-        expires_at: ElapsedTick,
-        mut clock: F,
-    ) -> FileEvidenceReport<FileHumanRequest>
-    where
-        S: EvidenceFile + ?Sized,
-        F: FnMut() -> ElapsedTick,
-    {
-        self.reap_helpers();
+    pub fn request_human_approval_from_file<S, F>(&mut self, source: &mut S, key: u64,
+        expires_at: ElapsedTick, clock: F) -> FileEvidenceReport<FileHumanRequest>
+    where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut observations = Vec::with_capacity(1);
         let mut source_updates = Vec::with_capacity(1);
+        let result = self.request_human_from_provider(key, expires_at, clock,
+            &mut FileProvider { source, observations: &mut observations, updates: &mut source_updates });
+        FileEvidenceReport { observations, source_updates, result }
+    }
+
+    // Both concrete source paths preserve the original job, time and input-cut
+    // checks. This is not a public provider hook or a second approval protocol.
+    fn request_human_from_provider<F, P>(&mut self, key: u64,
+        expires_at: ElapsedTick, mut clock: F, provider: &mut P)
+        -> Result<FileHumanRequest, JournalError>
+    where F: FnMut() -> ElapsedTick, P: EvidenceProvider {
+        self.reap_helpers();
         let result = (|| {
             let job = self.job.as_ref().ok_or(Error::Missing)?;
             let mut host = self.supervisor.host_mut()?;
@@ -173,16 +177,7 @@ impl FileSupervisedDriver {
             // never as the fresh observation for the ensuing request.
             job.check_ready(&host, job.inputs.as_ref())?;
             observe(&mut host, clock())?;
-            let captured = sample(
-                &mut host,
-                job,
-                &mut FileProvider {
-                    source,
-                    observations: &mut observations,
-                    updates: &mut source_updates,
-                },
-                &mut clock,
-            )?;
+            let captured = sample(&mut host, job, provider, &mut clock)?;
             observe(&mut host, clock())?;
             if let Some(error) = captured.failure {
                 return Err(error.into());
@@ -198,11 +193,7 @@ impl FileSupervisedDriver {
             )
         })();
         self.reap_helpers();
-        FileEvidenceReport {
-            observations,
-            source_updates,
-            result,
-        }
+        result
     }
 }
 

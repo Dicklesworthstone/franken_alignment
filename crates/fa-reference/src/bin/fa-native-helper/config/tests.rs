@@ -108,3 +108,8 @@ mod unicode_json;
 mod v2;
 #[path = "../../../../tests/support/native_worker_v2_assets.rs"]
 mod v2_assets;
+#[allow(dead_code)]
+#[path = "../../../../tests/support/native_worker_grammar_assets.rs"]
+mod grammar_assets;
+#[path = "tests/grammar.rs"]
+mod grammar;

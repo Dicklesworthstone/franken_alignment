@@ -3,21 +3,12 @@ use super::checkpoint_source::{CheckpointSource, MAX_MANIFEST_BYTES};
 use super::{Failure, Plan, contract, fit, invalid};
 use fa_reference::Error;
 use fa_reference::action::consequence::activation::{
-    monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization},
-    tensor::kv::{
-        decoder::{
-            DecoderModel,
-            safetensors::{
-                MAX_WEIGHT_HEADER_BYTES,
-                pretrained::{LlamaConfig, MAX_CONFIG_BYTES},
-                reader::WeightReadBudget,
-            },
-        },
-        model::learned::replay::archive::{
-            LearnedKvFitArchive, LearnedKvFitBinding, reader::FitArchiveReadBudget,
-        },
-    },
-};
+    monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization},
+    tensor::kv::{decoder::{DecoderModel,
+        safetensors::{MAX_WEIGHT_HEADER_BYTES,
+            pretrained::{LlamaConfig, MAX_CONFIG_BYTES}, reader::WeightReadBudget}},
+        model::learned::replay::archive::{LearnedKvFitArchive, LearnedKvFitBinding,
+            reader::FitArchiveReadBudget}}};
 use fa_reference::action::consequence::{
     delivery::persistent::observed::decoder::text::MAX_FILE_TOKENIZER_BYTES,
     oversight::helper_client::native::bootstrap::NativeTokenizerFormat,
@@ -82,35 +73,29 @@ pub(super) fn load_with_source(args: &[OsString], source: bool) -> Result<(Plan,
     let maximum = match plan.tokenizer_format {
         NativeTokenizerFormat::NativeArchive => MAX_FILE_TOKENIZER_BYTES,
         NativeTokenizerFormat::HuggingFaceRawByteLevel
-        | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
-        | NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
+            | NativeTokenizerFormat::HuggingFaceGpt2Unicode17
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece
+            | NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::MAX_HUGGINGFACE_JSON_BYTES,
     };
     let tokenizer_bytes = auxiliary(Path::new(&args[2]), maximum)?;
     let tokenizer = match plan.tokenizer_format {
-        NativeTokenizerFormat::NativeArchive => {
-            ByteBpe::from_bytes(negotiated.profile(), &tokenizer_bytes)
-        }
-        NativeTokenizerFormat::HuggingFaceRawByteLevel => {
-            ByteBpe::from_huggingface_json(negotiated.profile(), &tokenizer_bytes, maximum)
-        }
-        NativeTokenizerFormat::HuggingFaceGpt2Unicode17 => {
-            ByteBpe::from_huggingface_json_with_pre_tokenization(
-                negotiated.profile(),
-                &tokenizer_bytes,
-                maximum,
-                PreTokenization::Gpt2Unicode17,
-            )
-        }
-        NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => {
-            ByteBpe::from_huggingface_json_with_pre_tokenization(
-                negotiated.profile(),
-                &tokenizer_bytes,
-                maximum,
-                PreTokenization::Llama3Unicode17,
-            )
-        }
-    }
-    .map_err(contract)?;
+        NativeTokenizerFormat::NativeArchive => ByteBpe::from_bytes(negotiated.profile(), &tokenizer_bytes),
+        NativeTokenizerFormat::HuggingFaceRawByteLevel => ByteBpe::from_huggingface_json(
+            negotiated.profile(), &tokenizer_bytes, maximum),
+        NativeTokenizerFormat::HuggingFaceGpt2Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Gpt2Unicode17),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17 => ByteBpe::from_huggingface_json_with_pre_tokenization(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos => ByteBpe::from_huggingface_llama3_bos_json(
+            negotiated.profile(), &tokenizer_bytes, maximum),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece => ByteBpe::from_huggingface_json_with_merge_policy(
+            negotiated.profile(), &tokenizer_bytes, maximum, PreTokenization::Llama3Unicode17,
+            MergePolicy::WholePieceFirst),
+        NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece => ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(
+            negotiated.profile(), &tokenizer_bytes, maximum, MergePolicy::WholePieceFirst),
+    }.map_err(contract)?;
     // The independently retained codec source inventory must describe the exact
     // original cache profile and be disjoint from every declared probe origin.
     // This metadata is available before any checkpoint tensors are opened.

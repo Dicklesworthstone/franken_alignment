@@ -32,12 +32,14 @@ pub(super) struct Case {
 }
 impl Case {
     pub(super) fn new() -> Self {
-        Self::with_policy(None)
+        Self::with_policy(None, b"x", 1)
     }
     pub(super) fn with_policy(
         policy: Option<
             fa_reference::action::consequence::gate::containment::session::policy::Policy,
         >,
+        allowed_payload: &[u8],
+        allowed_units: u64,
     ) -> Self {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -99,10 +101,12 @@ impl Case {
             deadline: ElapsedTick(100000),
             units,
         };
-        host.propose(host.revision(), 1, spec(b"prior", 8), snapshot.clone())
+        // Cover actual bytes before policy evaluation; preserve both independent
+        // policy blockers in the external request rather than underfunding it.
+        host.propose(host.revision(), 1, spec(b"prior", 5), snapshot.clone())
             .unwrap();
         let denied = host
-            .submit_request(host.revision(), 901, spec(b"blocked", 8), snapshot.clone())
+            .submit_request(host.revision(), 901, spec(b"blocked", 7), snapshot.clone())
             .unwrap();
         assert_eq!(
             denied.disposition,
@@ -112,7 +116,12 @@ impl Case {
             }
         );
         let allowed = host
-            .submit_request(host.revision(), 2, spec(b"y", 1), snapshot)
+            .submit_request(
+                host.revision(),
+                2,
+                spec(allowed_payload, allowed_units),
+                snapshot,
+            )
             .unwrap();
         assert_eq!(
             allowed.disposition,

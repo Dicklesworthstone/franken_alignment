@@ -40,6 +40,11 @@ The producer's original `opaque` lane must contain a complete native
 a structured snapshot is available. A nonempty structured recipe still requires
 its structured input and cannot fall back to an opaque-only source.
 
+Coupled preparation reports the selected whole-input or structured binding
+context beside the original native error. Missing opaque input retains the native
+`Contract(Incomplete)` refusal and quarantine; diagnostic context performs no
+second source read, changes no acquisition order and supplies no fallback input.
+
 Use the existing commands with this profile:
 
 ```text
@@ -94,10 +99,12 @@ comparison budget and freshness, source-free receipt recovery and exact retries,
 and unrelated structured updates alongside opaque model-epoch changes. Existing
 structured tests are unchanged apart from registering this new test module.
 
-The tests are not execution evidence. The required RCH example-test and full
-xtask invocations cannot start in this editing environment (`rch` absent, exit
-127); Cargo, rustc and rustfmt are also absent. Compilation, formatting, Clippy
-and all Rust execution remain unverified:
+At original authoring, the required RCH example-test and full xtask invocations
+could not start (`rch` absent, exit 127); Cargo, rustc and rustfmt were absent too.
+That work therefore supplied no compilation, formatting, Clippy or Rust execution
+evidence. Later exact-source standard-backend results and the still-open complete
+gate are recorded in [implementation status](../IMPLEMENTATION_STATUS.md).
+The original verification commands remain:
 
 ```sh
 RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference --example supervise_publication

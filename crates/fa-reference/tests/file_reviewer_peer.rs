@@ -256,9 +256,12 @@ fn credential_success_does_not_bypass_logical_reviewer_binding_or_changed_eviden
         let root = Directory::new();
         let (mut host, reviewer) = create(&root);
         let (action, original) = reviewed(&mut host, 1, b"held");
+        // Review alone does not reserve rights. Establish the automatic
+        // reservation whose preservation this negative test asserts below.
         let _automatic = host
             .authorize(host.revision(), 1, &original, snapshot())
             .unwrap();
+        assert_eq!(host.inspect().control.ledger.reserved, 16);
         let request = host
             .request_human_approval(host.revision(), 1001, 1, &original, ElapsedTick(31))
             .unwrap();
@@ -306,6 +309,7 @@ fn credential_success_does_not_bypass_logical_reviewer_binding_or_changed_eviden
             HumanDisposition::Approved
         );
         assert_eq!(host.inspect().control.ledger.reserved, 16);
+        assert_eq!(host.inspect().control.ledger.charged, 0);
         assert_eq!(host.inspect().executions, 0);
     }
 }
@@ -406,6 +410,30 @@ impl Drop for ChildOwner {
     }
 }
 
+fn socket_directory() -> Directory {
+    use std::os::unix::fs::DirBuilderExt;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    // Long RCH TMPDIR paths are valid journal locations, but cannot name a
+    // Unix socket. Keep the actual pinned-child transport on a private path.
+    for _ in 0..64 {
+        let path = std::path::Path::new("/tmp").join(format!(
+            "fa-rp-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        match std::fs::DirBuilder::new().mode(0o700).create(&path) {
+            Ok(()) => return Directory(path),
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!(
+                "create private reviewer socket directory {}: {error}",
+                path.display()
+            ),
+        }
+    }
+    panic!("cannot allocate a private reviewer socket directory");
+}
+
 #[test]
 fn same_account_wrong_pid_is_rejected_then_the_pinned_child_can_review() {
     let root = Directory::new();
@@ -414,7 +442,8 @@ fn same_account_wrong_pid_is_rejected_then_the_pinned_child_can_review() {
     let request = host
         .request_human_approval(host.revision(), 1001, 1, &inputs, ElapsedTick(31))
         .unwrap();
-    let path = root.0.join("review.sock");
+    let socket_root = socket_directory();
+    let path = socket_root.0.join("review.sock");
     let listener = UnixListener::bind(&path).unwrap();
     listener.set_nonblocking(true).unwrap();
     // Queue the same-account parent first; only the independently pinned child

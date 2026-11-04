@@ -39,12 +39,16 @@ record does not tell us its earlier vote. It is neither invented as Allow nor
 reconstructed as a missing mandatory vote that would deceptively stop a violation.
 Clear observations and earlier holds remain caller-trusted campaign facts.
 
-Known duplicate evidence roots count once, using the worst replicate for each
-policy. A newly regressed replicate still fails even if another replicate already
-failed. The same root cannot change its ground truth or fill a second stratum.
-Different roots are NOT evidence of independent scenario origins; undetected
-shared-origin correlation remains an explicit limitation. These are descriptive
-counts over the sealed manifest, never multiplied marginal error probabilities.
+The original campaign constructor rejects duplicate evidence roots before any
+observations, labels or joint comparison. A repeated root cannot inflate a
+marginal denominator, change its ground truth or fill a second stratum. Joint
+reduction also groups roots defensively, but public sealed snapshots cannot
+bypass the earlier uniqueness requirement. Every newly regressed case fails,
+even if a different case already failed under the baseline or the aggregate
+rate ceilings are permissive. Different roots do not establish independent
+scenario origins; undetected shared-origin correlation remains an explicit
+limitation. Counts describe the sealed manifest and never multiply marginal
+error probabilities.
 
 ## Changelog and validation
 
@@ -56,10 +60,11 @@ unknown charges, historical retry, late or missing evidence, duplicate roots,
 per-stratum limits, false-stop regressions and complete work-budget admission.
 Existing authority and credibility test bodies remain unchanged.
 
-Compilation, formatting, Clippy and Rust tests are UNEXECUTED. The required
-RCH xtask attempt cannot start because rch is absent (exit 127); cargo, rustc and
-rustfmt are absent too. Exact baseline/source hash and scoped whitespace checks
-are not substitutes for the Rust gate. No qualification or bead is closed.
+At that original checkpoint, compilation, formatting, Clippy and Rust tests
+were unexecuted. The RCH xtask attempt could not start because rch was absent
+(exit 127); cargo, rustc and rustfmt were absent too. Exact source hashes and
+whitespace checks were not execution evidence, and no qualification or bead
+was closed.
 
 ## Durable two-key integration and compatibility
 
@@ -107,9 +112,19 @@ policy revalidation. Codec vectors include all truncations and invalid fields;
 creation and recovery exercise all five existing injected storage barriers.
 The original joint-evaluation tests are reconnected, not counted as new tests.
 
-The required RCH xtask was attempted again and exited 127: rch is unavailable.
-All eighteen newly authored Rust tests, compilation, formatting and Clippy remain
-UNEXECUTED. Hash and scoped source checks are not execution evidence. No bead,
-production activation, calibrated error-rate or authenticated evaluator claim is
-made. Selection through a new supervisor CLI bootstrap option is not included;
-existing supervisors that open a selected journal retain its native enforcement.
+At the durable-integration checkpoint, the RCH xtask retry exited 127 because
+rch was unavailable. All eighteen then-authored tests, compilation, formatting
+and Clippy remained unexecuted. No bead, production activation, calibrated
+error-rate or authenticated evaluator claim was made. Supervisor selection was
+outside that increment.
+
+2026-10-23: all fifteen public `held_out_joint` integration functions now pass
+with the qualified nightly's official Cranelift backend. Two earlier fixtures
+incorrectly attempted to seal repeated evidence roots; the corrected cases
+assert the original campaign refusal, distinct-root denominators and a newly
+regressed case despite permissive aggregate limits, with a matched passing
+control. No production admission or scoring rule changed. The three internal
+wire/storage-barrier functions above were not executed by this public-target
+run. Learned operator selection is documented in
+[the learned joint contract](LEARNED_JOINT_CREDIBILITY.md). Full dependency
+admission and release qualification remain open.

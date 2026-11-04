@@ -25,7 +25,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 pub(super) struct Root(pub PathBuf);
 impl Root {
     pub(super) fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-learned-cli-{}-{}-{}",
             std::process::id(),
             clock().0,

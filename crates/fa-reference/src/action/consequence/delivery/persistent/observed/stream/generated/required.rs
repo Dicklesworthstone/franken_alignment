@@ -226,16 +226,14 @@ impl Machine {
         if !self.generated_text_only {
             return Ok(());
         }
-        match event {
-            Event::Core(BaseEvent::Propose(_, spec, _) | BaseEvent::SubmitRequest(_, spec, _)) => {
-                // Original bounded frame parsing and original prefix validation
-                // still apply. Only a finish is non-disclosing; arbitrary bytes
-                // cannot borrow the provenance of a nearby native generation.
-                if ReleaseFrame::decode(&spec.payload)?.message().is_some() {
-                    return Err(Error::Binding);
-                }
-            }
-            _ => {}
+        // Original bounded frame parsing and original prefix validation
+        // still apply. Only a finish is non-disclosing; arbitrary bytes
+        // cannot borrow the provenance of a nearby native generation.
+        if let Event::Core(BaseEvent::Propose(_, spec, _) | BaseEvent::SubmitRequest(_, spec, _)) =
+            event
+            && ReleaseFrame::decode(&spec.payload)?.message().is_some()
+        {
+            return Err(Error::Binding);
         }
         Ok(())
     }

@@ -6,6 +6,8 @@
 //! endpoint. Storage and ballot authenticity remain operator assumptions.
 
 mod codec;
+pub mod abandonment;
+pub use abandonment::{FileAbandonReceipt, FileAbandonRequest};
 pub mod credibility;
 pub mod recovery_capacity;
 mod stopping;
@@ -252,11 +254,12 @@ enum Event {
     ReserveRecovery(RecoveryReserve),
     ActivateCredibility(Box<credibility::CredibilityActivation>),
     WithdrawCredibility(credibility::CredibilityWithdrawalRequest),
+    AbandonUnknown(abandonment::FileAbandonRequest),
 }
 enum Transition {
     Unit,
     Proposed(FrozenAction),
-    Reviewed(PolicyReceipt),
+    Reviewed(Box<PolicyReceipt>),
     Published(EndpointOutcome),
     Reconciled(Reconciliation),
     Swept(BTreeMap<u64, Result<Reconciliation, Error>>),
@@ -265,6 +268,7 @@ enum Transition {
     PolicyUpdated(PolicyUpdateReceipt),
     CredibilityActivated(credibility::CredibilityChange),
     CredibilityWithdrawn(credibility::CredibilityWithdrawal),
+    Abandoned(abandonment::FileAbandonReceipt),
 }
 
 struct Machine {
@@ -276,6 +280,7 @@ struct Machine {
     clock_ready: bool,
     requests: requests::RequestBook,
     policy_updates: governance::PolicyUpdates,
+    abandonments: abandonment::Abandonments,
 }
 impl Machine {
     fn new(profile: &FileDeliveryProfile) -> Result<Self, Error> {
@@ -309,6 +314,7 @@ impl Machine {
             clock_ready: false,
             requests: requests::RequestBook::default(),
             policy_updates: governance::PolicyUpdates::default(),
+            abandonments: abandonment::Abandonments::default(),
         })
     }
     fn replay(profile: &FileDeliveryProfile, events: &[Event]) -> Result<Self, Error> {
@@ -343,6 +349,7 @@ impl Machine {
             // Canonical admission validates this marker and every following prefix.
             // It grants no rights and changes no original authority transition.
             Event::ReserveRecovery(_) => {}
+            Event::AbandonUnknown(request) => return self.apply_abandonment(*request),
             Event::ActivateCredibility(request) => {
                 return self.apply_credibility_activation(request);
             }
@@ -381,7 +388,7 @@ impl Machine {
                 let receipt = self
                     .broker
                     .apply_review(session.finish()?, &input.snapshot)?;
-                return Ok(Transition::Reviewed(receipt));
+                return Ok(Transition::Reviewed(Box::new(receipt)));
             }
             Event::Authorize(id, snapshot) => {
                 let permit = self.broker.authorize(*id, snapshot)?;
@@ -573,7 +580,7 @@ impl FileDelivery {
         input: ReferenceReview,
     ) -> Result<PolicyReceipt, JournalError> {
         match self.transact(revision, Event::Review(input))? {
-            Transition::Reviewed(receipt) => Ok(receipt),
+            Transition::Reviewed(receipt) => Ok(*receipt),
             _ => unreachable!("review transition"),
         }
     }

@@ -7,6 +7,10 @@
 mod numerical;
 #[path = "forecast_reset_successors/support.rs"]
 mod support;
+#[path = "mediated_predictive_learned_recovery/native_fixture.rs"]
+mod native_fixture;
+#[path = "forecast_reset_successors/restart_audit.rs"]
+mod restart_audit;
 use support::*;
 
 use fa_reference::action::consequence::activation::{

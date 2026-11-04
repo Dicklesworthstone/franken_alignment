@@ -360,6 +360,10 @@ fn pool_fault_stops_later_io_and_charges_the_failed_allowance() {
         .unwrap();
     assert!(report.stopped_on_error());
     assert_eq!(report.visits.len(), 1);
+    assert!(matches!(&report.visits[0].result,
+        Err(FileActorPeerDriveError::Journal(JournalError::Io(failure)))
+            if failure.operation == crate::action::consequence::delivery::persistent::JournalIo::Stage
+                && failure.kind == io::ErrorKind::AlreadyExists));
     assert_eq!(
         report.remaining,
         subtract(budget.total, report.visits[0].allowance)
@@ -370,6 +374,53 @@ fn pool_fault_stops_later_io_and_charges_the_failed_allowance() {
         pool.drive(&mut s.driver, &mut s.source, no_clock, budget),
         Err(FileActorPeerDriveError::Journal(JournalError::Unavailable))
     ));
+}
+
+#[test]
+fn pool_successful_first_peer_leaves_the_second_eligible_and_charges_actual_socket_work() {
+    let mut s = setup();
+    let (a, mut ca) = connected(s.port.clone());
+    let (b, mut cb) = connected(s.port.clone());
+    let mut pool = FileActorPool::new(vec![(10, a), (20, b)]).unwrap();
+    send(&mut ca, &document(11));
+    send(&mut cb, &document(21));
+    // Same requests, budgets and owner as the collision control; no pending file.
+    let budget = intake();
+    let report = pool
+        .drive(&mut s.driver, &mut s.source, || ElapsedTick(2), budget)
+        .unwrap();
+    assert!(!report.stopped_on_error());
+    assert_eq!(report.visits.len(), 2);
+    let mut remaining = budget.total;
+    for visit in &report.visits {
+        let progress = visit.result.as_ref().unwrap().drive.progress;
+        assert_eq!(progress.frames, 1);
+        remaining = subtract(
+            remaining,
+            DriveBudget {
+                read_bytes: progress.read_bytes,
+                write_bytes: progress.written_bytes,
+                frames: progress.frames,
+                io_calls: progress.io_calls,
+            },
+        );
+    }
+    assert_eq!(report.remaining, remaining);
+    assert_eq!(s.source.status().read_attempts, 2);
+    assert_eq!(pool.next_request(&s.driver).unwrap().unwrap().peer, 10);
+    assert_eq!(pool.next_request(&s.driver).unwrap().unwrap().peer, 20);
+    assert!(
+        s.driver
+            .supervisor()
+            .host()
+            .unwrap()
+            .storage_failure()
+            .is_none()
+    );
+    assert_eq!(
+        s.driver.supervisor().host().unwrap().inspect().executions,
+        0
+    );
 }
 
 #[test]

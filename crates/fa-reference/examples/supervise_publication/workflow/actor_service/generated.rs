@@ -397,6 +397,9 @@ where
     deadline.check(after)?;
     let revision = host.revision();
     host.observe_time(revision, after).map_err(debug)?;
+    // A clock observation does not check the read-start lease. Refuse before
+    // the next numerical step if the actual source read consumed that lease.
+    host.capture_file_policy_state().map_err(debug)?;
     Ok(())
 }
 

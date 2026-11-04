@@ -373,7 +373,7 @@ impl ReviewReceipt {
 }
 fn write_binding(bytes: &mut [u8], binding: ReviewBinding) {
     bytes[..32].copy_from_slice(&binding.session);
-    for (chunk, value) in bytes[32..].chunks_exact_mut(8).zip([
+    for (chunk, value) in bytes[32..].as_chunks_mut::<8>().0.iter_mut().zip([
         binding.request,
         binding.reviewer,
         binding.attempt,

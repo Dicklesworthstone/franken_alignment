@@ -130,9 +130,9 @@ impl RolloutReport {
             out.write_all(b",\"outcome\":")?;
             string(out, &format!("{:?}", result.outcome()))?;
             let monitoring = result.monitoring_work;
-            write!(
+            writeln!(
                 out,
-                ",\"baseline_draws\":{},\"monitored_draws\":{},\"paired_positions\":{},\"baseline_scalar_products\":{},\"monitored_scalar_products\":{},\"monitoring\":{{\"frame_reviews\":{},\"encoded_bytes\":{},\"probe_coordinates\":{},\"codec_coordinates\":{}}}}}\n",
+                ",\"baseline_draws\":{},\"monitored_draws\":{},\"paired_positions\":{},\"baseline_scalar_products\":{},\"monitored_scalar_products\":{},\"monitoring\":{{\"frame_reviews\":{},\"encoded_bytes\":{},\"probe_coordinates\":{},\"codec_coordinates\":{}}}}}",
                 result.baseline_draws,
                 result.monitored_draws,
                 result.paired_positions,

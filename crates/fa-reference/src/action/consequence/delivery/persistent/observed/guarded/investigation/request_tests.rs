@@ -171,7 +171,7 @@ fn spec(payload: &[u8]) -> ActionSpec {
         required_witnesses: Vec::new(),
         policy_epoch: 0,
         deadline: ElapsedTick(100),
-        units: 8,
+        units: payload.len().max(1) as u64,
     }
 }
 fn snapshot() -> Snapshot {
@@ -181,7 +181,7 @@ fn snapshot() -> Snapshot {
         values: BTreeMap::new(),
     }
 }
-fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
+fn setup_writer(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
     let (mut host, _) =
         FileOversight::create_guarded(root.store(), profile(), &guards(), None).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
@@ -218,12 +218,16 @@ fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAn
         },
     };
     let anchor = host.history_anchor().unwrap();
+    (host, expected, anchor)
+}
+fn setup(root: &Root) -> (FileOversight, FileRecoveryRequirements, FileHistoryAnchor) {
+    let original = setup_writer(root);
     fs::write(
         root.store().join("delivery.pending"),
         b"preserve original staging",
     )
     .unwrap();
-    (host, expected, anchor)
+    original
 }
 fn begin(
     root: &Root,
@@ -304,7 +308,7 @@ fn external_request_lookup_matches_original_attempt_diagnosis_not_equal_numeric_
 #[test]
 fn terminal_outcome_and_exact_retry_do_not_replace_the_original_request_admission() {
     let root = Root::new();
-    let (mut host, expected, anchor) = setup(&root);
+    let (mut host, expected, anchor) = setup_writer(&root);
     let original = host.investigate_proposal(3, scope()).unwrap();
     fs::remove_file(root.store().join("delivery.pending")).unwrap();
     host.cancel_request(host.revision(), 2).unwrap();
@@ -344,8 +348,7 @@ fn terminal_outcome_and_exact_retry_do_not_replace_the_original_request_admissio
 #[test]
 fn not_admitted_missing_and_direct_only_keys_never_select_another_proposal() {
     let root = Root::new();
-    let (mut host, expected, anchor) = setup(&root);
-    fs::remove_file(root.store().join("delivery.pending")).unwrap();
+    let (mut host, expected, anchor) = setup_writer(&root);
     let rejected = host
         .submit_request(host.revision(), 3, spec(b"bad"), Snapshot::default())
         .unwrap();

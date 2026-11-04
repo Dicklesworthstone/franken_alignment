@@ -1,14 +1,21 @@
 //! Bounded, independently provisioned learned generation and native review inputs.
 #[path = "weights.rs"]
 pub(super) mod weights;
-use super::super::tokenizer::TokenizerInput;
+#[path = "joint.rs"]
+pub(super) mod joint;
+#[path = "recovery_policy.rs"]
+mod recovery_policy;
+use joint::HeldOutJointPolicy;
+use weights::WeightsInput;
 use super::{
     fields::{Assets, Fields, MAX_DATA_BYTES, path},
     fit,
     forecast::ForecastInput,
     monitor::MonitorInput,
     native::NativeRoster,
+    process::ProcessRecipe,
 };
+use super::super::tokenizer::TokenizerInput;
 use crate::config::{Config, debug, read_regular};
 use fa_reference::action::consequence::activation::monitor::{
     decoder::sampled::{
@@ -34,11 +41,11 @@ use fa_reference::action::consequence::activation::tensor::kv::experiment::KvSid
 use fa_reference::action::consequence::activation::tensor::kv::model::learned::replay::archive::MAX_FIT_ARCHIVE_BYTES;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor;
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    decoder::learned::FileLearnedConfig,
-    guarded::FileRecoveryFloor,
+    decoder::learned::FileLearnedConfig, guarded::{FileCampaignRequirement, FileRecoveryFloor},
     helpers::learned::native::{NativeReviewCost, NativeReviewLimits},
 };
 use fa_reference::action::consequence::delivery::stream::StreamProfile;
+use fa_reference::action::consequence::gate::containment::session::policy::Policy;
 use fa_reference::action::consequence::oversight::{
     decoder_monitoring::{DecoderBindingLimits, LearnedDecoderBindingLimits},
     learned_source::{
@@ -52,7 +59,6 @@ use fa_reference::action::consequence::oversight::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use weights::WeightsInput;
 
 const MAX_RECIPE_BYTES: usize = 64 * 1024;
 
@@ -62,8 +68,21 @@ pub(super) struct Loaded {
     pub generation: FileLearnedConfig,
     pub stream: StreamProfile,
     pub floor: FileRecoveryFloor,
+    /// Independently supplied recovery expectation, separate from bootstrap
+    /// configuration and the numerical recipe. Never inferred from the journal.
+    pub expected_policy: Policy,
+    /// Exact required inventory. None requires that campaigns are absent.
+    pub expected_campaigns: Option<FileCampaignRequirement>,
+    /// Explicit first-image selection. Recovery expectations alone cannot
+    /// install a guard in a new owner or enable it after work has begun.
+    pub creation_campaigns: Option<FileCampaignRequirement>,
     pub recovery_anchor: Option<FileHistoryAnchor>,
     pub anchor_output: Option<PathBuf>,
+    pub checkpoint_on_generation: Option<super::checkpoint_on_generation::Selection>,
+    pub topology: Option<super::topology::Selection>,
+    pub identity: Option<super::identity::Selection>,
+    pub publication: Option<crate::publication::PublicationProfile>,
+    pub credential: Option<super::credential::Selection>,
     pub evidence: LearnedEvidenceLimits,
     pub sidecar: SidecarIdentity,
     pub disclosure: SidecarCongressBudget,
@@ -72,48 +91,67 @@ pub(super) struct Loaded {
     pub native_limits: NativeReviewLimits,
     pub probes: BTreeMap<KvTap, Vec<LinearProbe>>,
     pub native: Option<NativeRoster>,
+    pub process: Option<ProcessRecipe>,
 }
 struct Recipe {
-    request: u64,
-    ttl_ms: u64,
-    assets_bytes: usize,
-    identity: DecoderIdentity,
-    context: usize,
-    stream: u64,
-    evaluation_origin: u64,
-    monitor_generation: u64,
-    publication: StreamProfile,
-    binding: LearnedDecoderBindingLimits,
-    floor: FileRecoveryFloor,
-    files: Files,
-    max_new_tokens: usize,
-    max_output_bytes: usize,
-    stop_tokens: BTreeSet<u32>,
-    tokenization: TokenizationBudget,
-    budget: GenerationBudget,
-    telemetry: GenerationTelemetryBudget,
-    sidecar: SidecarIdentity,
-    disclosure: SidecarCongressBudget,
-    native_limits: NativeReviewLimits,
-    priority: Vec<KvGroup>,
-    rounds: Vec<u64>,
-    continuation: bool,
+    request: u64, ttl_ms: u64, assets_bytes: usize,
+    identity: DecoderIdentity, context: usize, stream: u64, evaluation_origin: u64, monitor_generation: u64,
+    publication: StreamProfile, binding: LearnedDecoderBindingLimits, floor: FileRecoveryFloor,
+    files: Files, max_new_tokens: usize, max_output_bytes: usize, stop_tokens: BTreeSet<u32>,
+    tokenization: TokenizationBudget, budget: GenerationBudget, telemetry: GenerationTelemetryBudget,
+    sidecar: SidecarIdentity, disclosure: SidecarCongressBudget, native_limits: NativeReviewLimits,
+    priority: Vec<KvGroup>, rounds: Vec<u64>, continuation: bool,
+    process: Option<ProcessRecipe>, joint: Option<HeldOutJointPolicy>,
+    computed_identity: Option<super::identity::profile::Profile>,
+    checked_publication: Option<PathBuf>,
+    credential: Option<PathBuf>,
+    expected_policy: Option<Policy>,
+    expected_campaigns: Option<FileCampaignRequirement>,
 }
 struct Files {
-    configuration: PathBuf,
-    weights: WeightsInput,
-    tokenizer: TokenizerInput,
-    sampling: PathBuf,
-    prompt: PathBuf,
-    fit_binding: PathBuf,
-    fit_archive: PathBuf,
-    monitor: PathBuf,
-    native: PathBuf,
+    configuration: PathBuf, weights: WeightsInput, tokenizer: TokenizerInput, sampling: PathBuf,
+    prompt: PathBuf, fit_binding: PathBuf, fit_archive: PathBuf, monitor: PathBuf, native: Option<PathBuf>,
     forecast: Option<PathBuf>,
 }
 
 pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result<Loaded, String> {
     let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
+    let mut assets = Assets::new(recipe.assets_bytes)?;
+    load_recipe(recipe, config, require_native, &mut assets)
+}
+
+/// A recovery expectation verifies an acknowledged replacement; it cannot
+/// create a new history under a policy absent from its bootstrap configuration.
+pub(super) fn check_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
+    if loaded.expected_policy != config.profile.delivery.policy {
+        return Err("new learned history requires the configured bootstrap policy; a recovery expectation cannot replace it".into());
+    }
+    if loaded.expected_campaigns != loaded.creation_campaigns {
+        return Err("new learned history cannot install a recovery-only campaign guard".into());
+    }
+    Ok(())
+}
+
+/// Reuse complete original recipe/model/predictor admission under the fleet's
+/// cumulative input allowance. No live reviewer input is loaded. Failed intake
+/// aborts the caller's preparation; successful reads and failed streamed weight
+/// reads remain charged even when a later guard/asset refuses.
+pub(super) fn load_for_fleet(file: &Path, config: &Config, remaining: &mut usize,
+    forbidden: &[PathBuf]) -> Result<Loaded, String>
+{
+    let mut assets = Assets::for_fleet(*remaining, forbidden)?;
+    let result = (|| {
+        let recipe = Recipe::decode(&assets.read(file, MAX_RECIPE_BYTES)?)?;
+        assets.constrain(recipe.assets_bytes)?;
+        load_recipe(recipe, config, false, &mut assets)
+    })();
+    *remaining = remaining.saturating_sub(assets.consumed());
+    result
+}
+
+fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
+    assets: &mut Assets) -> Result<Loaded, String>
+{
     if recipe.identity.tenant != config.profile.delivery.scope.tenant
         || !config.profile.delivery.initial_payload.is_empty()
     {
@@ -135,17 +173,20 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
             "complete learned review schedule must fit the original request lifetime".into(),
         );
     }
-    let mut assets = Assets::new(recipe.assets_bytes)?;
+    if let Some(process) = &recipe.process {
+        process.check_roster(config)?;
+    }
+    let mut credential = recipe.credential.as_ref()
+        .map(|path| super::credential::Selection::load(path, config, assets, require_native)).transpose()?;
+    let publication = recipe.checked_publication.as_ref()
+        .map(|path| super::checked::load(path, config, assets)).transpose()?;
+    let identity_registration = recipe.computed_identity.as_ref()
+        .map(|identity| identity.registration(assets)).transpose()?;
     // The independent binding is never obtained from the archive it checks.
     // Closed probe/fit data admission precedes any model weight ingestion.
     let binding = fit::binding(&assets.read(&recipe.files.fit_binding, MAX_DATA_BYTES)?)?;
-    let monitor =
-        MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_KV_MONITOR_ARTIFACT_BYTES)?)?;
-    let forecast = recipe
-        .files
-        .forecast
-        .as_ref()
-        .map(|path| ForecastInput::load(path, &mut assets))
+    let monitor = MonitorInput::decode(&assets.read(&recipe.files.monitor, MAX_KV_MONITOR_ARTIFACT_BYTES)?)?;
+    let forecast = recipe.files.forecast.as_ref().map(|path| ForecastInput::load(path, assets))
         .transpose()?;
     let configuration = assets.read(&recipe.files.configuration, MAX_CONFIG_BYTES)?;
     let negotiated =
@@ -188,15 +229,9 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         }
     }
     let bound = (8 + MAX_WEIGHT_HEADER_BYTES + 4 * negotiated.profile().parameter_count())
-        .min(MAX_WEIGHT_FILE_BYTES)
-        .min(config.profile.delivery.limits.bytes);
-    let model = recipe
-        .files
-        .weights
-        .load(&configuration, &negotiated, &mut assets, bound)?;
-    let forecast = forecast
-        .map(|input| input.bind(&model, recipe.stream, recipe.publication))
-        .transpose()?;
+        .min(MAX_WEIGHT_FILE_BYTES).min(config.profile.delivery.limits.bytes);
+    let model = recipe.files.weights.load(&configuration, &negotiated, assets, bound)?;
+    let forecast = forecast.map(|input| input.bind(&model, recipe.stream, recipe.publication)).transpose()?;
     let archive = assets.read(&recipe.files.fit_archive, MAX_FIT_ARCHIVE_BYTES)?;
     let codec = fit::replay(&archive, &binding, MAX_FIT_ARCHIVE_BYTES)?;
     let monitor = monitor.bind_with_tokenizer(&model, &tokenizer, codec)?;
@@ -236,53 +271,57 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
         .with_required_policy_source(config.source_policy)
         .map_err(debug)?;
     let generation = if let Some(forecast) = forecast {
-        forecast
-            .pin(generation)?
-            .with_forecast_text_stream_continuation()
+        forecast.pin(generation)?
+    } else { generation };
+    let generation = if let Some(joint) = recipe.joint {
+        generation.with_required_held_out_joint(joint).map_err(debug)?
+    } else { generation };
+    let generation = if let Some(registration) = identity_registration {
+        generation.with_required_computed_identity_registration(registration).map_err(debug)?
+    } else { generation };
+    let generation = if let Some(publication) = &publication {
+        generation.with_required_publication_validation(publication.learned_profile(&config.profile)?)
             .map_err(debug)?
-    } else {
-        generation
-    };
+    } else { generation };
+    let generation = if let Some(credential) = &credential {
+        generation.with_required_credential_policy(credential.policy.clone()).map_err(debug)?
+    } else { generation };
     let native = if require_native {
-        {
-            let roster = NativeRoster::load(&recipe.files.native, config, &mut assets)?;
+        recipe.files.native.as_ref().map(|path| {
+            let roster = NativeRoster::load(path, config, assets)?;
             roster.check_limits(&recipe.native_limits, recipe.rounds.len())?;
-            Some(roster)
-        }
-    } else {
-        None
-    };
-    Ok(Loaded {
-        request: recipe.request,
-        ttl_ms: recipe.ttl_ms,
-        generation,
-        stream: recipe.publication,
-        floor: recipe.floor,
-        recovery_anchor: None,
-        anchor_output: None,
-        evidence: LearnedEvidenceLimits {
-            token_ids: recipe.binding.evidence.token_ids,
-            score_words: recipe.binding.evidence.score_words,
-            encoded_bytes: recipe.binding.encoded_bytes,
-        },
-        sidecar: recipe.sidecar,
-        disclosure: recipe.disclosure,
-        native_limits: recipe.native_limits,
-        priority: recipe.priority,
-        rounds: recipe.rounds,
-        probes: monitor.probes,
-        native,
-    })
+            Ok::<_, String>(roster)
+        }).transpose()?
+    } else { None };
+    if let Some(credential) = credential.as_mut() { credential.retain_allowance(assets); }
+    Ok(Loaded { request: recipe.request, ttl_ms: recipe.ttl_ms, generation, stream: recipe.publication,
+        floor: recipe.floor, recovery_anchor: None, anchor_output: None, topology: None,
+        checkpoint_on_generation: None,
+        expected_policy: recipe.expected_policy.unwrap_or_else(|| config.profile.delivery.policy.clone()),
+        expected_campaigns: recipe.expected_campaigns,
+        creation_campaigns: None,
+        identity: recipe.computed_identity.map(|identity| identity.selection), publication, credential,
+        evidence: LearnedEvidenceLimits { token_ids: recipe.binding.evidence.token_ids,
+            score_words: recipe.binding.evidence.score_words, encoded_bytes: recipe.binding.encoded_bytes },
+        sidecar: recipe.sidecar, disclosure: recipe.disclosure, native_limits: recipe.native_limits,
+        priority: recipe.priority, rounds: recipe.rounds,
+        probes: monitor.probes, native, process: recipe.process })
 }
 impl Recipe {
     fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let mut root = Fields::parse(bytes, MAX_RECIPE_BYTES)?;
+        let (mut root, joint, computed_identity, checked_publication, credential, recovery) =
+            recovery_policy::decode(bytes)?;
+        let (expected_policy, expected_campaigns) = match recovery {
+            Some(expected) => (Some(expected.policy), expected.campaigns),
+            None => (None, None),
+        };
         let version = match root.text("schema")?.as_str() {
             "fa.learned-publication/1" => 1,
             "fa.learned-publication/2" => 2,
             "fa.learned-publication/3" => 3,
             "fa.learned-publication/4" => 4,
             "fa.learned-publication/5" => 5,
+            "fa.learned-publication/6" => 6,
             _ => return Err("unsupported learned publication recipe".into()),
         };
         let progressive = version >= 2;
@@ -341,19 +380,16 @@ impl Recipe {
         let files_value = Files {
             configuration: files.path("model_config")?,
             weights: WeightsInput::parse(files.take("weights")?, version >= 3)?,
-            tokenizer: TokenizerInput::parse(files.take("tokenizer")?, true)?,
-            sampling: files.path("sampling")?,
-            prompt: files.path("prompt")?,
-            fit_binding: files.path("fit_binding")?,
-            fit_archive: files.path("fit_archive")?,
+            tokenizer: TokenizerInput::parse(files.take("tokenizer")?, true)?, sampling: files.path("sampling")?,
+            prompt: files.path("prompt")?, fit_binding: files.path("fit_binding")?, fit_archive: files.path("fit_archive")?,
             monitor: files.path("monitor")?,
-            native: files.path("native_roster")?,
-            forecast: if version == 5 {
-                Some(files.path("forecast")?)
-            } else {
-                None
-            },
-        };
+            native: if version == 6 { None } else { Some(files.path("native_roster")?) },
+            forecast: if version == 6 {
+                match files.take("forecast")? {
+                    fa_reference::strict_json::Json::Null => None,
+                    value => Some(path(value.as_str().ok_or("forecast must be null or an absolute path")?)?),
+                }
+            } else if version == 5 { Some(files.path("forecast")?) } else { None } };
         path(files_value.tokenizer.path())?;
         files.end()?;
         let mut text = root.object("text")?;
@@ -422,6 +458,14 @@ impl Recipe {
             }
             .into());
         }
+        let (rounds, native_limits, process) = if version == 6 {
+            let process = ProcessRecipe::decode(root.object("process_review")?)?;
+            let rounds = process.rounds();
+            if rounds.len() != disclosure_value.rounds || rounds.len() > priority.len() + 1 {
+                return Err("process schedule must match the disclosure budget and retained priority ladder".into());
+            }
+            (rounds, NativeReviewLimits::default(), Some(process))
+        } else {
         let mut native = root.object("native_review")?;
         let rounds = if progressive {
             let ids = native.array("round_ids", MAX_SIDECAR_REFINEMENT_ROUNDS)?;
@@ -460,7 +504,6 @@ impl Recipe {
             ..NativeReviewLimits::default()
         };
         native.end()?;
-        root.end()?;
         let caps = NativeReviewLimits::default();
         if native_limits.polls == 0
             || native_limits.polls > caps.polls
@@ -473,32 +516,16 @@ impl Recipe {
         {
             return Err("native review requires explicit nonzero finite work bounds".into());
         }
-        Ok(Self {
-            request,
-            ttl_ms,
-            assets_bytes,
-            identity,
-            context,
-            stream,
-            evaluation_origin,
-            monitor_generation,
-            publication: publication_value,
-            binding: binding_value,
-            floor: floor_value,
-            files: files_value,
-            max_new_tokens,
-            max_output_bytes,
-            stop_tokens,
-            tokenization,
-            budget,
-            telemetry,
-            sidecar: sidecar_identity,
-            disclosure: disclosure_value,
-            native_limits,
-            priority,
-            rounds,
-            continuation: version >= 4,
-        })
+
+            (rounds, native_limits, None)
+        };
+        root.end()?;
+        Ok(Self { request, ttl_ms, assets_bytes, identity, context, stream, evaluation_origin, monitor_generation,
+            publication: publication_value, binding: binding_value, floor: floor_value, files: files_value,
+            max_new_tokens, max_output_bytes, stop_tokens, tokenization, budget, telemetry,
+            sidecar: sidecar_identity, disclosure: disclosure_value, native_limits, priority, rounds,
+            continuation: version >= 4, process, joint, computed_identity, checked_publication, credential,
+            expected_policy, expected_campaigns })
     }
 }
 fn priority(groups: Vec<fa_reference::strict_json::Json>) -> Result<Vec<KvGroup>, String> {
@@ -551,7 +578,7 @@ pub(super) fn tokenization(mut fields: Fields) -> Result<TokenizationBudget, Str
     fields.end()?;
     Ok(value)
 }
-fn telemetry(mut fields: Fields) -> Result<GenerationTelemetryBudget, String> {
+pub(super) fn telemetry(mut fields: Fields) -> Result<GenerationTelemetryBudget, String> {
     let value = GenerationTelemetryBudget {
         compression_source_values: fields.number("compression_source_values")?,
         compression_encoded_bytes: fields.number("compression_encoded_bytes")?,

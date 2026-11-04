@@ -63,6 +63,13 @@ pub fn fixture() -> (OversightBroker, PublicationEndpoint, CommitteeContract) {
 pub fn fixture_with(
     profile: StreamProfile,
 ) -> (OversightBroker, PublicationEndpoint, CommitteeContract) {
+    fixture_with_capacity(profile, 32)
+}
+
+pub fn fixture_with_capacity(
+    profile: StreamProfile,
+    deliveries: usize,
+) -> (OversightBroker, PublicationEndpoint, CommitteeContract) {
     let contracts = CommitteeContract::new(BTreeMap::from([("helper".to_owned(), HelperContract::new(
         InputProfileBinding { profile_id: 1, profile_bytes: b"complete-cumulative-stream-v1".to_vec(),
             model_epoch: 1, tokenizer_epoch: 1, policy_epoch: 0 },
@@ -126,7 +133,8 @@ pub fn fixture_with(
         ])
         .unwrap(),
     };
-    let mut endpoint = PublicationEndpoint::new_stream(target(1), profile, 200, 32).unwrap();
+    let mut endpoint =
+        PublicationEndpoint::new_stream(target(1), profile, 200, deliveries).unwrap();
     let mut broker = OversightBroker::new(config, &mut endpoint, contracts.clone()).unwrap();
     broker.observe_time(ElapsedTick(1)).unwrap();
     endpoint.observe_time(ElapsedTick(1)).unwrap();

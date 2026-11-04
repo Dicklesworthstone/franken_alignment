@@ -4,6 +4,7 @@
 //! Its endpoint is memory-only during replay; the existing locked Store owns the
 //! sole externally visible canonical replacement. There is no one-key fallback.
 //! Operator storage, helper provenance, human identity and clock remain trusted.
+pub mod abandonment;
 pub mod consistency;
 pub mod containment;
 pub mod credential;
@@ -322,7 +323,7 @@ impl FileOversight {
         }
         let supplied = current.map(|input| input.views().clone());
         match self.transact(revision, Event::Finish(round, supplied, snapshot))? {
-            Transition::Reviewed(result) => Ok(result),
+            Transition::Reviewed(result) => Ok(result.map(|receipt| *receipt)),
             _ => unreachable!("completed review transition"),
         }
     }

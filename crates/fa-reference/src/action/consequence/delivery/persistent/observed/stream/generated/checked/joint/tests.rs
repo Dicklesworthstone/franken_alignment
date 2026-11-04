@@ -4,6 +4,7 @@ use crate::action::ElapsedTick;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
     GenerationFinish, MAX_SAMPLING_ENTRIES, text::TextGenerationRequest,
 };
+use crate::action::consequence::activation::tensor::kv::decoder::MAX_DECODER_PRODUCTS;
 use crate::action::consequence::delivery::persistent::observed::credibility::held_out_joint::HeldOutJointBudget;
 use crate::action::consequence::delivery::persistent::{
     RecoveryReserve,
@@ -274,14 +275,14 @@ fn recovery_does_not_retrofit_a_missing_joint_policy() {
 
 #[test]
 fn invalid_combined_configuration_cannot_create_a_partially_guarded_store() {
-    for bad_count in [false, true] {
+    for (which, mode) in [(0, 0), (1, 0), (2, 1)] {
         let root = Directory::new();
         let mut p = profile();
-        let mut selection = selected(0);
-        if bad_count {
-            p.delivery.limits.events = 5;
-        } else {
-            selection.limits.bindings = 0;
+        let mut selection = selected(mode);
+        match which {
+            0 => selection.limits.bindings = 0,
+            1 => p.delivery.limits.events = 5,
+            _ => selection.feed.as_mut().unwrap().freshness.clock_domain += 1,
         }
         assert!(
             FileOversight::create_generated_text_stream_with_joint_publication(
@@ -295,9 +296,11 @@ fn invalid_combined_configuration_cannot_create_a_partially_guarded_store() {
             .is_err()
         );
         assert!(!root.store().exists());
-        let host = create(&root, selected(0));
-        host.check_generated_text_joint_publication(selected(0), joint(1))
+        let host = create(&root, selected(mode));
+        host.check_generated_text_joint_publication(selected(mode), joint(1))
             .unwrap();
+        assert_eq!(host.decoder_inspection().unwrap().numerical.position, 0);
+        assert_eq!(host.inspect().executions, 0);
     }
 }
 

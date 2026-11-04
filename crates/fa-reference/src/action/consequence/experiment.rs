@@ -397,11 +397,11 @@ impl EvidenceSlice {
         closed.sort_unstable();
         let mut merged: Vec<(u64, u64)> = Vec::new();
         for (start, end) in closed {
-            if let Some(last) = merged.last_mut() {
-                if start <= last.1 {
-                    last.1 = last.1.max(end);
-                    continue;
-                }
+            if let Some(last) = merged.last_mut()
+                && start <= last.1
+            {
+                last.1 = last.1.max(end);
+                continue;
             }
             merged.push((start, end));
         }

@@ -1,8 +1,12 @@
 //! Yield while verifying an original batch; never return a checked prefix as rights.
+mod resumption;
+mod anchored;
+mod recovery;
+
 use super::{BatchAnchor, BatchStatus, Error, FileJournal};
 use crate::batch::{BatchLimits, MAX_BATCH_ENCODED_BYTES, MAX_BATCH_RECORDS};
-use crate::replay::{Replay, ReplayBudget, ReplayStatus, ReplayWork};
 use crate::{Event, Head, Journal};
+use crate::replay::{HistoryAnchor, Replay, ReplayBudget, ReplayStatus, ReplayWork};
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Take};
 
@@ -49,15 +53,20 @@ pub struct BatchInspectionReport {
     pub total: BatchInspectionWork,
 }
 
-/// Own the SAME locked descriptor and the last acknowledged journal throughout.
+/// Own the SAME locked descriptor and private accounting throughout. An existing
+/// owner keeps its acknowledgment; direct recovery publishes none before sync.
 /// No partial status, ledger, file handle, clone or writable owner escapes.
 /// Dropping or canceling releases the lock without changing any journal bytes.
-/// Only finish returns the original owner after exact prefix/suffix verification.
+/// Only completion returns an owner after exact prefix/suffix verification and
+/// any required recovery synchronization.
+/// An explicitly selected resumption may instead transfer to the sealed writer;
+/// neither route exposes an intermediate ledger or permits interleaved commits.
 ///
 /// The caller retains the original anchor and events independently; this does
 /// not authenticate unstored intentions or observe external effect outcomes.
 /// At most the original frame, bounded batch bytes, an 8 KiB comparison buffer
 /// and private original ledgers are retained, plus caller-supplied event storage.
+/// Exact-history inspection additionally retains its immutable pre-group prefix.
 /// Each prepared record uses the original batch primitive and clones its private
 /// ledger; this optional yielding path does not claim lower memory or throughput.
 ///
@@ -73,8 +82,10 @@ pub struct BatchInspectionReport {
 pub struct FileBatchInspection {
     replay: Option<Replay<Take<File>>>,
     file: Option<File>,
-    acknowledged: Journal,
+    origin: InspectionOrigin,
     candidate: Option<Journal>,
+    // Only explicit resumption selects transfer of a fully verified final candidate.
+    retain_candidate: bool,
     anchor: BatchAnchor,
     events: Vec<Event>,
     limits: BatchLimits,
@@ -87,75 +98,105 @@ pub struct FileBatchInspection {
     total: BatchInspectionWork,
 }
 
+// Only the existing-owner path begins with acknowledged accounting. Recovery
+// retains its independent minimum and no current state until an EXACT original
+// record boundary matches the opened extent. No provisional state is exported.
+enum InspectionOrigin {
+    Acknowledged(Journal),
+    Recovery {
+        minimum: Head,
+        extent: u64,
+        directory: File,
+        matched: Option<Journal>,
+    },
+}
+
+impl InspectionOrigin {
+    fn minimum(&self) -> Head {
+        match self {
+            Self::Acknowledged(journal) => journal.head(),
+            Self::Recovery { minimum, .. } => *minimum,
+        }
+    }
+
+    fn current(&self) -> Result<&Journal, Error> {
+        match self {
+            Self::Acknowledged(journal) => Ok(journal),
+            Self::Recovery { matched, .. } => matched.as_ref().ok_or(crate::Error::Binding.into()),
+        }
+    }
+
+    fn into_current(self) -> Result<Journal, Error> {
+        match self {
+            Self::Acknowledged(journal) => Ok(journal),
+            Self::Recovery { matched, .. } => matched.ok_or(crate::Error::Binding.into()),
+        }
+    }
+
+    // Never skip these barriers merely because all original group bytes exist.
+    // Existing acknowledged owners still perform no new synchronization here.
+    fn synchronize(&self, file: &File,
+        sync: impl FnOnce(&File, &File) -> io::Result<()>) -> Result<(), Error>
+    {
+        if let Self::Recovery { extent, directory, .. } = self {
+            if self.current()?.encoded_len() != *extent || file.metadata()?.len() != *extent {
+                return Err(extent_changed());
+            }
+            sync(file, directory)?;
+            if file.metadata()?.len() != *extent { return Err(extent_changed()); }
+        }
+        Ok(())
+    }
+}
+
 impl FileJournal {
     /// Consume a usable locked owner and the independently retained original
     /// batch. Validate shape/profile before file I/O, then seek the same file.
     /// No payload is read or event applied until advance. Errors consume/drop
     /// the owner; they never return its stale accounting as usable recovery.
     /// Reopen a poisoned writer strictly before calling this method.
-    pub fn begin_inspect_batch(
-        mut self,
-        anchor: BatchAnchor,
-        events: Vec<Event>,
-        limits: BatchLimits,
-    ) -> Result<FileBatchInspection, Error> {
-        if self.poisoned {
-            return Err(Error::Poisoned);
-        }
+    pub fn begin_inspect_batch(self, anchor: BatchAnchor, events: Vec<Event>,
+        limits: BatchLimits) -> Result<FileBatchInspection, Error>
+    {
+        self.begin_inspect_batch_checked(anchor, events, limits, None)
+    }
+
+    fn begin_inspect_batch_checked(mut self, anchor: BatchAnchor, events: Vec<Event>,
+        limits: BatchLimits, history: Option<HistoryAnchor>) -> Result<FileBatchInspection, Error>
+    {
+        if self.poisoned { return Err(Error::Poisoned); }
         if anchor.identity != self.journal.identity()
             || anchor.encoded_len < self.journal.header().len() as u64
             || anchor.encoded_len > self.journal.encoded_len()
-        {
-            return Err(crate::Error::Binding.into());
-        }
-        if events.is_empty() {
-            return Err(crate::Error::InvalidInput.into());
-        }
-        if limits.max_records == 0
-            || limits.max_records > MAX_BATCH_RECORDS
-            || limits.max_encoded_bytes == 0
-            || limits.max_encoded_bytes > MAX_BATCH_ENCODED_BYTES
-            || events.len() > limits.max_records
-        {
-            return Err(crate::Error::Limit.into());
-        }
-        let covered = self
-            .journal
-            .head()
-            .sequence
-            .checked_sub(anchor.head.sequence)
+        { return Err(crate::Error::Binding.into()); }
+        admit_batch(&events, limits)?;
+        let covered = self.journal.head().sequence.checked_sub(anchor.head.sequence)
             .ok_or(crate::Error::BehindAnchor)?;
         let covered = usize::try_from(covered).map_err(|_| crate::Error::Limit)?;
-        if covered > events.len() {
-            return Err(crate::Error::Binding.into());
+        if covered > events.len() { return Err(crate::Error::Binding.into()); }
+        let initial = Journal::configured(anchor.identity, self.journal.limits,
+            self.journal.recovery_reserve())?;
+        if let Some(history) = &history {
+            history.check_context(&initial)?;
+            if history.head() != anchor.head || history.encoded_len() != anchor.encoded_len {
+                return Err(crate::Error::Binding.into());
+            }
         }
-        let initial = Journal::configured(
-            anchor.identity,
-            self.journal.limits,
-            self.journal.recovery_reserve(),
-        )?;
         self.poisoned = true;
         if self.file.metadata()?.len() != self.journal.encoded_len() {
             return Err(extent_changed());
         }
         self.file.seek(SeekFrom::Start(0))?;
-        let replay = initial.replay_cursor(self.file.take(anchor.encoded_len), anchor.head)?;
-        Ok(FileBatchInspection {
-            replay: Some(replay),
-            file: None,
-            acknowledged: self.journal,
-            candidate: None,
-            anchor,
-            events,
-            limits,
-            covered,
-            prepared: 0,
-            records: Vec::new(),
-            compared: 0,
-            stage: BatchInspectionStatus::ReplayPrefix,
-            failed: false,
-            total: BatchInspectionWork::default(),
-        })
+        let reader = self.file.take(anchor.encoded_len);
+        let replay = match history {
+            Some(history) => initial.replay_cursor_anchored(reader, history)?,
+            None => initial.replay_cursor(reader, anchor.head)?,
+        };
+        Ok(FileBatchInspection { replay: Some(replay), file: None,
+            origin: InspectionOrigin::Acknowledged(self.journal), candidate: None, retain_candidate: false, anchor, events, limits, covered,
+            prepared: 0, records: Vec::new(), compared: 0,
+            stage: BatchInspectionStatus::ReplayPrefix, failed: false,
+            total: BatchInspectionWork::default() })
     }
 }
 
@@ -183,46 +224,38 @@ impl FileBatchInspection {
             total,
         }
     }
-    /// This is only the PREEXISTING acknowledged recovery minimum, not the
-    /// private replay head or a claim that the supplied batch has completed.
-    pub fn acknowledged_head(&self) -> Head {
-        self.acknowledged.head()
-    }
-    pub fn cancel(self) -> BatchInspectionWork {
-        self.progress().total
-    }
+    /// Only the preexisting acknowledgment, or the independently selected
+    /// pre-group minimum during direct recovery. Never a provisional replay
+    /// head, acknowledgment of a surviving suffix, or completed-group claim.
+    pub fn acknowledged_head(&self) -> Head { self.origin.minimum() }
+    pub fn cancel(self) -> BatchInspectionWork { self.progress().total }
 
-    /// Return the same already synchronized owner and exact historical status.
-    /// No write or synchronization occurs. Pending/failed inspection returns no
-    /// owner; a final extent check still runs under the original advisory lock.
+    /// Return an owner and exact historical status without completing a missing
+    /// suffix. An existing owner needs no sync; direct recovery first syncs the
+    /// same file and parent directory. Pending/failed inspection returns no owner.
+    /// The final extent checks remain under the original advisory lock.
     /// Same-length edits by noncooperating writers remain outside that lock's
     /// guarantee, as in original FileRecovery. No host-security claim is added.
     pub fn finish(self) -> Result<(FileJournal, BatchStatus), Error> {
-        if self.failed {
-            return Err(Error::Poisoned);
-        }
-        if self.stage != BatchInspectionStatus::Ready {
-            return Err(Error::RecoveryIncomplete);
-        }
+        self.finish_with_sync(|file, directory| {
+            file.sync_all()?;
+            directory.sync_all()
+        })
+    }
+
+    fn finish_with_sync(self, sync: impl FnOnce(&File, &File) -> io::Result<()>)
+        -> Result<(FileJournal, BatchStatus), Error>
+    {
+        if self.failed { return Err(Error::Poisoned); }
+        if self.stage != BatchInspectionStatus::Ready { return Err(Error::RecoveryIncomplete); }
         let file = self.file.ok_or(Error::RecoveryIncomplete)?;
-        if file.metadata()?.len() != self.acknowledged.encoded_len() {
-            return Err(extent_changed());
-        }
-        let status = BatchStatus {
-            anchor: self.anchor,
-            observed_head: self.acknowledged.head(),
-            persisted_records: self.covered,
-            total_records: self.events.len(),
-            remaining_bytes: self.records.len() - self.compared,
-        };
-        Ok((
-            FileJournal {
-                file,
-                journal: self.acknowledged,
-                poisoned: false,
-            },
-            status,
-        ))
+        if file.metadata()?.len() != self.origin.current()?.encoded_len() { return Err(extent_changed()); }
+        self.origin.synchronize(&file, sync)?;
+        let journal = self.origin.into_current()?;
+        let status = BatchStatus { anchor: self.anchor, observed_head: journal.head(),
+            persisted_records: self.covered, total_records: self.events.len(),
+            remaining_bytes: self.records.len() - self.compared };
+        Ok((FileJournal { file, journal, poisoned: false }, status))
     }
 
     // Private fault seam only; no public reader callback or alternate data source.
@@ -263,20 +296,29 @@ impl FileBatchInspection {
         if before.head() != self.anchor.head || before.encoded_len() != self.anchor.encoded_len {
             return Err(crate::Error::Binding.into());
         }
-        if self.covered == 0 {
-            self.check_prefix(&before)?;
-        }
+        self.observe_boundary(&before, 0)?;
         self.candidate = Some(before);
         self.stage = BatchInspectionStatus::PrepareBatch;
         Ok(())
     }
-    fn check_prefix(&self, prefix: &Journal) -> Result<(), Error> {
-        if prefix.head() != self.acknowledged.head()
-            || prefix.encoded_len() != self.acknowledged.encoded_len()
-            || prefix.rights() != self.acknowledged.rights()
-        {
-            return Err(crate::Error::Binding.into());
+    fn observe_boundary(&mut self, prefix: &Journal, prepared: usize) -> Result<(), Error> {
+        if let InspectionOrigin::Recovery { extent, matched, .. } = &mut self.origin {
+            if prefix.encoded_len() == *extent {
+                *matched = Some(prefix.clone());
+                self.covered = prepared;
+            }
+        } else if prepared == self.covered {
+            self.check_prefix(prefix)?;
         }
+        Ok(())
+    }
+
+    fn check_prefix(&self, prefix: &Journal) -> Result<(), Error> {
+        let acknowledged = self.origin.current()?;
+        if prefix.head() != acknowledged.head()
+            || prefix.encoded_len() != acknowledged.encoded_len()
+            || prefix.rights() != acknowledged.rights()
+        { return Err(crate::Error::Binding.into()); }
         Ok(())
     }
     fn prepare(&mut self, allowance: u64) -> Result<(), Error> {
@@ -307,25 +349,25 @@ impl FileBatchInspection {
                 .map_err(|_| crate::Error::Limit)?;
             self.records.extend_from_slice(&record);
             self.prepared += 1;
-            if self.prepared == self.covered {
-                self.check_prefix(&next)?;
-            }
+            self.observe_boundary(&next, self.prepared)?;
             self.candidate = Some(next);
         }
         if self.prepared == self.events.len() {
-            // Only the bounded canonical comparison bytes survive preparation.
-            // Never return or install any reconstructed intermediate/final ledger.
-            self.candidate = None;
+            // Direct recovery accepts only an exact original record boundary.
+            // A torn record or unrelated tail cannot be silently repaired.
+            self.origin.current()?;
+            // Ordinary inspection retains no reconstructed ledger. Explicit
+            // resumption keeps the final candidate private until full byte/EOF
+            // verification transfers it into the original bounded writer.
+            if !self.retain_candidate { self.candidate = None; }
             self.stage = BatchInspectionStatus::CompareSuffix;
         }
         Ok(())
     }
-    fn compare(
-        &mut self,
-        budget: BatchInspectionBudget,
-        read: &mut impl FnMut(&mut File, &mut [u8]) -> io::Result<usize>,
-    ) -> Result<(), Error> {
-        let suffix_len = usize::try_from(self.acknowledged.encoded_len() - self.anchor.encoded_len)
+    fn compare(&mut self, budget: BatchInspectionBudget,
+        read: &mut impl FnMut(&mut File, &mut [u8]) -> io::Result<usize>) -> Result<(), Error>
+    {
+        let suffix_len = usize::try_from(self.origin.current()?.encoded_len() - self.anchor.encoded_len)
             .map_err(|_| crate::Error::Limit)?;
         if suffix_len > self.records.len() {
             return Err(crate::Error::Binding.into());
@@ -359,16 +401,8 @@ impl FileBatchInspection {
                 .ok_or(crate::Error::Limit)?;
             bytes += count as u64;
             if eof && count == 0 {
-                if self
-                    .file
-                    .as_ref()
-                    .ok_or(Error::RecoveryIncomplete)?
-                    .metadata()?
-                    .len()
-                    != self.acknowledged.encoded_len()
-                {
-                    return Err(extent_changed());
-                }
+                if self.file.as_ref().ok_or(Error::RecoveryIncomplete)?.metadata()?.len()
+                    != self.origin.current()?.encoded_len() { return Err(extent_changed()); }
                 self.stage = BatchInspectionStatus::Ready;
                 return Ok(());
             }
@@ -383,6 +417,15 @@ impl FileBatchInspection {
         Ok(())
     }
 }
+fn admit_batch(events: &[Event], limits: BatchLimits) -> Result<(), Error> {
+    if events.is_empty() { return Err(crate::Error::InvalidInput.into()); }
+    if limits.max_records == 0 || limits.max_records > MAX_BATCH_RECORDS
+        || limits.max_encoded_bytes == 0 || limits.max_encoded_bytes > MAX_BATCH_ENCODED_BYTES
+        || events.len() > limits.max_records
+    { return Err(crate::Error::Limit.into()); }
+    Ok(())
+}
+
 fn extent_changed() -> Error {
     io::Error::new(
         io::ErrorKind::InvalidData,

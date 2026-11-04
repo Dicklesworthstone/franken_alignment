@@ -1,9 +1,12 @@
 //! Restart progress without a surviving in-memory domain owner. Coordinator
 //! intent precedes domain I/O; the ORIGINAL registered history remains authority.
-pub(super) mod clocked;
-pub(super) mod cooperative;
-pub(super) mod fleet;
 pub(super) mod resolution;
+pub(super) mod cooperative;
+pub(super) mod clocked;
+mod phases;
+pub(super) mod learned;
+mod reserve;
+pub(super) mod fleet;
 #[cfg(test)]
 mod test_support;
 #[cfg(test)]
@@ -36,8 +39,7 @@ impl FileShutdownCoordinator {
         domain: u64,
         at: ElapsedTick,
     ) -> Result<Result<FileShutdownObservation, JournalError>, JournalError> {
-        let (index, attempt) =
-            self.begin(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
+        let (index, attempt) = self.begin_registered_terminal(revision, domain, ShutdownVisitKind::RecoverStopped { at })?;
         let result = self.recover_domain(index, attempt, at);
         self.finish(index, attempt, result)
     }

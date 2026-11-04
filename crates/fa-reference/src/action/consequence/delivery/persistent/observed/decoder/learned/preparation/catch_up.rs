@@ -54,14 +54,14 @@ impl FileLearnedStepPreparation {
         // this cursor. No disk bytes, new owner or deserialized prefix is adopted.
         // Recheck the complete original law BEFORE changing the captured cut.
         match self.operation {
-            Operation::Intent => {
-                host.check_learned_intent_preparation(expected_revision, self.intent)?
-            }
-            Operation::Completion => host.check_learned_completion(
-                expected_revision,
-                self.intent.actor_revision,
-                self.intent.position,
-            )?,
+            Operation::Intent => host.check_learned_intent_preparation(expected_revision, self.intent)?,
+            Operation::Completion => host.check_learned_completion(expected_revision,
+                self.intent.actor_revision, self.intent.position)?,
+            Operation::Checkpoint { checkpoint, authority_epoch } =>
+                host.check_learned_checkpoint_preparation(expected_revision, checkpoint,
+                    self.intent, authority_epoch)?,
+            Operation::ResetCompletion { operation } =>
+                host.check_learned_reset_completion(expected_revision, operation)?,
         }
         self.revision = expected_revision;
         self.total = host.events.len();

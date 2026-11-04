@@ -705,3 +705,110 @@ fn an_output_created_after_reporting_cannot_be_overwritten_or_cause_a_refit() {
         Some("monitor_write")
     );
 }
+
+
+#[test]
+fn llama3_bos_campaign_preserves_original_token_cases_and_binds_the_prefix_in_the_monitor() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, PreTokenization};
+    let root = Root::new(); let args = files(&root);
+    let raw = fixture::tokenizer_json();
+    let json = unicode_json::with_llama3_bos(&raw, "<|reserved|>", 259);
+    fs::write(&args[2], &json).unwrap();
+    replace(&args, "\"tokenizer_format\":\"native_archive\"", "\"tokenizer_format\":\"huggingface_llama3_unicode17\"");
+    assert!(run(&args, &mut Vec::new()).is_err());
+    assert!(!Path::new(&args[6]).exists()); assert!(!Path::new(&args[7]).exists());
+    replace(&args, "\"tokenizer_format\":\"huggingface_llama3_unicode17\"", "\"tokenizer_format\":\"huggingface_llama3_unicode17_bos\"");
+    assert!(run(&args, &mut Vec::new()).unwrap());
+    let model = original::model(); let codec = original::codec(&model);
+    let tokenizer = ByteBpe::from_huggingface_llama3_bos_json(model.profile(),
+        json.as_bytes(), ByteBpe::MAX_HUGGINGFACE_JSON_BYTES).unwrap();
+    assert_eq!(tokenizer.bos_token(), Some(259));
+    assert_eq!(tokenizer.encode(b"a", Default::default()).unwrap().tokens(), &[259, 97]);
+    let archive = tokenizer.to_bytes().unwrap();
+    assert_eq!(&archive[..8], b"FABBPE06");
+    let restored = ByteBpe::from_bytes(model.profile(), &archive).unwrap();
+    let bytes = fs::read(&args[7]).unwrap();
+    let artifact = KvMonitorArtifact::decode(&bytes, MAX_KV_MONITOR_ARTIFACT_BYTES).unwrap();
+    let expected = original::campaign().policy(codec.clone(), &fixture::settings()).unwrap();
+    artifact.verify(&model, &restored, &expected).unwrap();
+    // Cases are explicit original-token observations, never re-tokenized by
+    // selecting a new input grammar. The complete tokenizer still binds use.
+    let capture = selected(&rows(&args), "capture_completed_work");
+    assert_eq!(capture[0].get("original_tokens").unwrap().as_u64(), Some(12));
+    let no_bos_json = unicode_json::select(&raw, PreTokenization::Llama3Unicode17);
+    let no_bos = ByteBpe::from_huggingface_json_with_pre_tokenization(model.profile(),
+        no_bos_json.as_bytes(), ByteBpe::MAX_HUGGINGFACE_JSON_BYTES, PreTokenization::Llama3Unicode17).unwrap();
+    assert_eq!(artifact.verify(&model, &no_bos, &expected), Err(Error::Binding));
+    let other_json = unicode_json::with_llama3_bos(&raw, "<|stop|>", 256);
+    let other = ByteBpe::from_huggingface_llama3_bos_json(model.profile(),
+        other_json.as_bytes(), ByteBpe::MAX_HUGGINGFACE_JSON_BYTES).unwrap();
+    assert_eq!(artifact.verify(&model, &other, &expected), Err(Error::Binding));
+    let loaded = operator_monitor::MonitorInput::decode(&bytes).unwrap()
+        .bind_with_tokenizer(&model, &restored, codec).unwrap();
+    for (seed, held) in [(4, false), (5, true)] {
+        let mut generation = model.monitored_generation(2000, 2001, original::spec(seed),
+            loaded.policy.clone(), GenerationBudget::default()).unwrap();
+        assert!(generation.advance(0).unwrap().audit().complete_quiet());
+        let accepted = generation.accepted_cache_image().unwrap().encode().unwrap();
+        let event = generation.advance(1).unwrap();
+        if held {
+            assert_eq!(event.status(), GenerationStatus::Held(MonitorOutcome::Alarm));
+            assert!(event.sample().is_none()); assert!(event.accepted().is_none());
+            assert!(generation.generated_tokens().is_empty());
+            assert_eq!(generation.accepted_cache_image().unwrap().encode().unwrap(), accepted);
+        } else {
+            assert!(event.audit().complete_quiet());
+            assert_eq!(event.sample().unwrap().token, 0);
+            assert!(generation.advance(2).unwrap().audit().complete_quiet());
+            assert_eq!(generation.status(), GenerationStatus::Finished(GenerationStop::StopToken(256)));
+        }
+    }
+    let native = Root::new(); let native_args = files(&native);
+    fs::write(&native_args[2], archive).unwrap();
+    assert!(run(&native_args, &mut Vec::new()).unwrap());
+    assert_eq!(fs::read(&native_args[7]).unwrap(), bytes);
+}
+
+#[test]
+fn whole_piece_campaign_binds_merge_policy_without_retokenizing_original_cases() {
+    use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::{ByteBpe, MergePolicy, PreTokenization};
+    for bos in [false, true] {
+        let root = Root::new(); let args = files(&root);
+        let raw = fixture::tokenizer_json();
+        let legacy_json = if bos { unicode_json::with_llama3_bos(&raw, "<|reserved|>", 259) }
+            else { unicode_json::select(&raw, PreTokenization::Llama3Unicode17) };
+        let json = legacy_json.replace("\"ignore_merges\":false", "\"ignore_merges\":true");
+        fs::write(&args[2], &json).unwrap();
+        let format = if bos { "huggingface_llama3_unicode17_bos_whole_piece" }
+            else { "huggingface_llama3_unicode17_whole_piece" };
+        replace(&args, "\"tokenizer_format\":\"native_archive\"", &format!("\"tokenizer_format\":\"{format}\""));
+        assert!(run(&args, &mut Vec::new()).unwrap());
+        let model = original::model(); let codec = original::codec(&model);
+        let tokenizer = if bos {
+            ByteBpe::from_huggingface_llama3_bos_json_with_merge_policy(model.profile(), json.as_bytes(),
+                json.len(), MergePolicy::WholePieceFirst)
+        } else {
+            ByteBpe::from_huggingface_json_with_merge_policy(model.profile(), json.as_bytes(),
+                json.len(), PreTokenization::Llama3Unicode17, MergePolicy::WholePieceFirst)
+        }.unwrap();
+        let old = if bos {
+            ByteBpe::from_huggingface_llama3_bos_json(model.profile(), legacy_json.as_bytes(), legacy_json.len())
+        } else {
+            ByteBpe::from_huggingface_json_with_pre_tokenization(model.profile(), legacy_json.as_bytes(),
+                legacy_json.len(), PreTokenization::Llama3Unicode17)
+        }.unwrap();
+        let bytes = fs::read(&args[7]).unwrap();
+        let artifact = KvMonitorArtifact::decode(&bytes, MAX_KV_MONITOR_ARTIFACT_BYTES).unwrap();
+        let expected = original::campaign().policy(codec.clone(), &fixture::settings()).unwrap();
+        artifact.verify(&model, &tokenizer, &expected).unwrap();
+        assert_eq!(artifact.verify(&model, &old, &expected), Err(Error::Binding));
+        // Even identical IDs for this prompt cannot conceal changed semantics.
+        assert_eq!(old.encode(b"a", Default::default()).unwrap().tokens(),
+            tokenizer.encode(b"a", Default::default()).unwrap().tokens());
+        let capture = selected(&rows(&args), "capture_completed_work");
+        assert_eq!(capture[0].get("original_tokens").unwrap().as_u64(), Some(12));
+        let restored = ByteBpe::from_bytes(model.profile(), &tokenizer.to_bytes().unwrap()).unwrap();
+        operator_monitor::MonitorInput::decode(&bytes).unwrap()
+            .bind_with_tokenizer(&model, &restored, codec).unwrap();
+    }
+}

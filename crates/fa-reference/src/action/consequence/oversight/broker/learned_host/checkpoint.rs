@@ -26,6 +26,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::rc::Rc;
 
+mod stream;
+pub use stream::{HostedLearnedStreamCheckpointHandle, HostedLearnedStreamResetRequest};
+pub(crate) use stream::HostedLearnedStreamNarrowRequest;
+pub(crate) use stream::StreamCheckpointBasis;
+
 /// References a private ORIGINAL numerical checkpoint paired with its original
 /// authority checkpoint. It carries no cache, sampler, live source or permit.
 #[derive(Clone)]
@@ -67,6 +72,10 @@ pub struct HostedLearnedResetReceipt {
     pub position: u64,
     pub sampled_draws: u64,
     pub restart: GenerationKvRestartReceipt,
+    /// Optional SECOND fresh audit of the actual restored successor cache.
+    /// Its presence follows the independently pinned owned-predictor recipe;
+    /// copies are historical evidence, never a live forecast source or permit.
+    pub restored_forecast_audit: Option<RestartAudit>,
 }
 
 /// Logical bounded work, not allocator memory or wall-clock isolation. At most
@@ -92,6 +101,7 @@ pub struct HostedLearnedRecoveryUsage {
 struct PairedCheckpoint {
     control: CheckpointHandle,
     numerical: GenerationKvCheckpoint,
+    stream: Option<StreamCheckpointBasis>,
 }
 #[derive(Debug)]
 pub(super) struct RecoveryState {
@@ -142,31 +152,22 @@ impl OversightBroker {
     /// to the authority's actor copy. An audit-only profile cannot create a pair.
     /// Fresh full-prefix restart has separate original policy-capacity checks;
     /// no stronger restart grade is inferred from successful serialization.
-    pub fn capture_hosted_learned_checkpoint(
-        &mut self,
-        id: u64,
-        expected_actor_revision: u64,
-    ) -> Result<HostedLearnedCheckpointHandle, Error> {
-        if self.enforce_learned_host_stop()?.is_some()
-            || self.enforce_consistency_stop()?.is_some()
-            || self.inspect().suspended
-            || self.stop_receipt().is_some()
-        {
-            return Err(Error::WrongState);
-        }
-        if expected_actor_revision != self.actor_revision() {
-            return Err(Error::Stale);
-        }
-        if id == 0 {
-            return Err(Error::InvalidInput);
-        }
+    pub fn capture_hosted_learned_checkpoint(&mut self, id: u64, expected_actor_revision: u64)
+        -> Result<HostedLearnedCheckpointHandle, Error>
+    {
+        self.capture_hosted_learned_checkpoint_inner(id, expected_actor_revision, None)
+    }
+
+    fn capture_hosted_learned_checkpoint_inner(&mut self, id: u64, expected_actor_revision: u64,
+        stream: Option<StreamCheckpointBasis>) -> Result<HostedLearnedCheckpointHandle, Error>
+    {
+        if self.enforce_learned_host_stop()?.is_some() || self.enforce_consistency_stop()?.is_some()
+            || self.inspect().suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
+        if expected_actor_revision != self.actor_revision() { return Err(Error::Stale); }
+        if id == 0 { return Err(Error::InvalidInput); }
         let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
-        if host.text_stream.is_some() {
-            return Err(Error::Incomplete);
-        }
-        if host.fault.is_some()
-            || host.run.position() == 0
-            || !host.run.status().is_active()
+        if host.text_stream.is_some() != stream.is_some() { return Err(Error::Incomplete); }
+        if host.fault.is_some() || host.run.position() == 0 || !host.run.status().is_active()
             || host.run.observation().availability() != LearnedAvailability::Ready
         {
             return Err(Error::WrongState);
@@ -185,15 +186,18 @@ impl OversightBroker {
             return Err(Error::Binding);
         }
         let original = host.run.original_generation();
-        let numerical = original.checkpoint_kv(DecoderRestoreBudget {
-            cache_values: MAX_MODEL_KV_VALUES,
-        })?;
+        if self.owned_learned_forecast_restart_audit_required()
+            && (original.position() != original.spec().prompt().len() as u64
+                || original.status() != GenerationStatus::Generating
+                || original.work().sampling_attempts != 0) {
+            return Err(Error::WrongState);
+        }
+        let numerical = original.checkpoint_kv(DecoderRestoreBudget { cache_values: MAX_MODEL_KV_VALUES })?;
         // Fixed model/policy objects are shared. Charge retained logical state
         // including histories, logits and the original sampler representation.
-        let bytes = actor
-            .tokens()
-            .len()
-            .checked_mul(4)
+        let stream_bytes = stream.as_ref().map(StreamCheckpointBasis::retained_bytes)
+            .transpose()?.unwrap_or(0);
+        let bytes = actor.tokens().len().checked_mul(4)
             .and_then(|n| n.checked_add(actor.cache().len()))
             .and_then(|n| n.checked_add(actor.sampler().len()))
             .and_then(|n| n.checked_add(original.accepted_logits().ok()?.len().checked_mul(4)?))
@@ -201,18 +205,12 @@ impl OversightBroker {
             .and_then(|n| n.checked_add(original.samples().len().checked_mul(68)?))
             .and_then(|n| n.checked_add(original.spec().prompt().len().checked_mul(4)?))
             .and_then(|n| n.checked_add(original.spec().stop_tokens().len().checked_mul(4)?))
-            .and_then(|n| n.checked_add(host.recovery.usage.checkpoint_bytes))
-            .ok_or(Error::Limit)?;
-        if bytes > MAX_RETAINED_STATE_BYTES {
-            return Err(Error::Limit);
-        }
-        let control = self
-            .delivery
-            .capture_checkpoint(id, expected_actor_revision)?;
+            .and_then(|n| n.checked_add(stream_bytes))
+            .and_then(|n| n.checked_add(host.recovery.usage.checkpoint_bytes)).ok_or(Error::Limit)?;
+        if bytes > MAX_RETAINED_STATE_BYTES { return Err(Error::Limit); }
+        let control = self.delivery.capture_checkpoint(id, expected_actor_revision)?;
         let host = self.learned_host.as_mut().expect("validated learned owner");
-        host.recovery
-            .checkpoints
-            .insert(id, PairedCheckpoint { control, numerical });
+        host.recovery.checkpoints.insert(id, PairedCheckpoint { control, numerical, stream });
         host.recovery.usage.checkpoints += 1;
         host.recovery.usage.checkpoint_bytes = bytes;
         Ok(HostedLearnedCheckpointHandle {
@@ -228,6 +226,9 @@ impl OversightBroker {
     /// The destination begins without current proposal evidence. It must be an
     /// active checkpoint so a fresh accepted token can establish that evidence;
     /// a finished live continuation may still rewind to an earlier active pair.
+    /// An independently pinned owned-predictor restart-audit recipe instead
+    /// admits only the unsampled complete prompt checkpoint and produces a
+    /// separate fresh forecast-only audit of the actual restored cache.
     ///
     /// ```compile_fail,E0308
     /// use fa_reference::action::{Permit, consequence::oversight::learned_host::checkpoint::HostedLearnedCheckpointHandle};
@@ -241,17 +242,19 @@ impl OversightBroker {
         {
             return Err(Error::WrongState);
         }
-        let result = self.reset_hosted_learned_inner(request);
-        if result.is_err() {
-            self.enforce_learned_host_stop()?;
-        }
+        let result = self.reset_hosted_learned_inner(request, None);
+        if result.is_err() { self.enforce_learned_host_stop()?; }
         result
     }
 
-    fn reset_hosted_learned_inner(
-        &mut self,
-        request: HostedLearnedResetRequest,
-    ) -> Result<HostedLearnedResetReceipt, Error> {
+    fn reset_hosted_learned_inner(&mut self, request: HostedLearnedResetRequest,
+        first_incident_sequence: Option<u64>) -> Result<HostedLearnedResetReceipt, Error>
+    {
+        let fresh_forecast_audit = self.owned_learned_forecast_restart_audit_required();
+        self.check_owned_learned_forecast_restart()?;
+        if let Some(first) = first_incident_sequence {
+            self.check_hosted_learned_stream_reset(&request.checkpoint, first)?;
+        }
         let inspection = self.inspect();
         if inspection.suspended || self.stop_receipt().is_some() {
             return Err(Error::WrongState);
@@ -273,34 +276,19 @@ impl OversightBroker {
             return Err(Error::InvalidInput);
         }
         let host = self.learned_host.as_mut().ok_or(Error::Incomplete)?;
-        if !Rc::ptr_eq(&request.checkpoint.issuer, &host.recovery.issuer) {
-            return Err(Error::Binding);
-        }
-        if host.text_stream.is_some() {
-            return Err(Error::Incomplete);
-        }
-        if host.fault.is_some()
-            || matches!(host.run.status(), GenerationStatus::Failed(_))
-            || !matches!(
-                host.run.observation().availability(),
-                LearnedAvailability::Ready | LearnedAvailability::Held
-            )
-        {
-            return Err(Error::WrongState);
-        }
+        if !Rc::ptr_eq(&request.checkpoint.issuer, &host.recovery.issuer) { return Err(Error::Binding); }
+        if host.text_stream.is_some() != first_incident_sequence.is_some() { return Err(Error::Incomplete); }
+        if host.fault.is_some() || matches!(host.run.status(), GenerationStatus::Failed(_))
+            || !matches!(host.run.observation().availability(), LearnedAvailability::Ready | LearnedAvailability::Held)
+        { return Err(Error::WrongState); }
         if self.started_rounds.contains(&request.binding.round)
-            || host.recovery.reset_rounds.contains(&request.binding.round)
-        {
-            return Err(Error::Duplicate);
-        }
-        let saved = host
-            .recovery
-            .checkpoints
-            .get(&request.checkpoint.id)
-            .ok_or(Error::Missing)?;
-        if !saved.numerical.status().is_active() {
-            return Err(Error::WrongState);
-        }
+            || host.recovery.reset_rounds.contains(&request.binding.round) { return Err(Error::Duplicate); }
+        let saved = host.recovery.checkpoints.get(&request.checkpoint.id).ok_or(Error::Missing)?;
+        if saved.stream.is_some() != first_incident_sequence.is_some() { return Err(Error::Binding); }
+        if !saved.numerical.status().is_active() { return Err(Error::WrongState); }
+        if fresh_forecast_audit && (saved.numerical.status() != GenerationStatus::Generating
+            || saved.numerical.position() != saved.numerical.spec().prompt().len() as u64
+            || saved.numerical.work().sampling_attempts != 0) { return Err(Error::Binding); }
         // A checkpoint ahead of the active logical timeline is not a rewind.
         generation_work(host.run.work(), saved.numerical.work(), subtract)?;
         telemetry(
@@ -312,27 +300,15 @@ impl OversightBroker {
             return Err(Error::Limit);
         }
         if request.restart_budget.cache_values > MAX_MODEL_KV_VALUES
-            || saved.numerical.cache_values() > request.restart_budget.cache_values
-        {
-            return Err(Error::Limit);
-        }
-        let rows = usize::try_from(saved.numerical.position())
-            .map_err(|_| Error::Limit)?
-            .checked_mul(saved.numerical.policy().monitor().taps().len())
-            .ok_or(Error::Limit)?;
-        if rows > saved.numerical.policy().monitor().budget().rows {
-            return Err(Error::Limit);
-        }
-        let stream = host
-            .run
-            .observation()
-            .stream()
-            .checked_add(1)
-            .ok_or(Error::Overflow)?;
-        let reserved = reservation(
-            request.restart_budget.audit,
-            saved.numerical.policy().allowance(),
-        )?;
+            || saved.numerical.cache_values() > request.restart_budget.cache_values { return Err(Error::Limit); }
+        let rows = usize::try_from(saved.numerical.position()).map_err(|_| Error::Limit)?
+            .checked_mul(saved.numerical.policy().monitor().taps().len()).ok_or(Error::Limit)?;
+        if rows > saved.numerical.policy().monitor().budget().rows { return Err(Error::Limit); }
+        let stream = host.run.observation().stream().checked_add(1).ok_or(Error::Overflow)?;
+        let reserved = reservation(request.restart_budget.audit, saved.numerical.policy().allowance())?;
+        // Both immutable-source audits receive the SAME intersected per-audit
+        // allowance. Reserve both before either runs; failures never refund it.
+        let reserved = if fresh_forecast_audit { telemetry(reserved, reserved, add)? } else { reserved };
         let audit_total = telemetry(host.recovery.usage.reserved_audit, reserved, add)?;
         let cache_total = add(
             host.recovery.usage.reserved_cache_values,
@@ -397,12 +373,18 @@ impl OversightBroker {
             host.recovery.usage.bytes_recaptured = recaptured;
             host.recovery.usage.staged_write_bytes = staged;
             generation.conserve_host_continuation_budget(host.run.original_generation())?;
-            let next =
-                ObservedLearnedGeneration::from_host_restart(generation, &receipt, &host.run)?;
+            let mut next = ObservedLearnedGeneration::from_host_restart(generation, &receipt, &host.run)?;
+            let forecast_audit = if fresh_forecast_audit {
+                let audit = next.audit_restored_forecast(request.restart_budget.audit)?;
+                host.recovery.usage.completed_audit = telemetry(host.recovery.usage.completed_audit,
+                    audit_work(&audit)?, add)?;
+                if !audit.monitoring().complete_quiet() { return Err(Error::Incomplete); }
+                Some(audit)
+            } else { None };
             let actor = next.capture_host_actor(host.profile)?;
-            Ok::<_, Error>((next, actor, receipt))
+            Ok::<_, Error>((next, actor, receipt, forecast_audit))
         })();
-        let (next, actor, restart) = match prepared {
+        let (next, actor, restart, restored_forecast_audit) = match prepared {
             Ok(value) => value,
             Err(error) => {
                 host.fault = Some(error);
@@ -461,24 +443,10 @@ impl OversightBroker {
             // Dropping the guard leaves the abandoned source unavailable too.
             drop(guard);
         }
-        Ok(HostedLearnedResetReceipt {
-            control,
-            actor_revision: self.actor_revision(),
-            resumed_stream,
-            position: self
-                .learned_host
-                .as_ref()
-                .expect("owned learned source")
-                .run
-                .position(),
-            sampled_draws: self
-                .learned_host
-                .as_ref()
-                .expect("owned learned source")
-                .run
-                .sampled_draws(),
-            restart,
-        })
+        Ok(HostedLearnedResetReceipt { control, actor_revision: self.actor_revision(), resumed_stream,
+            position: self.learned_host.as_ref().expect("owned learned source").run.position(),
+            sampled_draws: self.learned_host.as_ref().expect("owned learned source").run.sampled_draws(),
+            restart, restored_forecast_audit })
     }
 }
 

@@ -1,9 +1,10 @@
 //! Cooperative strict replay using the original wire decoder and rights reducer.
 //! A checked prefix is never exported as recovered accounting.
 
-use crate::{
-    Cursor, Error, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event,
-};
+mod anchor;
+pub use anchor::HistoryAnchor;
+
+use crate::{Cursor, Error, Head, Identity, Journal, Limits, apply_event, crc32_parts, decode_event};
 use std::fmt;
 use std::io::{self, Read};
 
@@ -87,7 +88,8 @@ enum Phase {
 /// elapsed time. One record check includes its bounded checksum/decoding and the
 /// original rights reducer. That reducer may inspect already retained rights.
 /// There is at most one frame buffer (max_frame_bytes + 4, or the selected fixed header), plus
-/// original decoded event/rights storage. A Read may block or buffer internally.
+/// original decoded event/rights storage. Anchored replay also retains its exact
+/// independent prefix. A Read may block or buffer internally.
 /// Errors other than Interrupted, including WouldBlock, are terminal; an I/O
 /// error is not reinterpreted as temporary EOF or a reusable partial history.
 ///
@@ -105,6 +107,8 @@ pub struct Replay<R> {
     journal: Journal,
     minimum: Head,
     anchor_seen: bool,
+    exact_anchor: Option<HistoryAnchor>,
+    captured_history: Option<Vec<u8>>,
     phase: Phase,
     buffer: Vec<u8>,
     filled: usize,
@@ -135,6 +139,8 @@ impl Journal {
         Ok(Replay {
             reader,
             anchor_seen: minimum == journal.head(),
+            exact_anchor: None,
+            captured_history: None,
             journal,
             minimum,
             phase: Phase::Header,
@@ -269,20 +275,29 @@ impl<R: Read> Replay<R> {
             }
             if count == 0 {
                 if matches!(self.phase, Phase::Length) && self.filled == 0 {
-                    return if self.anchor_seen {
-                        Ok(ReplayStatus::Ready)
-                    } else {
-                        Err(Error::BehindAnchor)
-                    };
+                    return if self.anchor_seen && self.exact_anchor.as_ref()
+                        .is_none_or(|anchor| self.total.read_bytes >= anchor.encoded_len())
+                    { Ok(ReplayStatus::Ready) }
+                        else { Err(Error::BehindAnchor) };
                 }
                 return Err(io::Error::from(io::ErrorKind::UnexpectedEof).into());
             }
-            self.total.read_bytes = self
-                .total
-                .read_bytes
-                .checked_add(count as u64)
+            let offset = self.total.read_bytes;
+            self.total.read_bytes = self.total.read_bytes.checked_add(count as u64)
                 .ok_or(Error::Limit)?;
             spent.read_bytes += count as u64;
+            if let Some(anchor) = &self.exact_anchor {
+                anchor.check_read(offset, &self.buffer[self.filled..self.filled + count])?;
+            }
+            if let Some(history) = &mut self.captured_history {
+                let length = (history.len() as u64).checked_add(count as u64)
+                    .ok_or(Error::Limit)?;
+                if length > self.journal.limits.max_total_bytes {
+                    return Err(Error::Limit);
+                }
+                history.try_reserve(count).map_err(|_| Error::Limit)?;
+                history.extend_from_slice(&self.buffer[self.filled..self.filled + count]);
+            }
             self.filled += count;
         }
     }

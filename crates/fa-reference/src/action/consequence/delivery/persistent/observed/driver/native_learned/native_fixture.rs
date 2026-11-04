@@ -45,6 +45,14 @@ fn word(vocabulary: &mut Vec<TokenBytes>, merges: &mut Vec<Merge>, bytes: &[u8])
 }
 
 pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -> NativeEvaluator {
+    evaluator_with_monitor_bytes(profile_binding, spelling, None)
+}
+
+pub(super) fn evaluator_with_monitor_bytes(
+    profile_binding: InputProfileBinding,
+    spelling: &[u8],
+    monitor_bytes: Option<usize>,
+) -> NativeEvaluator {
     let mut vocabulary: Vec<_> = (0..=255)
         .map(|byte| TokenBytes::Content(vec![byte]))
         .collect();
@@ -103,9 +111,19 @@ pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -
         output,
     )
     .unwrap();
+    // One exact binary32 block and one two-coordinate probe per position.
+    // Fund the already declared context before seeing input; the old 100,000
+    // bytes held a normal whole-input review at position 1,163. Per-frame
+    // admission remains exact, and a smaller lifetime allowance still holds.
+    let shape = profile.shape();
+    let per_frame = RefinementBudget {
+        encoded_bytes: crate::action::consequence::activation::HEADER_BYTES
+            + shape.hidden * std::mem::size_of::<f32>(),
+        probe_coordinates: shape.hidden,
+    };
     let allowance = RefinementBudget {
-        encoded_bytes: 250_000,
-        probe_coordinates: 250_000,
+        encoded_bytes: monitor_bytes.unwrap_or(shape.context * per_frame.encoded_bytes),
+        probe_coordinates: shape.context * per_frame.probe_coordinates,
     };
     let probe = LinearProbe::new(
         1,
@@ -116,7 +134,7 @@ pub(super) fn evaluator(profile_binding: InputProfileBinding, spelling: &[u8]) -
         100.0,
     )
     .unwrap();
-    let monitor = RefinementMonitor::new(vec![probe], vec![23], allowance).unwrap();
+    let monitor = RefinementMonitor::new(vec![probe], vec![23], per_frame).unwrap();
     let sampling = SamplingStart {
         policy: SamplingPolicy::new(1, 1, count, 1.0, 1, 1.0).unwrap(),
         stream: 10,

@@ -1,5 +1,7 @@
 //! Resolve existing shutdown bookkeeping from native evidence, never by retrying
 //! a domain command or spending a second durable visit allowance.
+use super::*;
+mod capacity;
 use super::super::super::canonical::replay::CanonicalRead;
 use super::*;
 use crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStopRecoveryProgress;
@@ -50,26 +52,29 @@ impl FileShutdownCoordinator {
     /// the original visit rules and newest acknowledged prefix. No durable visit
     /// or domain writer lock is acquired, so a live/faulted owner may coexist.
     /// A failed read withdraws session success but leaves durable intent intact.
-    pub fn begin_resolve_shutdown_visit(
-        &mut self,
-        revision: u64,
-        visit: usize,
-    ) -> Result<FileShutdownVisitResolution<'_>, JournalError> {
-        if self.unavailable {
-            return Err(JournalError::Unavailable);
+    pub fn begin_resolve_shutdown_visit(&mut self, revision: u64, visit: usize)
+        -> Result<FileShutdownVisitResolution<'_>, JournalError>
+    {
+        let (index, attempt, recorded) = self.prepare_resolution(revision, visit)?;
+        match self.campaign.begin_canonical_read(index) {
+            Ok(read) => Ok(FileShutdownVisitResolution { coordinator: self, visit, index, attempt, recorded, read }),
+            Err(error) => Err(self.refuse_resolution(index, attempt, error)),
         }
-        if revision != self.revision {
-            return Err(Error::Stale.into());
-        }
+    }
+
+    // One admission protocol for both original ordinary and fully guarded learned
+    // passive readers. No replay or domain write happens in this bookkeeping step.
+    pub(super) fn prepare_resolution(&mut self, revision: u64, visit: usize)
+        -> Result<(usize, usize, Option<u64>), JournalError>
+    {
+        if self.unavailable { return Err(JournalError::Unavailable); }
+        if revision != self.revision { return Err(Error::Stale.into()); }
         let retained = self.visits.get(visit).ok_or(Error::Missing)?;
-        if !matches!(
-            retained.kind,
-            ShutdownVisitKind::Advance { .. }
-                | ShutdownVisitKind::RecoverStopped { .. }
+        if !matches!(retained.kind,
+            ShutdownVisitKind::Advance { .. } | ShutdownVisitKind::RecoverStopped { .. }
                 | ShutdownVisitKind::RecoverStoppedAtCompletion
-        ) {
-            return Err(Error::WrongState.into());
-        }
+                | ShutdownVisitKind::StopAdmission | ShutdownVisitKind::DrainStoppedAtCompletion)
+        { return Err(Error::WrongState.into()); }
         let recorded = match &retained.result {
             ShutdownVisitResult::Entered => None,
             ShutdownVisitResult::Observed { domain_revision } => Some(*domain_revision),
@@ -89,39 +94,35 @@ impl FileShutdownCoordinator {
             .enter(domain, FileShutdownStep::InspectCanonical)?;
         // Before native read/replay: an unwind cannot reuse older success.
         self.unavailable = true;
-        match self.campaign.begin_canonical_read(index) {
-            Ok(read) => Ok(FileShutdownVisitResolution {
-                coordinator: self,
-                visit,
-                index,
-                attempt,
-                recorded,
-                read,
-            }),
-            Err(error) => Err(self.refuse_resolution(index, attempt, error)),
+        self.check_canonical_image()?;
+        // Only a pending result needs new persisted completion capacity. Preserve
+        // the original fixed overhead and whole-head ceiling before acquisition.
+        if recorded.is_none() {
+            match self.resolution_head_limit(visit, index) {
+                Ok(limit) => self.campaign.completion_head_limit = Some(limit),
+                Err(error) => return Err(self.refuse_resolution(index, attempt, error)),
+            }
         }
+        Ok((index, attempt, recorded))
     }
 
-    fn refuse_resolution(
-        &mut self,
-        index: usize,
-        attempt: usize,
-        error: JournalError,
-    ) -> JournalError {
+    pub(super) fn refuse_resolution(&mut self, index: usize, attempt: usize, error: JournalError) -> JournalError {
+        // A domain read refusal or cancellation cannot clear lost coordinator
+        // custody. Leave the owner quarantined and preserve both files.
+        if let Err(conflict) = self.check_canonical_image() { return conflict; }
         let _ = self.campaign.complete(index, attempt, Err(error.clone()));
         self.acknowledged.current_session = self.campaign.report();
         self.unavailable = false;
         error
     }
 
-    fn finish_resolution(
-        &mut self,
-        visit: usize,
-        index: usize,
-        attempt: usize,
-        recorded: Option<u64>,
-        result: Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>,
-    ) -> Result<FileShutdownObservation, JournalError> {
+    pub(super) fn finish_resolution(&mut self, visit: usize, index: usize, attempt: usize,
+        recorded: Option<u64>, result: Result<(FileShutdownObservation, Rc<[u8]>, usize), JournalError>)
+        -> Result<FileShutdownObservation, JournalError>
+    {
+        // Exact observed-cut refreshes write nothing, so they must validate
+        // coordinator custody here rather than relying only on commit().
+        self.check_canonical_image()?;
         let result = result.and_then(|observed| {
             let stop = observed.0.stop.as_ref().ok_or(Error::Incomplete)?;
             if stop.receipt.request().operation != self.campaign.plan.operation {
@@ -227,9 +228,8 @@ impl FileShutdownVisitResolution<'_> {
             FileStopRecoveryStatus::Failed(error) => error.into(),
             _ => JournalError::Unavailable,
         };
-        self.coordinator
-            .refuse_resolution(self.index, self.attempt, error);
-        Ok(())
+        let error = self.coordinator.refuse_resolution(self.index, self.attempt, error);
+        if self.coordinator.unavailable { Err(error) } else { Ok(()) }
     }
 }
 

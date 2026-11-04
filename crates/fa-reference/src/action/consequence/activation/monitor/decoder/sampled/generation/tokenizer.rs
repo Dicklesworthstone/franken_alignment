@@ -1,10 +1,13 @@
 //! Exact, model-bound byte BPE with explicit optional named controls.
 //!
 //! Raw input remains one byte sequence. Explicit Unicode-17 profiles additionally
-//! supply the exact GPT-2 or Llama-3 pretokenization grammar, without a general
-//! regex engine, normalization, prefix insertion, templates or unknown fallback.
+//! supply the exact GPT-2 or Llama-3 pretokenization grammar. A separate explicit
+//! Llama-3 BOS profile inserts one registered control before the original input.
+//! No general regex engine, normalization, template interpreter or fallback exists.
 //! Named-control recognition is enabled only by an explicit immutable
 //! registration, retained by its canonical archive.
+//! An independently selected whole-piece-first policy can match a complete
+//! ordinary pretoken before ranked BPE; the default remains ranked-only.
 //! A caller must independently establish that these are its model's trained
 //! tokenization semantics. External import accepts only its documented subset.
 //! Original prompt bytes and token boundaries survive encoding; replay uses the
@@ -12,10 +15,13 @@
 
 mod pretokenizer;
 mod special;
+mod postprocessor;
+mod whole_piece;
 mod unicode17;
 mod wire;
-pub use pretokenizer::PreTokenization;
 pub use special::MAX_SPECIAL_TOKEN_BYTES;
+pub use pretokenizer::PreTokenization;
+pub use whole_piece::MergePolicy;
 #[cfg(test)]
 mod tests;
 
@@ -74,6 +80,8 @@ impl Default for TokenizationBudget {
 /// Logical admitted input bytes and BPE examinations, not allocations, FLOPs or wall time.
 /// Optional named-control matching and Unicode segmentation are separately
 /// bounded by input/name limits and fixed-pass, frozen-table scanning;
+/// an optional whole-piece vocabulary lookup is bounded by the same input and
+/// vocabulary limits and does not claim an attempted BPE pair or merge.
 /// pair_lookups and heap_pops count only the original BPE pass.
 /// Stale heap entries count. A refusal retains performed work but no partial IDs.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -105,6 +113,9 @@ struct Data {
     max_content_bytes: usize,
     special: special::SpecialTokens,
     pre_tokenization: PreTokenization,
+    bos_token: Option<u32>,
+    merge_policy: MergePolicy,
+    whole_piece_tokens: Vec<u32>,
 }
 
 /// Immutable tokenization DATA bound to an independently supplied model profile.
@@ -116,8 +127,9 @@ impl fmt::Debug for ByteBpe {
         f.debug_struct("ByteBpe")
             .field("profile", self.profile())
             .field("pre_tokenization", &self.pre_tokenization())
-            .field("merges", &self.0.merges.len())
-            .finish_non_exhaustive()
+            .field("bos_token", &self.bos_token())
+            .field("merge_policy", &self.merge_policy())
+            .field("merges", &self.0.merges.len()).finish_non_exhaustive()
     }
 }
 
@@ -134,24 +146,15 @@ pub struct TokenizedInput {
     work: TokenizationWork,
 }
 impl TokenizedInput {
-    pub fn source(&self) -> &[u8] {
-        &self.source
-    }
-    pub fn tokens(&self) -> &[u32] {
-        &self.tokens
-    }
-    pub fn spans(&self) -> &[Range<usize>] {
-        &self.spans
-    }
-    pub fn profile(&self) -> &DecoderProfile {
-        self.tokenizer.profile()
-    }
-    pub fn tokenizer(&self) -> &ByteBpe {
-        &self.tokenizer
-    }
-    pub fn work(&self) -> TokenizationWork {
-        self.work
-    }
+    pub fn source(&self) -> &[u8] { &self.source }
+    pub fn tokens(&self) -> &[u32] { &self.tokens }
+    /// Original-byte provenance for every ID. An explicitly configured automatic
+    /// BOS has the synthetic span 0..0; the remaining spans form the complete
+    /// nonempty partition of source bytes, including any literal named controls.
+    pub fn spans(&self) -> &[Range<usize>] { &self.spans }
+    pub fn profile(&self) -> &DecoderProfile { self.tokenizer.profile() }
+    pub fn tokenizer(&self) -> &ByteBpe { &self.tokenizer }
+    pub fn work(&self) -> TokenizationWork { self.work }
 }
 impl fmt::Debug for TokenizedInput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -181,8 +184,10 @@ enum EncodingPhase {
 
 /// Owns one immutable prompt and its original tokenizer through bounded BPE
 /// steps. Admission still copies the bounded prompt, allocates scratch and runs
-/// the linear named-control and optional Unicode segmentation passes; this is
-/// NOT a constant-time admission claim.
+/// the linear named-control and optional Unicode segmentation passes, followed
+/// by optional whole-piece lookups in a bounded sorted vocabulary index. This
+/// is NOT a constant-time admission claim, and lookup byte comparisons are not
+/// included in the counters for attempted BPE pairs, heap pops or merges.
 /// Each advance thereafter offers one initial pair, pops at most one candidate
 /// (including stale candidates), or retains one final token. A successful merge
 /// offers at most its two neighbors. No new buffer capacity is requested while
@@ -308,6 +313,10 @@ impl TokenizationCursor {
                 }
             }
             EncodingPhase::Collecting(Some(current)) => {
+                // The automatic BOS counts toward the original output ceiling.
+                // Scratch was reserved at admission; no partial IDs escape if
+                // an uncompressed maximum-size prompt would need one more slot.
+                if self.tokens.len() == MAX_INPUT_BYTES { return Err(Error::Limit); }
                 self.tokens.push(self.nodes[current].token);
                 self.spans.push(current..self.nodes[current].end);
                 self.phase = EncodingPhase::Collecting(self.nodes[current].next);
@@ -353,17 +362,17 @@ impl ByteBpe {
     /// content, uses only earlier-defined operands and has a unique input pair.
     /// Every multi-byte token must be reachable through at least one merge.
     /// Controls cannot participate in merges or be recognized from input text.
-    pub fn new(
-        profile: DecoderProfile,
-        vocabulary: Vec<TokenBytes>,
-        merges: Vec<Merge>,
-    ) -> Result<Self, Error> {
-        if vocabulary.len() != profile.shape().vocabulary {
-            return Err(Error::Binding);
-        }
-        if vocabulary.len() < 256 {
-            return Err(Error::Incomplete);
-        }
+    pub fn new(profile: DecoderProfile, vocabulary: Vec<TokenBytes>, merges: Vec<Merge>)
+        -> Result<Self, Error>
+    {
+        Self::new_inner(profile, vocabulary, merges, MergePolicy::RankedOnly)
+    }
+
+    fn new_inner(profile: DecoderProfile, vocabulary: Vec<TokenBytes>, merges: Vec<Merge>,
+        merge_policy: MergePolicy) -> Result<Self, Error>
+    {
+        if vocabulary.len() != profile.shape().vocabulary { return Err(Error::Binding); }
+        if vocabulary.len() < 256 { return Err(Error::Incomplete); }
         if vocabulary.len() > MAX_DECODER_VOCABULARY || merges.len() > MAX_MERGES {
             return Err(Error::Limit);
         }
@@ -433,37 +442,38 @@ impl ByteBpe {
             }
             available.insert(rule.result);
         }
-        if vocabulary.iter().enumerate().any(|(id, token)| {
+        if merge_policy == MergePolicy::RankedOnly && vocabulary.iter().enumerate().any(|(id, token)| {
             matches!(token, TokenBytes::Content(_)) && !available.contains(&(id as u32))
         }) {
             return Err(Error::Incomplete);
         }
         drop(seen);
-        Ok(Self(Rc::new(Data {
-            profile,
-            vocabulary,
-            merges,
-            ranks,
+        // Keep original IDs in a sorted index, not a second copy of all token
+        // bytes. Only the explicitly selected policy can reach unmerged content.
+        let mut whole_piece_tokens = Vec::new();
+        if merge_policy == MergePolicy::WholePieceFirst {
+            whole_piece_tokens.try_reserve_exact(vocabulary.len()).map_err(|_| Error::Limit)?;
+            whole_piece_tokens.extend(vocabulary.iter().enumerate().filter_map(|(id, token)|
+                matches!(token, TokenBytes::Content(_)).then_some(id as u32)));
+            whole_piece_tokens.sort_unstable_by(|left, right|
+                content(&vocabulary, *left).expect("content index")
+                    .cmp(content(&vocabulary, *right).expect("content index")));
+        }
+        Ok(Self(Rc::new(Data { profile, vocabulary, merges, ranks,
             singletons: singletons.map(|id| id.expect("complete singleton inventory")),
-            controls,
-            max_content_bytes,
-            special: special::SpecialTokens::default(),
-            pre_tokenization: PreTokenization::RawBytes,
-        })))
+            controls, max_content_bytes, special: special::SpecialTokens::default(),
+            pre_tokenization: PreTokenization::RawBytes, bos_token: None,
+            merge_policy, whole_piece_tokens })))
     }
 
-    pub fn profile(&self) -> &DecoderProfile {
-        &self.0.profile
-    }
-    pub fn pre_tokenization(&self) -> PreTokenization {
-        self.0.pre_tokenization
-    }
-    pub fn control_tokens(&self) -> &[u32] {
-        &self.0.controls
-    }
-    pub fn max_content_bytes(&self) -> usize {
-        self.0.max_content_bytes
-    }
+    pub fn profile(&self) -> &DecoderProfile { &self.0.profile }
+    pub fn pre_tokenization(&self) -> PreTokenization { self.0.pre_tokenization }
+    pub fn merge_policy(&self) -> MergePolicy { self.0.merge_policy }
+    /// The explicit automatic prefix, separate from literal control recognition.
+    /// Existing constructors and non-BOS input profiles always return None.
+    pub fn bos_token(&self) -> Option<u32> { self.0.bos_token }
+    pub fn control_tokens(&self) -> &[u32] { &self.0.controls }
+    pub fn max_content_bytes(&self) -> usize { self.0.max_content_bytes }
     pub fn content_bytes(&self, token: u32) -> Result<&[u8], Error> {
         content(&self.0.vocabulary, token)
     }
@@ -493,13 +503,12 @@ impl ByteBpe {
     }
 
     /// Admit owned input and scratch, then yield before initial pair lookups.
-    /// Copying, named-control recognition and Unicode segmentation remain a bounded synchronous
-    /// admission pass; the candidate and final-output passes are cooperative.
-    pub fn begin_encode(
-        &self,
-        source: &[u8],
-        budget: TokenizationBudget,
-    ) -> Result<TokenizationCursor, TokenizationFailure> {
+    /// Copying, named-control recognition, Unicode segmentation and optional
+    /// whole-piece lookup remain bounded synchronous admission passes; the
+    /// candidate and final-output passes are cooperative.
+    pub fn begin_encode(&self, source: &[u8], budget: TokenizationBudget)
+        -> Result<TokenizationCursor, TokenizationFailure>
+    {
         let mut work = TokenizationWork::default();
         self.begin_encode_inner(source, budget, &mut work)
             .map_err(|error| TokenizationFailure { error, work })
@@ -531,12 +540,12 @@ impl ByteBpe {
         let mut nodes = Vec::new();
         nodes.try_reserve_exact(count).map_err(|_| Error::Limit)?;
         let mut heap = BinaryHeap::new();
-        heap.try_reserve(count.saturating_mul(3))
-            .map_err(|_| Error::Limit)?;
+        heap.try_reserve(count.saturating_mul(3)).map_err(|_| Error::Limit)?;
+        let output_count = (count + usize::from(self.bos_token().is_some())).min(MAX_INPUT_BYTES);
         let mut tokens = Vec::new();
-        tokens.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        tokens.try_reserve_exact(output_count).map_err(|_| Error::Limit)?;
         let mut spans = Vec::new();
-        spans.try_reserve_exact(count).map_err(|_| Error::Limit)?;
+        spans.try_reserve_exact(output_count).map_err(|_| Error::Limit)?;
         let mut original = Vec::new();
         original
             .try_reserve_exact(count)
@@ -559,17 +568,17 @@ impl ByteBpe {
                 .pre_tokenization
                 .bind_nodes(unicode, &mut nodes, &self.0.vocabulary)?;
         }
-        Ok(TokenizationCursor {
-            tokenizer: self.clone(),
-            source: original,
-            nodes,
-            heap,
-            tokens,
-            spans,
-            budget,
-            work: *work,
-            phase: EncodingPhase::Offering(0),
-        })
+        self.bind_whole_pieces(source, &mut nodes)?;
+        // Validation, source retention and all capacity admission precede the
+        // insertion. Like the fixed upstream template, even empty input gets a
+        // BOS, and a literal BOS in the source does not suppress this prefix.
+        if let Some(bos) = self.bos_token() {
+            tokens.push(bos);
+            spans.push(0..0);
+        }
+        Ok(TokenizationCursor { tokenizer: self.clone(), source: original,
+            nodes, heap, tokens, spans, budget, work: *work,
+            phase: EncodingPhase::Offering(0) })
     }
 
     fn offer(

@@ -879,7 +879,9 @@
         "H17"
       ],
       "invariants": [
-        "FA-INV-034"
+        "FA-INV-034",
+        "FA-INV-005",
+        "FA-INV-003"
       ]
     },
     {
@@ -1969,6 +1971,31 @@
       ],
       "plan_sections": [
         "§18.7"
+      ]
+    },
+    {
+      "mechanism": "Prompt-boundary containment before reset",
+      "serves": [
+        "FI-A02",
+        "FI-A09",
+        "FI-A16"
+      ],
+      "plan_sections": [
+        "§9.8",
+        "§11.10",
+        "§15.2",
+        "§15.6"
+      ]
+    },
+    {
+      "mechanism": "File-backed prompt counterfactual campaigns",
+      "serves": [
+        "FI-A16",
+        "FI-I11"
+      ],
+      "plan_sections": [
+        "§12.2",
+        "§12.4"
       ]
     },
     {

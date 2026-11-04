@@ -105,7 +105,7 @@ fn run(
 #[test]
 fn cancellation_after_reconnect_releases_only_an_undispatched_reservation() {
     for authorized in [false, true] {
-        let root = Directory::new();
+        let root = directory();
         let a = actor(&root);
         configure(&root, &a);
         let config = settings(&root, &a);
@@ -165,7 +165,7 @@ fn cancellation_after_reconnect_releases_only_an_undispatched_reservation() {
 #[test]
 fn cancellation_cannot_refund_dispatch_or_relabel_an_executed_effect() {
     for stage in 0..3 {
-        let root = Directory::new();
+        let root = directory();
         let a = actor(&root);
         configure(&root, &a);
         let config = settings(&root, &a);
@@ -238,7 +238,7 @@ fn cancellation_cannot_refund_dispatch_or_relabel_an_executed_effect() {
 #[test]
 fn unanswered_or_missing_requests_refuse_before_socket_access_and_staging_cleanup() {
     for prepared in [false, true] {
-        let root = Directory::new();
+        let root = directory();
         let mut a = actor(&root);
         a.socket = root.0.join("absent").join("actor.sock");
         configure(&root, &a);
@@ -279,7 +279,7 @@ fn unanswered_or_missing_requests_refuse_before_socket_access_and_staging_cleanu
 
 #[test]
 fn lost_cancel_reply_is_recovered_by_the_same_request_without_a_second_cancellation() {
-    let root = Directory::new();
+    let root = directory();
     let a = actor(&root);
     configure(&root, &a);
     let config = settings(&root, &a);
@@ -341,7 +341,7 @@ fn lost_cancel_reply_is_recovered_by_the_same_request_without_a_second_cancellat
 
 #[test]
 fn deadline_after_ticket_recovery_precedes_cancel_preparation() {
-    let root = Directory::new();
+    let root = directory();
     let a = actor(&root);
     let config = settings(&root, &a);
     let (port, supervisor, _, minimum) = acknowledged(&root, &a, &config);
@@ -443,7 +443,7 @@ fn unavailable_evidence_and_extra_cancel_arguments_cannot_be_treated_as_acknowle
             outcome != ActorOutcome::Executed
         );
     }
-    let root = Directory::new();
+    let root = directory();
     for rest in [
         vec!["00"],
         vec!["0", "replacement.json"],
@@ -469,7 +469,7 @@ fn output_failure_does_not_erase_acknowledged_cancel_or_send_another_command() {
         }
     }
     for fail_flush in [false, true] {
-        let root = Directory::new();
+        let root = directory();
         let a = actor(&root);
         configure(&root, &a);
         let config = settings(&root, &a);

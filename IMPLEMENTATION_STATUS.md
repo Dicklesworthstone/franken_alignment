@@ -1,5 +1,3631 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: expose the topology-protected predictive containment lifecycle
+
+The learned operator now routes fresh preparation, offline capture/narrowing,
+reset initiation, reset completion and stopped-reset confirmation through the
+original owned predictive topology guards. Fresh preparation requires an explicit
+v2 creation profile and distinct new history/source outputs. Every offline
+operation selects an exact independently retained v2 source/history pair before
+replay; missing or mismatched custody cannot fall back to a plain owner.
+
+The original topology source check and cut certification precede prompt work.
+Successful preparation captures the matching immutable archives, releases its
+owner, and attempts each export and the report without another source read,
+forecast, draw, Stop or Fence. Offline control returns the same paired immutable
+custody through its operation-bound native finalizer. Late deadlines and lost
+outputs preserve acknowledgment and successful companion archives. Later live
+publication still requires a newer graph/inventory, current-epoch certification,
+a fresh owned forecast, native review and a separate human decision.
+
+Ordinary live checkpoint capture now requires paired v2 outputs whenever
+topology is selected, and an exact input pair on recovery. Public command
+routing also preserves the complete learned grammar before generic precheck or
+receipt parsers; preparation and narrowing reach their own closed parsers before
+shared live options can be stripped. The retained-report schemas add a separate
+topology retention result without converting observations into authority.
+
+Eight new operator regressions cover the complete real lifecycle and matched
+human rejection/bypass cases, exact retry with unavailable live inputs,
+pair/graph/recipe/output refusals and archive/report failures. A ninth regression
+exercises the public learned precheck route, and an exact paired retry also uses
+the public entry point. Source and syntax review passed; required RCH compilation,
+formatting, Clippy and runtime execution remain pending. Losing a fresh
+preparation's only source archive still requires independent custody recovery;
+the operator does not reconstruct it from the journal. Post-sampling reset,
+calibration and physical deployment qualification remain open. See the
+[complete operator contract](docs/LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md).
+
+## 2026-11-04: preserve topology custody through native predictive containment
+
+The explicit owned prompt-audit stream now supports sealed mediated capture,
+narrowing and reset initiation. Before replay event zero, a predictive-mediated
+cursor binds the exact request and independently retained source checkpoint.
+It repeats the complete predictor, policy, guard, topology, credential, floor
+and terminal-reserve checks around private preparation, then returns immutable
+control and topology histories at the same acknowledged cut. Source documents,
+spent work and last operation are preserved; only the unchanged cut or one exact
+selected event can explain a lost export. No source reread or new quota occurs.
+
+Successful original narrowing now clears the broker's accepted topology cut
+without withdrawing its graph or adding another epoch change. The old check
+remains historical evidence, and current-epoch certification is required for a
+later effect. Original reset completion and stopped-reset recovery retain the
+same sealed reset/Fence transaction and checked Stop priority. Fresh source,
+topology, forecast and native/human publication gates remain in force.
+
+Four new public regression functions exercise actual restored publication and
+a matched bypass refusal, complete pair/guard/reserve admission, changed requests
+and suffixes, and storage failures. An existing regression now checks actual
+cut withdrawal, stale-epoch refusal, fresh recertification and weaker recovery
+refusal; two compile-fail examples protect sealed custody. All thirteen changed
+Rust files passed syntax checks and independent source review. Required RCH
+compilation, formatting, Clippy and runtime execution remain pending. This
+source capability does not qualify physical containment, authenticated archive
+provenance, sampled-state rewind or calibrated prediction. Operator routing is
+a separate integration. See [the native contract](docs/OWNED_FORECAST_RESTART_AUDIT.md#complete-topology-custody-through-native-stream-control).
+
+## 2026-11-04: run actual prompt counterfactual campaigns from bounded files
+
+`supervise_publication compare-learned-prompt PLAN` now loads independently
+selected model, tokenizer, sampling, codec-fit and monitor assets and drives the
+original `PromptIntervention`/`PromptCampaign` engine. The closed plan fixes an
+exact source-token span edit, ordered unique paired seeds, continuation-token
+question, full campaign reservation and original per-arm limits. The same
+aggregate asset allowance includes the plan and all selected input files;
+single-file and existing explicit checkpoint-source loading remain original.
+No production configuration, journal, helper service or effect owner is opened.
+
+The command advances one original revision at a time under one wall deadline
+that starts before input intake. Cancellation retains partial work and all
+unstarted seeds. The structured experiment report preserves the full denominator,
+the three-by-three outcome table, typed arm stops, numerical and telemetry costs,
+declared limits, reservations and any active failed comparison. A censored
+nonmatch remains censored; an admission failure has no fabricated arm outcome.
+Output failure never reruns inference. The public command dispatch rejects live
+options before any shared supervisor option can consume them.
+
+Eight new operator regressions cover actual prompt-induced sampled output and
+sham equality against separately driven original generators, unchanged live
+storage, explicit checkpoint-source intake, closed arguments, independent fit
+lineage, all five complete campaign budget boundaries, censored and failed
+trials, deadline boundaries and output failure. These tests, compilation,
+formatting and Clippy remain unexecuted pending the required RCH gate. This is a
+bounded numerical experiment on one declared source lineage: it supplies no
+calibrated population estimate, authenticated model identity, external protocol
+registration or production authority. FA-032 and experimental qualification
+remain open. See [the operator contract](docs/LEARNED_PROMPT_COUNTERFACTUAL_OPERATOR.md).
+
+## 2026-11-04: drive predictive stream containment through the actual operator
+
+The operator now reaches a complete unsampled prompt through explicit fresh
+`--prepare-stream-checkpoint` creation. It reuses the original guarded bootstrap,
+cooperative numerical engine, source/time checks and campaign inventory. A
+distinct maintenance outcome captures and retains the original checkpoint before
+any prediction, draw or actor request, then releases the owner without Stop or
+Fence. Pre-acknowledgment failures use original Stop/drain; later archive/report
+failures preserve the acknowledged cut and never repeat prompt inference.
+
+Forecast artifact `/2` explicitly selects `owned_prompt_audit`; `/1` and `/2`
+with reset disabled retain identical original recipe bytes. A closed exact
+`--narrow-stream-checkpoint` request uses the original native consequence while
+preserving policy/predictor generations. Its original receipt supplies the
+incident frontier separately from the current control sequence. The same
+independent recipe and anchors then drive capture, reset initiation, completion
+and ordinary live continuation through fresh prediction and both review keys.
+Exact narrowing retries after later publication append zero events; original
+reset retries retain their audits and incident count with only the usual Fence.
+
+Fifteen new operator regression functions cover actual preparation/campaigns,
+later native and human approval/rejection, the complete prepare/narrow/reset
+lifecycle, legacy recipe equality, strict input/cut/guard refusal, wrong prompt
+boundaries, source failure and lost archives/reports. Six preparation regressions,
+four forecast/live-capture regressions and five predictive lifecycle regressions
+are source-reviewed; syntax and whitespace checks passed. Required RCH
+compilation, formatting, Clippy and runtime execution remain pending.
+
+This explicit operator path requires a plain owned predictive stream at the
+complete original prompt with zero cumulative sampling. Preparation refuses
+stronger identity, credential, checked-publication and held-out selections until
+their own pre-output contracts are integrated. Predictive topology reset,
+post-sampling reset, detector/governor authentication and host/calibration
+qualification remain open; no packet or bead is closed by source-only evidence.
+
+## 2026-11-04: contain and restore an owned predictive stream before sampling
+
+A distinct native stream recipe now composes cumulative learned publication
+with the owned successor-cache restart audit. It accepts only the complete
+original prompt before any cumulative sampling, retaining the exact confirmed
+audience, target, output offset, original predictor and lifetime work. Raw,
+optional and legacy predictor recipes keep their previous bytes and refusals.
+The original reset reserves both audits, retains failed costs and requires a
+fresh owned forecast before the first draw and ordinary review thereafter.
+
+An exact checkpoint-bound supervisor narrowing operation closes the control
+frontier gap without changing policy or predictor generations. The original gate
+intersects explicit versions of the same target, advances the authority epoch
+and cancels/refunds only undispatched reservations. Actor state, numerical and
+statistical work, admitted/Unknown charges and incident accounting remain intact.
+Only the later reset increments the incident count. Native replay recomputes
+the complete consequence witness and binds its requested journal predecessor
+to the event's actual index; old event tags and encodings remain unchanged.
+
+Sealed owned recovery finalizers capture, narrow and begin a reset without a
+Fence or live roles. They check all independent guards and recipes before and
+after preparation, use ordinary capacity and preserve terminal reserves. Exact
+historical retries append zero events even after publication. Reset completion
+retains its atomic completion/Fence replacement and original incident/audit
+retry behavior. Predictive topology reset and post-sampling statistical reset
+remain outside this capability.
+
+Seventeen new regression functions cover the native two-Message/Finish path,
+exact cuts and target versions, stale roles, both audits, prediction exhaustion,
+Unknown/spent conservation, all five storage barriers, ordinary capacity,
+semantic witness/index tampering and a certified-topology refusal. The native
+Rust sources passed syntax and whitespace checks and independent source review.
+Required RCH compilation, formatting, Clippy, tests and operational/model
+qualification remain pending; this does not close FA-108 or FA-111. The
+complete operator preparation/narrowing lifecycle is a separate integration.
+
+## 2026-11-04: promote learned policy with exact topology-source custody
+
+The explicit policy governor now supports nonpredictive mediated learned
+histories through the original guarded numerical replay. A sealed cursor binds
+the complete independently retained topology/history pair before replay and
+admits only that cut or its exact original Request/Approve/Promote suffix.
+Unrelated source, numerical, time, Fence or campaign events cannot fill a gap.
+Every original graph, availability, guard, current-policy, credential and
+recovery-floor requirement is checked before and after private preparation.
+
+The original atomic campaign transaction preserves Unknown/admitted charges,
+cancels only undispatched reservations and consumes ordinary capacity while
+retaining terminal reserves. Its immutable result pairs the acknowledged
+history with unchanged source documents, spent work and last operation. The
+operator requires distinct new outputs for both archives and attempts both
+plus the report despite lateness or output failure. Exact retries require the
+independently selected current policy and append zero events; no owner, observer,
+governor, effect key, clock acquisition or numerical work escapes the finalizer.
+
+Six native and five operator regression functions cover real mediated learned
+publication, complete reports, full guard/source-cut binding, Unknown versus
+reserved liabilities, capacity, canonical/staging failures, exact retries and
+paired export recovery. Eleven Rust files passed syntax/whitespace checks and
+two independent source reviews found no remaining concrete blocker. Required
+RCH compilation, formatting, Clippy, tests and qualification remain pending.
+Predictive governance, signed governor authentication and physical mediation
+qualification remain outside this capability.
+
+## 2026-11-04: create governed functional resident learned streams
+
+Resident learned creation now uses the same explicit functional-restart reader
+and original first-image numerical constructor as single learned creation. A
+resident invocation can install the original bounded campaign guard and retain
+its exact inventory through every Message and Finish. Only the first entry
+holds the creation selection; recovery-only expectations and later entries
+cannot install or broaden it. Raw and owned predictors keep their original
+cumulative work and likelihood lifetimes across the whole resident sequence.
+
+The existing live checkpoint profile can select the first Message boundary in
+a resident invocation, including its first new boundary after anchored message
+continuation. Capture is acknowledged before sampling, then the original loop
+services Stop, source and deadline checks. Subsequent entries cannot recapture
+or reuse that ID. This increment retains plain nonpredictive capture and exact
+confirmed-audience eligibility; it does not reset audience knowledge or budgets.
+
+Six new regressions cover actual functional CLI Message/Message/Finish,
+campaign guards, native helper and authenticated human review, human rejection,
+both predictor lifetimes, first-entry-only selection, wrong-cut zero-draw
+refusal and anchored continuation. The existing creation-boundary regression
+now admits a complete functional resident declaration before verifying that an
+existing store cannot be replaced. Five Rust files passed syntax and whitespace
+checks; source/API review found no concrete blocker. Required RCH compilation,
+formatting, Clippy, runtime execution and qualification remain pending.
+
+## 2026-11-04: promote independently reviewed learned policy campaigns
+
+The operator now connects a complete original policy-replay report to an
+explicit trusted offline governor request for a campaign-protected plain
+learned history. A sealed guarded cursor captures the original corpus/cut in
+the same numerical replay, verifies every independent guard and exact current
+policy, and compares the entire bounded canonical report before mutation.
+Read-only policy replay remains descriptive; its output grants no authority.
+
+The native finalizer applies the original Request, Approve and Promote reducers
+in one canonical replacement. Original governor shadow/relaxation checks and
+one-use promotion rules remain in force. Only undispatched reservations may be
+cancelled; Unknown/admitted effects stay charged. Ordinary event and byte
+capacity funds all three events, preserving the terminal reserve. No Fence,
+live governor, numerical owner, human effect key or effect permit escapes.
+
+An exact lost-acknowledgment retry appends zero events and compares the original
+full report, predecessor, candidate and explicit relaxation bit. Recovery must
+independently select the CURRENT effective policy; it cannot relabel the owner
+with the original predecessor policy. After acknowledgment, archive retention
+and reporting are both attempted despite independent output failure or lateness.
+
+Ten new native/operator regression functions cover actual native/human learned
+publication before replay/promotion, reserved versus charged Unknown outcomes,
+denied and shadow corpora, all five write barriers, ordinary/terminal capacity,
+exact report/intent/canonical binding, stale current-policy refusal, deadline
+cuts and output repair. Thirteen Rust files passed syntax/whitespace checks and
+independent source/API reviews found no concrete blocker. RCH compilation,
+execution, formatting and Clippy remain unavailable. This initial capability
+requires trusted local governance custody and plain nonpredictive histories;
+remote governor authentication, mediated/predictive promotion and broader
+shadow/deployment qualification remain open.
+
+## 2026-11-04: forecast from a freshly audited restored prompt boundary
+
+The explicit with_owned_forecast_restart_audit recipe resolves a native reset
+ordering gap: a restored complete prompt had no current accepted event, its
+owned predictor needed that event, and sampling required the forecast first.
+The reset now performs a second bounded audit of the actual successor cache and
+exposes it solely to that original owned K/V predictor. Ordinary source evidence
+stays Empty until a newly accepted token. Both audits are reserved and charged;
+the separately versioned recipe and reset witness bind their actual stream
+identities, while legacy recipe bytes and single-audit behavior remain intact.
+
+This scoped native capability admits an unsampled complete prompt only. Pending
+or lost forecasts, crossed evidence, unreported prediction work and any prior
+cumulative sampling remain barriers, preserving one-origin statistical credit.
+Raw predictors and the cumulative streams used by the current operator command
+retain their existing refusals. No predictor lifetime, likelihood process,
+numerical allowance, revocation floor or effect key is renewed by restoration.
+
+Six new regressions cover original capture, guarded recovery, fresh forecast
+before sampling, identical original output, native helper plus human publication,
+full journal replay, old-recipe and pending/sampled-history causal refusals, and
+failed audit accounting. Fourteen Rust files passed assigned syntax checks and
+source review. The mandatory RCH runner is unavailable; compilation, runtime
+execution, rustfmt, Clippy, calibration and restart qualification remain pending.
+
+## 2026-11-04: provision campaign guards and capture live learned checkpoints
+
+Single learned creation now accepts an independently selected campaign profile
+and installs the original mandatory governance guard in its first acknowledged
+image. The original plain/raw/owned guarded constructors preserve all other
+guards and separate roles. Recovery-only descriptions cannot create the guard,
+and recovery still requires its exact independently selected inventory. Native
+policy replacement without campaign approval remains refused.
+
+The same live Message workflow can explicitly select a fresh checkpoint ID and
+exact numerical position/draw count. At the first quiet Generating boundary it
+acknowledges the original stream checkpoint before any new sampled intent, then
+returns to normal Stop/source/deadline servicing. Initial and continued-message
+boundaries preserve cumulative work and confirmed audience. This plain,
+functional-restart selection grants no reset or review key; ordinary failure
+Stop/drain behavior and same-audience reset eligibility remain unchanged.
+
+Ten new regression functions cover real CLI/native/human publication, both
+predictor bootstrap roles, exact anchored campaign recovery, healthy and
+continued checkpoint capture, causal wrong-cut/no-draw and human-rejection
+controls, duplicate IDs, deadline expiry and closed/incompatible grammars.
+Ten Rust files passed syntax/whitespace review; independent source review found
+no concrete blocker. RCH remains unavailable, so compilation, execution,
+formatting, Clippy and production qualification remain pending. Original live
+checkpoint capture still includes synchronous full replay and serialization.
+
+## 2026-11-04: use finite verdict grammars in learned publication reviews
+
+The actual learned publication NativeRoster can now explicitly select the
+native finite verdict grammar per member through fa.learned-native-roster/3.
+Every member's declaration is closed before model reads, and the original
+loaded model retains it for every fresh evaluator and action epoch. Versions
+/1 and /2 keep their unrestricted semantics. This connects the prior native
+sampler/worker capability to the main learned generation and publication path.
+
+Five regression functions cover real constrained numerical inference followed
+by authenticated human review and durable publication, the identical model's
+higher-scored invalid output without the grammar, all nonpermitting verdicts
+and human rejection, frozen mixed member choices, and invalid declarations
+before asset/store access. Three Rust files passed syntax and whitespace checks;
+source/API review found no concrete blocker. The mandatory RCH command again
+exited 127 because rch is unavailable, before compilation. Runtime tests,
+formatting, Clippy, calibration and production qualification remain pending.
+The grammar option supplies no new authority or evidence of judgment accuracy.
+
+## 2026-11-04: constrain native helper sampling to a finite verdict grammar
+
+NativeEvaluator can now explicitly select FiniteWordsV1 before input admission.
+The fixed language is the exact bytes allow, hold, deny or abstain followed by
+a registered sampled and fully reviewed terminal. Compilation uses actual
+immutable tokenizer bytes and original token IDs, including byte and merged
+paths; it does not insert an answer, alter the prompt or repair malformed text.
+
+The original sampler validates and accounts for the full vocabulary before
+filtering, then applies its existing temperature/top-k/nucleus arithmetic and
+PRNG. Grammar and random state commit with the actual numerical token before
+fallible monitoring. Holds, incomplete terminals and spent allowances cannot
+reroll or become a vote. The evaluator keeps decoder ownership private, and
+grammar-bearing host checkpoint/replay is explicitly refused rather than losing
+unrecorded state. Existing sampler and helper-policy APIs remain compatible.
+
+The closed fa.native-worker/5 manifest selects finite-words-v1 or unrestricted,
+with explicit adapter null or the original static-LoRA profile. All existing
+single/sharded/tokenizer/rotary/adapted loader paths use the selection before
+returning a worker. Versions /1 through /4 preserve unrestricted semantics and
+their exact old fields. Grammar selection changes the judgment distribution and
+belongs in the independently registered helper/input profile and generation.
+
+Nineteen new regression functions cover sampler equivalence/full scan and finite
+checks, all words and merged paths, actual input-dependent numerical inference,
+held answers/terminals, immutable selection, budgets, closed manifests and real
+spawned-worker commit/reveal including LoRA. The decisive checkpoint fixture
+scores invalid x above valid allow: unrestricted output fails while finite
+sampling computes the lower-scored valid verdict. Sixteen Rust files passed
+syntax/whitespace checks; independent source/API review found no concrete
+blocker after correcting constructor and private sampler-call compatibility.
+The required RCH runner is still unavailable. Compilation, runtime tests,
+formatting, Clippy, calibration and FA-018 qualification remain pending.
+
+## 2026-11-04: capture and initiate original learned-stream containment
+
+The operator now exposes --capture-stream-checkpoint and --begin-stream-reset
+for plain nonpredictive histories. Capture requires an independently selected
+exact active numerical cut; initiation requires the complete original reset
+request and incident frontier. These close the missing operator entry points
+before the already available pending-reset completion command.
+
+New sealed guarded finalizers retain the original exclusive replay lock and
+check all independent requirements before and after native preparation. They
+record the original StreamCapture or BeginStreamReset event, return only an
+immutable receipt/history/anchor, and do not append a Fence or issue live roles.
+Exact retries append zero events; a lost export cannot repeat capture or reset
+work. Native control/actor/epoch/audience binding, ordinary journal capacity,
+terminal reserve, cumulative work and original interruption rules remain intact.
+
+Seven native and four operator regression functions cover actual imported-model
+capture, initiation followed by original completion, exact retries and lost
+output, independent coordinate/intent/guard mismatches, incomplete or changed
+canonical history, Ready deadline cancellation, all five storage barriers and
+ordinary-versus-terminal capacity. Fifteen edited Rust files passed syntax and
+whitespace checks; independent source/API review found no concrete blocker.
+RCH remains unavailable, so compilation, runtime execution and qualification
+are pending. Capture needs an existing eligible quiet prefix and released owner
+lock; it does not generate one. Predictive rearming and topology-backed fresh
+capture/initiation remain outside this increment; existing mediated completion
+retains its exact paired-custody contract.
+
+## 2026-11-04: exact precheck for original learned actor releases
+
+A single live learned actor can now select an authenticated v1 exact-predicate
+precheck endpoint while waiting to release its completed Message or Finish.
+The new supervisor-issued native grant freezes the ORIGINAL cumulative action,
+including confirmed prior messages, actual target, policy epoch and full charge.
+It accepts only that selected request/kind's canonical release intent and a
+bounded deadline. Ordinary raw-action precheck continues to reject learned,
+stream and decoder owners; no generated bytes or effect authority are disclosed.
+
+The original actor-precheck wire/client and source/lease/revision budgets are
+reused. Early epoch admission follows qualification and precedes generation;
+the final source cut is checked again before binding the endpoint. Queries do
+no source/time/journal work. Actual Submit reacquires source evidence, then
+requires native helpers and the independent human key. Stop, mutation, expiry
+and exhausted work retire the disclosure, and malformed sidecar traffic cannot
+invoke outer Stop/drain. Cached/full-policy profiles and actorless, historical
+or resident modes remain explicitly unsupported for this integration.
+
+Nine authored regression functions exercise actual authenticated query followed
+by native/human publication across all three predictor modes, continuation and
+Finish epochs, cumulative-frame refusal, changed source after a pass, canonical
+intent binding, unchanged query storage, raw-grant refusal, authenticated Stop,
+and profile/grammar/epoch boundaries. Nine scoped Rust files passed syntax and
+whitespace checks. The mandatory remote RCH runner remains unavailable; Rust
+typing, execution, formatting and qualification are not claimed.
+
+## 2026-11-04: create explicitly selected functional learned histories
+
+The single create-learned-generated command can now provision a fresh native
+learned owner with an explicitly declared functional_restart profile. Previously
+its generic audit-only Config reader prevented operator-created histories from
+using the native paired checkpoint/reset contract. The scoped creation reader
+still refuses bit_exact and unknown grades, never infers a grade, and leaves
+ordinary and resident creation on their original audit-only paths.
+
+The original numerical bootstrap constructs and synchronizes the actual model,
+cache and sampler before publishing the first canonical image. A declared
+functional grade cannot import an advanced actor or replace an existing store.
+Recovery continues to require the complete original profile, recipe and guards;
+an audit-only expectation cannot relabel the resulting functional history.
+
+Three new regression functions cover actual CLI generation, native sidecar
+review and independent authenticated human publication; exact actor/numerical
+recovery and wrong-grade no-write refusal; unsupported declarations and legacy
+profile equivalence; and advanced-state bootstrap refusal before storage. The
+existing creation-boundary test now checks existing-store preservation for this
+new learned path while retaining generic and resident restrictions. Five edited
+Rust files passed a syntax parse. The required RCH gate was attempted and failed
+with rch not found; compilation, test execution and qualification remain pending.
+No restart-grade certification, roadmap packet or bead is closed.
+
+## 2026-11-04: functional histories in audit, situations and terminal fleets
+
+Historical learned review audit and recipe-selected individual/fleet situation
+readers now accept an explicitly declared native functional-restart profile.
+Previously the generic audit-only Config intake rejected these histories before
+the native reader could verify them, and fleet observation reported otherwise
+readable members as Unknown. Shared terminal fleet intake had the same restriction
+and could not stop an explicitly selected functional learned member.
+
+The scoped decoder now serves these independently selected learned paths while
+retaining existing cumulative input-byte reservations and complete original
+profile, generation, archive and canonical replay checks. It does not infer a
+grade from history or manufacture effective-policy requirements for observation.
+Ordinary members retain audit-only admission; mismatches continue to refuse or
+emit Unknown under the original report contract. Terminal fleet members still
+require their independent recipe and anchor before the native coordinator acts.
+
+Four new regression functions use actual completed numerical resets and native
+review archives. They cover root audit/situation/fleet observation without live
+helper material or mutation, mismatched grade/model/unsupported declaration,
+explicit-recipe boundaries, native fleet admission Stop and passive replay of
+that same observed Stop. Passive fleet resume leaves canonical and staging bytes
+unchanged and acquires no settlement tick. Independent source/API reviews found
+no concrete blocker. The required RCH runner and executor remain unavailable;
+syntax/type checks, runtime execution and qualification of this increment remain
+pending, and no packet or bead is closed.
+
+## 2026-11-04: terminal custody repair across stream reset and admission Stop
+
+A new sealed FileStoppedStreamResetRecovery repairs the documented compound
+export-loss gap: independently retained custody can precede an original stream
+reset completion and its subsequent admission Stop. Before full original guarded
+replay, admission requires the exact recorded reset intent and incident frontier,
+original source/history pair and already recorded selected Stop. The wrapper
+exposes only progress, bounded advance and exact terminal confirmation.
+
+The --recover-stopped-stream-reset operator uses that cursor with two distinct
+new output destinations. Native confirmation appends zero journal events and
+retains source expenditure, incident/accounting history and terminal liabilities.
+It cannot start a Stop, complete a pending reset, settle liabilities or issue a
+live owner. Original canonical revalidation and durable staging cleanup still
+apply. Both exports are attempted even if one fails or the original deadline
+expires; a new pair can be confirmed again without recording another event.
+
+Ten authored native/operator regression functions cover real pending-Stop and
+completed-reset-Stop histories, old/new pair retries, absent and changed Stop or
+reset expectations, independent guard floors, canonical changes and cleanup
+failure, unrelated successor events, early/Ready/late deadlines, output races
+and root executable routing. Later StopProgress/settlement suffixes remain outside
+this dedicated repair mode. Independent source review is complete; the workspace
+and required RCH runner remain unavailable, so syntax/type checking, execution
+and qualification of this increment are still pending.
+
+## 2026-11-04: functional-history recovery through the operator lifecycle
+
+The explicit functional-restart Config reader now serves original guarded
+learned recovery, including live generation/message continuation and finish,
+receipt recovery and service, resident continuation, diagnosis, policy replay,
+credential maintenance, abandonment and terminal Stop. Each selected path still
+has to bind the complete independent bootstrap profile and numerical history
+before issuing any role or result. Ordinary and resident creation keep the
+original audit-only boundary; a declaration cannot upgrade a stored history or
+admit bit-exact claims.
+
+Five new regression functions include a genuine reset followed by a fresh
+request through the real continuation parser, native sidecar review, authenticated
+human approval and confirmed publication. They retain the same numerical recipe
+and cumulative sampling allowance, original incident and restart expenditure,
+and actual native dispatch linkage. Other cases cover wrong profile no-write
+refusal, terminal admission without live evidence, historical receipt recovery,
+creation restrictions and refusal to relabel an audit-only journal.
+
+Independent source review is complete. The authored lifecycle child passed a
+Rust syntax parse and scoped production edits passed whitespace checks before
+executor loss. The replacement resident selection preserves the concurrently
+landed campaign guard comparison. Required RCH compilation and runtime tests
+remain unavailable; qualification and restart-grade gates stay open.
+
+## 2026-11-04: native reset-kind execution and replay integration
+
+The stream checkpoint implementation referenced shared reset methods and kind
+metadata that were absent from the native reset module. The missing definitions
+and sibling visibility prevented that path from compiling. The shared module
+now implements the full native stream/legacy discriminator across pending
+admission, original checkpoint lookup, execution, completion and exact retry.
+The selected incident frontier remains bound to the original stream intent;
+a legacy reset cannot finish a stream operation, or vice versa.
+
+Stream execution delegates to the existing broker restoration operation with
+the original captured handle, control predecessor, budget and target ceiling.
+Audit work, incident accounting, containment escalation, key withdrawal and
+acknowledged native refusals retain their existing authority. No new reset
+algorithm, refund policy or witness format is introduced. The existing legacy
+witness body is unchanged, and stream witnesses continue to wrap that encoder.
+
+Existing native stream checkpoint/recovery regressions exercise pending and
+completed cross-kind refusal, changed frontier and budget refusal, exact retry
+without repeated work, numerical restoration and subsequent advancement. The
+repair has independent source/API review; executor loss and the missing
+mandatory RCH runner prevent compilation and execution in this session. This
+status does not close a restart grade, packet, bead or qualification gate.
+
+## 2026-11-04: topology custody during original stream-reset recovery
+
+The learned stream-reset operator now accepts an explicit topology profile for
+non-predictive mediated histories. It requires an exact v2 source checkpoint
+paired with the independently retained input history anchor, plus distinct new
+history and source output paths. Manual source minima cannot substitute for the
+original source documents, expenditure, graph and operation frontier. Historical
+intake never reads the declared next-source files or refreshes topology.
+
+A sealed native cursor binds the complete original reset intent and incident
+frontier before replay. Only that operation's completion and recovery Fence may
+follow the saved cut; availability can withdraw, independent floors can only
+strengthen, and every original policy/guard check remains mandatory. A reset
+whose checkpoint export failed can retry with its original paired custody
+without repeating its audit, incident, refund or source work.
+
+Authenticated Stop retains priority at every replay boundary, including Ready,
+through the original native Stop handoff. After either acknowledged completion
+or Stop, history and source exports are attempted independently. Reporting keeps
+acknowledgment distinct from retention and does not return a resumed actor.
+Predictive histories retain their native stream-reset refusal. Compound reset/Stop export loss is now handled by the dedicated terminal-only
+repair described above, using the independently retained reset request and
+recorded Stop operation. Reset completion itself still refuses stopped suffixes.
+
+Regression source covers actual numerical restoration and audit refusal,
+original source work, paired output admission, lost exports and exact retries,
+unrelated suffixes, changed commands/frontiers, deadline cancellation and checked
+Stop at Ready. Independent source review and syntax/whitespace checks do not
+establish execution. The required RCH runner is unavailable; compile, runtime,
+formatting, Clippy and full qualification remain pending, with no packet or bead
+closed. See `docs/LEARNED_STREAM_RESET_OPERATOR.md` for exact supported paths.
+
+## 2026-11-04: explicit whole-piece BPE through native operator intake
+
+An independently selected `MergePolicy::WholePieceFirst` now supports the
+Hugging Face BPE `ignore_merges: true` interpretation. Each complete ordinary
+pretoken first attempts its exact original vocabulary ID; a miss uses the
+unchanged ranked merge engine. Named controls and Unicode boundaries remain
+separate, and ordinary content reachable only through an exact whole-piece hit
+is admitted only under this explicit policy. Existing entry points continue to
+select ranked-only semantics and reject a mismatched imported flag.
+
+The canonical `FABBPE07` archive binds the merge policy together with the full
+original tokenizer, pretokenization and optional BOS. The six earlier archive
+formats retain their exact bytes. Explicit Llama3 whole-piece selectors, with
+and without automatic BOS, now reach native worker bootstrap, publication
+recipe intake and checkpoint-based K/V probe training. A monitor binding cannot
+silently substitute the old policy even when one prompt happens to yield the
+same IDs.
+
+Regression source covers exact IDs and spans, misses, direct-only content,
+controls, Unicode boundaries, BOS, original work accounting and cancellation,
+strict JSON/reader selection, every archive version, worker inference in both
+checkpoint layouts and training artifact binding. Source review, syntax parsing
+and whitespace checks are the available checks; the required RCH runner remains
+absent. Compile, runtime, formatting, Clippy and full qualification are pending.
+
+## 2026-11-04: recover campaign-protected learned histories
+
+The closed `fa.learned-recovery-policy/2` envelope selects the original full
+effective policy and exact native campaign guard limits independently of the
+journal. Shared learned recovery requirements now carry that complete guard
+inventory, allowing native campaign-protected histories to reach the same
+guarded Ready cut after acknowledged policy promotion. Legacy recipes and `/1`
+continue to require campaigns to be absent.
+
+This is a recovery-only selection: every new-owner creation path rejects it
+before source or journal preparation, and resident entries must retain the
+same exact guard. It issues no governor or policy approval. Native recovery
+continues to revoke outstanding approvals, preserve promoted policies and
+receipts, and require fresh source/time and ordinary effect review.
+
+Regression source exercises real campaign promotion, original numerical
+continuation, complete guard mismatch refusal with unchanged canonical/staged
+bytes, creation and resident selection, parser bounds and stale approval keys.
+The required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because `rch` is absent (exit 127). Compilation, runtime tests,
+Clippy and complete qualification remain pending; no packet or bead is closed.
+See `docs/LEARNED_RECOVERY_POLICY.md` for the supported schema and custody rules.
+
+## 2026-11-04: recover independently expected effective policies
+
+A new optional outer learned-recipe envelope,
+`fa.learned-recovery-policy/1`, binds the complete independently supplied
+effective Policy without changing the original bootstrap Config or numerical
+recipe. Legacy recipes still expect the bootstrap policy. Guarded recovery
+compares the full selected policy at Ready; a different predicate at the same
+generation is a mismatch, not a generation-only match.
+
+All native learned creation entries reject an expectation different from the
+bootstrap before owner/source preparation. Every resident sequence member must
+retain the same full expectation. Plain, raw, owned and mediated guarded
+recovery, maintenance, terminal and fleet selections share the original full
+requirements. Campaign-enabled histories still require supported independent
+campaign guard selection and remain outside this increment.
+
+Six regression cases use genuine native policy replacement and original
+numerical continuation, preserve canonical/staging bytes on policy mismatch,
+exercise creation and resident refusal boundaries, and retain legacy/composed
+recipe parsing. Production paths and tests received independent source/API
+review. Compilation, runtime execution and the canonical gate remain pending:
+RCH is unavailable, and the executor disconnected during final implementation.
+
+Historical audit and situation projections retain their existing read-only
+contracts; this recovery expectation is not an added policy assertion in those
+outputs. See `docs/LEARNED_RECOVERY_POLICY.md` for the exact supported scope.
+No roadmap acceptance or qualification gate has been weakened or closed.
+
+## 2026-11-04: complete acknowledged stream resets through the operator
+
+`create-learned-generated ... --complete-stream-reset` now selects the original
+plain guarded stream-reset finalizer before recovery can fence its intent. The
+operator requires the independently retained full intent and incident frontier,
+an exact input history anchor, and a new output archive. Strict bounded request
+parsing preserves full-width identities. Replay retains the original deadline
+and authenticated Stop priority at every event and Ready checkpoint.
+
+A dedicated Config entry admits an explicitly declared native functional-restart
+bootstrap for this recovery only; ordinary Config admission remains audit-only.
+The command retains acknowledged custody and reports restoration, containment
+without restoration, and native refusal distinctly. Exact retries only fence;
+they cannot repeat audit work, refund spent rights or count another incident.
+Predictive and topology histories remain explicitly unsupported in this operator.
+
+Real numerical regression cases cover command-file admission, exact matching,
+unchanged files on refusal/deadline, interrupted intents, preserved accounting,
+acknowledged inner refusal, exact retries, and output crossing the original
+deadline. They are authored but unexecuted because RCH is unavailable. FA-108 is
+in progress; its executed-evidence and complete-containment acceptance remains
+unchanged. See `docs/LEARNED_STREAM_RESET_OPERATOR.md` for the closed input schema
+and operational result contract.
+
+## 2026-11-04: connect operator commands to original native owners
+
+The executable now registers and dispatches the existing situation, policy-replay,
+actor-precheck, and learned fleet implementations. Ordinary proposal diagnosis
+and unknown-outcome abandonment also receive the complete argument list before
+shared live-service options can be removed. Learned historical inspection,
+credential rotation/revocation, unknown-outcome abandonment, and offline Stop
+likewise select their original closed grammars before live option processing.
+
+Learned recovery now uses the existing authenticated recovery-Stop driver at the
+fully verified Ready cut. A pending checked Stop consumes the original cursor
+before a recovery Fence or live role can be issued. Credential maintenance
+preflights the exact operation on that same guarded Ready cursor; abandonment
+uses its sealed terminal finalizer and never obtains a live owner.
+
+Positive situation, policy-replay and authenticated precheck cases now enter
+through the executable dispatcher. A mixed ordinary/learned fleet regression
+covers terminal create, exact no-write resume, and incompatible shared flags.
+Existing numerical recovery, diagnosis, maintenance and fleet suites are now
+registered with their production modules.
+
+All seven changed Rust files passed source parsing with rustfmt. Runtime tests,
+type checking and the canonical gate remain unexecuted: the required RCH runner
+is unavailable, and the repository prohibits local Cargo fallback. This is a
+source integration increment, not qualification or closure of the corresponding
+roadmap packets.
+
+## 2026-10-28: expose actor-only exact prechecks through the operator command
+
+`supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`
+now consumes the original authenticated native client. Its closed grammar runs
+before shared supervisor flags can be removed; it opens only public profiles and
+the actor's proposal, never private Config, evidence or journal. It checks the
+independently configured epoch, authenticates the server before proposal bytes,
+and binds Known responses to the selected disclosure before stdout.
+
+One cumulative byte/call allowance and one elapsed allowance cover the query;
+partial I/O cannot refresh them. No automatic retry, reconnect, Submit, ticket or
+effect key is created. Stdout remains the original native response. Success is
+only an exact pass still marked review-required; valid denials and other native
+refusals render unchanged with nonzero exit. Failed or late stdout can leave
+partial/complete response bytes without causing a resend. File/connect/output
+operations remain synchronous cooperative boundaries, not hard preemption.
+
+Fourteen client/dispatch regression functions and two actual operator-to-sidecar
+functions cover authentication before bytes, strict correlation/disclosure,
+closed argument dispatch, malformed/truncated/extra output, lifetime limits,
+lost responses and output failure, unchanged durable state, and a following
+ordinary Submit that still acquires fresh source and enters review. Independent
+review found no remaining concrete source blocker after the corrections recorded
+in the preceding server increment.
+
+Required targeted example tests and canonical RCH check again cannot start
+because `rch` is absent (exit 127). No compilation, runtime test, formatting,
+Clippy, full assurance-profile or production qualification is claimed; no tracker
+or gate is closed. See [the operator client contract](docs/LIVE_ACTOR_PRECHECK.md#actor-only-command).
+
+## 2026-10-28: integrate exact prechecks into the ordinary live supervisor
+
+The four ordinary single-request serve modes now accept an explicit final
+`--precheck-profile` option. A strict public connection profile selects exact
+disclosure, independent expected epoch, separate secure socket and finite work.
+Default operation is unchanged; unsupported service combinations and recorded
+request disclosure are refused rather than downgraded.
+
+After independent stop setup/checkpoint, the original supervisor prepares one
+source/time intake and retains one native grant. Sidecar scheduling checks the
+captured source lease, acknowledged clock floor, unchanged owner revision and
+elapsed allowance. Reconnects retain original budgets; query faults retire only
+the sidecar, never invoke ordinary stop/drain or append a query journal event.
+Actual Submit still performs fresh source acquisition, helper review and human
+approval. The sidecar closes before review and on every outer workflow exit.
+
+Ten component and four actual-service/grammar regression functions cover allowed
+and denied prechecks, unchanged owner bytes, later ordinary execution, source
+changes before Submit, rejected peers, finite reconnects, lost replies, socket
+collisions and lease/clock boundaries. Independent review repaired a post-intake
+clock rollback gap and partial-I/O assumptions in the fixtures.
+
+Required targeted example tests and the canonical check cannot start because
+`rch` is absent (exit 127); `br` is also absent, so no tracker state is changed.
+Compilation, runtime tests, formatting, Clippy and production qualification are
+not claimed. This is cooperative reference orchestration, not hard syscall
+preemption, full assurance-profile disclosure or witness caching. FA-142 and its
+remaining acceptance stay open. See [the live precheck contract](docs/LIVE_ACTOR_PRECHECK.md).
+
+## 2026-10-28: query exact prechecks through an authenticated one-shot client
+
+The Linux precheck client authenticates an already connected server socket before
+writing any request bytes and binds the proposal to the independently expected
+policy epoch. Its bounded nonblocking state machine resumes partial writes,
+flushes the complete request before reading, and accepts one strictly correlated
+Knowledge response. Queued trailing data, malformed/oversized/truncated replies
+and terminal I/O failures latch; successful completion also closes the socket.
+The post-line WouldBlock check describes only currently available bytes, not
+future peer behavior. No socket is reused and no query retries automatically.
+
+Eleven new regression functions and one compile-fail example complement the
+fourteen server functions and three compile-fail examples. They cover scripted
+partial-I/O faults and actual source-backed authenticated owner exchanges,
+one-byte budgets, wrong server/query/epoch, unchanged journal and ordinary review,
+and retained work after reply loss. Independent review corrected a lost-reply
+test's invalid zero server allowance without weakening its charge assertions.
+
+The client creates no listener, pathname connection, runtime, journal, actor
+ticket or effect authority. The integrating host still owns bounded connection
+establishment, scheduling, elapsed deadlines and explicit source/grant issuance;
+no supervisor CLI or full disclosure profile is claimed. Required targeted and
+canonical RCH commands cannot start (dispatcher absent, exit 127). Compilation,
+runtime execution, formatting, Clippy and qualification remain open, with no
+Bead or production gate closed. See
+[the precheck client contract](docs/ACTOR_EXACT_PRECHECK.md#authenticated-one-shot-client).
+
+## 2026-10-28: carry exact prechecks over authenticated process transports
+
+The original separately granted precheck wire now has bounded newline framing,
+a nonblocking Unix connection and a Linux kernel-credential peer session. The
+host independently selects UID/GID and optional PID before any input is read;
+ordinary actor Submit/Poll/Cancel and source-acquisition paths remain unchanged.
+One input and one response enforce write/flush backpressure. Each drive bounds
+socket bytes, frames and I/O attempts and latches terminal failures.
+
+Explicit reconnect keeps the same original channel and wire, preserving both
+entered-frame and shared native query allowances. Lost replies cannot refund
+work. Ingress revocation and native disclosure revocation remain distinct; owner
+revision changes, unavailable source and dropped custodians keep their original
+Unknown/Withheld behavior. No source/clock observation, grant renewal, journal
+event, helper work, request reservation or effect authority is introduced.
+
+Real-owner, framing and socket regression source covers positive disclosures,
+credential refusals, fragmented/pipelined input, exact bounds, backpressure,
+reconnect exhaustion, lost replies and unchanged durable/request state. Required
+RCH verification still cannot start because the dispatcher is absent (exit 127).
+Compilation, runtime tests, qualified formatting, Clippy and production
+qualification remain open. This is not an operator listener/CLI, assurance
+profile or witness-sensitive cache; no Bead or full FA-142 acceptance is closed.
+See [authenticated precheck transport](docs/ACTOR_EXACT_PRECHECK.md#authenticated-precheck-process-transport).
+
+## 2026-10-28: complete exact pending stream resets before recovery fences
+
+The original learned recovery cursor now exposes `finish_pending_stream_reset`
+to complete an already acknowledged stream intent at its unchanged predecessor.
+It requires the exact independently retained instruction and incident frontier,
+original audience boundary and complete Ready replay. Completion uses ordinary
+journal capacity; the original Fence follows in the same canonical replacement.
+No live owner or role escapes preparation, encoding, storage failure or unwind.
+
+Guarded plain and mediated plain wrappers check their complete original policy,
+credential, floor and source/topology requirements before and after preparation,
+then provision the original fresh roles after persistence. Exact completed
+retries only fence, without another audit or incident. Missing or changed
+instructions, unrelated pending work and previously fenced/stopped intents
+refuse. Ordinary open retains quarantine behavior; predictor stream restoration
+is still unsupported. Returned numerical owners remain paused until fresh time
+and independently authorized resume, and restored evidence starts Empty.
+
+Nineteen new runtime regression functions cover real numerical restoration,
+guarded fresh-role continuation, exact retries, partial replay, canonical
+substitution, all five storage barriers, ordinary event/byte reserves and
+acknowledged audit failures. A full mediated fixture retains actual file-source
+refresh, identity, evaluation and campaign guards; its native policy promotion
+establishes the strict control frontier, while topology rebind advances only the
+authority epoch. A consuming compile-fail example prevents cursor reuse.
+
+All nine changed Rust files pass syntax parsing after independent source review.
+The targeted tests and canonical check through RCH both exit 127 because the
+dispatcher is absent. Compilation, runtime tests, formatting, Clippy and full
+qualification remain pending; the scoped Bead and FA-108 acceptance remain open.
+See [stream recovery](docs/LEARNED_STREAM_CONTAINMENT.md#explicit-recovery-before-the-fence).
+
+## 2026-10-28: restore learned stream state within the confirmed audience boundary
+
+Plain learned text streams now have separate native and durable checkpoint/reset
+APIs. They bind the exact original target, profile, confirmed message boundaries
+and text output offset, plus a strictly later supervisor-declared incident
+control frontier. The shared original reset engine restores actual KV/sampler
+state while preserving lifetime work, spent rights, current policy and published
+history; it narrows authority, withdraws old keys and increments the original
+incident counter. A later-message reset can preserve confirmed A and subsequently
+publish only B after fresh observation and ordinary two-key approval.
+
+Pending/Unknown deliveries, exposed or confirmed boundary changes, Finished
+streams, consumed later-message requests and any installed action-consistency
+predictor refuse. Exact retries retain original outcomes without re-audit; a
+recovery Fence leaves interrupted intents blocked. New tags 3/4/5 and disjoint
+stream witness domains preserve the old tag 0/1/2 encodings and legacy refusals.
+
+Sixteen authored runtime regression functions plus two compile-fail examples
+cover actual numerical continuation, authority/accounting conservation, all five
+storage barriers, original/new wire compatibility, exact limits, failed audits,
+recovery and incident escalation. Independent source reviews corrected concrete
+visibility and fixture-buffer defects. All fifteen changed Rust files pass syntax
+parsing. Required targeted and canonical RCH commands both exit 127 because the
+dispatcher is absent. Compilation, runtime
+and production qualification remain open; no full roadmap acceptance is closed.
+See [learned stream containment](docs/LEARNED_STREAM_CONTAINMENT.md).
+
+## 2026-10-27: replay candidate policies over guarded learned histories
+
+The original learned recovery cursor and all five guarded wrappers now expose a
+read-only policy-replay finalizer. It compares the complete retained
+current-policy proposal/review corpus, including denials, on the same verified
+machine and rechecks its canonical journal under the original exclusive lock.
+Recipe, numerical and predictive validation, custody, revocation floors,
+credentials, terminal reserve and topology/source guards are preserved.
+
+The learned operator entry accepts the existing strict candidate request and
+renders the existing bounded Knowledge report. It requires independent history
+custody and exact v2 checkpoints for mediated modes; recipe request IDs cannot
+filter the corpus. One elapsed allowance covers ingestion, one-event replay,
+Ready, canonical confirmation and staged output. It never creates a live owner,
+appends a Fence, cleans staging, refreshes sources, reruns helpers, or promotes a
+policy. Historical numerical recomputation validates the retained learned cut.
+
+Native and operator regression source covers successful comparisons, complete
+current-policy corpora, all six learned configurations, unsupported observations,
+resource/deadline boundaries, malformed custody and unchanged durable bytes.
+Targeted RCH and canonical-check attempts exit 127 because `rch` is absent.
+Compilation, formatting, Clippy and these tests remain unexecuted; no production
+qualification or Bead closure is claimed. See
+[learned policy replay](docs/POLICY_REPLAY_OPERATOR.md#guarded-learned-histories).
+
+## 2026-10-27: expose separately granted exact prechecks over bounded bytes
+
+A dedicated actor precheck codec and adapter now wrap the original revocable
+`FileActorPrecheckPort`. The host must explicitly supply that capability;
+ordinary Submit/Poll/Cancel and source-acquiring transports remain unchanged.
+Closed request/response schemas preserve exact identifiers and payloads, reject
+unknown fields and cross-protocol input, and bind responses to the query and
+expected policy epoch. A successful result always requires ordinary review.
+
+The adapter charges each entered frame before parsing and retains a bounded
+per-adapter exchange allowance. All port clones still share the native evaluated
+query allowance and original owner/source invalidation. Coarse Knowledge
+responses contain no policy tree, source values, helper identities, empirical
+review, controller sequence or authority. No helper, source refresh, clock read,
+admission snapshot, request ID, journal event, reservation or permit is consumed.
+
+Regression source covers the strict codecs, actual source-backed outcomes,
+correlation failures, revocation, unavailable owners, parser/evaluation budgets
+and unchanged durable/request state. RCH test and canonical-check attempts exit
+127 because the dispatcher is absent; compilation, formatting, Clippy and tests
+remain unexecuted. Socket authentication/service integration, the full disclosure
+profile schema and witness-sensitive caching are not claimed. FA-142 remains
+in progress with no Bead or production gate closed. See
+[actor precheck](docs/ACTOR_EXACT_PRECHECK.md#bounded-actor-byte-interface).
+
+## 2026-10-28: include mediated learned histories in the fleet operator
+
+Version-three fleet members may now pair topology_profile with an independent
+topology_history_anchor beside their learned recipe. The original v2 historical
+profile, graph/inventory binding and trusted checkpoint decoders select mediated
+or predictive-mediated guards for plain/raw/owned numerical generation. The
+fixed registration remains unchanged; a later source cut must independently
+match its checkpoint, strengthen the original floors and pass native prefix
+qualification before a member can acknowledge Stop or Drain.
+
+The same cumulative input allowance now charges historical topology profiles,
+initial documents, exact source checkpoints and independent source anchors.
+All opened nested paths remain outside every registered authority/coordinator
+root. Declared stores resolve through existing ancestors without opening absent
+members, preserving the full fleet report and progress for reachable controls.
+The loader never opens next live topology files, binds a new source or resets
+spent source work. Manual v1 minima and fresh output requests refuse before
+mutable coordinator work. Existing ordinary/non-topology checkpoint schedules
+and original nonfleet readers retain their behavior.
+
+Five focused operator regressions cover all three mediated predictor selections
+through admission/passive/drain/passive, source cuts later than fixed
+registration, actual spent work, exact/one-short total intake, foreign-authority
+nested assets, missing members with explicit retry, and malformed or mixed
+custody with positive controls. All 41 owned Rust files pass syntax parsing and
+ten new files are formatted. Independent source reviews found no blocker.
+The 22 new native/operator functions remain unexecuted under the existing
+RCH/approval constraints; no production qualification or packet closure
+is inferred from source review. See
+[mediated fleet custody](docs/LEARNED_FLEET_RECOVERY.md#mediated-members-retain-an-independent-source-cut).
+
+## 2026-10-27: expose bounded learned fleet shutdown through the operator
+
+`supervise_publication shutdown-fleet` now drives the original durable
+coordinator for mixed ordinary/plain/raw/owned learned rosters. It defaults to
+terminal clocks and supports create/recover/resume, separate admission/drain,
+explicit member selection and original retained coordinator custody. Complete
+original argv is validated before stripping; no learned failure selects an
+ordinary fallback. Closed v3 profiles require explicit archived-plan or member
+anchor custody and independent learned recipes. Operator topology remains an
+explicit refusal; the native mediated path is available separately.
+
+Numerical intake reuses the original recipe and predictor loaders before any
+coordinator mutation. Recipe files, auxiliary assets, actual streamed weights,
+history/plan/coordinator archives share the existing cumulative input allowance,
+conjoined with each recipe's original ceiling. Every numerical path, including
+nested base/shard/adapter files, must remain outside every authority/coordinator
+root. No helper, current evidence, live generation or publication is invoked.
+
+Nine new operator functions complement eight native functions. They cover actual
+mixed histories and dispatched liabilities, phases and passive resume, explicit
+selected work, busy/missing archived members, exact/one-short aggregate intake,
+foreign-authority assets, floors/suffixes, deadlines, custody and output loss.
+All 37 owned Rust files pass syntax parsing after concurrent-main integration,
+with only eight new files formatted. Independent source reviews found no blocker.
+
+The prescribed remote publication test attempt exits 127 because RCH is absent.
+Automatic approval review rejected the standalone fleet regression command
+because an unspecified remote destination could receive repository/build inputs;
+that action was not run. No local fallback or export workaround was used.
+These 17 tests, compilation, Clippy and canonical qualification remain open.
+Concurrent authenticated Stop, unknown-abandonment and policy-replay work is
+preserved. See [learned fleet command](docs/LEARNED_FLEET_RECOVERY.md#runnable-learned-fleet-operator).
+
+## 2026-10-27: recover learned fleet members through original guarded replay
+
+The durable coordinator now accepts a complete immutable per-domain roster for
+ordinary and all five guarded learned families. New combined/admission/drain
+visits and passive retained-visit resolution use the original learned numerical
+cursor, newest whole registered prefix, current guards/credentials/floors,
+predictor, reserve and canonical custody. Learned failure never falls back to
+ordinary replay. The existing full-roster selector, report and coordinator
+bookkeeping remain the only fleet protocol.
+
+Original replay now preserves the actual last StopProgressed result and revision,
+including when proposal diagnosis is attached. Mediated inputs retain the
+original exact v2 source checkpoint across only its permitted terminal successor.
+Passive learned reads hold the original exclusive lock and change no domain
+bytes, staging or clock; pending coordinator completion and exact observed-cut
+refresh retain their original distinct semantics. Unknown/expired liabilities
+and charges remain explicit, with no effect retry or budget reset.
+
+Eight new native integration functions cover six modes, genuine numerical and
+effect histories, both phases, passive reopen, original sweeps, eleven independent
+input mutations, complete roster admission, canonical/cancellation failures,
+mixed missing/busy/corrupt members, selected work and passive quarantine.
+All 22 changed Rust files pass syntax parsing; the five new files are formatted.
+Independent source reviews found no blocker. Required targeted/full RCH commands
+both exited 127 because the dispatcher is absent. No compilation, runtime test,
+Clippy or canonical gate pass is claimed, and Beads remain open.
+Concurrent authenticated recovery-Stop and learned unknown-abandonment work
+through 0c20c06 is preserved. See
+[learned fleet recovery](docs/LEARNED_FLEET_RECOVERY.md).
+
+## 2026-10-28: acknowledge durable Stop from active learned recovery
+
+Active continuation, next-message and Finish startup now retain the same
+kernel-authenticated peer while completing their original one-event guarded
+replay. At Ready the selected plain/raw/owned/mediated cursor enters the sealed
+Stop protocol before ordinary finalization. Only the exact request applies native
+admission Stop/Fence; connection alone cannot mutate or release live custody.
+The original startup and peer-session budgets and finite candidate quota persist,
+and admission errors are latched across retries of the same control object.
+
+Native acknowledgment is cached before late deadlines or reply delivery.
+History and source custody exports are attempted independently from the original
+acknowledged terminal result, preserving source work and successful partner
+archives. Startup returns a clear acknowledged terminal message; it neither
+issues an actor result nor advances helper/source/generation work. Existing CLI
+recipe and credential admission prerequisites still precede socket creation.
+See [operator recovery Stop](docs/LEARNED_RECOVERY_STOP_PEER.md#operator-recovery-integration--2026-10-28).
+
+Ten new real-socket regression functions cover all six configurations, real
+continuation entry, early/middle/Ready arrivals, charged published Unknown
+liabilities, no-peer/rejected-identity controls, malformed/silent peers, quota
+and session exhaustion, guards/floors/canonical binding, late deadlines, lost
+replies and independent export races. Four existing control regression groups
+remain, with connection-only expectations updated to the explicit-request law.
+All nine changed operator Rust files pass syntax parsing and independent review.
+The native and operator increments add 19 regression functions plus three
+compile-fail examples; none has executed here. Both example tests and the full
+xtask gate stop before compilation because the mandatory RCH dispatcher is
+absent (exit 127). Type checking, qualified formatting, Clippy, runtime and full
+FA-014/FA-120 acceptance remain open; scoped bead `.6` remains in progress.
+
+## 2026-10-28: expose complete-corpus policy replay without promotion authority
+
+`supervise_publication policy-replay CONFIG CANDIDATE_JSON` now consumes the
+original native read-only policy replay API. It compares a strictly newer
+candidate with every retained proposal and applied review belonging to the
+current effective policy, including exact denials. Independent configuration
+binds the original journal profile; an explicit expected policy generation
+binds the effective predecessor. The operator cannot choose favorable cases,
+rerun helpers, substitute fresh evidence or return a partial successful corpus.
+
+The bounded `fa.policy-replay/1` report includes both complete policies, original
+and candidate predicate traces, exact tightening/relaxation sets and missing
+observation indices. Unsupported candidate reads remain unknown and require
+prospective shadow observation. A newly reviewable historical case carries no
+helper decision, human approval, dispatch capability or promotion permission.
+Strict input, case and staged-output limits and one elapsed budget cover the
+command. One canonical read can coexist with its writer; it does not recover,
+fence, clean staging, change policy, alter charges or write a campaign artifact.
+
+Ten authored operator regression functions cover real durable proposal/review
+histories, tightening and relaxation, unobserved branches, writer coexistence,
+reopen replay, exact no-mutation controls, malformed histories and candidates,
+closed predicate encodings, resource limits, deadline phases and failed output.
+The complete publication operator test harness, including all existing suites
+and these additions, passed final metadata checking with exit 0 and three
+warnings in support/service/publication code. This is compilation evidence,
+not a runtime pass. Both LLVM and official Cranelift full-library code generation
+were SIGKILLed before execution. The unchanged baseline xtask dependency-admission
+guard still blocks canonical qualification. FA-130 moves to `in_progress`;
+executed evidence, prospective shadow campaigns and full promotion acceptance
+remain open. See [the command contract](docs/POLICY_REPLAY_OPERATOR.md).
+
+## 2026-10-28: complete learned abandonment through the operator
+
+The learned operator accepts `--abandon-unknown REQUEST_JSON` with an independent
+input history anchor and a distinct new retained output. Historical recipe
+loading and the original guarded plain/raw/owned cursors preserve complete
+numerical replay, current policy and credentials, identity, predictor and floors.
+The command needs no live helper roster, provider secret or current evidence.
+Its original argument grammar is closed before file I/O; one invocation budget
+covers intake, every replay event and the pre-acknowledgment boundary.
+
+Originally mediated histories require the exact retained v2 source/history pair
+and both new output archives. A sealed abandonment-only consumer defers source
+extent solely to the native finalizer, which admits the saved cut or exactly
+one matching AbandonUnknown successor. Ordinary live and receipt recovery keep
+their existing exact extent requirement. Source documents, graph, availability,
+spent work and last operation are preserved; no fresh source read is introduced.
+
+After acknowledgment both requested archives are attempted before final output,
+including after late expiry or one export failure. Create-new output races and
+stdout failures preserve successful custody and report the acknowledged revision
+for exact retry. The structured result separates disposition knowledge from the
+still-Unknown effect outcome. It grants no live owner, effect capability, refund,
+clock observation, Fence or stream successor.
+
+Eight authored operator functions complement the six native integration
+functions. The native library and complete native target pass metadata checking;
+the full registered publication operator harness also completed with exit 0,
+including all eight new functions and ten policy-replay functions. Runtime tests
+remain unexecuted after LLVM and Cranelift library builds were SIGKILLed. These
+scoped checks do not clear the unchanged baseline dependency-admission failure,
+full workspace qualification or FA-014. See
+[the learned operator contract](docs/DURABLE_UNKNOWN_ABANDONMENT.md#learned-numerical-histories)
+and [the native contract](docs/LEARNED_UNKNOWN_ABANDONMENT.md).
+
+## 2026-10-28: preserve authenticated Stop through native learned recovery
+
+The original fully replayed learned cursor and all five guarded wrappers now
+produce a sealed Stop-only transport target after their complete independent
+requirements pass. The same authenticated Linux peer and unchanged nonce-bound
+Stop client can consume the original clock-independent admission Stop/Fence
+transaction without releasing a live owner, reviewer, source writer or weaker
+cursor. Connection presence alone does not mutate history. Existing numerical
+work, Unknown effects, charges and unresolved drain state remain conservative.
+
+Native acknowledgment and the original history anchor survive receipt loss;
+storage failures remain Unconfirmed. Exact historical retry confirms without
+another Stop, clock sample or replacement. No journal/wire format, runtime,
+dependency or agent-verb change is introduced. See the
+[native recovery Stop contract](docs/LEARNED_RECOVERY_STOP_PEER.md).
+
+Nine regression functions cover real guarded histories, all six configurations,
+partial replay, binding and credential refusals, fragmented/lost replies, exact
+retry, canonical substitution and all five storage barriers. Three compile-fail
+examples forbid owner/role escape. All 13 changed native Rust files pass syntax
+parsing and source review. The required RCH test dispatch stops before compilation
+because `rch` is absent (exit 127); no compilation or test execution is claimed.
+Qualified formatting, Clippy and the full workspace gate remain open. Scoped
+bead `franken_alignment-fa-014-full-hc0s.6` and FA-014/FA-120 remain in progress.
+
+## 2026-10-28: abandon learned Unknown through complete original recovery
+
+The original learned cursor and all guarded learned forms now consume complete
+replay into `FileAbandonedHistory` through `finish_abandoned_with_anchor` or
+`finish_abandoned_with_checkpoint`. The wrappers preserve their independent
+recipe, identity, policy, credential epoch, predictor, topology and counter-floor
+requirements. Finalization rechecks the original canonical bytes and reuses the
+same durable AbandonUnknown reducer and persistence boundary as guarded recovery.
+
+Only the selected Unknown becomes IrrecoverablyUnknown. Its charged exposure,
+unknown endpoint execution, unresolved Stop liability, numerical operation and
+stream barrier remain. The result carries only the immutable receipt, snapshot
+and acknowledged anchor; no recovered role, live owner, Fence, fresh clock,
+endpoint query/send, refund or numerical restart is introduced. Exact operation
+retries return the original receipt without another event, including at capacity.
+
+An independently retained topology checkpoint must match the exact saved cut or
+one matching AbandonUnknown successor before cleanup or mutation. The derived
+checkpoint preserves original documents, graph, availability, work and last
+operation. Archive writes remain separate; an interrupted export can retry from
+that same old pair without replaying an effect or refreshing source budget.
+
+Six new integration functions cover seven native modes, actual publication and
+unexecuted Unknown, full snapshot/stream preservation, exact retries, guard and
+credential mismatches, wrong stages/requests, canonical races, ordinary capacity,
+reserved capacity and available/withdrawn source custody. Independent production
+review found no blocking defect. Standard LLVM and official Cranelift library
+code generation were both SIGKILLed before a test binary existed; these tests
+have no runtime pass. The complete library and new six-function native integration
+target pass Cargo metadata checking on nightly-2026-10-28; no test registration
+or assertion was removed. This scoped result is not a canonical qualification.
+The baseline canonical xtask gate already refuses the existing three-package
+workspace at its unchanged initial dependency-admission guard. Full qualification
+and the FA-014 umbrella remain open. See
+[the native contract](docs/LEARNED_UNKNOWN_ABANDONMENT.md).
+
+## 2026-10-28: expose guarded learned policy diagnosis and repair search
+
+The learned operator now accepts explicit `--resume --explain-proposal` with
+independent history custody. It diagnoses the first exact-policy admission of
+the selected external request, including hard denials with no completed review.
+The original plain/raw/owned cursor, optional mediation, numerical recipe,
+identity/current credentials, floors, policy and terminal reserve remain
+mandatory. Optional topology requires an exact matching v2 source/history pair.
+
+The command registers capture before event zero, performs one complete original
+replay, validates the exact message or finish predecessor, and consumes only the
+immutable native investigation after canonical confirmation. It reuses the
+original predicate-tree renderer, hypothetical payload experiments and bounded
+subset search. Strict original-argv admission prevents mixed live/receipt/repair
+modes and retained-output flags. One elapsed budget covers intake through output.
+
+Learned payload interventions edit hypothetical historical `ActionSpec`
+release-frame bytes. They do not regenerate model text, recompute forecasts,
+validate a new release or confer permission. The report explains historical
+admission policy, not every later helper or dispatch condition. The original
+exclusive recovery lock makes this an offline operator route.
+
+Eight new operator regression functions complement the eight native functions.
+The full native library, complete 26-function integration target, production
+publication executable and complete unchanged publication test target all pass
+real-source metadata checking. The complete operator target took 10.22 seconds
+and includes the earlier receipt-service tests. Both forbidden owner/permit
+examples fail with the expected E0599/E0308.
+
+The additional bounded 256-unit Cranelift library build stopped on shared-cgroup
+OOM after 47.18 seconds, following the previously recorded 16-unit failure.
+No linked library was produced; these sixteen new functions remain unexecuted.
+The earlier formatter integration error was corrected before all passing
+metadata checks. No original assertion, source body or registration was removed.
+The pinned local-nightly checks do not replace canonical workspace/RCH
+qualification, and Beads remain open. See
+[the command and verification record](docs/LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+
+## 2026-10-28: diagnose learned policy admissions through their original replay
+
+The base learned recovery and all five guarded learned forms now support
+pre-replay selection of one external request and consuming immutable proposal
+diagnosis. This covers plain/raw/owned histories with and without mediation,
+including a frozen hard-policy denial before any helper round exists.
+
+The original admission selector captures the same policy, snapshot, compiled
+witnesses and request-to-attempt mapping during the SAME original reducer pass.
+Complete numerical/suffix replay, each wrapper's original independent guards,
+current credential epoch, policy, floors and topology remain mandatory. The
+offline cursor holds its original exclusive recovery lock and rereads canonical
+bytes before releasing only `FileProposalInvestigation`. It appends no Fence,
+cleans no staging, reads no authority clock and grants no owner or permit.
+NotAdmitted requests never acquire fictional proposals; later outcomes do not
+rewrite admission history. Existing policy counterfactuals and bounded subset
+search consume the immutable result without changing real denial or charges.
+
+Eight new integration functions cover all five wrappers/six mode combinations,
+denied/allowed/non-admitted controls, real message and finish selection,
+registration/drop/lock boundaries, all independent guards and floors, credential
+generation, exact recipe/anchor, malformed and semantically invalid suffixes,
+canonical races, full ordinary capacity and unusable staging. Existing fixture
+tests and assertions are unchanged; the parent gains only the new module.
+
+The complete library passes metadata checking (15.04 seconds), the complete
+26-function native receipt/diagnosis target type-checks, and both new forbidden
+owner/permit snippets produce the expected E0599/E0308. The source manifest is
+`a29149b5729e2c229dc628907c770ebb65edf21dfad35880b93dafcde9af82fd`.
+Initial metadata/link attempts exposed a filename banner accidentally written
+by the integration formatter; the original module was restored and formatted
+normally before the successful checks. The subsequent full Cranelift library
+build was SIGKILLed after 31.69 seconds with a shared-cgroup OOM event, so these
+new tests have no runtime pass at this checkpoint. Previous receipt runtime
+results do not qualify this changed source. Canonical workspace/RCH gates and
+Beads remain open. See
+[the learned diagnosis contract](docs/LEARNED_PROPOSAL_DIAGNOSIS.md).
+
+## 2026-10-28: repair learned receipt custody before resident actor exchange
+
+The learned resident receipt service now supports
+`--recover-receipt-checkpoint` with the original matching v2 source/history pair,
+both fresh outputs and final `--reconcile-receipts` mode. It consumes the same
+sealed native recovery with full plain/raw/owned guards and bounded replay.
+Exact historical selection and socket binding/security precede native
+confirmation or settlement; both exports precede late deadline handling or
+any actor-frame exchange. Failed retention serves no receipt while preserving
+successful partner archives and the confirmed revision.
+
+Retained output paths are now rejected if they alias the service socket,
+including canonical-parent/ancestor aliases. This check runs before recovery
+for both ordinary retained reconciliation and explicit repair. Original
+immediate option values and final mode position also remain validated.
+No source budget is refreshed, no unknown effect is resent, and the actor gains
+only its original immutable selected outcome.
+
+Six new service regression functions cover actual source-backed publication,
+lost exports/repeated repair, reconnect, independent output races, late expiry,
+kernel-peer rejection, malformed input/floors, canonical/cleanup/suffix failures
+and 36 archive/socket collision combinations with a positive exchange control.
+Together this wave adds **22 regression functions** (nine native, seven one-shot,
+six service) and two forbidden wrapper-owner examples.
+
+All **18 native receipt tests pass**, including the nine new cases; both
+compile-fail controls refuse owner escape. The final production executable
+passes metadata checking and changed sources pass syntax parsing and independent
+review. The thirteen new operator/service functions remain unexecuted and lack
+a completed final full-target metadata result: shared-cgroup OOM events stopped
+the full operator checks before a harness existed. No assertions or registrations
+were weakened. Concurrent main changes are preserved; canonical workspace/RCH
+qualification and Beads remain open. See
+[resident repair](docs/LEARNED_RECEIPT_SERVICE.md#repair-interrupted-exports-before-serving).
+
+## 2026-10-28: expose receipt checkpoint repair through the learned operator
+
+The one-shot learned command now accepts `--recover-receipt-checkpoint` only
+with explicit resume/reconciliation, an independent input anchor, an exactly
+matching v2 source checkpoint and both fresh retained outputs. It delegates to
+the sealed native repair cursor with the original plain/raw/owned guards,
+current credential epoch, reserve, higher floors and one-event replay budget.
+Ordinary recovery remains exact-cut; unsafe or unrelated suffixes cannot repair
+custody.
+
+The original current cut settles once; an existing exact Fence/Time/Sweep
+successor confirms without another clock, event or replacement. Both exports
+are attempted before late expiry or stdout, successful partner archives survive,
+and combined failures name the confirmed revision. Original immediate path and
+finish values are checked before option stripping. The guarded-abandonment test
+module now has its explicit nested path, repairing a concrete full-target
+compilation error without altering assertions.
+
+Seven new one-shot regression functions cover lost exports, repeated repair,
+all modes, original finish selection, malformed custody/options, unsafe suffixes,
+floors and post-confirmation failures. The production executable passes metadata
+checking; the complete native suite passes 18/18. Changed sources pass syntax
+parsing and independent review. Full operator metadata/build attempts were
+interrupted by shared-cgroup OOM pressure, including SIGKILL of the unmodified
+Cranelift harness at 33.31 seconds. These seven tests remain unexecuted and lack
+a completed final full-target metadata result. Canonical workspace/RCH gates
+and Beads remain open. See
+[the operator repair command](docs/LEARNED_RECEIPT_RECONCILIATION.md#explicit-operator-repair-after-interrupted-exports).
+
+## 2026-10-28: repair interrupted learned receipt checkpoint exports natively
+
+A sealed `FileReceiptTopologyRecovery` now consumes the original mediated
+plain/raw/owned learned cursor with one independently retained v2 source
+checkpoint and selected historical request. It admits only the unchanged exact
+cut or exactly one Fence/Time/Sweep successor. Full original numerical replay,
+policy/predictor/current-credential checks, terminal reserve, selected message or
+finish predecessor and independently strengthened floors remain required.
+
+At the unchanged cut it performs the original one-clock, three-event settlement.
+At the complete successor it rereads canonical bytes, synchronizes storage and
+cleans verified staging without another clock, event, replacement or sweep.
+Failed confirmation returns no candidate custody. No owner or source-observation
+capability escapes. Source work and last operation remain unchanged; unresolved
+effects remain charged. The triplet proves source succession, not a triggering
+request or single-batch provenance. Partial, reordered, repeated, source,
+credential, Stop and AbandonUnknown suffixes refuse. Ordinary recovery stays
+strict.
+
+The complete native receipt target passes **18/18** in 59.96 seconds, including
+all nine new repair functions and all existing tests. The first run passed
+16/18; the two new fixtures were corrected to supply the original predictive
+finish forecast and to respect native Sweep clock readiness before testing an
+invalid suffix. No production guard or original assertion was weakened. Real
+library/integration metadata checks and the full linked library pass; both new
+owner-escape snippets fail with E0599. The library source manifest is
+`aeff8b3660d0a0097345c7944f46b625bab4808b40bdefa18732a0499e3d68bf`.
+Checks use nightly-2026-08-31, the matching official Cranelift library and the
+unchanged LLVM integration harness with 32 MiB stacks. They include concurrent
+main source through `fcc8fe766` but do not qualify every abandonment case.
+Canonical workspace/RCH gates and Beads remain open. See
+[the native repair contract](docs/LEARNED_RECEIPT_RECONCILIATION.md#recover-source-custody-after-interrupted-receipt-exports).
+
+## 2026-10-27: expose guarded unknown abandonment through the offline operator
+
+The base and mediated guarded recovery cursors now consume the same fully
+replayed private state into an explicit abandonment receipt, acknowledged
+snapshot and exact history anchor. They recheck their complete independent
+requirements and canonical bytes, retain ordinary-capacity admission, and never
+return a live owner or append a recovery Fence that changes the selected
+predecessor. Exact retries preserve the original receipt and return the current
+acknowledged cut without another event, including at physical journal capacity.
+
+The Unix reference executable now accepts
+`supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.
+Its closed request and separate base/mediated profile schemas require independent
+input custody and a new outside-store output archive. One monotonic budget covers
+input admission and cooperative replay. After native acknowledgment, retention
+and reporting are both attempted even after a late deadline or independent
+output failure. Errors name the acknowledged revision and direct exact-request
+retry; they cannot imply that an effect was undone or resend it.
+
+The bounded report wraps the known disposition in Knowledge while its endpoint
+outcome stays Unknown. Charges, prior effects, unresolved Stop liabilities and
+blocked stream successors remain intact. The command uses the exact original
+source-publication guard inventory and does not downgrade learned, numerical or
+prediction/evaluation profiles into a weaker recovery path. The existing
+`resolve` vocabulary entry and P3 operator playbook identify this implementation.
+
+Nine guarded and twelve operator regression functions cover native state/byte
+equivalence, full guard and predecessor refusals, canonical forks/suffixes,
+interrupted replay, terminal reserve, all five storage barriers, required output
+custody, pre/post-acknowledgment deadlines, output races and lost responses.
+All fourteen changed Rust files passed the pinned nightly rustfmt syntax parser;
+the report template and registry JSON were also checked without Rust execution.
+Independent source reviews found no blocker. Compilation, runtime tests, Clippy
+and the canonical gate remain unverified because RCH is unavailable. The
+FA-014 scoped bead remains in progress. See
+[the complete contract and command schemas](docs/DURABLE_UNKNOWN_ABANDONMENT.md).
+
+## 2026-10-27: retain learned receipt service custody before actor exchange
+
+The resident learned `--serve-receipts ... --reconcile-receipts` command now
+supports retained history and paired v2 topology checkpoints through the same
+original complete cursor and native immutable acknowledged result. It admits
+matching independent input and distinct new outside-store outputs before
+replay. Original request checks and socket binding/security still precede the
+clock and mutation, preserving the occupied-socket zero-write contract.
+
+After acknowledgment, both archive writes are attempted before late deadline
+handling or peer-session construction. Any export failure serves no receipt,
+keeps any successful partner archive and reports the acknowledged revision.
+Successful retention remains valid after a later deadline or rejected peer.
+The actor receives only its original sealed redacted observation; it gains no
+history archive, cancellation, owner or publication capability. No-output and
+passive service selection retain their existing contracts.
+
+Four new service regression functions cover original publication and subsequent
+passive recovery in all three modes, retention before real client/reconnect
+exchange, Cancel refusal, independent output races, late expiry, actual kernel
+credential rejection, malformed custody and pre-clock socket collision. Together
+with the five one-shot functions, four native integration functions and one
+five-barrier native unit matrix, this wave adds fourteen regression functions
+and two compile-fail owner-escape examples.
+
+Verification before the concurrent abandonment commit: the complete unchanged native
+`mediated_learned_receipts` target passes **9/9**, including its four new custody
+functions, in 30.06 seconds. Its LLVM harness links the matching official
+nightly-2026-08-31 Cranelift library with 32 MiB test-thread stacks. Library,
+publication executable, complete publication test target and native integration
+target all pass real-source metadata checks; both forbidden snippets fail with
+the expected E0599 and the permitted API control compiles. The exact 1,880-file
+Rust source manifest is
+`faf70c2a3ced6a4b0d7cc25a58885914a9466168371aa1a86bb7b482d7f0eca9`.
+
+The earlier first linked-library attempt stopped at its own 1.25 GiB watchdog;
+a later full library build succeeded. Full operator harness generation with
+LLVM (22.57 seconds), serialized LLVM (24.17 seconds) and Cranelift (22.57
+seconds) stopped at the 1.7 GiB watchdog before an executable existed. The nine
+new operator/service functions therefore type-check but remain unexecuted.
+The full library-unit metadata attempt was SIGKILLed after 66.12 seconds, and
+the new native barrier matrix has no completed full-target typecheck or runtime
+result. Initial service fixture-name diagnostics were fixed before the successful
+metadata checks; no original assertions or source bodies were weakened.
+The concurrent main commit `0fb1c1b` is preserved in full; these execution
+results precede that integration and do not qualify its new abandonment event.
+Canonical workspace qualification, existing dependency-admission failures and
+Beads remain open. See [receipt service](docs/LEARNED_RECEIPT_SERVICE.md#retain-custody-before-serving-reconciled-receipts).
+
+
+## 2026-10-27: persist explicit unknown-delivery abandonment
+
+The base and full-input durable publication owners now journal the original
+trusted `Unknown -> IrrecoverablyUnknown` transition. The request binds one
+operation, attempt and control/authority predecessor. Healthy current-revision
+exact retries return the original action-bound receipt without another event;
+conflicting identities, stale predecessors and non-Unknown states refuse.
+
+Abandonment removes only the selected local sendable envelope. It never queries
+or resends an effect, refunds a charge, advances a stream, restores a clock or
+claims nonexecution. Actor polling stays Unknown, and Stop retains the original
+unresolved/irrecoverable liability even after a sweep returns no pending work.
+Published-but-unreconciled bytes and execution counts stay intact. Interrupted
+source acquisition and paused/pending numerical work do not block this restrictive
+operation or become cleared by it.
+
+Canonical tag 18 extends the existing journal without changing legacy bytes;
+unknown-tag readers refuse. The event uses ordinary capacity and preserves the
+existing terminal reserve. Authored positive and causal-negative tests cover
+base/two-key histories, exact retries, forbidden states, canonical replay,
+retained actor/stream/numerical obligations, capacity and five storage barriers.
+Pinned nightly-2026-09-08 rustfmt parsing is the available source check. RCH and
+configured workers are absent, so no compilation, runtime, Clippy or full gate is
+claimed and no bead is closed. See [the contract](docs/DURABLE_UNKNOWN_ABANDONMENT.md).
+
+## 2026-10-27: keep learned receipt settlement reopenable through the operator
+
+The one-shot learned `--resume --reconcile-receipts` command now accepts retained
+history, and paired retained source custody for selected topology histories.
+Plain/raw/owned modes use their original complete guarded cursor and the native
+acknowledged result. Topology output requires an exact v2 checkpoint plus its
+independent input anchor; unsafe, duplicate, mixed and incomplete output
+selections refuse before the settlement clock. Passive receipt mode still
+refuses output retention before configuration intake.
+
+Both selected archives are attempted before a late deadline or response write.
+Errors retain the acknowledged revision and independent export/report failures;
+they never retry the effect. Subsequent passive inspection or further explicit
+reconciliation can select the successor pair without rereading live source
+files or resetting spent source work. Legacy no-output calls retain their
+previous behavior, including the stale old-v2-cut limitation after mutation.
+
+Five new operator regression functions cover message and finish history,
+actual topology publication and later exact recovery in all three modes,
+stale/mixed/manual/unsafe custody, independent output races, late expiry and
+stdout loss. The real library, executable, complete publication test target and
+native receipt integration target pass direct nightly metadata checks. This
+establishes type/borrow checking, not execution. The earlier fixture module-name
+error was corrected before these passing checks. The full library-unit
+metadata attempt remains interrupted by SIGKILL; no runtime or canonical gate
+pass is claimed here. See
+[retained receipt custody](docs/LEARNED_RECEIPT_RECONCILIATION.md#retained-topology-receipt-custody).
+
+## 2026-10-27: retain exact source custody after learned receipt reconciliation
+
+The original single-replay Fence/Time/Sweep transaction now hands off its
+already acknowledged canonical bytes through a private immutable
+`FileReconciledLearnedReceipt`. All six learned recovery cursor families expose
+history-retaining and independently selected checkpoint finalizers, together
+with sealed actor-port variants. Complete replay, original guards, current
+credential epoch, external floors, request selection, canonical rechecks and
+ordinary capacity remain mandatory. The result carries no Store, owner,
+observer, reviewer or publication permission.
+
+`TopologyCheckpoint::after_reconciled_receipt` accepts only the same complete
+starting source/history cut followed by exactly that one acknowledged
+Fence/Time/Sweep. It preserves original source documents, spent work and last
+source operation; the original fence leaves the graph unavailable. Selected
+checkpoint validation occurs before the trusted clock or mutation. No live
+source is reread, no numerical replay is added to the finalizer, and no unknown
+dispatched effect is retried or refunded by inference.
+
+Four new integration functions exercise actual plain/raw/owned mediated
+publication, exact successor recovery without live source files, all original
+guard/canonical/capacity refusals and independent export failures. A new native
+unit matrix covers all five replacement barriers for both receipt and actor-port
+custody. These are authored runtime regressions, not execution claims.
+
+Real-source nightly-2026-08-31 metadata checks passed for the native library
+and complete mediated receipt integration target. Both forbidden public owner
+escape snippets failed with the expected E0599; the permitted immutable surface
+type-checked. New source/test files passed rustfmt parsing. A first monitored
+linked-library attempt stopped at its own 1.25 GiB resident-memory limit before
+a test harness existed. The full library-unit metadata attempt was then
+SIGKILLed after 66.12 seconds at an observed peak of 1,426,852 KiB, before a
+result; the final unit matrix is not claimed to have type-checked. No runtime
+pass, canonical workspace gate or Bead closure is claimed by this increment. See
+[receipt reconciliation](docs/LEARNED_RECEIPT_RECONCILIATION.md#acknowledged-receipt-history-and-source-custody).
+
+## 2026-10-27: repair interrupted topology credential checkpoint exports
+
+The learned credential command now has an explicit
+`--recover-credential-checkpoint` path for a lost successor export. It requires
+the original version-2 source checkpoint and matching independent history anchor,
+the exact original lifecycle request, and the independently selected current
+credential epoch. Only that request's Rotate/Revoke events and recovery Fences
+may extend the retained prefix. Unrelated credential operations, source work,
+Time, settlement and Stop cannot be priced from an older source allowance.
+
+Both mediated learned replay types expose an operation-bound recovery wrapper.
+It retains the original exclusive cursor, numerical/predictor/guard checks,
+canonical history, terminal reserve and independent floor maxima. Its finalizer
+preflights the request before the original Fence, discards live roles, and returns
+a private maintenance owner that can only apply the bound request and capture
+acknowledged history/source custody. Ordinary exact-extent recovery is unchanged.
+The operator routes plain/raw/owned modes through that wrapper and shares the
+existing Fence-first independent export handling, including deadline and output
+failures. No source bytes, spent work, unknown-effect charges or revocation floor
+are reset; topology is not recertified.
+
+Five new native integration functions and three operator functions cover
+successful lost Rotate/Revoke export recovery in all three modes, Fence-only
+interruption, exact historical retries, unrelated suffix/current-epoch/floor/
+reserve refusal, forked history, every replay-drop boundary, and acknowledged
+exports after deadline/stdout failure. Four compile-fail API examples express
+the absence of general recovery and publication-owner escapes. New files passed
+rustfmt parsing; independent static review found no concrete implementation
+defect. These statements describe authored coverage, not runtime passes.
+
+Verification progressed after the earlier failed attempts below: a fresh
+isolated temporary filesystem allowed the real library, library test target,
+publication executable and publication test target at the first two increments
+to pass direct `rustc --edition=2024 --emit=metadata` checks. These checks used
+nightly-2026-08-31, without source rewriting, and established type/borrow checking,
+not execution or canonical qualification.
+
+A subsequent linked-library build intended for focused runtime tests was
+SIGKILLed after 25.56 seconds before a harness existed. Its observed peak RSS was
+600,352 KiB and the shared cgroup OOM-kill counter rose from 62 to 63; no runtime
+test executed. Its snapshot SHA-256 was
+`87a33e5ba1138a348b8e70b6eb08d67c0f7812a6b3fe1b154181cf02d21f6b46`.
+For the combined repair source, real library metadata checking passed with zero
+warnings in 38.59 seconds at source manifest
+`cd0c211d0bbba74853945e89741b2199a974bd7f19bf07c5c5a8a24bbcc283f9`.
+The environment became unavailable during the next library-unit-test target
+compilation, before a result was available; that interrupted attempt is retained.
+
+After recovery, a focused real-source run at the same manifest used
+`-Zthreads=1 --edition=2024 --emit=metadata`: the final library passed in 15.48
+seconds, publication executable in 2.68 seconds, complete publication test target
+in 9.67 seconds, and new native integration-test target in 0.11 seconds. All four
+returned zero. The four forbidden public-surface snippets each failed with the
+expected E0599, and the corresponding permitted API surface type-checked. This
+does not execute the regression bodies or replace the interrupted final library
+unit-test compilation. No runtime, Clippy, full workspace gate, latest qualified
+toolchain or Bead completion is claimed. Prior failures and the unchanged
+dependency-admission gate remain recorded. See
+[credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
+## 2026-10-27: maintain credentials on topology-protected learned owners
+
+The offline learned rotation/revocation commands now accept plain, raw-forecast
+and owned-forecast topology histories through the original fully guarded replay.
+An explicit version-2 source checkpoint and matching input history anchor are
+required, together with distinct new history/source output paths outside the
+authority store. Missing pairs, manual version-1 source minima, stale current
+epochs and invalid lifecycle operations refuse before cleanup or the recovery
+Fence. The ordinary exact-extent guard remains unchanged.
+
+Every acknowledged recovery carries the original source bytes, spent work and
+last source operation to the same history cut without reading current source
+files or recertifying the withdrawn graph. The command captures the Fence pair
+before mutation, independently attempts both exports after acknowledgment, and
+reports source and history retention separately. A poisoned write can retain
+only the already acknowledged prefix; an exact retry still reports its original
+receipt separately from today's independently selected credential state.
+
+Four new operator regression functions exercise all three predictor modes,
+rotation/revocation and later historical retries without live assets, original
+receipt preservation, pre-Ready guard refusal, stale/mixed/version-1 custody,
+invalid output selection, deadlines around Fence/mutation/export, independent
+archive races and report-output failure. Rustfmt syntax/formatting passed for
+the new helper and test files. No runtime pass is claimed.
+
+Verification remains limited by the execution environment. The subsequent
+real-source Cargo check of native commit `3d679dbc` exited 101 when it could not
+write metadata because the memory filesystem was full. A real-source direct
+metadata attempt including this operator increment also failed at metadata
+creation before completing even its library target. The combined source
+manifest for that attempt was
+`14611d8a4d2589c9338d0c8acfef3bc04f8ab68f7d66496148dae188be919d65`.
+Isolated temporary-filesystem attempts could not establish their mounts, and
+the execution environment became unavailable again. These are failed attempts,
+not successful compilation, tests or canonical qualification. No dependency,
+source/journal format, authority gate or Bead completion was widened. See
+[credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
+## 2026-10-27: retain topology source custody across credential maintenance
+
+The native `TopologyCheckpoint::after_credential_lifecycle` API now carries the
+original source documents, spent source allowance and last source operation to
+an acknowledged healthy-owner cut. It verifies the same owner/profile, exact
+history prefix, graph, availability and monotone authority floors. Only native
+Fence/credential rotation/revocation events may extend the retained cut; later
+source checks, numerical work, time, settlement and Stop events refuse. Poisoned
+owners cannot certify an ambiguous mutation, and an earlier acknowledged Fence
+checkpoint remains independently retainable. No source refresh, recertification,
+credential provisioning or effect resend occurs.
+
+The plain and predictive mediated learned recovery cursors expose the original
+credential status and lifecycle preflight only after complete guarded replay.
+Historical retry receipts remain separate from the independently selected
+current epoch. The offline operator integration remains a separate consumer.
+
+Five new native regression functions cover healthy maintenance and old exact
+receipts; unchanged source work without live inputs; source/ordinary/terminal
+suffix rejection; owner/profile/graph/fork/floor binding; and rotation/revocation
+failures at all five native journal barriers. These are authored tests, not
+passing execution evidence. New native source and tests passed rustfmt parsing
+through stdin with nightly-2026-08-31. A metadata-only full-library verification
+attempt relocated module/include paths to memory files while preserving bodies
+and included all seven changed native source/test paths. It exited **137** before
+any success or Rust diagnostic; the execution environment subsequently became
+unavailable. No library typecheck, runtime test, qualified toolchain, Clippy or
+canonical xtask success is claimed. All earlier failures, Beads and gate status
+remain unchanged. See [credential lifecycle](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
+## 2026-10-25: rotate and revoke credentials through guarded learned recovery
+
+The learned executable now exposes the original durable credential lifecycle:
+`--rotate-credential OPERATION EXPECTED_GENERATION NEXT_GENERATION` and
+`--revoke-credential OPERATION EXPECTED_GENERATION`. Both require exclusive
+offline owner custody, an independently retained input history anchor and a new
+output archive. The closed grammar rejects actor, reviewer, activation, receipt,
+Stop and topology mixtures before input loading. Plain, raw-forecast and
+owned-forecast histories retain their original identity, joint, publication,
+policy, epoch, floor and numerical-recipe checks.
+
+New read-only queries on the original guarded recovery cursors validate the
+operation before staging cleanup or the recovery Fence. They reuse the original
+native lifecycle validation; replay still rejects duplicate events. An exact
+retry returns the historical operation receipt separately from the independently
+selected current generation and revocation state. A later rotation or revocation
+does not rewrite the old receipt. Each successful recovery still acknowledges
+its own Fence; the command does not provision secret bytes, rewrite the selected
+profile or issue a publication capability.
+
+Historical admission needs no live inventory, credential files, helper roster
+or publication evidence. The command performs no new generation, terminal Time,
+Sweep, refund or effect resend. After acknowledgment it attempts to retain the
+latest healthy journal cut even when a deadline, archive export or stdout fails.
+An ambiguous native write leaves the transition/current state unconfirmed and
+retains at most the already acknowledged Fence prefix. The bounded result
+separates receipt, current status, acknowledged revisions and retention status.
+Topology lifecycle remains explicitly refused until paired source-custody
+checkpoint succession exists; its exact-extent guard is unchanged.
+
+At the combined source based on `c3bd4a0e` plus routing commit `47f5dbf8` and this
+increment, standard Cargo check passes the complete original operator test
+target. All **seven new lifecycle functions** pass in their focused run, and all
+**60 public functions** pass across the 12 complete credential/perimeter targets.
+The broader operator selection completes **86 passed, one failed, zero ignored**;
+its two subprocess entry points are not counted as additional tests. Every new
+lifecycle and route function passes in that broad run as well. Overlapping
+focused executions are not added to either denominator.
+
+The sole broad-run failure is the unchanged checked resident-sequence fixture
+`resident_messages_and_finish_reacquire_witnesses_and_preserve_the_first_effect_when_the_next_basis_fails`.
+Its third actor started at 16.952 seconds, the third human-review endpoint became
+ready at 41.704 seconds, and the service completed at 43.182 seconds with
+`failure=None` and all three original `Known(Executed)` receipts. The fixture's
+fixed 25-second actor wait expired before delivery of the final response; its
+join then panicked. The configured actor/service runtime was 60 seconds. Source
+review confirms that this fixture selects no credential policy and calls none of
+the new lifecycle paths. Retain the failed result and the earlier intermittent
+case investigation; this increment does not claim to repair that fixture.
+One exact unchanged diagnostic rerun then passed both the positive sequence and
+the later invalid-evidence case in 32.71 seconds, with all original assertions
+and the same 25-second client cap retained. This confirms intermittent timing at
+this source; it does not turn the earlier 86/87 run into a green full selection.
+
+Runtime uses standard LLVM harnesses, the official Cranelift native library and
+32 MiB test-thread stacks. Selected files and bodies remain unchanged; the
+operator mirror removes only unselected test-registration attributes. Source
+hashes are checked before and after execution. The canonical xtask gate executes
+and still refuses the unchanged initial dependency-admission guard before
+formatting, Clippy or full-suite execution. This is scoped feature evidence, not
+full workspace, default-stack or FA-011/014 qualification. No dependency,
+publication key, effect authority or release gate was widened. See
+[the executable lifecycle contract](docs/LEARNED_CREDENTIAL_LIFECYCLE.md).
+
+## 2026-10-24: select explicit credentials for independent effect routes
+
+Perimeter inventory version 2 now binds each broker-mediated route to one exact
+broker-held credential declared in that route's own family. Multiple file or
+learned-publication routes can therefore use distinct independently provisioned
+credentials without family-wide ambiguity. Unknown, actor-held or cross-family
+names, unsupported mediation and malformed credential objects refuse; there is
+no fallback to a different credential. Every reference consumes the original
+family text budget. All original inventory limits and version 1 admission and
+single-broker effect-resolution rules remain unchanged.
+
+The original CredentialBroker and FileCredentialPolicy resolver consume the
+checked route selection. New integration cases publish to two actual independent
+file endpoints through the original actor, reviews and dispatch capabilities,
+then exercise foreign envelopes, unequal provider secrets, credential lifecycle,
+worker reopening and conservative lost-acknowledgment accounting. Learned cases
+publish both routes in plain, raw-forecast and owned-forecast modes, composing
+identity, joint review and publication witnesses. Exact route/name selection
+remains pinned to historical receipts, audit and guarded recovery after live
+credentials, inventories, helper assets and evidence disappear.
+
+All **60 selected public test functions** across 12 complete integration targets
+and **80 selected operator functions** pass at frozen routing source based on
+`3446fb4a`. These include six new public and three new operator functions. The
+operator denominator excludes its two registered subprocess entry points; actual
+child invocations are not counted again. The three new route functions also
+passed again on the combined `b37bfbea` base; that rerun is not added to these
+denominators. Subsequent main changes through `c3bd4a0e`, including native
+constructor frame isolation and receipt fixtures, are preserved. Standard Cargo
+check passes all selected public targets and the complete original operator
+test target at the initial frozen routing source.
+Runtime uses the standard LLVM test harness, official Cranelift native library
+and 32 MiB test-thread stacks. The operator verification mirror changes only
+unselected registration attributes; production and selected test bodies remain
+unchanged, with original source hashes checked before and after execution.
+
+The canonical xtask gate ran and still refuses the unchanged initial dependency
+admission guard before formatting, Clippy or full-suite execution. No dependency,
+permit, journal-authority or release gate was widened. This increment provides
+explicit routing within the existing trusted-operator perimeter contract, not
+whole-process external-effect recovery, remote-provider authentication or full
+FA-011/014 qualification. See [route credential selection](docs/ROUTE_CREDENTIAL_SELECTION.md).
+## 2026-10-25: validate charged client requests and the stream finish slot
+
+This continuation changes reference tests, fixtures and contract wording; it
+activates no production runtime behavior. The original P0 remains in progress.
+Six learned-stream fixtures now admit seven messages within the existing eight
+delivery slots, preserving the original separate finish slot. Client fixtures
+now declare the full 9,000-byte or 25-byte payload charge; historical-investigation
+fixtures likewise declare their actual payload cost. No production ceiling,
+clock, timeout, wire format or source/authority check is relaxed.
+
+The generated-source peer and named-listener cases now require the original
+`Denied` judgment, exact control-ledger/request/generation basis and retained
+request stage, rather than misclassifying a complete false policy as a
+proposal-construction refusal. The native policy reducer and request book are
+unchanged. Existing exact retry, producer-file repair, private-context redaction,
+no-source-read and no-effect assertions remain.
+
+At frozen `93660bf54711efca2565d7d36c88ce21fb569b16` (tree
+`6963ffe370a06f6073ec136b4958db665067102d`), standard workspace/all-target
+compilation and all 359 workspace doc tests pass. The public `stream_release`
+target passes all nine tests, including two real reference message publications
+and finish within exactly three deliveries, beside rejection at two deliveries.
+These reference ballots and memory endpoints do not qualify a real actor model
+or deployment. The complete 2,325-function library run finishes **2,244 passed/81 failed**,
+zero ignored/filtered, in 1,352.85 seconds. Every prior 2,324 ID remains: **32
+previously failing IDs now pass and zero originally passing ID newly fails**.
+The added undercharged-client negative also passes with unchanged canonical
+bytes, live state and revision and zero peer I/O. All seven batched-client,
+five peer-client, thirteen generated-source API and seven named-listener
+functions pass. Ten of thirteen anchored-investigation functions pass; three
+retain their original failure on a real staging-file collision during a later
+writer operation. Their guards and assertions remain unchanged. Overlapping
+selections are not added to the full inventory as extra evidence.
+
+The first dispatch used an unresolvable revision and stopped before compilation.
+The first new library build at `089eda23` caught two `E0599` calls in the new
+regression: read-only `FileClientInspection` has no recovery encoder. The explicit
+correction compares actual canonical bytes and uses its existing inspection
+fields. Both failed attempts and the corrective commit remain retained; they are
+not test passes. Fifteen continuation Rust paths pass qualified formatting.
+The original plan, license, dependency policy and Bead acceptance remain intact.
+
+Raw continuation logs and normalized source diffs are retained outside frozen
+source under the existing operator evidence directory:
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+Current Clippy again fails with 25 library errors (14 argument counts, five
+large enum variants, six large error results), before later Clippy targets.
+The canonical command actually executes and refuses the unchanged initial
+admission guard. All 81 remaining library failures, original Bead acceptance,
+full dependency/source admission and the separate older workspace/operator
+failures remain open. This is self-reexecution of bounded reference evidence,
+not independent certification or a complete project gate.
+
+## 2026-10-25: propagate intake journal faults and reduce reference lint debt
+
+The reference inbox now propagates a newly raised source-preparation journal
+fault to the existing peer pool. The pool stops before another peer and charges
+the complete failed allowance; the original inbox can still drain its queued
+redacted refusal. The real collision negative, matched two-peer success and
+queued-reply regression all pass.
+
+At frozen `66b2ae6a1b3ed2177ea8e1ea21c8a41398d22e90` (tree
+`f6287cb90d28c942edd97c635e7d6a1a3b4c3552`), the complete reference library
+finished **2,211 passed/113 failed**, zero ignored/filtered, out of **2,324**, in
+807.28 seconds. The original 2,323 IDs are all retained: **73 original failed IDs
+now pass and zero originally passing ID newly fails**; one new matched positive
+also passes. These are reference-library outcomes, not a complete workspace or
+production pass. All-target compilation, all 359 workspace doc tests and
+formatting of all 58 owned Rust paths pass at this same source. Clippy still
+fails with 25 library diagnostics and the canonical driver still refuses the
+unchanged initial dependency-admission guard. Self-reexecution is not independent
+certification, and no Bead, roadmap packet or production gate is closed.
+
+The original P0 workspace-qualification Bead remains **in progress**. The full
+runtime command at `2f540485` exited 101 with **36 failed Cargo targets**. Its
+reference library finished **2,137 passed/186 failed, zero ignored/filtered, out
+of 2,323**. The complete pre-cleanup `24062cbf` library control has identical
+counts and the same 186 failed IDs; this compares library outcomes, not all
+workspace targets or independent certification. The 744-function operator
+suite finished **742 passed/two failed**, zero ignored/filtered, in 1,621.69
+seconds. The learned checked-publication resident sequence and native
+continuation after second dispatch remain unresolved after peer timeouts or
+BrokenPipe. No deadline or peer budget was widened. The separate xtask target
+passed 248 tests; filtered child helper invocations are not added to parent
+inventories, and no whole-workspace test count is inferred from interleaved logs.
+
+At frozen
+`2f54048572d9d0af36092985e488754c5929c1cc` (tree
+`46e3101f49d21e2f345510bcf0d739ff4323bb54`), all 48 changed Rust files pass
+qualified formatting and the standard workspace/all-target compile check passes.
+Clippy with warnings denied still **fails** with 25 library errors: 14 argument
+counts, five large public enum variants and six large error results. This removes
+55 of the original 80 library diagnostics. Later Clippy targets remain unrun;
+the passing compile check retained their warnings rather than suppressing them.
+
+The source changes preserve report bytes, fixed-width codecs, binding/length
+checks, lazy clock calls and short-circuit delivery/recovery checks. Three
+private receipt-transition variants use a short-lived box; feed ingestion reuses
+the existing capture `Rc` earlier. Public APIs, journal/event formats, authority
+checks and all runtime test behavior are unchanged. The receipt boxes also
+allocate during replay; no allocation, latency, stack-limit or RSS improvement
+has been measured. This is build-enabling reference work, not a new production
+activation or an alignment result.
+
+The canonical driver again exits 1 at the unchanged initial two-package lockfile
+guard. Full dependency admission remains required before admitting `fa-journal`
+there; no guard, package policy, snapshot, golden, compiler/backend, timeout,
+production bound or assertion was relaxed. Six operative README compiler pins
+now match the already-qualified `nightly-2026-09-08` registry.
+
+The complete workspace doc gate at `2f540485` exposed two private-field
+forgery examples whose empty literals produced an uncoded privacy diagnostic,
+so their original `E0451` requirements failed. `ff1f90943195a3a87eab65eddb50ee14dea285f4`
+(tree `b5cb7d449866766a47b9f2d701b45333c902392f`) keeps both `E0451`
+requirements and supplies complete private-field literals attempting to replace
+accepted revision or expiry, beside permitted clone/accessor examples. Dropping
+only doc comments from qualified-formatted old/new source leaves identical
+runtime text in both files. These positives are compile-only API checks, not
+runtime evaluator proof.
+
+At `ff1f9094`, all-target compilation and the full workspace doc gate pass:
+13 journal, three merged reference examples and 343 separate reference tests;
+359 passed, zero failed/ignored/filtered. The earlier baseline was 357 tests,
+355 passed/two failed; its separate one-positive merged harness is included
+here, correcting preliminary per-crate shorthand. The failed full runtime
+workspace command remains attributed to `2f540485`, not relabeled as
+`ff1f9094`. The four older intermittent native investigations remain open,
+alongside the native-continuation failure observed in the new full run.
+
+A separately reviewed inherited oracle repair at
+`4281d2022dfe2007ad22e43c66f040183d0a80a9` keeps production version-six bytes
+unchanged. The manually authored wrapper oracle used 64-bit words where the
+original shared journal uses 32-bit blob/count words. Exact equality remains;
+precision/cap offsets now target those fields, and widening either/both words
+is explicitly rejected. The same three parent configuration functions changed
+from baseline one passed/two failed to three passed/zero failed (2,320 filtered,
+zero ignored). No generated snapshot/golden file was refreshed.
+
+The repository DSR fragment at `054a7ce5` also pins its three Cargo checks to the
+existing qualified compiler, preserving all four checks. Concordance and system
+map attempts still fail on unlisted files/digest mismatches in the old source
+snapshot; the canonical command still refuses lockfile admission. No global DSR
+registry, production profile or manifest refresh was installed. Current source
+requires the original admission/source-closure work before a complete gate can
+pass.
+
+The inherited hosted-likelihood test failed at an assertion that proposal
+recording must refuse on crossing. Stronger diagnostics verified the actual
+positive probe band, configured pair, consumed prediction, true payload event,
+exact alpha and crossing. The original contract gates permitting review and
+authorization instead. At `45829a6c` (tree
+`bb5125c405685e80d6105361e16b6cadb23789c6`), the same parent function passes:
+a crossing records the proposal, refuses an actual unanimous Allow review with
+`Incomplete`, refuses authorization without a journal write and executes zero;
+the matched quiet control obtains both keys and publishes once. Exact likelihood
+replay/reopen assertions remain. This is a separately reviewed test-contract
+repair, not a new production enforcement mechanism.
+
+Three shared test fixtures are corrected at
+`26ddac0862f83e4b8e98e5c9cc39c5d479659e22` (tree
+`1c1afd90d6b736e6dac2673152ba80ceab5abcdb`): the native toy model now uses
+4,096 context tokens, within the unchanged 4,096 hard cap, and two actor-source
+policies explicitly conjoin both original leaves. The original 8,192-token
+fixture and unreachable policy nodes failed before their intended boundaries.
+All 55 owned Rust paths pass qualified formatting and match this frozen source.
+The same 112 affected parent functions improved from baseline 24 passed/88
+failed to 84 passed/28 failed, zero ignored and 2,211 filtered, in 212.27 seconds;
+60 original failures pass and no original passing ID newly fails. The production
+limits, policy graph rules, formats and authority remain unchanged. This selected
+result is separate from the later full current run.
+
+At `ca4ab945`, an actual ingress propagation gap is repaired: failed source
+preparation can queue a redacted actor refusal without adding a ready hint. The
+inbox now returns the original newly raised journal I/O fault to its coordinator,
+so the existing pool stops before another peer and charges the whole issued
+allowance. Subsequent draining of that queued reply from the same faulted inbox
+remains possible. The original collision, second-peer, budget and canonical-byte
+assertions pass, including an added exact `Stage`/`AlreadyExists` check; a new
+matched no-collision positive admits both peers and charges actual socket work.
+The existing generated-inbox storage test also passes its unavailable-reply drain
+and prior-hint checks. The selected run finished 28 passed/seven failed, zero
+ignored, 2,289 filtered out of the new 2,324-parent inventory. All seven failures
+still occurred at named Unix socket bind; they are not credited as passes.
+
+Shortening the shared data-directory spelling was insufficient for `SUN_LEN`.
+`66b2ae6a1b3ed2177ea8e1ea21c8a41398d22e90` (tree
+`f6287cb90d28c942edd97c635e7d6a1a3b4c3552`) restores that spelling and gives
+only the seven named-socket tests their own short, atomically created private
+0700 directory under `/tmp`. Source evidence and journals keep `TMPDIR`; kernel
+credentials, framing, quotas, actual two-key publication and every original
+assertion remain. At that current source, all 58 owned Rust paths pass qualified formatting and
+match the frozen tree; standard workspace/all-target compilation and all 359
+workspace doc tests pass. Clippy still fails with exactly the same 25 library
+diagnostics; later Clippy targets remain unreached. The full 2,324-parent library
+result is reported above, including the new matched positive test. Within it,
+the fixed inbox/pool/socket selection is 34 passed/one failed out of 35, with no
+ignored test. Six named listener functions now pass their original checks,
+including actual two-key publication. The remaining named backpressure test
+reaches its original `ActorOutcome::NotAdmitted` assertion and still fails;
+that assertion was not weakened. All 113 remaining library failures stay open.
+The complete workspace/operator inventory has not been re-executed at this later
+source; its older failures remain separately attributed.
+
+The preceding test-only `34013f95` full library control finished 2,202 passed/121
+failed, zero ignored/filtered, in 754.30 seconds. Its exact 2,323 IDs match the
+original `24062cbf` baseline: 65 original failed IDs now pass and zero passing ID
+newly fails. It does not qualify the later inbox runtime change or socket fix.
+
+Raw logs are outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`:
+`clippy-2f54-all-target.log`, `clippy-2f54-final-hz2.jsonl`,
+`clippy-2f54-canonical.log` and `clippy-2f54-workspace-tests.log`. The later
+cut retains `clippy-ff1f-all-target.log`, `clippy-ff1f-workspace-doc-tests.log`,
+`clippy-ff1f-final-hz2.jsonl` and `clippy-ff1f-canonical.log`; its Clippy and
+canonical refresh still fail on the same 25 library diagnostics and initial
+admission guard. All 50 owned Rust paths pass formatting and match `ff1f9094`.
+These are self-verification, not independent certification. Earlier attempts remain
+retained: the `f38ab05a` E0596 introduced by the closure cleanup, its explicit
+reborrow correction, the second-pass formatter mismatch, queued cancellations,
+`hz4` source-initialization refusal, and the superseded `c29f9a06` compile's
+SIGTERM/143 terminal acknowledgment. None is a passing test result. The tracker
+contains the original acceptance plus 25 exact remaining diagnostic TODOs.
+
+## 2026-10-24: isolate guarded startup frames without changing authority
+
+The full `a985f9cd` operator attempt aborted on the integrated credential-history
+function with stack overflow/SIGABRT before a complete 744-function summary. A
+fresh exact-function run reproduced that abort on standard `vmi1149989`; it was
+not merely a failure following earlier tests. No stack-size, compiler/backend,
+deadline or assertion change was used to repair it.
+
+`83cd4443116dbccbeccf7bbb75fc1bfc5c8a13aa` (tree
+`094954254ac7e87499977b9eb582de28900b31fc`) keeps the mutually exclusive plain,
+raw-predictive and owned-predictive guarded native constructors in separate
+private noninlined frames. The same complete guards, credential registration,
+terminal reserve, generation and original constructor are selected, and the
+same human/consistency/identity roles are returned. No public interface, source
+or credential rule, journal format, numerical algorithm or outcome changed.
+
+The unchanged history function passed on `ts1`: one passed, zero failed/ignored,
+743 filtered, 3.06 seconds. More decisively, the original failing worker
+`vmi1149989` passed the complete fixed checked-publication and computed-identity
+module filters: **42 passed, zero failed/ignored, 702 filtered**, 262.72 seconds.
+This covers all nine credential functions and their actual publication, both-key,
+rotation, missing/foreign credential, source-free history, composed guard and
+resident-sequence cases. No credential test body was changed. Preliminary 17 and
+33 estimates missed nested modules and are withdrawn; the filters never changed
+and only the actual harness count of 42 is measured evidence. Overlapping runs
+are not added together.
+
+Owned formatting and standard workspace/all-target compilation passed at this
+exact source. Clippy actually failed on 80 library errors before later targets;
+the canonical driver actually refused the unchanged dependency-admission guard.
+The complete unfiltered operator run at `83cd4443` passed **744 functions, zero
+failed/ignored/filtered**, 510.04 seconds, terminal exit 0 on standard `ts1`.
+The clean-overlay receipt binds the exact source and tree above. All original
+743 functions from the `bfaea731` base remain registered, alongside the one new
+pure diagnostic. The earlier aborted run and the 734-function 726/8 execution
+remain separate historical results. Four older intermittent-case investigations
+still lack causal repairs and remain open despite this passing full run; all
+original P0 acceptance remains open for dependency admission, lint and complete
+workspace qualification.
+These results are bounded reference execution, not independent certification,
+provider authentication, a general stack/RSS bound or complete project qualification.
+
+## 2026-10-24: test forecast recovery and retained Unknown against native contracts
+
+The original predictive namespace at frozen `bfaea731` reproduced **6 passed,
+1 failed, zero ignored, 736 filtered**, 35.14 seconds. Its negative called a test
+helper that now selects the permitting predictive recovery path. The corrected
+original function calls the native nonpredictive guarded API with the same
+complete requirements and generation, requires exact `Binding`, and checks both
+canonical and staging bytes. Selected raw/owned recovery must append one fence
+and preserve numerical state, forecast identity, coverage loss and paid work;
+the original no-resume assertion remains. At `da8077c7`, all seven predictive
+functions plus the original plain continuation/publication passed **8/0**, zero
+ignored, 735 filtered, 44.43 seconds on qualified standard RCH.
+
+The four original retention functions independently reproduced **0 passed,
+4 failed, zero ignored, 739 filtered**, 1.41 seconds at `bfaea731`. Their expiry
+expectations contradicted the existing native contract: `RetentionExpired`
+retains `Unknown` and its charge. The corrected fixtures assert that exact stage,
+zero reserved units, unchanged execution/payload/stop receipt and retained charges
+through repeated recovery. Valid selected receipts and the actual published-tail
+positive still execute. No expiry reducer, outcome, refund or abandonment is
+manufactured.
+
+A separate explicitly synthetic unit checks empty-sweep report inputs containing
+Unknown or IrrecoverablyUnknown against an otherwise identical completed report
+with the same nonzero charge. It tests the renderer only. The durable hosts still
+have no journaled explicit-abandonment API; that format/epoch/storage feature and
+FA-014 prerequisites remain open. Pure report input does not prove native
+irrecoverable history or satisfy the complete packet.
+
+Combined source `a985f9cdf1c1b196fa5aa649007b456992277aac`, tree
+`20cbe485895be86c581f4af5afd51f8c4f585eae`, passed all **63 selected functions,
+zero failed/ignored, 681 filtered**, 50.20 seconds on standard `vmi1149989`:
+all 50 stop functions, seven predictive, one plain continuation, four original
+stream-completion functions and one pure diagnostic. All five addressed failure
+IDs pass and no previously passing selected ID failed. Overlapping runs and
+child-helper repeats are not added to this denominator. These are fixture and
+verification repairs, not new production capability or independent certification.
+
+Owned formatting and workspace/all-target compilation passed at this exact source.
+Fresh Clippy with warnings denied failed on **80 library errors** before later
+targets. The canonical driver executed and refused the unchanged initial
+dependency-admission guard. Its admission compiler explicitly supports the two
+original reviewed local rows; it is not a finished general-admission path that
+can simply admit the third package. No policy, snapshot hash or lock guard was
+relaxed. The unfiltered **744-function** operator attempt at this source aborted
+with a stack overflow/SIGABRT in the integrated
+`credential_history_requires_exact_policy_and_rotated_epoch_before_cleanup_without_live_secrets`
+function, exit 101, before a complete summary. Later functions were unrun; this
+is not a 743/1 result. This inventory includes nine integrated
+credential-publication functions from the `bfaea731` base and the one new pure
+diagnostic unit. Four prior intermittent-case investigations and original P0
+acceptance remain open. The fatal credential-history case triggered the separate
+`83cd4443` startup-frame repair and subsequent evidence recorded above; neither
+the passing 63-function selection nor the aborted full attempt is rewritten as
+a complete operator pass.
+
+The first `da8077c7` dispatch on `hz4` refused source-namespace initialization
+before Cargo. Same-ID recovery confirmed terminal exit 1 and acknowledgment;
+the refusal was not testing success and no source fence was removed. Commands,
+raw failures, passing output and receipts remain outside source under
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+
+## 2026-10-24: exercise pending stop/drain and every clock boundary
+
+At frozen `76bf4d57`, the complete original stop namespace reproduced **42 passed,
+8 failed, zero ignored, 684 filtered** on standard RCH `vmi1149989`. Four fixture
+files now count the existing before/after clock checks, retain the original Ready
+and before-clock cuts, and test the exact post-clock one-short/sufficient budget
+neighbors without releasing the writer lock. Post-acquisition expiry may read
+time once; it still cannot acknowledge a stop or mutate canonical/staged files.
+
+The phase fixtures now use an actual captured policy source, native congress
+review, separate human approval and original dispatch. They retain an empty
+stopped-domain control that performs no clock call or new journal event. A real
+pending counterpart needs the final event of the original three-event reserve
+and a native nonexecution receipt. Failed, panicking and slow clocks preserve
+its stopped `Unknown` state, sixteen charged units, zero executions and all
+original files until an explicit permitted drain. No native reducer, production
+deadline, journal format, authority rule or retention behavior changed.
+
+Exact source `81365a31f59a936c830396b301be83910b4c7dc5`, tree
+`9958d28331a2e4a73ae27176fba14ca9b6491cbe`, passed the two decisive phase parents
+on standard `hz4`: **2 passed, zero failed/ignored, 732 filtered**, 0.19 seconds.
+The complete original stop namespace then finished **48 passed, 2 failed, zero
+ignored, 684 filtered**, 4.99 seconds. Six original failure IDs now pass; zero
+previously passing stop IDs failed. All 50 registrations remain. The two
+retention-state disagreements remain red, with their original assertions intact.
+These are fixture repairs and native reference evidence, not new production
+capability or independent certification.
+
+Qualified `nightly-2026-09-08`, default stack and standard compiler settings were
+used. Owned formatting and workspace/all-target compilation passed at this
+source. The canonical driver executed and refused the unchanged initial
+dependency-admission guard before downstream gates. The first Clippy refresh
+was refused before execution with RCH `missing_runtime`; its qualified-component
+setup was refused by slot admission (four estimated cores versus two available).
+A subsequent admitted `ts1` run actually executed Clippy with warnings denied
+at this exact source and failed on **80 library errors**, exit 101. That is a
+fresh measurement, not an all-target lint inventory: later targets were not
+reached. The complete unfiltered
+734-function operator run at this source finished **726 passed, 8 failed, zero
+ignored/filtered**, 1115.89 seconds, exit 101. All six addressed stop failures
+passed, but three previously passing functions failed: resident native sequence,
+native checked create/recovery, and recovered qualification. Their actor-response,
+source-reference timeout/broken-pipe and helper-join failure chains remain open;
+no host-timing cause or regression-free result is inferred. Together with the
+five other current failures and one historical intermittent sequence case, nine
+per-ID investigations remain. The original P0 and all acceptance criteria remain
+open.
+
+An unchanged-source control of exactly those three newly failing functions
+passed on admitted `vmi1149989`: **3 passed, zero failed/ignored, 731 filtered**,
+19.75 seconds. This demonstrates that the full-run failures did not reproduce in
+that selected context. It is not a repair or proof of a host cause; all three
+investigations remain open and the failed 726/8 result remains authoritative for
+that full execution. The attempted same-worker control refused slot admission
+under critical disk pressure before tests, without a guard override.
+
+The original explicit reviewer-peer target also passed at this source on
+`vmi1149989`: **7 passed, zero failed/ignored/filtered**, 2.36 seconds, including
+the actual pinned child and both-key publication. Child-helper repeats are not
+added to that denominator. Its independent transport/binding refusals remain
+covered; this does not settle the separate operator or dependency/lint failures.
+
+The complete `fa-journal` package subsequently passed at this same source on
+`vmi1149989`, including all 13 compile-fail doctests; no failures, ignored tests
+or filters were reported. The first attempt remained queued and was cancelled
+before start with terminal exit 130 before this admitted reroute. Package and
+reviewer results are separate inventories, not additions to the 734-function
+operator count or evidence for all workspace compile-fail targets.
+
+Retain the first missing-toolchain refusal, invalid installer-option attempts,
+source-owner-fenced installer refusal, missing-runtime refusal and original
+42/8 runtime failure under
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stop-76bf4d57/`.
+Same-ID recovery confirmed installer exit 1; installation did not reach its
+command. No source fence or shared Git lock was removed, and no local compilation
+fallback occurred. Shared main independently incorporated these four fixture
+files and later credential-publication work. The latter is outside this frozen
+source evidence; the combined working tree is not qualified here.
+
+## 2026-10-24: verify complete receipt, topology and checked-Andon groups
+
+The combined final selection at `9a8cf8f07b63903394500543e8e688014dad626a`
+(tree `1d76b8603a2b7d1ee51ca919bc96a00fef650527`) passed **38 functions,
+zero failed/ignored, 696 filtered**, 99.77 seconds on qualified standard RCH
+`ts1` and the default stack. This includes the 27 receipt functions below,
+all seven topology-service functions and all four checked-Andon functions;
+the overlapping runs are not added together. Actual actor/helper/human
+publication, human rejection, post-dispatch witness/topology loss, unrelated
+changes and unchanged plain checked-bootstrap positives all executed.
+
+Two additional original fixtures were wrong: the waiting profile omitted its
+required feed, and the outer-routing test expected topology usage for a learned
+command that owns its topology grammar. Both original functions reproduced as
+failed at `73c7822b` before correction. The valid waiting profile now reaches
+the specific no-downgrade refusal without reading the absent feed or creating
+a store. The direct topology parser still rejects every original malformed
+argument with its exact diagnostic; learned-owned arguments must instead
+return the learned grammar diagnostic before reading the nonexistent paths.
+No production parser, profile, guard or authority rule changed.
+
+All nine owned Rust files passed qualified formatting and workspace/all-target
+compilation at this final source, warnings retained. The canonical driver again
+executed and refused the unchanged initial dependency-admission guard. Thirteen
+old failure IDs have scoped resolutions in this block. The complete unfiltered
+operator inventory at this source finished **723 passed, 11 failed, zero
+ignored/filtered**, 483.23 seconds, exit 101. Compared with the retained complete
+732-function run's 702/30 result, 19 original failed IDs passed and no previously
+passing ID failed. Two added tests account for the inventory increase; repeated
+or child-helper runs are not added to these counts.
+
+The granular TODO retains the 11 current failures plus one previously failing
+checked learned sequence case that passed this run without a specific repair in
+this block. Its earlier failure remains an intermittent-case investigation, not
+a claimed fix. Complete qualification and original P0 acceptance remain open;
+this is fixture verification, not independent certification. The frozen branch
+excludes concurrent credential-policy work on shared main; this evidence does
+not qualify their combined working tree. Shared staging and the pre-existing
+index lock were preserved; owned changes are committed on the isolated train branch.
+
+## 2026-10-24: distinguish retained nonadmission from admitted policy denial
+
+The learned receipt fixtures now exercise three native outcomes in their original
+message, finish, read-only and settlement functions. A supplied snapshot with one
+mismatched semantic epoch produces retained `NotAdmitted(Binding)` with no action;
+a complete known-false policy creates an admitted `Denied` action; actual native
+review and independent human approval still produce confirmed publication. These
+are fixture corrections, not a new production authorization mechanism. Original
+deadlines, byte/store checks, wrong-selection/floor/anchor controls, interrupted
+clocks, unknown liabilities and spent-work assertions remain in place.
+
+At exact source `73c7822bcfdaf22b17b696c7bb56e0833f420ce8`, all 26 original
+receipt-selection functions plus the new captured-input boundary passed:
+**27 passed, zero failed/ignored, 707 filtered**, 96.37 seconds on standard RCH
+`ts1`, qualified `nightly-2026-09-08`, default stack. The new boundary separately
+checks that already-expired source-only intake performs no source read, clock
+callback or request retention. Historical receipt lookup and recovery retain
+all three outcomes after live assets disappear; no action or outcome is injected.
+Standard workspace/all-target compilation passed with warnings. The canonical
+driver executed and refused the unchanged dependency-admission guard before
+formatting, Clippy or workspace tests.
+
+Retain the original 26-function **15 passed/11 failed** baseline, the incorrect
+expiry probe **0/1**, and the first expanded candidate **15/12**, including its
+new helper regression. Expired learned-stream construction cannot be assumed to
+reach request retention; the corrected test changes only the supplied snapshot
+binding and preserves the expired-intake refusal. The separate `trj` attempt has
+recovered terminal acknowledgment with transport exit 255 and no test result.
+The queued, unstarted candidate was cancelled with exit 130 before redispatch.
+None of those attempts counts as passing evidence.
+
+Eleven original failure-ID TODOs now have scoped passing evidence, leaving 14 at
+this source cut. This is not a full 734-function result or independent
+certification. The original P0 and roadmap acceptances remain open, including
+dependency/source/target/runtime admission, Clippy and complete qualification.
+Raw commands, failed attempts and source receipts are retained outside source in
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-receipts-24c632f8/`.
+
+## 2026-10-24: run learned publication with the original credential guard
+
+The learned operator now accepts the closed outer credential envelope around all
+six original recipe versions, including checked publication, computed identity,
+joint qualification and forecasting. Its independently loaded perimeter must
+resolve the exact immutable policy before model loading. Original guarded
+constructors install that registration in the first canonical image, including
+mediated topology, before numerical startup.
+
+Live acquisition reads separate bounded broker/provider files under the original
+aggregate asset allowance and deadline. Missing, unequal, empty, oversized or
+aliased inputs refuse before service sockets, owner creation or recovery. The
+actual owner then binds the native non-cloneable permit. One live session carries
+it through native/process review, the original first-publication driver, finite
+publication waiting and resident Message/Message/Finish. Provisioning files need
+not survive binding; neither waiting nor a successor request reopens them. Every
+request still needs its original helper review, automatic key, human approval
+and selected publication witnesses.
+
+Recovery, receipt and Stop/Drain retain the exact credential policy and current
+generation/revoked expectation before cleanup or fencing. Historical loading
+needs no live inventory or credential files. Anchored review audit retains its
+original immutable-policy/history-anchor meaning: epoch-only expectations leave
+the past audit unchanged and grant no present effect right. A changed or omitted
+policy refuses. Secrets and permits never enter the recipe, journal or packets.
+
+All 77 selected operator functions pass on the feature source based on
+`a14a9e5f`: nine new credential functions and 68
+existing publication, waiting, identity/joint, cooperative generation/prediction,
+recovery, resident and native-publication regressions. The new combined test
+publishes through credential, identity, joint, owned-forecast, topology and
+witness guards together; a relevant witness change then refuses despite the same
+valid credential and original reviews. Separate positive cases retain one permit
+after provisioning files disappear during a wait or resident sequence. The
+denominator excludes the two registered subprocess helper entry points, whose
+actual child invocations are not counted again.
+
+Concurrent main fixture fixes through `341b7d45` were then preserved with every
+feature source byte unchanged. All five affected native checked-publication
+functions pass again, and standard Cargo check passes the complete combined
+operator test source. Runtime
+uses the standard LLVM harness with the official Cranelift native library and
+32 MiB test-thread stacks. A verification mirror removes only unselected test
+registration attributes; production and every selected test file/body remain
+unchanged, with original source hashes checked before and after execution. The
+required xtask gate was run again and still refuses the unchanged dependency
+admission check before formatting, Clippy or full-suite execution. These results
+do not establish full workspace or FA-011/014 qualification.
+
+This increment integrates the existing canonical journal publication sink. The
+independent external file endpoint still needs durable send/receipt and
+whole-process recovery integration; no remote provider or hostile-process
+containment is claimed. See [operator selection and usage](docs/LEARNED_CREDENTIAL_PUBLICATION.md).
+
+## 2026-10-24: retain native reviewer deadlines while waiting for readiness
+
+The shared native and generated reviewer fixtures now use the existing verified
+readiness helper after the pathname appears, with only the **remaining** original
+ten-second setup allowance. Their original twelve-second protocol limit still
+runs from the same start. This addresses the broad run's actual
+`ConnectionRefused` race; production connection behavior and authentication,
+source, accounting and outcome assertions are unchanged.
+
+The complete original native/generated inventory plus its three existing controls
+and seven peer entries passed: **121 passed, zero failed/ignored, 612 filtered**
+on standard RCH `ts1`, default stack and qualified `nightly-2026-09-08`.
+The exact cut is `3b38f717` plus two-path overlay
+`e03882634c9457cf09adf050c28928fa414c5e47f214f5cad70df9198be5f04d`, committed in
+`bf6b085e41e126359e484f94e0ad2963d590ddb3`. Owned formatting and standard
+workspace/all-target compilation passed at that commit, warnings retained.
+The canonical driver executed there and failed the unchanged initial dependency
+guard before formatting, Clippy or workspace tests. RCH reported the same
+`j-30078706395382216` for these three commands; their separate retained logs,
+commands and start times distinguish them. Exit statuses are respectively 0/0/1.
+
+The complete **702/30 failed** operator result below remains retained. Four of
+those failures have the later checked-capture pass and the native-sharded failure
+now has repaired-source passing evidence. The granular original P0 TODO contains
+exactly 25 remaining unchecked failure IDs. This is not an unfiltered 733-entry
+pass or independent certification. Dependency/source/target/runtime admission,
+Clippy and complete project qualification remain open; no Bead or packet closes.
+
+## 2026-10-24: execute checked continuation with exact capture attempts
+
+The checked-continuation fixture had labeled every capture as native attempt 1,
+including second-action captures and later input changes. The native gate binds
+both attempt and the complete action frame, so it correctly refused those
+captures. Parameterizing the fixture's actual attempt restores the existing
+second-publication workflow without altering production validation.
+
+All eight original checked parents, a new wrong-attempt/permitted-attempt pair
+and the existing unchecked two-publication control passed: **10 passed, zero
+failed/ignored, 723 filtered**, on standard RCH `ts1`, qualified
+`nightly-2026-09-08` and default stack (`j-30078706395382212`). The new pair checks
+exact Binding/cancellation and first-publication retention versus freshly reviewed
+publication, exact second-attempt stages, five/eleven-unit charges and zero
+reservations. Original phantom, missing-witness, missing-topology, both-loss,
+human-rejection, profile, replay-expiry, receipt and CLI assertions remain.
+
+Exact Rust source is `3b38f71721c59c1e1547082d625d698df846e3e2`, the sole fixture
+path added to `d218b0b5`; passing overlay fingerprint
+`699865740dd234c5e6008ba9990026b1dc433eb2395f7af1ad790ce8c7386554`.
+Owned formatting and standard workspace/all-target compilation passed at this
+committed source on `ts1`, warnings retained. The preliminary diagnostic dispatch
+queue-timed-out with `RCH-I001`/exit 103 before execution; its temporary source
+line was byte-restored before repair. It provides no runtime evidence.
+
+Four additional original failure IDs have scoped passing evidence. The full
+732-entry run at the preceding `d218b0b5` completed **702 passed, 30 failed,
+zero ignored/filtered** (`j-30078706395382190`, `vmi1149989`, 1071.38 seconds).
+Comparing its exact outer failure set with the preceding complete 728-entry
+run finds 34 original failures now passing and zero previously passing IDs
+newly failing. That broad run predates this one-path repair/new test (latest
+inventory 733). Its 30 failures remain a failed result, including the four
+checked parents subsequently passing in the separate ten-entry selection.
+
+The broad run also reproduced a real `ConnectionRefused` in the shared native
+reviewer fixture, followed by actor/reviewer deadlines. That sharded case had
+passed in the earlier scoped 114-entry run; its TODO was reopened. The union
+inventory at that point had 26 old failure IDs without a passing latest
+resolution. The later two-path readiness repair and complete 121-entry selection
+above address that race while preserving both original deadline bounds. No red
+result is erased by retrying.
+No production feature, authority rule, dependency, source contract, format or
+deadline changed. Complete qualification and original P0 acceptance remain open.
+
+## 2026-10-24: pin original credential policy in learned recipes
+
+The original learned configuration now binds an exact nonsecret credential
+policy: effect family, route, credential name and adapter-profile generation.
+The pure public resolver uses the existing perimeter validator. Selection grants
+no authority; learned Enable requires the genuinely installed original guard to
+match before a numerical owner exists. Plain, raw-predictive, owned-predictive
+and mediated guarded constructors retain their original independent registration
+and first-image publication. Unselected recipes keep their exact bytes.
+
+The disjoint bounded recipe wrapper makes omitted or changed policy refuse in
+every learned receipt, review replay, anchored audit and recovery reader before
+numerical replay, staging cleanup or a recovery fence. Dynamic credential
+generation and revocation stay in the original independent recovery requirements.
+Rotation preserves the numerical recipe and the charged action while requiring
+a new original live permit; a recovered or revoked permit cannot regain effect
+rights. No secret, credential-equality assertion or permit enters the recipe.
+
+All 39 public regression functions pass: seven new learned-policy functions,
+seventeen original credential guard/driver/lifecycle/source-completion functions
+and fifteen learned-publication functions. The new tests cover six real guarded
+bootstrap lanes, actual generated OK output after sidecar review and both keys,
+missing/mismatched credentials, policy-field and audit binding, unchanged
+numerical expenditure, rotation, revocation and original nonexecution accounting.
+Standard Cargo check passes all six complete public targets. Independent source
+review found no blocker, and source hashes remained unchanged during execution.
+
+Runtime uses standard LLVM harnesses linked to the qualified nightly's official
+Cranelift library with 32 MiB test-thread stacks. The required full xtask driver
+was executed and still refuses the existing dependency-admission guard before
+formatting, Clippy or full-suite execution. This is scoped native integration
+for the original journal publication sink, not external-provider containment or
+full FA-011/014 qualification. The operator increment above consumes this policy
+binding. See [learned credential policy](docs/FILE_LEARNED_CREDENTIAL_POLICY.md).
+
+## 2026-10-24: execute the original sequential publication integration
+
+The original 18 service/parser/client entries first completed ten passed/eight
+failed at `e5b141b0` (`j-30078706395382143`, `vmi1149989`). Corrections to fixture
+frames and intermediate-outcome polling reached sixteen passed/two failed
+(`j-30078706395382150`). The final declared selection adds seven peer entries:
+**25 passed, zero failed/ignored, 707 filtered** on the qualified standard
+compiler/default stack (`j-30078706395382170`, `vmi1149989`). Nested child-helper
+runs are not added to that denominator. Retain both failed selections.
+
+This block repairs tests, not the production authorization reducer. It polls
+the existing `Unknown(OutcomeUnknown)` intermediate under the original deadline,
+funds complete fixture payloads without changing their seven-unit charge, and
+waits for actual reviewer listen readiness before the original credential and
+audience checks. The test-only wait retries only `NotFound`/`ConnectionRefused`;
+it times out without removing a stale socket and also admits a permitted peer.
+The immediate production connector retains its original behavior.
+
+The cumulative-budget oracle now follows plan §7.3: reservation occurs at
+Authorize after review. The original ten-unit case remains with seven charged,
+three available and zero reserved; thirteen versus fourteen adds an exact
+one-short/permitted pair. Both requests receive independent reviews. Underfunded
+authorization returns the native Limit error and retains a cancelled second
+request rather than the test's former incorrect `NotAdmitted` expectation.
+The stale second target also receives its independent review, then must return
+exact `ConfirmedNotExecuted`, with original actor bytes and first charge intact.
+
+The four Rust files are committed in `d218b0b5d0bd2440b693e08a4480dcdc89dd1d32`,
+a descendant of shared main's `ad4a2646`, on
+`train/navyheron/native-source-leases-20261024`. Their passing selection used
+base `e5b141b0` plus overlay
+`517572c0fd12069b86fc3626083ac9c15f2ebdf0c376410d33a785536312f02b`;
+the only Rust differences from that base are these four paths. Owned-file
+formatting and standard workspace/all-target compilation passed at the committed
+source (`j-30078706395382180`, `vmi1149989`, warnings retained). Two initial
+source-only dispatches refused invalid option combinations before execution;
+both are retained. The canonical driver at the same commit executed and failed
+the unchanged dependency guard before formatting, Clippy or tests
+(`j-30078706395382184`, `vmi1152480`). No local compilation fallback occurred.
+
+Shared main incorporated the earlier native source-lease commits and three
+current files through `e6e21f09`, `20234ef4` and `ad4a2646`. NavyHeron preserved
+shared HEAD/index and the pre-existing ambiguous index lock; the remaining
+service-fixture commit remains on the isolated branch. Eight additional original
+failure IDs have scoped passing evidence, leaving 29 unresolved IDs in the old
+inventory. That union count is not a complete-suite result. The full 732-entry
+operator inventory at `d218b0b5` completed 702 passed/30 failed after a
+queue-timeout refusal (`RCH-I001`, exit 103, no local fallback); see the later
+failure-set and readiness record above. Dependency
+admission, Clippy, full runtime qualification and original P0 acceptance remain
+open. Raw attempts and fresh source/test audit are retained outside source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-sequence-e5b141b0/`.
+
+## 2026-10-24: check native source leases before numerical work
+
+The generated operator now calls the existing `capture_file_policy_state` gate
+after acknowledging its post-read clock. The native service calls the same gate
+at its final stamped clock before generation, resume or finish preparation.
+Previously those paths observed time without checking the registered source's
+read-start lease. The learned operator already made this explicit check. This
+repair connects that original gate; it adds no journal tag, model kernel, source
+reader, dependency, authority reducer or historical receipt requirement.
+
+A causal test now delays clock samples only after the first intent is durable,
+instead of jumping at an unrelated startup-call ordinal. Before the production
+repair, the complete 113-entry native/generated cut finished **112 passed, one
+failed**, with the expired case still advancing all four numerical positions
+(`j-30078706395382071`). After the repair, **114 passed, zero failed/ignored,
+617 filtered**, on the qualified standard compiler/default stack at `vmi1149989`
+(`j-30078706395382079`). The denominator is all 111 original native/generated
+entries plus three new controls, including registered helper entrypoints. The
+new native pair reads at tick 1000: tick 1009 admits an actual first step, while
+1010 refuses with unchanged numerical state and generation revision.
+
+The same change corrects test oracles for audience text versus reviewed frames,
+whole-frame charges, independently bound helper epochs after a recovery fence,
+and exact `Knowledge::Withheld { authority_required: "own_request" }` responses.
+Full one-byte stream finish cases retain their publication limits while funding
+the tokenizer's existing worst-case generation allocation. Two new actual
+operator controls retain the original undersized allocation and require refusal,
+no text intent, zero publication, charges and reservations. The earlier complete
+111-entry result, **108 passed/three failed**, and all other failed attempts remain
+retained. No production bound, deadline, assertion registration or native source
+contract was relaxed.
+
+The verified Rust source is base `7228d44ad4bf02d9111d9702412cfc27ac128374` plus
+12 owned paths, overlay fingerprint
+`f11b1a91644b45b49a980630e9d6102a061e4e902fac484c65369a16ffa175a2`.
+All 12 pass qualified individual-file formatting. Standard workspace/all-target
+compilation passed at that exact cut (`j-30078706395382085`, `vmi1149989`), with
+warnings retained. The canonical driver executed at the same Rust cut
+on `vmi1152480` (`j-30078706395382086`) and failed the unchanged initial dependency
+admission guard before formatting, Clippy or tests. Its first dispatch refused
+`RCH-I003` before execution; the admitted retry used one Cargo job. No local
+fallback occurred.
+
+The twelve qualified Rust files are committed byte-for-byte in
+`cafce41da3dc909bb93de9d98991158d467c8a86` on
+`train/navyheron/native-source-leases-20261024`. A pre-existing shared Git index
+lock prevented ordinary staging. A private index recorded only the seventeen
+owned code/test/contract/status/tracker paths on that isolated branch; shared
+HEAD, staging and the ambiguous lock are preserved. Integration into shared HEAD
+remains pending resolution of that lock's ownership.
+
+Fourteen original failure IDs now have scoped passing evidence, leaving 37 of
+the preceding 51-ID unresolved inventory. This is not a new complete operator
+suite count. Complete source/package admission, Clippy, operator/workspace runtime
+qualification and the observed transient reviewer startup race remain open on
+the original P0. Raw attempts, normalized source/test review and exact owned-file
+hashes are outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-native-7228d44a/`.
+
+## 2026-10-24: recover learned owners on the standard test-thread stack
+
+The learned recovery selector now finishes its five original cursor variants in
+separate private leaf adapters. Each adapter calls the same native finalizer and
+returns the same owner and human, identity, consistency and topology roles. The
+unchanged exact-reopen regression previously aborted on the default test-thread
+stack; debugger evidence located a 993,968-byte selector frame. The new dispatcher
+frame is 161,264 bytes, with separate leaf frames; this is not a measurement of
+whole-stack reduction. No stack setting, allocation, schema or authority contract
+was changed.
+
+At base `5df1aeb4f352e11a81bd0413e0007fbe2e8c9d25`, the original regression aborted
+on qualified standard-backend RCH worker `vmi1264463`. The same worker passed the
+unchanged test with only the selector repair (overlay `e19d083abbb3a10c`): one
+passed, 726 unrelated functions filtered. Its changed tokenizer, prompt, sampling,
+monitor and weights controls retain the original unchanged-journal assertions,
+followed by a valid reopen. A complete unfiltered run at that repaired source
+then finished without abort: **368 passed, 359 failed, zero ignored/filtered**
+across all 727 original harness entries. Helper entrypoints are included in that
+denominator and are not independent capability claims.
+
+Of those 359 failed parent functions, 306 explicitly reported a Unix socket path
+length refusal. The shared operator fixtures now create private short directories
+while preserving their unique names and refusing occupied paths. The production
+100-byte limit is unchanged. A new real-socket boundary regression passed on
+`vmi1149989` (RCH `j-30078269650895234`, base `5df1aeb4` plus overlay
+`321ae0d5e40f2eb1f`): a 100-byte socket binds and is secured, while a 101-byte
+profile refuses before journal creation. That run executed one test with 727
+filtered. The follow-on inventory is 728 entries, comprising the original 727
+plus this boundary. That invocation compiled and reached previously blocked
+checked learned publication, then aborted on a second default-stack overflow in
+`checked_learned_publication_rejects_late_phantoms_but_keeps_disjoint_changes_in_all_forecast_modes`.
+That aborted attempt has no completed suite result. Its partial failures remain
+retained alongside the subsequent startup repair and complete result below.
+
+The second debugger trace found 792,112-byte `create_selected` and 644,752-byte
+`topology::start` frames during native learned stream startup. Separating the
+original identity constructor and topology create/recover arms into leaf paths
+preserves their calls, guards, reserves, checkpoint ordering and returned roles.
+The unchanged original checked regression then passed on the same standard
+worker and default stack (overlay `226e8000f19d4a5b`): one function containing
+eight original permitted/disjoint and forbidden/phantom cases, 727 unrelated
+functions filtered. Complete qualification remains open. Additional native
+Stop/deadline and durable raw/cancel/stream fixtures use local short private
+roots without changing the shared disk-only fixtures or their accounting and
+deadline assertions.
+
+Coupled publication preparation also retains its selected whole-input or
+structured context beside the native failure. A missing opaque lane still
+quarantines the owner with `Contract(Incomplete)`; no second acquisition,
+fallback input or changed binding order was introduced. The original early
+missing-input regression retains its assertions and additionally requires that
+native cause. That original regression passes in the follow-on run, alongside
+the original real Stop/deadline and durable raw/cancel/stream cases.
+
+The complete 42-path operator cut finished on the default stack with the
+qualified standard compiler: **664 passed, 64 failed, zero ignored/filtered**, all
+728 registered entries (RCH `j-30078269650895280`, `vmi1149989`). Its Rust bytes
+were subsequently committed through `ac1575e9b9b2e927ff1f9081780de853403f5089`;
+this precedes the one-file shared-option routing fix below. Comparing complete
+failure sets against the preceding 727-entry run finds 295 formerly failing
+original entries now passing and zero formerly passing entries newly failing.
+The extra passed entry is the new socket boundary. Helper entrypoints and
+same-origin retries are not additional independent capabilities. This is still
+a failed operator suite; the 64 original failures remain retained.
+
+The intermediate 43-path Rust cut passed qualified standard-backend workspace/all-target
+compilation on `hz3` (RCH `j-30078269650895290`, base `5df1aeb4` plus overlay
+`0d1b4e62a35b74d1ddb3ac33cb120cc746e274fc0c4ab47467f498b27b7442fb`).
+Warnings remain. All 43 owned Rust files also pass the qualified formatter's
+individual-file check; this does not establish workspace-wide formatting.
+
+The original guarded receipt CLI case exposed a shared-option routing mismatch:
+its implemented receipt-only handler was unreachable with the otherwise unused
+qualification option. The parser now accepts that option only after the exact
+guarded-resume positionals. The handler still never reads or activates it;
+unguarded resume, query and create refusals remain. Missing-profile/file negatives
+were added beside the permitted parse. The complete parser tests and original
+actual CLI regression pass on the subsequent 43-path source cut: four passed, zero
+failed/ignored, 724 filtered, RCH `j-30078269650895300` on `vmi1149989`, overlay
+`0d1b4e62a35b74d1`. This is scoped evidence, not a complete rerun. The first
+substring selection also matched five native qualification functions and
+finished eight passed/one failed, 719 filtered; its original native `Incomplete`
+failure remains open. The subsequent exact-name dispatch on `hz3` was refused
+with `RCH-I006` before execution; no local fallback occurred. The admitted worker
+then executed the four declared exact IDs. No result from those attempts is
+discarded or counted twice.
+
+The canonical driver on that same 43-path cut executed on `vmi1152480`
+(`j-30078269650895295`) and failed at the unchanged initial dependency-admission
+guard before formatting, Clippy or workspace tests. No package, manifest digest,
+production bound, deadline, test-stack size or original assertion was relaxed.
+Three remaining receipt-service fixture constructors now use local private short
+roots. All 18 original functions executed at the 46-path cut: **16 passed, two
+failed, zero ignored, 710 filtered** (`j-30078269650895304`, `vmi1149989`). The
+two failures expect `IrrecoverablyUnknown` after retention expiry, while the
+native broker's `reconcile_pending`/`reconcile_status` contract from `399e87a0`
+explicitly retains `Unknown` and charged liability. No implicit abandonment,
+refund, native transition or expected outcome was changed to manufacture green.
+That contract disagreement remains on the original P0.
+
+The final 46-path Rust cut passed qualified standard workspace/all-target
+compilation (`j-30078269650895312`, `vmi1149989`, base `5df1aeb4` plus overlay
+`0a70ae622cd53623329d40b53556b5129e0dfd339130c7162049ef482c936a0e`). Its changed
+Rust bytes match committed `8e8d77dc4f8da6decb186c51d4bbfe58ffeae54f`. All 46 owned
+files pass the qualified formatter's individual-file check. The canonical driver
+also ran without an overlay at that committed revision (`j-30078269650895313`,
+`vmi1152480`) and failed the unchanged admission guard before formatting, Clippy
+or workspace tests. Warnings, the 80-error library Clippy baseline and complete
+source/package admission remain open.
+
+Thirteen of the 64 failure IDs from the completed 42-path run have subsequent
+scoped passes: the guarded CLI case and twelve receipt cases. The original Bead
+retains those exact IDs and 51 unresolved IDs with the remaining qualification
+work. This is inventory tracking; the complete latest operator suite has not
+rerun, and the selected results cannot be added into a new aggregate suite count.
+
+Raw attempts, normalized original/test diffs and debugger observations are retained
+outside frozen source at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-stack-5df1aeb4/`.
+These repairs do not qualify the full operator, dependency admission, Clippy or
+the canonical workspace gate, and the original P0 Bead remains in progress.
+
+## 2026-10-24: restore executable reference checks without granting admission
+
+The Native Andon peer now resolves its existing transport, receipt and nested
+test modules by their original explicit paths. This fixes the workspace's
+all-target compilation failure and makes the original real peer tests reachable.
+A guarded-resume fixture's unmatched format delimiter is corrected. Private,
+short socket fixture directories preserve real Unix and pinned-child transport
+under RCH's deep temporary roots; production still rejects an overlong address.
+The reviewer negative now creates the automatic reservation it asserts survives,
+retaining its original 16-unit assertion and checking that no units were charged.
+
+Source-snapshot discovery now covers reference examples/fixtures and journal
+source/tests/manifest, alongside the original roots. Independent sandbox hashes
+and positive/negative controls reproduce the former omissions and bind changed
+bytes after discovery. No manifest was regenerated and no package was admitted.
+Actual Cargo metadata retains all three workspace packages and their resolved
+journal-to-reference edge; the original two-package policy still refuses it.
+Registry test lookup accepts only sole conditional language-feature payloads,
+while conditional ignore/cfg, nested and mixed payloads still refuse. Negative
+sandboxes now copy the actual retained contracts and example source before their
+single causal mutation; none of their finding assertions were relaxed.
+
+Qualified standard-backend RCH execution at base `4a9fb80e8d34b1cdac65960dcfccc6e43295a9c1`
+plus the corresponding owned-path overlays passed all 248 xtask tests and all 46
+Native Andon tests. The original reviewer target passed six parent regressions
+and its registered helper entrypoint; the pinned child also executed the helper
+with actual credentials. The unchanged journal source passed 81 unit tests,
+143 integration tests and 13 compile-fail doctests. Each target ran unfiltered;
+the child intentionally selects its own helper, not an additional independent
+parent regression. Raw attempts, including earlier failures, are retained at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.
+
+These are bounded reference/enabler results, not production alignment evidence.
+The frozen workspace/all-targets check also passed at `b688a37bc7baea0efce2d53fc1b0bb769e40af86`
+on the qualified standard compiler. The driver at that exact source failed at
+its unchanged lock guard. The complete 727-function publication operator target
+compiled at the earlier source cut, recorded failed functions and then aborted
+on a test-thread stack overflow in
+`learned_command_exact_reopen_refuses_changed_independent_recipe_without_journal_writes`.
+It has no completed suite result. A real child fixture also refused its overlong
+Unix socket address. No registrations or production bounds were changed to
+avoid those failures.
+
+The follow-on diagnosis repair funds payload bytes before original policy
+evaluation, supplies valid permitted controls for each unchanged policy, and
+retains the occupied test-staging bytes before the separate positive writer
+phase. All 21 `diagnosis::` functions pass on the standard compiler at base
+`b688a37b` plus the three owned diagnosis paths (overlay `69126149d57c429e`):
+18 behavioral cases and three renderer cases, zero failed/ignored, 706 unrelated
+functions filtered. Complete search masks, all original policy/denial and
+zero-write assertions, and captured-image versus later-writer checks remain.
+The preliminary policy-only repair and 19/21 intermediate run are retained as
+failures; neither counts as qualification. This proves the selected original
+operator paths, not an admitted effect or complete operator suite.
+
+The full qualification bridge remains in progress: reviewed source/package
+admission is incomplete, the library Clippy baseline reports 80 errors, and
+complete operator/workspace runtime qualification remains open. No roadmap
+packet or Bead is closed by this repair.
+
+## 2026-10-24: finish finite producer catch-up in the learned operator
+
+The checked learned operator now accepts the original finite-wait witness
+profile, `fa.supervised-witnesses/4`. Native and process helper review retain
+their original inputs and paid progress while a valid producer capture lags a
+complete feed. After both original approvals, the same prepared request retains
+its frozen action, review, human key and one finite retry allowance. Each yield
+returns to the unchanged deadline, authenticated Stop and actor-cancellation
+checks before another acquisition. Review acquisitions do not spend final retries.
+
+The existing native waiting diagnostic alone permits that yield. Its Ready,
+human-key, expiry, control-basis and acknowledged-deferral conditions are not
+replaced with an operator guess. Persistent lag exhausts the original bounded
+allowance even with a frozen clock. Relevant changes, missing history and
+post-dispatch lag retain strict refusal or reconciliation, including unknown
+charges. Waiting adds no native grant, journal format or recovery permission.
+
+All 68 selected operator regression functions pass: eight new finite-wait
+functions and sixty existing checked-publication, generation, forecast, joint,
+identity, recovery, resident, bootstrap and native-checked functions. The new
+cases execute actual native/process helpers, real source catch-up and both
+original keys; they cover changed empty-range membership, exact finite retry
+exhaustion, Stop, cancellation, the original accepted deadline, strict
+post-dispatch behavior and historical recovery without live sources. Both
+original child entrypoints are registered and used by real processes; their
+standalone no-input invocations are excluded from the 68-function denominator.
+
+The complete unmodified operator test source and all three public deferral
+integration targets pass standard Cargo check. The preceding 31 native/public
+regressions remain source-identical and passed in this increment. Independent
+source review found no blocker. Runtime uses standard LLVM harnesses linked to
+the qualified nightly's official Cranelift library with 32 MiB stacks; the scoped
+mirror changes only unselected test registrations, with selected files byte
+identical and original source hashes unchanged throughout execution.
+
+Earlier failed attempts remain retained, including shared-storage exhaustion and
+one corrected deadline fixture. That fixture now observes authenticated Pending
+within the allowed lifetime, lets one acknowledged wait complete, then checks
+the authoritative cancellation receipt after expiry without demanding transport
+service beyond the original deadline. No production lifetime or assertion about
+charge, effect, cancellation or numerical expenditure was weakened.
+
+The required full xtask driver was rerun and still stops at the existing
+unchanged dependency-admission guard before formatting, Clippy or full-suite
+execution. Full FA-061/062, deployment and release qualification remain open.
+See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
+## 2026-10-23: retain learned review while publication producers catch up
+
+The original computed, native-model and process learned drivers now expose
+explicit capture-or-defer acquisition around their original policy-only learned
+input provider. A valid snapshot behind a complete change feed remains an
+acknowledged nonpermitting observation, allowing native/process review to
+advance under its original schedule and budgets. Only the original ready-job,
+matching-human-key and Incomplete checks can recommend later bounded waiting.
+Malformed history, unavailable evidence, changed helper input and post-dispatch
+lag retain the original refusal and cleanup behavior. No capture replaces the
+actual learned sidecar, and no review or effect key is synthesized.
+
+The durable capture-or-defer transition also uses the existing same-owner
+control replay cache. It derives Installed/Deferred from the original candidate
+after semantic replay and returns that outcome only after storage acknowledgment.
+Warm owners reuse their acknowledged prefix; cold owners still replay normally,
+and every unverified suffix event remains subject to the original checks.
+
+All 31 selected public regression functions pass: fifteen learned-publication
+cases, including five new learned deferral functions, seven original durable
+deferral cases and nine original driver/socket cases. The new tests exercise
+actual generated output and both original keys, warm/cold historical equality,
+unchanged numerical expenditure, negative key/range and opaque-input changes,
+missing history, equivocation, rollback, recovery fencing, failed withdrawal and
+strict post-dispatch charge preservation. The three complete public test targets
+pass standard Cargo check, and independent source review found no blocker.
+
+Runtime evidence uses standard LLVM harnesses linked to the qualified nightly's
+official Cranelift native library with 32 MiB thread stacks; source hashes remain
+unchanged throughout execution. This is scoped reference evidence, not a full
+LLVM native-library build, performance SLO, deployment or release qualification.
+The required full xtask driver executes and stops at the unchanged existing
+dependency-admission guard before formatting, Clippy or full-suite execution.
+No dependency, journal format, native gate or work allowance changes.
+
+The runnable learned finite-wait profile is the next operator integration slice;
+these native APIs do not themselves add a polling loop. FA-061/062 remain open.
+See [supervised capture deferral](docs/SUPERVISED_CAPTURE_DEFERRAL.md).
+
+## 2026-10-24: run checked learned publication through real operator boundaries
+
+The closed `fa.learned-checked-publication/1` envelope selects original publication
+witnesses around version-1 through version-6 learned recipes. Canonical optional
+composition is checked(identity(joint(original))). The profile consumes the
+existing aggregate asset allowance; unsupported finite-wait and witness-joint
+selections refuse before startup. Immutable validation, feed, freshness and
+fallback policy enter the independently retained numerical recipe.
+
+Every admitted Message and Finish binds its own original evidence before native
+or process helper launch. The three original learned driver families reacquire
+publication sources around the policy-only learned-input provider, preserving
+actual sidecars, both effect keys, topology, identity and joint qualification.
+Resident entries retain one exact native policy and reacquire each attempt's
+basis. Historical receipt, audit and Stop reconstruct the selected recipe without
+current producer, capture, feed or helper files. Plain capture preparation now
+matches an explicitly absent feed without calling a feed-only fallback getter.
+
+The operator returns its original cooperative replay custody at completed prompt
+and output boundaries instead of dropping it. This uses the preceding native
+cache repair; all source reads, numerical quanta, deadlines and work allowances
+remain unchanged. The earlier resident positive case reached its 60-second wall
+deadline after two confirmed messages. The final positive case completes Message,
+Message and separately reviewed Finish under the original limits. This is a
+bounded regression result, not a latency SLO or statistical benchmark.
+
+An invalid original witness can quarantine the owner. Final reply grace now
+drives the original authenticated observation transport without requiring an
+unavailable live cancellation-status lookup. The actor receives the existing
+`ControllerUnavailable` knowledge; quarantine and failed Stop/drain remain in
+force. The negative resident test requires that exact peer/operator response,
+preserved first effect and charge, no second review and no third actor. It still
+fails on broken connections, timeouts or missing responses.
+
+All 53 scoped operator functions pass, including twelve new checked-publication
+functions and original generation, prediction, joint, identity-recipe, recovery,
+resident, producer-bootstrap and native-checked regressions. Both original child
+entrypoints are registered and exercised by actual processes; their standalone
+no-input invocations are excluded from the 53-function denominator. All 31 public
+publication/custody functions also pass. Standard Cargo checks pass for the
+production operator, the complete unmodified operator test source and the public
+target. Independent source reviews found no blocker.
+
+Runtime uses standard LLVM harnesses linked to the qualified nightly's official
+Cranelift library with 32 MiB stacks. The scoped operator mirror changes only
+unselected test registrations; all bodies, assertions and fixtures remain, with
+source hashes unchanged throughout the successful execution. Earlier failures
+remain retained: producer bootstrap could not see the nested learned selection;
+repeated cold replay exhausted the resident deadline; final response flushing
+queried a quarantined ledger. Existing helper text/epoch and frame-versus-sink
+fixture mismatches were corrected against the original contracts. A fixture name
+collision was caught before execution; no timeout, production budget or gate was
+relaxed to obtain success.
+
+The required full xtask still refuses the existing dependency graph before
+formatting, Clippy or full-suite execution. Six witness-profile forms are admitted;
+the new operator effect tests cover direct captures, coupled strict/fallback
+producers and fallback whole-input mode. Separate-feed and strict whole-input
+selection have parser/configuration coverage here, and the original native
+fallback tests cover evicted history. Full FA-062 packet, deployment and release
+qualification remain open. See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
+## 2026-10-24: retain acknowledged replay custody through publication acquisition
+
+Producer catch-up now recognizes the original feed cut inside an independently
+bound learned Enable configuration. It uses the exact runtime registration and
+keeps the original source, conflicting-overlap and missing-history checks. This
+repairs the live coupled-producer path for the preceding learned registration.
+
+Publication input withdrawal, freshness persistence, direct capture installation
+and coupled feed ingestion now reuse the existing control replay continuation.
+They retain original preflights, fresh external acquisition, canonical encoding
+and acknowledgment. A successful feed batch retains the actual retired machine
+at its pre-batch event count; every notice, heartbeat and capture in its suffix
+must still replay. Cold owners retain their original behavior.
+
+The consuming `FileLearnedReplayContinuation::retain_for_control` returns an
+already acknowledged same-owner predecessor to the existing cache without a
+write, clock observation, numerical operation or effect key. It rejects foreign,
+stale, recovered and storage-faulted owners, validates existing custody and keeps
+a newer verified prefix. Cooperative raw and owned forecast steppers return their
+terminal carry while preserving the original result and interruption latch.
+
+All 31 public integration functions pass: ten learned publication functions,
+including four new cache/custody regressions, and 21 unchanged witness, snapshot
+fallback and producer-driver functions. Warm and explicitly cold owners retain
+equal publication outcomes, numerical work and independently replayed historical
+state. The producer pair exercises a two-notice/heartbeat/capture batch, lost
+input and contradictory already-acknowledged history. Handback itself leaves
+canonical bytes and live inspection unchanged; actual storage failure remains
+unavailable. The initial twin fixture omitted the required fresh acquisition
+after authorization consumed its capture. That failure is retained; the fixture
+now asserts consumption and reacquires through the original readers before
+dispatch, without weakening the native gate.
+
+Standard compiler checking and independent source review pass. Runtime uses the
+qualified nightly's official Cranelift library and standard LLVM test harnesses
+with 32 MiB stacks. The required full xtask still refuses the unchanged dependency
+graph before formatting, Clippy or full-suite execution. This is a native
+execution improvement, not a performance SLO, full FA-062 packet or release
+qualification. See [learned publication replay](docs/LEARNED_PUBLICATION_REPLAY.md).
+
+## 2026-10-23: bind final-publication witnesses to learned ownership
+
+`FileLearnedConfig::with_required_publication_validation` freezes the original
+validation limits and optional complete change-feed, freshness and snapshot
+fallback policies into the independent numerical recipe. The original witness
+codec supplies the disjoint wrapper; existing unselected bytes remain unchanged.
+The same learned Enable transition installs the original guards, including the
+producer clock-domain check, before a numerical owner or first canonical image
+can escape. Plain, raw-predictive, owned-predictive and topology-mediated owners
+retain their separate identity, joint-credibility and recovery-reserve contracts.
+
+All six new public integration functions pass. They exercise every selected
+field, wrapper composition, all six predictor/topology bootstrap lanes, invalid
+limits and clock domains before storage, exact recovery and historical selection
+before cleanup, and actual generated text through original sidecar review and
+both effect keys. Disjoint changes publish; late phantom insertion, opaque epoch
+drift, closure loss and unavailable evidence refuse the obsolete publication.
+Old receipts and numerical expenditure survive recovery. A validation-work
+refusal cannot grant rights or publish an unacknowledged validation report.
+
+All twenty-one unchanged witness, snapshot-fallback and coupled-producer driver
+regressions also pass. The standard qualified compiler checks the production
+library/operator and new public target; runtime uses unchanged LLVM harnesses
+against the qualified nightly's official Cranelift library, with 32 MiB stacks.
+Independent source review found no blocker. The initial new-target run retained
+two fixture failures: an oversized count refused in the original codec before
+bootstrap, and a refused transaction correctly exposed no acknowledged report.
+The fixtures now test the exact native one-over bound and unchanged failed-write
+state; no production validator or assertion was weakened.
+
+The standard full xtask driver executes and refuses the unchanged dependency
+graph before formatting, Clippy or full-suite execution. No admission guard,
+dependency or lockfile was changed to manufacture a passing gate.
+
+This is the native composition slice of FA-062, not full packet or release
+qualification. See [checked learned publication](docs/LEARNED_CHECKED_PUBLICATION.md).
+
+## 2026-10-24: enforce computed identity in the learned operator and audit native reviews
+
+The learned operator accepts the closed `fa.learned-identity-publication/1`
+envelope around an original version-1 through version-6 recipe, optionally with
+joint credibility inside it. The complete independent passport and identity
+policy are bound to the exact learned configuration in live and historical modes.
+Ordinary, raw-predictive, owned-predictive and topology-mediated paths retain the
+original unique identity observer alongside all existing roles.
+
+Each request executes the original cooperative stimulus measurement before
+generation. Stop and deadline interruption cancel before journal mutation while
+retaining completed work and observer custody. A committed measurement refusal
+closes only its still-current challenge; successful computation observes fresh
+native time before separate matching installation. Recovery requires fresh
+evidence and preserves numerical draws, forecast expenditure and old effect
+liability. Resident sequences bind one registration and require distinct check
+IDs and increasing measurement sequences. Helper Congress and human approval
+remain separate prerequisites for publication.
+
+The first runtime pass exposed an older functional audit gap: native learned
+reviews finish through the original learned-sidecar event, but historical audit
+selected only ordinary Finish. Both read-only extraction and effect attribution
+now consume the actual native archive and application receipt. Exact anchors,
+original numerical witnesses, independent recipe binding and whole-suffix replay
+remain required. A refinement-only round has no application and explicitly
+refuses this export; a later actual application remains auditable after its
+refinement prefix and without current evidence or helper inputs.
+
+All 49 selected operator regression functions pass, including all thirteen new
+identity cases, six original native audit cases, the causal refinement/application
+case, and existing generation, prediction, qualification, recovery and resident
+sequences. The original process fixture is registered and exercised by real child
+processes; its standalone no-input entry is excluded from that count. All 25
+public identity functions pass again with the rebuilt native library. The complete
+unmodified operator test source and both public targets pass standard Cargo check.
+
+Runtime uses standard LLVM harnesses against the qualified nightly's official
+Cranelift library with 32 MiB stacks. The isolated operator harness retains every
+body/assertion/fixture and changes only unselected test registrations; exact source
+hashes agree before and after execution. Independent source review found no blocker.
+This does not claim full LLVM native-library execution or full-suite qualification.
+
+Earlier failed attempts are retained: the first focused run caught the real audit
+gap, the old forecast fixture's incorrect implicit-expiry assumption and the
+verifier's omitted process-child registration. The native audit was fixed; the
+forecast test now asserts pure-time refusal separately from original acknowledged
+expiry, preserving numerical/forecast work and permanent coverage loss. The
+verifier retains the original child entrypoint. A setup-cleanup type error and a
+verifier-only registration parsing refusal were also corrected before final success.
+
+The full standard xtask driver compiles and executes, then refuses the unchanged
+existing dependency graph before formatting, Clippy or full-suite execution. No
+admission guard, production limit, journal format, effect authority or lockfile
+was weakened. Details and boundaries: [computed identity operator](docs/LEARNED_IDENTITY_OPERATOR.md)
+and [anchored native review audit](docs/ANCHORED_REVIEW_AUDIT.md).
+
+This is scoped capability toward FA-118 and FA-020, not complete packet or release
+qualification. Passport authentication, randomized audit-floor scheduling, full
+evidence-generation propagation, H19 discrimination and a distinct public audit
+representation for unattempted refinement applications remain open.
+
+## 2026-10-23: bind complete identity registration to learned ownership
+
+The immutable learned recipe can now require original-model computation with an
+exact independently supplied passport and identity policy. The new registration
+wrapper reuses the original bounded native codec; unselected and boolean-only
+recipes keep their original bytes. Native learned installation checks the actual
+bootstrap registration before it can create storage or return roles. Every
+existing exact-recipe reader, including historical audit, therefore retains the
+complete identity selection rather than only a computed-only flag.
+
+Ordinary, raw-predictive and owned-predictive reserved creation now supports the
+complete original guard inventory and returns every separate role. The original
+stream, terminal reserve, source, learned owner and selected predictor become
+visible together in the first canonical image. Source policies are installed
+once, and exact predictor mode/work checks remain intact. Computed observations,
+identity installation, native Congress and human approval remain separate.
+
+All five new public registration functions and all twenty existing required
+identity functions pass with unchanged LLVM test harnesses linked to the
+qualified nightly's official-Cranelift native library. The five new cases also
+pass as an ordinary Cranelift Cargo target; they cover actual same-label model
+substitution, positive original two-key publication, exact registration and
+legacy-byte identity, pre-measurement audit/recovery and all three reserved
+source/predictor/identity lanes. The standard library compiler check and
+independent source review pass.
+
+The first all-Cranelift existing suite passed eighteen cases and failed two
+intentional nested-panic catches. A minimal control reproduced that backend
+limitation, and the complete unchanged twenty-function LLVM harness passes.
+No assertion, production guard or numerical budget changed. Runtime tests use a
+32 MiB thread stack. The failed attempt remains recorded, and this mixed-backend
+runtime evidence does not claim complete LLVM code generation of the native library or
+release qualification.
+
+This is the native integration slice of FA-118, plan section 7.10 and FS-07.
+Passport signing, randomized audit-floor scheduling, full evidence-generation
+propagation, H19 discrimination and the complete packet remain open.
+
+## 2026-10-23: enforce joint credibility through the learned operator
+
+The learned operator now accepts `fa.learned-joint-publication/1`, a closed
+envelope around the complete original version-1 through version-6 recipe. It
+independently selects the native held-out joint policy in both live and
+historical loading. The complete policy travels with the original numerical,
+source, predictor and continuation configuration; mixed resident selections
+refuse before startup. Existing activation still supplies independent campaign
+evidence, derives capped weights and requires the original helper and human
+approvals. The envelope does not supply qualification or a new authority path.
+
+The outer command parser now forwards `--credibility-activation` to
+`serve-learned-generated`, making its existing explicit-recovery path reachable.
+The inner parser still refuses fresh-creation activation before opening inputs.
+Both command usage surfaces and the existing operator/resident contracts describe
+the option and exact joint selection.
+
+All six new operator regression functions pass. The causal lifecycle case covers
+ordinary, raw-predictive and owned-predictive publication: marginally qualifying
+weights lose two complementary vetoes, joint activation refuses without journal,
+epoch, charge, forecast or numerical changes, and a matched nonregressing capsule
+then reaches original native review, a fresh human key and confirmed A/A output.
+Additional cases cover all six recipe versions, malformed/nested/oversized
+envelopes, resident policy equality, full dispatcher routing, all eight policy
+fields before recovery cleanup, and offline original receipts and terminal
+completion without current helper or capsule intake. Existing test bodies and
+fixtures remain intact apart from a shared preparation hook and fixture visibility.
+
+All sixteen selected operator functions pass, including those six new cases,
+seven existing learned-qualification cases and three outer-parser cases. The
+qualified nightly's official Cranelift backend runs an isolated registration-only
+harness: all test bodies, assertions, fixtures and production are retained,
+selected files are byte-identical, and source hashes match before and after the
+run. The unchanged binary needs an explicit 32 MiB test-thread stack under this
+verification build; its earlier default-stack overflow is retained. An earlier
+preparation also stopped on an intervening public-test source change before
+execution. No production limit or assertion was relaxed.
+
+The complete unmodified operator test source and both public targets also pass
+the standard qualified compiler's Cargo check. No test-registration changes
+are used for that compiler check.
+
+Independent source review found no blocking defect. Earlier complete-library
+builds and a standard check were OOM-killed; those failures remain recorded.
+The standard xtask command compiles and executes, then refuses the existing
+dependency graph before formatting, Clippy or tests. All eleven new core/operator
+functions now have passing scoped runtime evidence. Full FA-105, dependency
+admission and release qualification remain open.
+
+## 2026-10-23: bind held-out joint credibility to learned generation
+
+`FileLearnedConfig::with_required_held_out_joint` freezes the native held-out
+joint policy into the independently retained numerical recipe. All eight policy
+fields, including case/member work limits, are bound alongside the complete
+original configuration. Learned Enable installs the original credibility guard
+inside the same candidate transition and first canonical image. The ordinary,
+raw-predictive, owned-predictive and topology-mediated recovery paths retain
+their existing exact-recipe checks, guards, floors and restricted consumers.
+Legacy recipe bytes are unchanged; separate outer joint enables retain their
+existing profile restrictions. No alternate promotion or weight setter is added.
+
+All five new public regression functions pass for all policy-field mismatches,
+omitted selection, wrapper composition, all three mediated replay/terminal
+lanes, conflicting evaluation bootstraps and rollback after a later numerical
+installation refusal. A causal learned-output case pairs marginally accepted
+complementary-veto regression with native joint refusal, then exercises actual
+nonregressing publication through original automatic and human keys. Recovery
+retains reports while historical capsule retries cannot revive qualification or
+old keys. Independent source review found no blocking defect.
+
+All fifteen existing public held-out joint functions also pass. Actual execution
+exposed two fixtures that attempted duplicate-root campaigns, which the original
+ledger already refuses before labels or scoring. They now directly assert that
+admission law and use distinct-root positive/negative controls for insufficient
+evidence and per-case regression under permissive aggregate limits. The new
+wrapper-size assertion now correctly includes the original four-byte blob prefix:
+92 bytes of overhead. No production format, admission or scoring changed.
+
+These twenty public functions execute as unmodified Cargo test targets with the
+qualified nightly's official Cranelift backend, one compiler thread and disabled
+MIR optimization after the earlier OOM-killed attempts. Failed-attempt logs are
+retained. Native and operator source received independent review. The operator
+integration and current compiler/gate qualification are recorded above; full
+FA-105 and dependency admission remain open.
+
+## 2026-10-23: repair interrupted learned terminal checkpoint exports
+
+The learned operator now exposes `--recover-terminal-checkpoint` on admission
+stop, later drain and combined stop. This explicit mode consumes the original
+version-2 source checkpoint and matching independently retained history anchor
+through the sealed native terminal cursor. It can recover after either or both
+outputs failed after native acknowledgement, then export a new exact pair
+without manually reconstructing a historical profile. Ordinary live, receipt
+and default terminal selection retain their existing exact-cut checks. A
+different Stop, mixed cuts, version-1 minima, unretained ordinary/source work
+or missing independent requirements cannot select repair.
+
+Four new operator regression functions pass using actual dispatched liabilities
+and output collisions across ordinary, raw-predictive and owned-predictive
+modes. They verify interrupted admission followed by repair and later drain,
+completed clock-free/event-free retries, unchanged source work and documents,
+native floors, independent output failures, absent live inputs, closed option
+parsing, full command dispatch and staging preservation on refusal. All seven
+existing paired-terminal and failed-service checkpoint regressions also pass.
+The operator runtime selection changes only unrelated libtest registration in
+a disposable copy; every test body, assertion, fixture and production statement
+is preserved, selected files are byte-identical and input hashes are checked.
+Execution uses the qualified nightly's official Cranelift backend in a private
+temporary build namespace. The complete unmodified operator test source also
+passes the standard compiler check. A Cargo rerun exhausted shared storage
+while producing output; the same standard compiler invocation with a private
+output directory completed successfully. The full xtask gate was retried and
+still refuses the existing dependency graph before formatting, Clippy or tests.
+Full dependency-admission and release qualification remain separate and open.
+
+## 2026-10-23: recover retained source custody after interrupted terminal export
+
+Ordinary and predictive mediated learned cursors can now be consumed before
+replay into `FileTerminalTopologyRecovery`, bound to one stop operation. The
+adapter checks the retained source checkpoint's exact original prefix against
+the same locked canonical image, verifies old graph and availability, requires
+the original terminal reserve and preserves or strengthens all independent
+floors. Only the same Stop's closed Stop/Fence/StopProgress suffix can explain
+an older cut. Ordinary events, later source work, an equal-counter fork or a
+different stop refuse. Full numerical replay and original guard checks remain
+mandatory; only terminal availability can advance. The resulting type exposes
+native admission, drain and combined completion without any live owner,
+observer, receipt-reconciliation operation or inner-cursor escape.
+
+Five new public regression functions pass across ordinary, raw-predictive and
+owned-predictive modes, including loss of the transient acknowledgement,
+missing live files, true Stop-only versus Fence availability, unretained source
+and time work, stronger saved and external floors, missing reserve, late cursor
+conversion, same-path equal-counter forks and canonical replacement during the
+clock. A Time event after a matching Stop is a causal negative, paired with a
+newer-checkpoint positive. All six existing public terminal-checkpoint
+regressions also pass, and the new public target passes the standard qualified
+compiler check. Runtime execution used the qualified nightly's official
+Cranelift backend in an isolated temporary build directory because shared disk
+storage was exhausted. No test body, source check or production bound was
+relaxed. These results do not close full FA-014, dependency admission or release
+qualification; operator activation is a separate following change.
+
+## 2026-10-23: preserve source work after failed learned service
+
+Learned source retention no longer returns early merely because the service has
+an error. While the original driver still owns a healthy acknowledged host, its
+selected checkpoint captures the admitted documents, actual source expenditure,
+native availability and exact history. The original service failure remains
+first; an export error is appended and independent anchor retention still runs.
+The shared path also serves resident learned sequences. Native capture continues
+to reject a poisoned owner, without issuing live authority or another effect.
+
+All three new `learned_failed_service_` regressions pass across ordinary,
+raw-predictive and owned-predictive modes. They exercise actual initial bypass
+refusal and loss of live inventory, retain spent work and native withdrawal,
+then remove live inputs and perform clock-free, event-free terminal retries
+with the exact saved pair. A late checkpoint collision preserves the competing
+bytes, original error and independent anchor. A real stage-file collision
+latches native storage failure and prevents either archive from being created.
+An initial fixture assertion incorrectly expected bypass coverage to remain
+available; source inspection confirmed `refresh_checked` explicitly withdraws
+every non-Verified cut before Stop. The regression now requires that native
+withdrawal while preserving all expenditure, identity and retry assertions.
+
+The final complete operator test source passes the standard qualified nightly
+check. These three runtime functions pass in the same registration-only scoped
+Cranelift harness described below, with the final source hashes checked against
+the frozen input. Additional existing stop-suite reruns were blocked during
+fixture setup by shared storage exhaustion; they are not counted as passing.
+The full dependency-admission gate and wider packet qualification remain open.
+
+## 2026-10-23: retain paired topology custody from learned terminal commands
+
+Learned `--stop-admission`, `--drain-stopped` and `--recover-stop` now accept
+`--retain-topology-checkpoint NEW_OUTPUT` with a separately selected version-2
+source checkpoint and paired `--retain-history-anchor NEW_OUTPUT`. The original
+exact-cut requirements are checked before native recovery. Both destinations
+must be new, distinct private files outside the authority store; canonical
+parent aliases and version-1 manual minima cannot create exact source custody.
+The sealed native result advances the retained source checkpoint without live
+files or another journal read. Both exports and the native report are attempted
+independently, preserving each failure and the acknowledged native revision.
+A retained successor pair supports later drain and clock-free completed retries
+in ordinary, raw-predictive and owned-predictive modes.
+
+Four new operator regressions pass: real dispatched liability through both
+phases and all predictor modes; malformed/manual/aliased output refusal paired
+with a permitted command; independent output races; and broken report output.
+All eight existing checkpoint creation/continuation regressions and their
+synthetic helper entry point also pass against the shared private writer.
+The unchanged complete operator test source also passes the standard qualified
+`nightly-2026-09-08` check. Full operator code generation was killed by SIGKILL
+twice on the shared host. Focused execution uses that same nightly's official
+Cranelift backend and a disposable copy changing only unrelated libtest
+registration, preserving all test bodies, assertions, fixtures and production
+logic. Disk-exhausted attempts remain recorded; the four final cases pass with
+private temporary fixtures. The full standard xtask gate was retried and still
+refuses the existing dependency graph before formatting, Clippy or tests.
+These results do not close the wider packet, RCH or release qualification.
+
+Terminal persistence and paired exports remain separate writes. An earlier v2
+source checkpoint becomes stale after an advancing stop even if export fails.
+The operator contract now explicitly requires valid independently selected
+historical custody for retry; changing output paths alone cannot bypass exact
+cut matching, infer requirements or silently downgrade a profile.
+
+## 2026-10-22: retain exact topology custody across native terminal cuts
+
+`TopologyCheckpoint::after_admission_stop` and `after_stopped` carry an
+independently retained source checkpoint to a sealed native terminal result.
+The original decoder binds the bootstrap and canonical identity; exact prefix
+comparison and a Stop/Fence/StopProgress-only suffix prevent later unretained
+source work or an equal-counter fork from inheriting old expenditure. Complete
+topology/inventory bytes, work and last source operation remain unchanged.
+The exact captured anchor and native control/authority floors advance together.
+Historical availability follows the real events: a recovery Fence withdraws it,
+while a live Stop without that Fence preserves its historical value. No source,
+observer, live owner, second semantic replay, filesystem access or clock is used.
+
+The standard qualified `nightly-2026-09-08` compiler passes targeted checks for
+the affected operator and the new public `topology_terminal_checkpoint` target.
+All six public regression functions pass using that same nightly's official
+Cranelift backend, including real source refreshes, missing live files,
+binding/floor/graph refusals and a genuine same-path, equal-counter native fork.
+The complete library unit harness reached compilation but was killed by
+SIGKILL on the shared host; five additional internal cases remain unexecuted.
+No assertion or production limit was relaxed. These scoped results do not
+establish the full standard-backend, formatting, Clippy, RCH or release gate;
+the wider FA-014 packet and compilation bridge remain open.
+
+## 2026-10-23: execute learned terminal and authenticated stop regressions
+
+The operator and both changed integration targets pass targeted `cargo check`
+with the qualified `nightly-2026-09-08` and its standard backend. The standard
+runtime build was killed by SIGKILL during library compilation on the shared
+host. Installing that same nightly's official Cranelift component made bounded
+runtime verification possible without changing the repository toolchain,
+dependencies, source admission or qualification gates.
+
+The complete 677-test operator harness compiles with that alternate backend.
+Selected runtime results are 7/7 authenticated single-peer stop tests, 10/10
+authenticated fleet-stop tests, 18/18 learned stop/export/phase tests, and 1/1
+topology terminal test covering all three predictor modes. All 4/4 new public
+topology phase regressions also pass, including real reserved, sent, executed
+and retention-expired effects at complete terminal capacity. Another 4/4 native
+forecast/continuation lifecycle tests pass, for 44 selected passing functions.
+All runtime builds used `RUSTFLAGS=-Zcodegen-backend=cranelift`. Socket tests ran
+with approved native execution because the sandbox rejects Unix socket creation.
+One initial 60-second setup timeout passed in isolation and in the final complete
+18-test selection; no deadline or production limit was relaxed.
+
+Compilation exposed unsupported equality assertions on bootstrap profiles,
+a malformed JSON fixture and an incomplete submission fixture. A test-only
+helper now compares every original profile field through exhaustive patterns;
+the fixtures retain their original checks. Native stop fixtures use payloads
+within their existing 16-unit allowance. The topology expiry fixture derives
+receipt retention from the actual original dispatch time and checks the native
+`RetentionExpired` outcome directly. Expiry preserves a charged, unresolved
+`Unknown` attempt; it does not invent explicit irrecoverable abandonment.
+The native forecast fixture also selected an unsupported 8192-token context.
+It now uses the existing 4096-token maximum with a monitoring allowance derived
+from that fixed context. Its strengthened assertions require original native
+model evidence, every submitted byte and prompt token, both sampled draws and
+monitoring of every decoded token. No input is truncated or production bound
+increased to make the fixture pass.
+
+The required `cargo run --locked -p xtask -- check` was attempted with the
+standard qualified compiler and stops at the existing lock admission refusal:
+the gate admits only `fa-reference` and `xtask`, while the workspace lock also
+contains `fa-journal`. That gate is unchanged. Cranelift runtime results do not
+constitute the full standard-backend, formatting, Clippy, remote RCH or release
+qualification. Full FA-014 and the compilation bridge remain open.
+
+## 2026-10-22: expose learned stop and drain as independent operator actions
+
+`create-learned-generated` now accepts explicit `--stop-admission OPERATION`
+and `--drain-stopped OPERATION` terminal modes alongside the unchanged atomic
+`--recover-stop`. All ordinary, raw-predictive and owned-predictive selections,
+with or without topology, consume the original fully verified guarded cursor.
+Admission uses only Stop/Fence and no settlement clock; later drain requires the
+matching acknowledged Stop and uses only StopProgress when needed. Both retain
+the original policy, predictor, topology, availability, reserve, floor and
+anchor requirements and return no live custody.
+
+The operator shares one monotonic budget from command entry through input
+admission, every replay event and terminal clock acquisition. The combined and
+drain consumers check both before and after their fallible clock. Late time
+leaves active history unchanged for combined completion and preserves the exact
+earlier stop for separate drain; no failure implicitly selects another phase.
+Acknowledged anchors and native reports remain distinct from successful export.
+
+Seven operator regression functions cover all predictor modes, actual command
+parsing, real dispatched liabilities, unavailable/late clocks, replay deadlines,
+missing reserve, independent guards/anchors, conflicting options, missing live
+assets, output/export failures and topology source continuity. Four independent
+public-library functions cover all three mediated predictor modes and real
+reserved/sent/executed/expired effects, complete terminal capacity, exact anchors,
+zero-event retries, failed guards and canonical replacement during clock
+acquisition. These are enforcement fixtures, not detector calibration.
+
+The untouched baseline workspace check reached an existing private-method call
+in `learned_text_stream_durable/continuation/forecast/owned_native.rs`. That test
+now obtains checked source shapes and acknowledged input through the existing
+public evidence APIs; its native adapter checks and all prior assertions remain,
+with an added exact-input equality assertion. No production visibility changed.
+The operator check also exposed unresolved child modules beneath explicitly
+selected source paths and a fleet-profile parameter shadowing its validator.
+Explicit paths now bind all 53 affected declarations to their existing source
+files, including the original test modules; the shadowing parameter is renamed.
+No module or test was removed to make compilation advance.
+The first targeted runtime attempt was killed by SIGKILL while compiling the
+library under shared host memory pressure, before any test function executed.
+The qualified `nightly-2026-09-08` targeted check now passes for the operator
+example and the `mediated_learned_reserve` and `learned_text_stream_durable`
+integration targets. This does not execute their tests or compile the example's
+test harness. Full RCH/workspace qualification and FA-014 remain open.
+
+## 2026-10-22: preserve the original authenticated stop-peer deadline
+
+The live `stop-peer` operator now starts one elapsed budget before socket
+connection and peer authentication, carries it through every native step, and
+caps polling waits at the remaining allowance. A slow connection cannot reset
+the budget or permit a new stop request after expiry. Public profile-file intake
+still precedes this budget; synchronous kernel calls remain nonpreemptible.
+
+A genuine native receipt received across the deadline keeps its original
+acknowledgment, drain facts and sequence in the unchanged JSON report, while the
+command returns a deadline error. A failed output also preserves the late-receipt
+status in its error. No reconnect, replacement request or effect retry occurs.
+
+Three new regression functions use authenticated named Unix sockets and the
+original native authority with a real reserved publication. They pair timely
+durable success with connection exhaustion before any request and a final
+receipt crossing the exact cutoff. They verify canonical history, liabilities,
+native receipt identity and single application. Central compilation and runtime
+verification are pending at this source commit; no qualification gate or packet
+is closed by source review.
+
+## 2026-10-22: guarded learned admission stop and separate drain
+
+The original learned stop phases now reach every guarded cursor: ordinary
+learned, raw-predictive, owned-predictive, topology-mediated and predictive
+topology-mediated recovery. Each terminal consumer keeps the original
+`check_ready()` before delegating to the same verified machine and exclusive
+canonical store. Admission-only stop uses the original two-event Stop/Fence
+transaction without logical time; later drain consumes only the original
+StopProgress event. Both return the exact acknowledged history anchor and no
+live authority or reviewer role.
+
+Matching admission retries append zero events, including histories with
+unresolved liabilities. Completed drain retries need no clock or spare journal
+capacity. Original dispatched uncertainty and executed effects keep their
+charges; a stop never resends an effect. Fallible combined completion preserves
+the original atomic transaction and does not silently fall back to admission.
+
+Four additional public regression functions cover the original four
+non-topology library lanes, including real reserved, sent, executed and expired
+effects, acknowledged anchor reuse, failure without implicit admission fallback,
+post-clock canonical conflicts and failed independent floors on all consumers.
+They are source-reviewed; execution is pending at this commit. Operator phase
+selection and topology regression coverage remain in progress.
+
+The exact earlier c09def8 source now passes all 42 shutdown_fleet tests on the
+qualified nightly. The next core unit-test compile exposed an opaque
+LearnedPrediction equality assertion, repaired here by comparing every exposed
+field, exact encoded checked source and refinement bits. Its subsequent
+monolithic unit-test build was killed by SIGKILL before tests ran. No complete
+core-test, formatting, Clippy, RCH or workspace-gate pass is claimed. Full
+qualification and the scoped FA-014 and P0 compilation beads remain open.
+
+## 2026-10-21: recovery/fleet compilation repair (partial verification)
+
+The P0 compilation bridge was checked against the current source and the exact
+qualified `nightly-2026-09-08` compiler
+(`cea272fa356e94bd2ee2cadf376630aa0683867a`). The baseline workspace check
+reported 52 errors: two missing test-module paths caused most follow-on errors,
+and a review replay test accessed `FileOversight.actions` instead of its
+original `machine.actions`. These are now repaired without dropping tests.
+The subsequent scoped check compiled the `fa-reference` and `fa-journal`
+library targets, then exposed missing fleet profile archive/custody module
+paths. Those paths and the archive's nested test path are also corrected.
+A subsequent xtask test compile exposed a missing Debug implementation for its
+internal hash failure type; the existing hash positive control now has that
+required diagnostic trait, with no change to hash/refusal behavior.
+
+This is partial compilation evidence, not a passing workspace gate. Shared
+overlay and host temporary storage exhausted during verification; a later
+attempt lost its execution environment with `environment_offline`. The final
+fleet path repair has not been compiled or tested. No runtime, Clippy, complete
+formatting, RCH or production qualification is claimed. The baseline full gate
+also refuses the stale two-package admission inventory, and baseline formatting
+emitted extensive differences. Their historical records are unchanged.
+The P0 bridge and full roadmap packets remain open.
+
+## 2026-10-19: resident learned publication sequence (unqualified source)
+
+`supervise_publication serve-learned-generated` now admits a fixed sequence of
+2..=16 learned Messages and an optional final Finish, each with an independently
+selected recipe and authenticated actor profile. One original locked authority,
+driver, numerical generation, human reviewer, forecast observer and topology
+custodian remain resident. The complete immutable generation and stream must
+match; each release still needs its own original native or process congress,
+fresh forecast when required, and separate human approval.
+
+A successor requires both original Known(Executed) and native Confirmed
+Executed, plus confirmed retirement of direct and process-review children.
+Intermediate entries do not reopen the authority, add a recovery Fence or
+requalify helpers. Original draws, forecast work, source checks and publication
+charges remain cumulative. One global lifetime bounds all entries, each TTL
+has a monotonic wall bound, and the initial request owns the same Stop endpoint
+even during automatic failure handling in later requests. Final source/history
+outputs are retained once from the original owner after the sequence.
+
+Independent regression source covers ordinary, raw-predictive and
+owned-predictive A/A/Finish, mixed native/process review, cancellation, original
+prediction exhaustion, real post-Dispatch staging failure, live Stop during
+request two, full profile admission, on-disk command/topology/export composition
+and a short TTL under a stalled logical clock. Source review corrected typed
+owned-forecast observation, per-entry wall deadlines and fixed Stop operation
+before publication. All 17 changed Rust files in this wave passed nonmutating
+Rust 2024 syntax parsing from their exact candidate contents. No compilation,
+runtime or Clippy result is claimed: the normal sandbox cannot start on the
+full device and the mandatory remote-only RCH gate is unavailable.
+FA-027 is in progress; long-horizon and isolated-branch acceptance remain open.
+See [resident sequence usage](docs/RESIDENT_LEARNED_PUBLICATION.md).
+
+## 2026-10-19: live authenticated fleet Stop (unqualified source)
+
+`supervise_publication stop-fleet FLEET_JSON` now drives the original native
+stop-only protocol for a fixed independently selected roster of 1..=64 active
+supervisors. Unlike offline journal recovery, it can reach the owner while its
+original journal lock is held. Full manifest/profile admission precedes all
+connections. Linux kernel identity, complete audience, original operation and
+fresh-session binding remain on the existing checked client path.
+
+Each connected member advances at most one native step per round with its own
+work bound and the same overall elapsed budget. The complete roster reports
+not-attempted, unconfirmed/may-have-sent, stop acknowledged, drain refused,
+pending and drained outcomes. No failure, lost acknowledgement or failed output
+triggers a reconnect, effect retry or liability refund. Synchronous file intake
+and Unix connect are not preemptible; fairness applies to connected nonblocking
+clients. This is a local live Stop consumer, not the complete FA-120 ordered
+distributed fence, lease protocol or persistent acknowledgement frontier.
+
+Regression source uses real file-backed live drivers and authenticated named
+sockets, plus causal protocol, incomplete-drain, full-roster, time/work and
+output controls. The executor was unavailable and the required remote-only RCH
+gate has no available worker. No compilation, test execution, Clippy or
+production qualification is claimed. FA-120 is in progress; all full packet
+acceptance conditions remain open. See [live fleet usage](docs/LIVE_FLEET_STOP.md).
+
+## 2026-10-19: complete actor/topology command admission (unqualified source)
+
+The learned actor option parser now admits the documented `--topology-profile`
+pair. Previously its closed whitelist refused combined actor/topology commands
+before the topology parser, despite the underlying workflow supporting both.
+Both flag orders now reach the original independent profile admission.
+
+A full-command regression drives actual learned generation, native review,
+authenticated actor ingress and independent human approval in all three
+forecast modes, and checks original publication plus paired source/history
+checkpoints. Invalid combinations must refuse before time observation or
+durable/socket creation. The production clock is unchanged. Source review is
+not type checking or execution: the workspace executor is offline and required
+remote-only RCH qualification is still unavailable. FA-073 remains in progress.
+
+## 2026-10-18: topology-mediated learned operator (unqualified source)
+
+The original learned publication command now accepts `--topology-profile` for
+creation, continuation, explicit Finish, historical receipt/reconciliation
+operations, receipt service and offline stop. It reuses the existing
+`fa.mediated-create/1` and `/2`, `fa.mediated-submit/1` and `/2`, original
+topology source/checker and independently retained history/source checkpoints.
+No new recipe, journal, wire command, dependency or numerical owner is added.
+
+The source enters the same supervised driver before live preparation. Fresh
+native certification follows qualification and precedes numerical or forecast
+work; the original final publication refresh remains attached through both
+native and process review. Ordinary learned, raw-predictive and owned-predictive
+recovery preserve complete independently selected guards, topology,
+availability, predictor, policy, reserve, anchor, source expenditure and floors.
+Historical modes load no next live topology files and cannot export a fresh
+source checkpoint. Reconciliation retains its original Fence/Time/Sweep;
+passive receipts and direct terminal stop retain their separate original laws.
+
+Four new operator regression functions exercise real authenticated actor and
+human peers with native model review, all three forecast modes, multiple
+messages and explicit Finish, exact source/history continuity, historical
+receipts, offline stop/retry, initial bypass and source loss after dispatch.
+Five independent public receipt functions cover all three modes at original
+Sent, Published and Confirmed cuts, exact source envelopes, full capacity,
+independent requirements, canonical races and unknown-liability conservation.
+These synthetic models are enforcement fixtures, not calibration evidence.
+
+All seventeen changed Rust sources passed nonmutating syntax parsing using
+nightly-2026-09-21 rustfmt. Production custody and new test source received
+independent review. This does not establish Rust type checking, formatting,
+Clippy, runtime behavior or deployment qualification. The required RCH gate
+remains blocked before compilation by the unavailable remote daemon (exit 103,
+local fallback refused under AGENTS.md). The scoped beads and full FA-014/FA-073
+packets remain in progress. See [operator usage](docs/LEARNED_OPERATOR_PUBLICATION.md)
+and [receipt service](docs/LEARNED_RECEIPT_SERVICE.md).
+
+## 2026-10-18: reserved mediated learned recovery (unqualified source)
+
+The original topology-mediated learned and predictive learned constructors now
+have explicit reserved variants. Their existing guarded bootstrap installs the
+terminal recovery reserve before guard and numerical work and publishes the
+complete configuration in one first canonical image. Ordinary, raw-predictive,
+and owned-predictive modes retain their exact original recipe and role custody.
+Older constructors and journal formats are unchanged.
+
+Both sealed mediated recovery cursors can require the exact independently
+selected reserve before replay. Their original full guard, topology, predictor,
+policy, floor, and anchor checks now also protect message/finish receipt
+selection, immutable actor receipt ports, explicit reconciliation, and direct
+stopped recovery. No ordinary recovery fence consumes terminal capacity before
+the original Stop/Fence/StopProgress transaction, and no live role escapes a
+receipt or stopped finalizer.
+
+Four independent public regression functions cover all three modes, pairing
+useful numerical output and full-capacity shutdown with startup, reserve, and
+recovery refusals. These tests and the changed library sources passed
+nonmutating syntax parsing with
+nightly-2026-09-21 rustfmt. This is not type checking, format qualification, or
+test execution. RCH exits 103 because the remote daemon is unavailable and
+refuses local fallback as required by AGENTS.md. Compilation, Clippy, runtime
+tests, full packet acceptance, and production qualification remain open.
+See [ordinary mediated recovery](docs/MEDIATED_LEARNED_RECOVERY.md) and
+[predictive mediated recovery](docs/PREDICTIVE_MEDIATED_LEARNED_RECOVERY.md).
+
+## 2026-10-17: explicit BOS tokenizer compatibility (unqualified source)
+
+The original bounded byte-BPE engine now has an explicit Llama-3/Unicode-17 BOS
+profile. Its closed importer accepts one precisely bound BOS template and the
+converter's inert ByteLevel wrapper. It preserves original token IDs and literal
+control occurrences, prepends a synthetic `0..0` token span, and retains the
+original source, work, output and decoder limits. The FA-BBPE/6 archive binds the
+prefix and original BOS ID; formats /1 through /5 are unchanged.
+
+The same selection reaches native helper bootstrap and checkpoint configuration,
+publication input, and learned monitor training. Regression source checks exact
+encoding and archive behavior, worker Allow/Deny and malformed intake, monitored
+training/artifact binding, and original publication/recovery. This does not
+expand the supported architecture or model/vocabulary bounds, provide a general
+template interpreter, or establish empirical detector quality. See
+[the exact tokenizer contract](docs/UNICODE_PRETOKENIZATION.md).
+
+FA-025 and FA-026 remain in progress. The remote-only gate command using the
+qualified `nightly-2026-09-08` was attempted with `RCH_REQUIRE_REMOTE=1`;
+RCH exited 103 and refused local fallback because the daemon was unavailable.
+After the execution server restarted, all eighteen changed Rust sources passed
+nonmutating syntax parsing with rustfmt from the qualified-date toolchain. Test
+source has been reviewed, but syntax is not type checking or execution;
+compilation, formatting, Clippy, runtime tests and release qualification remain
+open.
+
+## 2026-10-17: process-backed learned publication (unqualified source)
+
+The original `FileLearnedProcessReview` now runs through the supervised actor
+driver and the explicit `fa.learned-publication/6` operator recipe. External
+helpers receive the exact learned input through the existing private-socket
+commit/reveal protocol. A witnessed refinement updates the pending actor job;
+the next fixed roster starts only after predecessor children have been reaped.
+An original permitting receipt returns the same driver to independent human
+approval and its existing automatic, current-input and publication checks.
+
+The operator validates complete fixed rosters and aggregate start bounds before
+model ingestion, retains live post-launch and post-I/O clocks, polls in bounded
+short intervals, and carries actual child custody through stop and cleanup.
+Receipt-only recovery can read a recorded effect without executable preflight
+or a live helper. Old /1–/5 recipes retain their original semantics; /6 reuses
+finite numerical continuation and can select the existing required forecast.
+
+Six substantive public-driver tests and operator regressions are authored,
+including real child processes and an original publication, with causal
+controls for deny/EOF, cancellation, missing evidence, exact clock cutoffs,
+roster limits and missing executables during receipt recovery. Synthetic
+ballots exercise protocol and authority behavior, not detector quality.
+The twelve changed process Rust sources passed nonmutating syntax parsing with
+qualified-date rustfmt. Source review and syntax do not establish runtime
+qualification. The required remote
+RCH attempt refused local fallback with its daemon unavailable (exit 103);
+compilation, Clippy, runtime tests and release qualification remain open.
+FA-018, FA-019, FA-107 and FA-113 stay in progress: this does not establish
+host containment, judgment independence, residual-channel measurements or
+held-out sidecar quality. See [the process publication contract](docs/PROCESS_LEARNED_PUBLICATION.md).
+
+## 2026-10-14: reconcile stream receipts through verified recovery (unqualified source)
+
+The anchored stream receipt service now has an explicit `--reconcile-receipts`
+mode. After exact history, guard, floor and reserve replay, it requires the selected
+request to exist before any recovery mutation, then uses the original fixed
+`Fence -> Time -> Sweep` transaction before exposing the non-admitting stream
+receipt port. Missing requests therefore consume no fence or clock. Receipt-only
+mode retains its no-clock behavior; reconciliation neither reads fresh evidence
+nor launches helpers/reviewers and cannot recreate effects. Published unresolved
+messages can become confirmed only through the original endpoint receipt sweep;
+unresolved outcomes stay charged and unknown.
+
+Two new regressions exercise confirmed recovery of a published message and the
+missing-request/no-clock boundary, while existing stream recovery tests are
+strengthened to require no mutation for absent keys. The required RCH build/test
+gate remains unavailable, so this is unqualified source and no FA-014/FA-107
+closure or production qualification is claimed. See
+[the stream receipt contract](docs/STREAM_RECEIPT_SERVICE.md).
+
 ## 2026-10-12: recover learned histories directly into stopped state (unqualified source)
 
 All four original learned replay cursor types now expose exact stop selection

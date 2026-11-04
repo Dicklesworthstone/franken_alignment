@@ -2,54 +2,42 @@
 //! No listener is needed by the direct owner tests. Transport remains separately
 //! exercised by its real peer test; unavailable sockets are not skipped.
 use super::*;
-#[path = "tests/admission.rs"]
-mod admission;
-#[path = "tests/anchored_recovery.rs"]
-mod anchored_recovery;
-#[path = "tests/anchors.rs"]
-mod anchors;
-#[path = "tests/bound_monitor.rs"]
-mod bound_monitor;
-#[path = "tests/checkpoint_source.rs"]
-mod checkpoint_source;
-#[path = "tests/continuation.rs"]
-mod continuation;
-#[path = "tests/cooperative_generation.rs"]
-mod cooperative_generation;
-#[path = "tests/cooperative_prediction.rs"]
-mod cooperative_prediction;
-#[path = "tests/direct.rs"]
-mod direct;
-#[path = "tests/finish.rs"]
-mod finish;
-#[path = "tests/fixture.rs"]
-mod fixture;
-#[path = "tests/forecast.rs"]
-mod forecast;
-#[path = "tests/models.rs"]
-mod models;
-#[path = "tests/predictive.rs"]
-mod predictive;
-#[path = "tests/qualification.rs"]
-mod qualification;
-#[path = "tests/receipt_replay_deadline.rs"]
-mod receipt_replay_deadline;
-#[path = "tests/recovery_control.rs"]
-mod recovery_control;
-#[path = "tests/recovery_quanta.rs"]
-mod recovery_quanta;
-#[path = "tests/refinement.rs"]
-mod refinement;
-#[path = "tests/replay.rs"]
-mod replay;
-#[path = "tests/stopped.rs"]
-mod stopped;
-#[path = "tests/trained_monitor.rs"]
-mod trained_monitor;
-#[path = "tests/transport.rs"]
-mod transport;
-use fa_reference::action::consequence::delivery::persistent::observed::helpers::learned::native::{
-    NativeMemberRecord, NativeReviewStatus, sequence::FileNativeSidecarSequence,
+#[path = "tests/models.rs"] mod models;
+#[path = "tests/fixture.rs"] mod fixture;
+#[path = "tests/direct.rs"] mod direct;
+#[path = "tests/native_grammar.rs"] mod native_grammar;
+#[path = "tests/processes.rs"] mod processes;
+#[path = "tests/admission.rs"] mod admission;
+#[path = "tests/transport.rs"] mod transport;
+#[path = "tests/refinement.rs"] mod refinement;
+#[path = "tests/trained_monitor.rs"] mod trained_monitor;
+#[path = "tests/finish.rs"] mod finish;
+#[path = "tests/continuation.rs"] mod continuation;
+#[path = "tests/bound_monitor.rs"] mod bound_monitor;
+#[path = "tests/checkpoint_source.rs"] mod checkpoint_source;
+#[path = "tests/forecast.rs"] mod forecast;
+#[path = "tests/predictive.rs"] mod predictive;
+#[path = "tests/cooperative_prediction.rs"] mod cooperative_prediction;
+#[path = "tests/cooperative_generation.rs"] mod cooperative_generation;
+#[path = "tests/anchors.rs"] mod anchors;
+#[path = "tests/anchored_recovery.rs"] mod anchored_recovery;
+#[path = "tests/recovery_quanta.rs"] mod recovery_quanta;
+#[path = "tests/replay.rs"] mod replay;
+#[path = "tests/recovery_control.rs"] mod recovery_control;
+#[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;
+#[path = "tests/qualification.rs"] mod qualification;
+#[path = "tests/stopped.rs"] mod stopped;
+#[path = "tests/stream_reset.rs"] mod stream_reset;
+#[path = "tests/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
+#[path = "tests/checkpoint_prepare.rs"] mod checkpoint_prepare;
+#[path = "tests/campaign_creation.rs"] mod campaign_creation;
+#[path = "tests/prompt_counterfactual.rs"] mod prompt_counterfactual;
+#[path = "tests/mediated_predictive_stream_reset.rs"] mod mediated_predictive_stream_reset;
+
+#[path = "tests/recovery_policy.rs"] mod recovery_policy;
+use fixture::{Root, configured, evidence};
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},
 };
 use fa_reference::action::consequence::oversight::sidecar::receiver::native::SidecarDecisionBasis;
 use fixture::{Root, configured, evidence};
@@ -191,5 +179,24 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
     )
 }
 
-#[path = "tests/audit.rs"]
-mod audit;
+#[path = "tests/audit.rs"] mod audit;
+#[path = "tests/diagnosis.rs"] mod diagnosis;
+
+#[path = "tests/receipt_selection.rs"] mod receipt_selection;
+
+#[path = "tests/receipt_service.rs"] mod receipt_service;
+
+#[path = "tests/peer_intake.rs"] mod peer_intake;
+#[path = "tests/precheck.rs"] mod precheck_tests;
+#[path = "tests/functional_creation.rs"] mod functional_creation;
+#[path = "tests/topology.rs"] mod mediated_topology;
+
+#[path = "tests/sequence.rs"] mod resident_sequence;
+
+#[path = "tests/identity.rs"] mod identity_tests;
+
+#[path = "tests/checked_publication.rs"] mod checked_publication;
+
+#[path = "tests/fleet.rs"] mod fleet_shutdown;
+
+#[path = "tests/situation.rs"] mod situation;

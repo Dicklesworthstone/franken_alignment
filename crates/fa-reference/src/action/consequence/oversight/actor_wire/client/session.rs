@@ -245,19 +245,19 @@ impl<S> ActorClient<S> {
         let stream = self.stream.take().ok_or(ClientError::Disconnected)?;
         match ActorExchange::new(stream, command, &mut self.state.budget) {
             Ok(exchange) => {
-                if let Command::Submit { proposal, .. } = exchange.command() {
-                    if !self.state.requests.contains_key(&request) {
-                        self.state.payload_bytes += proposal.payload.len();
-                        self.state.requests.insert(
-                            request,
-                            Request {
-                                proposal: proposal.clone(),
-                                visible: false,
-                                response: None,
-                                terminal: None,
-                            },
-                        );
-                    }
+                if let Command::Submit { proposal, .. } = exchange.command()
+                    && !self.state.requests.contains_key(&request)
+                {
+                    self.state.payload_bytes += proposal.payload.len();
+                    self.state.requests.insert(
+                        request,
+                        Request {
+                            proposal: proposal.clone(),
+                            visible: false,
+                            response: None,
+                            terminal: None,
+                        },
+                    );
                 }
                 self.active = Some(exchange);
                 Ok(())

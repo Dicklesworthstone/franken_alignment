@@ -34,6 +34,9 @@ time again after source/control work and immediately before numerical admission;
 an expired source lease cannot borrow the earlier pre-read tick. Deadline, hold,
 source loss, partial output, TokenLimit and numerical failure cannot emit a source
 reference. Error handling uses the original stop/drain and helper cleanup path.
+At the final stamped clock, the service explicitly calls the original
+`capture_file_policy_state` gate before generation, resume or finish preparation;
+clock acknowledgment alone does not establish source freshness.
 Physical replay of earlier numerical history remains synchronous and may repeat;
 this is not a hard-real-time stop bound or an exactly-once CPU claim.
 

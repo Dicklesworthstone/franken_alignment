@@ -68,9 +68,10 @@ pub(super) fn tokenizer_format(value: &Json) -> Result<NativeTokenizerFormat, La
         Some("native-archive") => Ok(NativeTokenizerFormat::NativeArchive),
         Some("huggingface-raw-bytelevel") => Ok(NativeTokenizerFormat::HuggingFaceRawByteLevel),
         Some("huggingface-gpt2-unicode17") => Ok(NativeTokenizerFormat::HuggingFaceGpt2Unicode17),
-        Some("huggingface-llama3-unicode17") => {
-            Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17)
-        }
+        Some("huggingface-llama3-unicode17") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17),
+        Some("huggingface-llama3-unicode17-bos") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17Bos),
+        Some("huggingface-llama3-unicode17-whole-piece") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17WholePiece),
+        Some("huggingface-llama3-unicode17-bos-whole-piece") => Ok(NativeTokenizerFormat::HuggingFaceLlama3Unicode17BosWholePiece),
         _ => Err(LaunchError::Field("tokenizer_format")),
     }
 }
@@ -91,15 +92,11 @@ impl Manifest {
     /// Both legacy and version-two manifests use these same admitted loaders.
     /// The caller retains spent budgets on failure. The returned evaluator is
     /// fresh and has performed no inference; only the original worker consumes it.
-    pub(super) fn load(
-        &self,
-        assets: &mut NativeAssetReadBudget,
-        weights: &mut WeightReadBudget,
-    ) -> Result<NativeEvaluator, LaunchError> {
-        if let Some(adapter) = &self.adapter {
-            return self.load_lora(adapter, assets, weights);
-        }
-        match &self.checkpoint {
+    pub(super) fn load(&self, assets: &mut NativeAssetReadBudget, weights: &mut WeightReadBudget)
+        -> Result<NativeEvaluator, LaunchError>
+    {
+        let evaluator = if let Some(adapter) = &self.adapter { self.load_lora(adapter, assets, weights) }
+        else { match &self.checkpoint {
             CheckpointFiles::Single(weight_path) => {
                 let request = NativeFileBootstrap {
                     policy: &self.policy,
@@ -146,6 +143,7 @@ impl Manifest {
                 .map(|(evaluator, _)| evaluator)
                 .map_err(LaunchError::ShardedStartup)
             }
-        }
+        } }?;
+        evaluator.with_verdict_grammar(self.verdict_grammar).map_err(LaunchError::Contract)
     }
 }

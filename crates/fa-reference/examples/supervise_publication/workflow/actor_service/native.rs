@@ -635,7 +635,7 @@ where
 }
 
 // Re-sample after potentially slow source/control work. A source lease is checked
-// by the ORIGINAL numerical admission against this exact just-observed tick.
+// by the ORIGINAL captured-state gate against this exact just-observed tick.
 fn stamp<F>(host: &mut FileOversight, deadline: &Deadline, time: &mut F) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
@@ -646,6 +646,7 @@ where
         let revision = host.revision();
         host.observe_time(revision, now).map_err(debug)?;
     }
+    host.capture_file_policy_state().map_err(debug)?;
     Ok(())
 }
 

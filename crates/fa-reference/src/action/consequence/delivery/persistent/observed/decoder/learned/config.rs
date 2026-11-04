@@ -5,8 +5,12 @@ mod automatic_stop;
 mod consistency;
 mod identity;
 mod policy_source;
-mod sidecar;
 mod text;
+mod sidecar;
+mod held_out_joint;
+mod publication;
+mod credential;
+pub use publication::FileLearnedPublicationProfile;
 
 use super::super::super::super::codec::shared::Writer;
 use crate::Error;
@@ -51,13 +55,18 @@ pub struct FileLearnedConfig {
     sidecar_required: bool,
     automatic_stop: Option<HostedStopPolicy>,
     computed_identity_required: bool,
+    computed_identity_registration: Option<super::super::super::guarded::FileIdentityRequirement>,
     policy_source: Option<super::super::super::source::FileSourcePolicy>,
     pre_output_forecast: Option<super::super::super::consistency::FileConsistencyConfig>,
     owned_pre_output_forecast:
         Option<super::super::super::consistency::learned::FileLearnedConsistencyConfig>,
     forecast_reset_successors: bool,
+    owned_forecast_restart_audit: bool,
     text_stream_continuation: bool,
     forecast_text_stream_continuation: bool,
+    held_out_joint: Option<super::super::super::credibility::held_out_joint::HeldOutJointPolicy>,
+    publication: Option<FileLearnedPublicationProfile>,
+    credential: Option<super::super::super::credential::FileCredentialPolicy>,
 }
 impl fmt::Debug for FileLearnedConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -109,26 +118,9 @@ impl FileLearnedConfig {
         let mut w = Writer::new(MAX_CONFIG_BYTES);
         w.raw(DOMAIN)?;
         w.u64(source.monitor_generation)?;
-        w.count(limits.evidence.token_ids)?;
-        w.count(limits.evidence.score_words)?;
-        w.count(limits.encoded_bytes)?;
-        w.blob(&archive)?;
-        Ok(Self {
-            model,
-            source,
-            limits,
-            bytes: w.finish().into(),
-            text: None,
-            sidecar_required: false,
-            automatic_stop: None,
-            computed_identity_required: false,
-            policy_source: None,
-            pre_output_forecast: None,
-            owned_pre_output_forecast: None,
-            forecast_reset_successors: false,
-            text_stream_continuation: false,
-            forecast_text_stream_continuation: false,
-        })
+        w.count(limits.evidence.token_ids)?; w.count(limits.evidence.score_words)?;
+        w.count(limits.encoded_bytes)?; w.blob(&archive)?;
+        Ok(Self { model, source, limits, bytes: w.finish().into(), text: None, sidecar_required: false, automatic_stop: None, computed_identity_required: false, computed_identity_registration: None, policy_source: None, pre_output_forecast: None, owned_pre_output_forecast: None, forecast_reset_successors: false, owned_forecast_restart_audit: false, text_stream_continuation: false, forecast_text_stream_continuation: false, held_out_joint: None, publication: None, credential: None })
     }
     pub fn encoded_bytes(&self) -> usize {
         self.bytes.len()

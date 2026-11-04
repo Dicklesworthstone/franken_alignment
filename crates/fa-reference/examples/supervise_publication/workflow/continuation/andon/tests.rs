@@ -41,7 +41,7 @@ impl Directory {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-andon-publish-{}-{stamp}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
@@ -249,6 +249,7 @@ fn run_case(
             settings,
             mode,
             peers: None,
+            publication: None,
         },
         started,
         || ElapsedTick(1000),
@@ -475,7 +476,8 @@ fn expired_or_wrong_inventory_admission_preserves_canonical_and_staging() {
                 document: &first,
                 settings: &settings,
                 mode: Mode::Create(&input),
-                peers: None
+                peers: None,
+                publication: None
             },
             started,
             || panic!("expired invocation clock"),

@@ -185,13 +185,25 @@ fn generated_source_peer_backpressure_then_new_file_version_changes_admission() 
         Ok(capture(2, true, b"deny").identity())
     );
     let refused = drain(&mut session, &mut client);
+    let denied = s.supervisor.host().unwrap().request_status(92).unwrap();
     assert!(matches!(
+        denied.disposition,
+        FileRequestDisposition::Admitted {
+            stage: crate::action::ActionState::Denied,
+            ..
+        }
+    ));
+    assert_eq!(
         refused.result,
         Ok(Knowledge::Known {
             value: ActorOutcome::Denied,
-            ..
+            basis: crate::action::consequence::oversight::actor::ActorBasis {
+                request: 92,
+                generation: denied.generation,
+                source: crate::action::consequence::oversight::actor::BasisSource::ControlLedger,
+            },
         })
-    ));
+    );
     assert!(
         !refused
             .encode()

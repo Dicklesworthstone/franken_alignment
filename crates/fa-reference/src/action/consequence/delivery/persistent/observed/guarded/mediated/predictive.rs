@@ -1,19 +1,28 @@
 //! Keep both topology and pre-output predictor custody through original learned
 //! recovery. The exact recipe owns the predictor; no separate enable or capture
 //! hydration, second numerical replay, or statistical reset is introduced.
+mod stream_control;
+pub use stream_control::{FileMediatedStreamControlHistory,
+    FileMediatedStreamControlRecovery, FileMediatedStreamControlRequest};
+use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
+    FileConsistencyConfig, FileCredentialRegistration, FileGuardSet, FileMediatedRoles,
+    FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
+    FileTopologyRequirement, JournalError, Machine, MediationEvent, PreparedGuardedBootstrap, storage};
+use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
 use super::super::super::consistency::{ConsistencyEvent, learned::FileLearnedConsistencyConfig};
-use super::super::super::decoder::learned::{
-    FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus,
-    checkpoint::FileLearnedResetIntent,
+use super::super::super::decoder::learned::{FileLearnedConfig, FileLearnedRecovery,
+    FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent};
+use super::super::super::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery};
+use super::super::super::stream::FileStreamProposal;
+use crate::action::consequence::delivery::credential_broker::{
+    CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
 };
-use super::super::{anchored::FileHistoryAnchor, learned::check_profile};
-use super::{
-    AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event, FileConsistencyConfig,
-    FileCredentialRegistration, FileGuardSet, FileMediatedRoles, FileOversight,
-    FileOversightProfile, FileOversightRoles, FileRecoveryRequirements, FileTopologyRequirement,
-    JournalError, Machine, MediationEvent, PreparedGuardedBootstrap, storage,
-};
+use crate::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
 use crate::Error;
+use crate::action::ElapsedTick;
+use crate::action::consequence::delivery::{StopRequest, persistent::RecoveryReserve};
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
 use std::fmt;
 use std::path::Path;
 
@@ -26,7 +35,7 @@ pub enum FileMediatedPredictor {
     Owned(FileLearnedConsistencyConfig),
 }
 impl FileMediatedPredictor {
-    fn check_recipe(&self, config: &FileLearnedConfig) -> Result<(), Error> {
+    pub(in super::super) fn check_recipe(&self, config: &FileLearnedConfig) -> Result<(), Error> {
         let matches = match self {
             Self::Raw(prediction) => {
                 config.required_pre_output_forecast() == Some(prediction)
@@ -118,30 +127,20 @@ impl FileOversight {
         evaluation: Option<EvaluationProtocol>,
         config: FileLearnedConfig,
     ) -> Result<(Self, FileMediatedRoles), JournalError> {
-        check_profile(guards)?;
-        prediction.check_recipe(&config)?;
-        let mut prepared_guards = guards.clone();
-        if let Some(policy) = config.required_policy_source() {
-            if guards.source != Some(policy) {
-                return Err(Error::Binding.into());
-            }
-            prepared_guards.source = None;
-        }
-        // The sole learned Enable installs its pinned predictor and policy
-        // source itself. Never append a second predictor/source Enable.
-        let mut prepared =
-            PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?
-                .learned(config)?;
-        if let Some(protocol) = &evaluation {
-            prepared = prepared.evaluated(protocol.clone())?;
-        }
-        let prepared = prepared
-            .mediated(topology.clone())?
-            .checked_predictive_mediated(guards, evaluation.as_ref(), &prediction, &topology)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
-        let roles = FileMediatedRoles::provision(&host, oversight, true, evaluation.is_some());
-        Ok((host, roles))
+        create(directory.as_ref(), profile, guards, registration, topology, prediction, evaluation, config, None)
+    }
+
+    /// Reserve the original terminal tail before any guard or numerical work
+    /// in the same first canonical image. The exact raw/owned predictor remains
+    /// installed only by the original learned Enable; complete guards, topology
+    /// and reserve admission precede storage and release of any separate role.
+    pub fn create_predictive_mediated_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>, profile: FileOversightProfile,
+        guards: &FileGuardSet, registration: Option<FileCredentialRegistration<'_>>,
+        topology: AuthorityGraph, prediction: FileMediatedPredictor,
+        evaluation: Option<EvaluationProtocol>, config: FileLearnedConfig, reserve: RecoveryReserve,
+    ) -> Result<(Self, FileMediatedRoles), JournalError> {
+        create(directory.as_ref(), profile, guards, registration, topology, prediction, evaluation, config, Some(reserve))
     }
 
     /// Bind both original recipe and predictor before numerical replay, then
@@ -186,13 +185,39 @@ impl FileOversight {
     }
 }
 
-fn begin(
-    directory: &Path,
-    profile: FileOversightProfile,
-    expected: &FilePredictiveMediatedRequirements,
-    config: &FileLearnedConfig,
-    anchor: Option<&FileHistoryAnchor>,
-) -> Result<FilePredictiveMediatedLearnedRecovery, JournalError> {
+fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet,
+    registration: Option<FileCredentialRegistration<'_>>, topology: AuthorityGraph,
+    prediction: FileMediatedPredictor, evaluation: Option<EvaluationProtocol>,
+    config: FileLearnedConfig, reserve: Option<RecoveryReserve>)
+    -> Result<(FileOversight, FileMediatedRoles), JournalError>
+{
+    check_profile(guards)?;
+    prediction.check_recipe(&config)?;
+    let mut prepared_guards = guards.clone();
+    if let Some(policy) = config.required_policy_source() {
+        if guards.source != Some(policy) { return Err(Error::Binding.into()); }
+        prepared_guards.source = None;
+    }
+    let prepared = match reserve {
+        Some(reserve) => PreparedGuardedBootstrap::prepare_reserved(profile, &prepared_guards, registration, reserve)?,
+        None => PreparedGuardedBootstrap::prepare(profile, &prepared_guards, registration)?,
+    };
+    // The sole learned Enable installs its pinned predictor and policy source
+    // itself. The optional reserve already occupies its original pre-work slot.
+    let mut prepared = prepared.learned(config)?;
+    if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
+    let prepared = prepared.mediated(topology.clone())?
+        .checked_predictive_mediated(guards, evaluation.as_ref(), &prediction, &topology)?;
+    let store = storage::Store::create(directory)?;
+    let (host, oversight) = prepared.publish(store)?;
+    let roles = FileMediatedRoles::provision(&host, oversight, true, evaluation.is_some());
+    Ok((host, roles))
+}
+
+fn begin(directory: &Path, profile: FileOversightProfile,
+    expected: &FilePredictiveMediatedRequirements, config: &FileLearnedConfig,
+    anchor: Option<&FileHistoryAnchor>) -> Result<FilePredictiveMediatedLearnedRecovery, JournalError>
+{
     check_profile(&expected.oversight.guards)?;
     expected.prediction.check_recipe(config)?;
     let mut inner = FileOversight::begin_open_with_learned_generation(directory, profile, config)?;
@@ -283,6 +308,214 @@ fn check_machine(
 }
 
 impl FilePredictiveMediatedLearnedRecovery {
+    // Sealed fleet composition: framing is inspected before event zero, while
+    // extraction requires this wrapper's COMPLETE independent Ready checks.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn shutdown_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path, usize)
+    {
+        self.inner.shutdown_history()
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn into_shutdown_terminal(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStopRecovery, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_terminal()
+    }
+
+    /// Select one original external request for offline historical policy
+    /// diagnosis before any replay. The same exclusive recovery lock, numerical
+    /// recipe and independent guard requirements remain held; no new admission
+    /// or fictional proposal is created for a request that was not admitted.
+    pub fn require_request_proposal_investigation(mut self, request: u64,
+        scope: crate::action::consequence::experiment::InterventionScope)
+        -> Result<Self, JournalError>
+    {
+        self.inner = self.inner.require_request_proposal_investigation(request, scope)?;
+        Ok(self)
+    }
+
+    /// Return only the selected historical policy experiment after the whole
+    /// numerical history and every independent guard qualify. The original
+    /// finalizer rechecks the canonical bytes and releases the lock without
+    /// cleanup, clock, fence, effect or live owner.
+    pub fn finish_proposal_investigation(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_proposal_investigation()
+    }
+
+    /// Compare the complete retained current-policy corpus after the original
+    /// numerical history and EVERY independently selected requirement qualify.
+    /// The inner finalizer rechecks the canonical bytes under the same lock.
+    /// No live owner, campaign key, fence, cleanup or journal mutation escapes.
+    pub fn finish_policy_replay(
+        self,
+        candidate: crate::action::consequence::gate::containment::session::policy::Policy,
+        limits: crate::action::consequence::policy_campaign::ReplayLimits,
+    ) -> Result<(
+        crate::action::consequence::delivery::persistent::FileDeliverySnapshot,
+        crate::action::consequence::policy_campaign::PolicyReplayReport,
+    ), JournalError> {
+        self.check_ready()?;
+        self.inner.finish_policy_replay(candidate, limits)
+    }
+
+    /// Complete only the selected Unknown -> IrrecoverablyUnknown disposition
+    /// after this cursor's full original guard, numerical, policy, credential
+    /// and floor checks. No recovery Fence, clock, live owner or role escapes.
+    /// Exact retries retain the original receipt without another event; charges
+    /// and blocked stream successors remain unchanged.
+    pub fn finish_abandoned_with_anchor(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_anchor(request)
+    }
+
+    /// Preserve independently selected source custody through only this exact
+    /// native abandonment. The saved cut or its one matching event is checked
+    /// before cleanup or mutation, retaining every original wrapper requirement.
+    pub fn finish_abandoned_with_checkpoint(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+        saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_checkpoint(request, saved)
+    }
+
+    /// Restrict this original cursor to repairing source custody across either
+    /// the exact retained cut or one complete Fence/Time/Sweep successor. Full
+    /// independent replay remains mandatory; no live recovery owner can escape.
+    /// The selected historical request need not have triggered the old sweep.
+    pub fn require_receipt_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        request: u64, finish_after: Option<u64>)
+        -> Result<super::receipt::FileReceiptTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        let reconciled = super::receipt::prepare(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum, saved)?;
+        Ok(super::receipt::FileReceiptTopologyRecovery::predictive(
+            self, saved, request, finish_after, reconciled))
+    }
+
+    // Only the restricted checkpoint wrapper can confirm an already replayed
+    // settlement. The original full requirements are repeated before cleanup.
+    pub(super) fn confirm_reconciled_receipt_with_history(self, request: u64,
+        finish_after: Option<u64>,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.confirm_reconciled_receipt_with_history(request, finish_after, saved)
+    }
+
+    /// Restrict the still-unreplayed original cursor to one exact credential
+    /// maintenance operation after retained source-checkpoint admission.
+    /// Only its Fence/Rotate/Revoke suffix may explain an unexported cut.
+    /// No live roles, observer, generation control or alternate operation escape.
+    pub fn require_credential_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        request: super::credential::FileCredentialMaintenanceRequest)
+        -> Result<super::credential::FileCredentialTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::credential::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, request)?;
+        Ok(super::credential::FileCredentialTopologyRecovery::predictive(self, saved, request))
+    }
+
+    /// Seal the explicit owned prompt-audit profile to one exact stream-reset
+    /// intent and independent v2 source cut BEFORE replay. Only its original
+    /// StreamReset/Fence suffix may repair lost export; the source allowance,
+    /// predictor, current policy and all independent guards remain unchanged.
+    /// A checked Stop retains priority on the same Ready cursor.
+    pub fn require_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64)
+        -> Result<super::stream_reset::FileStreamResetTopologyRecovery, JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        let progress = self.progress();
+        super::stream_reset::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, intent, first_incident_sequence)?;
+        Ok(super::stream_reset::FileStreamResetTopologyRecovery::predictive(
+            self, intent, first_incident_sequence))
+    }
+
+    /// Confirm only an already recorded Stop after this exact owned stream
+    /// reset. No live role, first Stop, reset audit, source read or extra Fence
+    /// escapes. Both independently retained archives remain mandatory.
+    pub fn require_stopped_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64, operation: u64)
+        -> Result<super::stream_reset::FileStoppedStreamResetRecovery, JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        let progress = self.progress();
+        let selection = super::stream_reset::StoppedStreamResetSelection {
+            intent, first_incident_sequence, operation,
+        };
+        super::stream_reset::prepare_stopped(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum, saved, selection)?;
+        Ok(super::stream_reset::FileStoppedStreamResetRecovery::predictive(self, operation))
+    }
+
+    /// Inspect credential state only after the original numerical replay and
+    /// every independent topology, predictor, guard and floor check succeeds.
+    /// No cleanup, fence, source observation or live role is produced.
+    pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.credential_status())
+    }
+
+    /// Check a rotation before the recovery Fence or staging cleanup. An exact
+    /// retry returns its original receipt, independently of today's generation.
+    pub fn check_credential_rotation(&self, request: CredentialRotationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_rotation(request)?)
+    }
+
+    /// Check the original revocation and retained-operation identity without
+    /// mutating the journal or granting an observer or publication capability.
+    pub fn check_credential_revocation(&self, request: CredentialRevocationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_revocation(request)?)
+    }
+
+    /// Restrict this still-unreplayed predictive cursor to one native terminal
+    /// operation after exact retained-source admission. Only the same Stop's
+    /// terminal suffix can advance the cut; no source work, weaker predictor or
+    /// live continuation is inferred. All original floors, guards and terminal
+    /// reserve remain required, including exact-cut initial stopping.
+    pub fn require_terminal_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        operation: u64) -> Result<super::terminal::FileTerminalTopologyRecovery, JournalError>
+    {
+        let progress = self.progress();
+        super::terminal::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, operation)?;
+        Ok(super::terminal::FileTerminalTopologyRecovery::predictive(self, operation))
+    }
+
+    /// Require the exact original terminal reserve from this same locked
+    /// canonical image before numerical replay. Missing, changed or late
+    /// requirements refuse without mutation; no allowance is replenished.
+    pub fn require_recovery_reserve(self, expected: RecoveryReserve) -> Result<Self, JournalError> {
+        check_recovery_reserve(&self.inner, expected)?;
+        Ok(self)
+    }
+
     pub fn progress(&self) -> FileLearnedRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure {
@@ -332,6 +565,135 @@ impl FilePredictiveMediatedLearnedRecovery {
         Ok(())
     }
 
+    /// Select the original retained message after the complete independent
+    /// predictor, topology, guard, policy and floor contract passes. This read
+    /// issues no observer, new forecast, fence or live owner.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Select the exact retained finish and confirmed predecessor under the
+    /// same complete predictive mediation contract without changing storage.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_finish_request(after_request, request)
+    }
+
+    /// Expose only the original historical actor observation after independent
+    /// validation and the original canonical-cut check. No new forecast, clock,
+    /// cleanup, fence or role escapes; pending liabilities remain unresolved.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_receipt(request, finish_after)
+    }
+
+    /// Reconcile the same fully validated numerical history through the
+    /// original single-image Fence/Time/Sweep. Guard and selection failures
+    /// precede clock and mutation; only the selected actor observation escapes.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt(request, finish_after, clock)
+    }
+
+    /// Retain the same original acknowledged reconciliation cut without a live
+    /// owner. Every independent wrapper guard is checked before the clock.
+    pub fn finish_reconciled_receipt_with_history<F>(self, request: u64,
+        finish_after: Option<u64>, clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_history(request, finish_after, clock)
+    }
+
+    /// Admit the exact independently retained source checkpoint on the SAME
+    /// fully guarded cursor before any reconciliation clock or mutation.
+    pub fn finish_reconciled_receipt_with_checkpoint<F>(self, request: u64,
+        finish_after: Option<u64>, saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+        clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)
+    }
+
+    /// Transfer only a fixed Stop target after rechecking this wrapper's
+    /// COMPLETE original recipe, guards, policy, credentials and history floors.
+    /// The original private replay and exclusive lock survive; no weaker cursor,
+    /// live owner or role is released before or after the nonce-bound exchange.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_recovery_stop(operation)
+    }
+
+    /// Select the original stop predecessor after the complete predictor,
+    /// topology, guard, policy and independent-floor requirements pass.
+    pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
+        self.check_ready()?;
+        self.inner.stop_request(operation)
+    }
+
+    /// Withdraw admission through the original Stop/Fence without acquiring
+    /// settlement time. Complete independent requirements, the retained reserve
+    /// and canonical custody still apply; no live role or drain receipt escapes.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_admission_stop(request)
+    }
+
+    /// Drain only the matching acknowledged stop through the original terminal
+    /// event. A failed clock preserves that stop and its charged liabilities.
+    /// An already-drained retry does not acquire time or append another event.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_stopped_drain(request, clock)
+    }
+
+    /// Retain the same fully guarded combined terminal transaction while
+    /// allowing the caller to refuse unavailable or late settlement time.
+    /// Refusal returns neither a candidate receipt nor a history anchor.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.try_finish_stopped_with_anchor(request, clock)
+    }
+
+    /// Consume the same original replay directly into native stopped recovery.
+    /// No ordinary fence, new forecast or observer precedes the original
+    /// Stop/Fence/StopProgress transaction; all spent and unknown work survives.
+    pub fn finish_stopped<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedRecovery, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped(request, clock)
+    }
+
+    /// Return that acknowledged stopped cut and its original private history
+    /// anchor, preserving every predictive mediation requirement and the one
+    /// canonical lock. Capturing it issues no role, replay or extra fence.
+    pub fn finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_stopped_with_anchor(request, clock)
+    }
+
     /// Acknowledge exactly the original fence before returning separate human,
     /// forecast, topology, identity, governance and optional evaluator custody.
     /// Unanswered forecasts lose coverage; unknown effects remain charged.
@@ -361,4 +723,17 @@ impl FilePredictiveMediatedLearnedRecovery {
         self.inner = self.inner.prepare_pending_reset(intent)?;
         self.finish()
     }
+
+    // Only the pre-replay, operation-bound source-custody selector exposes this
+    // path. The full predictor/mediation guard runs around original preparation;
+    // the existing sole reset-plus-Fence write provisions the paused owner.
+    pub(super) fn finish_pending_stream_reset(mut self, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Result<(FileOversight, FileMediatedRoles), JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_stream_reset(intent, first_incident_sequence)?;
+        self.finish()
+    }
 }
+

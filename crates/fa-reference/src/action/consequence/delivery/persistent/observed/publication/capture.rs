@@ -302,19 +302,13 @@ impl FileOversight {
         self.check_source_admission(&event)?;
         // A malformed/regressing observation cannot be forgotten in favor of a
         // prior quiet producer generation. Recovery fences every old effect key.
-        self.fault = Some(JournalFailure {
-            operation: JournalIo::Stage,
-            kind: io::ErrorKind::Other,
-            replacement_may_be_visible: false,
-        });
-        if self.events.len() >= self.profile.delivery.limits.events {
-            return Err(Error::Limit.into());
-        }
-        let bytes =
-            journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
-        let mut candidate = Machine::replay(&self.profile, &self.events)?;
+        self.fault = Some(JournalFailure { operation: JournalIo::Stage,
+            kind: io::ErrorKind::Other, replacement_may_be_visible: false });
+        if self.events.len() >= self.profile.delivery.limits.events { return Err(Error::Limit.into()); }
+        let bytes = journal::encode_appended(&self.profile, self.store.identity(), &self.events, &event)?;
+        let (mut candidate, retain_replay) = self.replay_control_candidate()?;
         let result = candidate.apply(&event)?;
-        match self.persist_candidate(event, bytes, candidate, result)? {
+        match self.persist_control_candidate(event, bytes, candidate, result, retain_replay)? {
             Transition::Inputs(revision) => Ok(revision),
             _ => unreachable!("captured publication inputs"),
         }

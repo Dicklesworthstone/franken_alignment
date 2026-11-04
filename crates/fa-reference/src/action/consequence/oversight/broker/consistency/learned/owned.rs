@@ -94,6 +94,8 @@ impl OversightBroker {
     /// the latest accepted and completely quiet original event can supply this
     /// capture. The original forecast admission, lifetime accounting and optional
     /// containment execute unchanged; no generation draw or audit is repeated.
+    /// The explicit restart-audit recipe can instead select its separately
+    /// charged, fresh successor-cache audit at the unsampled prompt boundary.
     ///
     /// This guarantees in-process owner provenance, not an authenticated remote
     /// tap, calibrated probabilities or forecast-before-sampling by itself.
@@ -117,6 +119,33 @@ impl OversightBroker {
     fn owned_learned_forecast_source(&self) -> Result<(CheckedLearnedKv, KvRow), Error> {
         let lane = self.learned_consistency_lane()?;
         let state = self.hosted_learned_generation()?;
+        // This is a second fresh audit of the ACTUAL restored successor, not
+        // the original checkpoint's audit or an old accepted generation event.
+        // Its full inventory and numerical prediction use the unchanged lifetime
+        // accounting below. No ordinary proposal evidence becomes available.
+        if self.owned_learned_forecast_restart_audit_required()
+            && let Some(audit) = self.hosted_learned_restart_forecast_audit()?
+        {
+            self.check_owned_learned_forecast_restart()?;
+            let run = self.hosted_learned_original()?;
+            if state.host_failure.is_some() || state.availability != LearnedAvailability::Empty
+                || run.last_event().is_some() || run.position() != state.position
+                || state.position != run.spec().prompt().len() as u64
+                || !audit.monitoring().complete_quiet()
+                || audit.monitoring().first_position() != 0
+                || audit.monitoring().end_position() != state.position {
+                return Err(Error::Incomplete);
+            }
+            let source = audit.monitoring().source();
+            let row = KvRow { layer: lane.layer, side: lane.side,
+                position: state.position.checked_sub(1).ok_or(Error::Incomplete)? };
+            let (frame, _, _) = source.row_shape(row)?;
+            if frame.stream != self.hosted_learned_observation()?.stream()
+                || frame.sequence != state.position || frame.position != row.position {
+                return Err(Error::Binding);
+            }
+            return Ok((source.clone(), row));
+        }
         if state.host_failure.is_some() || state.availability != LearnedAvailability::Ready {
             return Err(Error::Incomplete);
         }

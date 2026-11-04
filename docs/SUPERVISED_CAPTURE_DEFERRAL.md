@@ -84,3 +84,42 @@ One budget unit test checks every admitted limit and its overflow/zero neighbors
 These seven tests plus nine driver tests are authored but UNEXECUTED. The required
 RCH xtask verifier cannot start because rch is unavailable; no test pass, compiler,
 formatting, Clippy, production activation or Bead-closure claim is made.
+
+## Learned-input driver composition
+
+The same nonpermitting acquisition now wraps the original learned-input provider:
+
+- `FileSupervisedDriver::step_computed_from_policy_file_with_publication_deferral`
+  retains the original computed learned review and effect driver.
+- `FileNativeSupervisedDriver::step_from_policy_file_with_publication_deferral`
+  retains the privately owned native inference and fixed review schedule.
+- `FileProcessSupervisedDriver::step_from_policy_file_with_publication_deferral`
+  retains the original source-bound process replies and child cleanup custody.
+
+Each takes the original policy-only evidence file, action-bound capture file,
+optional change feed, clock and independently supplied effect keys. The concrete
+policy reader still resolves the current learned sidecar before and after its
+read. Publication capture cannot supply or replace helper input.
+
+`FileDeferrableDriverReport<T = FileDriverEvent>` preserves the original result
+and acknowledged observations for all three event types. Existing callers can
+continue using the default event type. The shared provider and report construction
+remain internal to the driver; this is not a public evidence-provider extension.
+
+During a native or process review, a valid deferred capture still supplies the
+actual committee evidence, so review can advance under its original work, poll
+and phase limits. This progress does not itself recommend waiting or grant
+publication eligibility. Only an original Ready job with the matching unexpired
+human approval and the original `Incomplete` result can yield the acknowledged
+`waiting_for_producer()` diagnostic. All callers must bound those later retries
+and service Stop/cancellation between calls. Missing sources, changed committee
+inputs, unavailable owners and malformed history are not producer lag.
+
+Capture-or-defer persistence also retains an existing acknowledged learned replay
+prefix through the original control-candidate helpers. The outcome is still
+derived from the candidate after semantic application and returned only after
+canonical storage acknowledgment. Cold owners retain cold replay, and every
+unverified suffix event is replayed. This changes neither the event format nor
+the acquisition, source-floor, fault, authority or post-dispatch strictness rules.
+See [learned publication replay](LEARNED_PUBLICATION_REPLAY.md) and the current
+[implementation status](../IMPLEMENTATION_STATUS.md) for execution scope.

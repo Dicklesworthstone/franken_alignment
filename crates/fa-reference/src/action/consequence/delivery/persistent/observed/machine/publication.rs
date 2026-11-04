@@ -32,6 +32,9 @@ impl Machine {
         &mut self,
         event: &WitnessEvent,
     ) -> Result<Transition, Error> {
+        // Bootstrap replay must reject the same foreign clock as canonical
+        // encoding, before constructors create storage or mutate this machine.
+        event.check_clock_domain(self.clock_domain)?;
         match event {
             WitnessEvent::SubtreeRouting => {
                 self.broker.enable_publication_subtree_routing()?;

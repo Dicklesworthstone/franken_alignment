@@ -33,7 +33,8 @@ pub const MAX_ROUTE_NONCLAIMS: usize = 8;
 /// Maximum named trust domains in one declared route path.
 pub const MAX_ROUTE_TRUST_DOMAINS: usize = 4;
 const MAX_INVENTORY_JSON_ITEMS: usize = 131_072;
-const INVENTORY_SCHEMA_VERSION: u64 = 1;
+const FAMILY_CREDENTIAL_SCHEMA: u64 = 1;
+const ROUTE_CREDENTIAL_SCHEMA: u64 = 2;
 
 /// Closed categories for every effect route named by plan §4.4.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -75,7 +76,8 @@ impl RouteProfile {
 pub enum ActorCredentialDisposition {
     /// This route declares that no actor-held credential is part of its profile.
     NoneDeclared,
-    /// This route is mediated by a declared family broker credential.
+    /// This route is mediated by a declared broker credential. Version 1
+    /// resolves an unambiguous family; version 2 names the exact credential.
     BrokerMediated,
     /// An actor directly holds this named declared credential.
     ActorDirect { credential: String },
@@ -89,6 +91,9 @@ pub struct RouteMetadata {
     trust_path: Vec<TrustDomain>,
     threat: ThreatClass,
     actor_credential: ActorCredentialDisposition,
+    // Explicit only in v2. It is validated against this route's own family,
+    // never inferred from another route or a globally matching credential name.
+    broker_credential: Option<String>,
     residual_nonclaims: Vec<String>,
 }
 
@@ -116,6 +121,14 @@ impl RouteMetadata {
     #[must_use]
     pub fn actor_credential(&self) -> &ActorCredentialDisposition {
         &self.actor_credential
+    }
+
+    /// The explicitly declared v2 broker credential name, not secret material
+    /// or evidence of possession. Version 1 has no explicit route selection;
+    /// effect consumers must use `broker_credential_for_route` in either case.
+    #[must_use]
+    pub fn broker_credential_name(&self) -> Option<&str> {
+        self.broker_credential.as_deref()
     }
 
     #[must_use]
@@ -240,11 +253,11 @@ impl LoadedPerimeterInventory {
         Ok(LoadedRoute { record, metadata })
     }
 
-    /// Execution-only resolution for the v1 family-wide credential model. A
-    /// brokered route is usable only when exactly one broker credential is
-    /// declared in that family; multiple names are valid inventory data but are
-    /// ambiguous effect authority and therefore refuse here. Future schemas may
-    /// bind a route to a specific credential explicitly rather than guessing.
+    /// Execution-only resolution for the exact declared route. Version 2 names
+    /// a broker-held credential in that route's own family. Version 1 retains
+    /// its original rule: exactly one family broker credential must exist, and
+    /// multiple names remain valid inventory data but ambiguous effect authority.
+    /// This lookup grants no capability and does not authenticate secret bytes.
     pub fn broker_credential_for_route(
         &self,
         scope: PerimeterScope,
@@ -259,6 +272,11 @@ impl LoadedPerimeterInventory {
             )
         {
             return Err(Error::Binding);
+        }
+        if let Some(credential) = loaded.metadata().broker_credential_name() {
+            // Private metadata construction already checked family membership,
+            // holder and mediation together. No fallback may replace this name.
+            return Ok(credential);
         }
         let family_record = self
             .inventory
@@ -286,7 +304,8 @@ impl LoadedPerimeterInventory {
     fn from_json(value: Json) -> Result<Self, InventoryLoadError> {
         let root = object(&value)?;
         exact_fields(root, &["version", "families"])?;
-        if unsigned(required(root, "version")?)? != INVENTORY_SCHEMA_VERSION {
+        let version = unsigned(required(root, "version")?)?;
+        if !matches!(version, FAMILY_CREDENTIAL_SCHEMA | ROUTE_CREDENTIAL_SCHEMA) {
             return Err(schema(Error::InvalidInput));
         }
         let families = array(required(root, "families")?)?;
@@ -300,7 +319,7 @@ impl LoadedPerimeterInventory {
         let mut records = Vec::with_capacity(families.len());
         let mut metadata = BTreeMap::new();
         for family in families {
-            let (record, route_metadata) = parse_family(family)?;
+            let (record, route_metadata) = parse_family(family, version)?;
             for (route, metadata_record) in record.routes.iter().zip(route_metadata) {
                 let key = RouteKey {
                     scope: record.scope,
@@ -331,6 +350,7 @@ impl LoadedPerimeterInventory {
 
 fn parse_family(
     value: &Json,
+    version: u64,
 ) -> Result<(EffectFamilyRecord, Vec<RouteMetadata>), InventoryLoadError> {
     let value = object(value)?;
     exact_fields(
@@ -370,12 +390,15 @@ fn parse_family(
         total_text = add_text(total_text, nonclaim.len())?;
     }
     for route in routes {
-        let (record, route_metadata) = parse_route(route, &trust_domains, &credentials)?;
+        let (record, route_metadata) = parse_route(route, &trust_domains, &credentials, version)?;
         total_text = add_text(total_text, record.route.len())?;
         total_text = add_text(total_text, route_metadata.profile.id.len())?;
         if let ActorCredentialDisposition::ActorDirect { credential } =
             &route_metadata.actor_credential
         {
+            total_text = add_text(total_text, credential.len())?;
+        }
+        if let Some(credential) = &route_metadata.broker_credential {
             total_text = add_text(total_text, credential.len())?;
         }
         for nonclaim in &route_metadata.residual_nonclaims {
@@ -434,6 +457,7 @@ fn parse_route(
     value: &Json,
     family_domains: &[TrustDomain],
     credentials: &[crate::perimeter::CredentialExposure],
+    version: u64,
 ) -> Result<(RouteRecord, RouteMetadata), InventoryLoadError> {
     let value = object(value)?;
     exact_fields(
@@ -459,12 +483,19 @@ fn parse_route(
         mediation,
         bypass: parse_bypass(text(required(value, "bypass")?)?)?,
     };
+    // Keep the original field-admission order, including v1 refusal causes.
+    let effect = parse_effect(text(required(value, "effect")?)?)?;
+    let profile = parse_profile(required(value, "profile")?)?;
+    let trust_path = parse_trust_domains(required(value, "trust_path")?, false)?;
+    let (actor_credential, broker_credential) =
+        parse_actor_credential(required(value, "actor_credential")?, version)?;
     let metadata = RouteMetadata {
-        effect: parse_effect(text(required(value, "effect")?)?)?,
-        profile: parse_profile(required(value, "profile")?)?,
-        trust_path: parse_trust_domains(required(value, "trust_path")?, false)?,
+        effect,
+        profile,
+        trust_path,
         threat,
-        actor_credential: parse_actor_credential(required(value, "actor_credential")?)?,
+        actor_credential,
+        broker_credential,
         residual_nonclaims: parse_texts(
             required(value, "residual_nonclaims")?,
             1,
@@ -484,23 +515,35 @@ fn parse_profile(value: &Json) -> Result<RouteProfile, InventoryLoadError> {
     })
 }
 
-fn parse_actor_credential(value: &Json) -> Result<ActorCredentialDisposition, InventoryLoadError> {
+fn parse_actor_credential(
+    value: &Json,
+    version: u64,
+) -> Result<(ActorCredentialDisposition, Option<String>), InventoryLoadError> {
     let value = object(value)?;
     let kind = text(required(value, "kind")?)?;
     match kind {
         "none_declared" => {
             exact_fields(value, &["kind"])?;
-            Ok(ActorCredentialDisposition::NoneDeclared)
+            Ok((ActorCredentialDisposition::NoneDeclared, None))
         }
         "broker_mediated" => {
-            exact_fields(value, &["kind"])?;
-            Ok(ActorCredentialDisposition::BrokerMediated)
+            let credential = if version == ROUTE_CREDENTIAL_SCHEMA {
+                exact_fields(value, &["kind", "credential"])?;
+                Some(text(required(value, "credential")?)?.to_owned())
+            } else {
+                exact_fields(value, &["kind"])?;
+                None
+            };
+            Ok((ActorCredentialDisposition::BrokerMediated, credential))
         }
         "actor_direct" => {
             exact_fields(value, &["kind", "credential"])?;
-            Ok(ActorCredentialDisposition::ActorDirect {
-                credential: text(required(value, "credential")?)?.to_owned(),
-            })
+            Ok((
+                ActorCredentialDisposition::ActorDirect {
+                    credential: text(required(value, "credential")?)?.to_owned(),
+                },
+                None,
+            ))
         }
         _ => Err(schema(Error::InvalidInput)),
     }
@@ -630,6 +673,16 @@ fn validate_metadata(
             }
         }
         ActorCredentialDisposition::BrokerMediated => {
+            if let Some(credential) = &metadata.broker_credential {
+                if record.mediation != Mediation::BrokeredEffects
+                    || !credentials.iter().any(|declared| {
+                        declared.credential == *credential
+                            && declared.holder == CredentialHolder::Broker
+                    })
+                {
+                    return Err(schema(Error::Binding));
+                }
+            }
             if !credentials
                 .iter()
                 .any(|declared| declared.holder == CredentialHolder::Broker)

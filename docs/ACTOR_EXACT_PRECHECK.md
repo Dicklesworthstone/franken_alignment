@@ -28,10 +28,226 @@ accepts actor-supplied scope, witnesses, source data, time or a policy. It retur
 `ActorBasis`. Existing actor observations and wire formats keep `ActorBasis` as
 the default generic parameter and retain their previous variants and meaning.
 
-This increment exposes an in-process Rust capability, not a new CLI command or
-wire operation. Existing process transports do not silently gain policy access.
-An integration must decide explicitly which actor may receive this capability.
-In-process role separation is not OS isolation or provider authentication.
+Learned stream owners continue to reject that raw-proposal method. Their
+supervisor can instead call `disclose_learned_text_stream_precheck(revision,
+disclosure, queries, request, release, latest_deadline)` after original
+generation or Finish preparation. This grant freezes the original native
+cumulative release action and accepts only its canonical actor intent, with the
+independently selected current policy epoch. It evaluates the real frame,
+target and full charge without disclosing output bytes or granting submission
+authority. Every query and revocation rule below still applies. The uncached
+Linux service integration is documented in [live prechecks](LIVE_ACTOR_PRECHECK.md#learned-actor-releases).
+
+The capability is also available through a separate bounded byte adapter,
+`requests::actor::precheck_wire::FilePrecheckWire`. Existing Submit/Poll/Cancel
+commands and process transports do not silently gain policy access. An
+integration must explicitly bind the separately granted port to its chosen
+actor. A bounded Unix connection and Linux kernel-credential peer session now
+carry this same capability across a process transport. They do not create a
+listener, CLI service, deployment profile or provider identity; in-process role
+separation and message correlation are not OS isolation.
+
+## Bounded actor byte interface
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    FilePrecheckWire, PrecheckRequest, encode_precheck_request, decode_precheck_response,
+};
+
+let request = PrecheckRequest { query: 9001, proposal };
+let bytes = encode_precheck_request(&request)?;
+let mut wire = FilePrecheckWire::new(precheck, 16)?;
+let response = wire.exchange(&bytes).encode()?;
+let observation = decode_precheck_response(
+    &response, request.query, request.proposal.expected_policy_epoch,
+)?;
+```
+
+Keep the original disclosure custodian alive on the supervisor side. The adapter
+owns only its weak actor capability and a finite exchange allowance; it cannot
+obtain the host, refresh evidence, observe time, install policy or submit an
+effect. The optional transport below supplies framing, output backpressure and
+kernel-peer admission. Grant provisioning, listener ownership, scheduling and
+whole-session deadlines remain the integrating host's responsibility.
+
+Requests use the closed `fa.actor-precheck/1` schema and responses use
+`fa.actor-precheck-response/1`. Decimal-string identifiers retain all u64 bits;
+payloads use bounded lowercase hexadecimal. The strict parser rejects duplicate
+or extra fields, unsupported versions, invalid numeric spellings, oversized
+payloads and authority-bearing additions. An ordinary actor command is not a
+precheck request. Response encoding has fixed fields and enumerated outcomes;
+no diagnostic string, evidence byte, helper identity or policy tree is included.
+
+Every response is marked `precheck: true`; a passed result must explicitly say
+`review_required: true`. The response decoder checks the original query and
+expected policy epoch, including the nested known basis and stale-generation
+binding. It accepts only the precheck's closed Knowledge states and coarse
+errors, never an effect outcome, permit, pending submission or fabricated
+absence. Decoding verifies representation and correlation, not authenticity
+or truth. Retrying a query is new work, not an idempotent effect operation.
+
+`FilePrecheckWire::new` requires a positive bounded exchange allowance.
+`exchange` charges an entered frame before parsing, including malformed frames.
+Exhaustion performs no further parsing or evaluation. Reconstructing an adapter
+does not reset the native grant's shared evaluation allowance; creating another
+adapter's parser allowance is an explicit host decision, not a global network
+rate limiter. The original grant's conservative invalidation/revocation rules
+are unchanged.
+
+### Declared disclosure boundary
+
+| State | Actor-visible information | Still excluded |
+| --- | --- | --- |
+| No granted capability | No precheck adapter is provisioned | Policy, source and review data |
+| Known pass or denial | Coarse exact outcome; disclosure/query labels, policy epoch and captured clock cut | Predicate trace, literals, source values, helpers, votes and authority |
+| Wrong expected epoch | Supplied and captured public policy epochs | Internal controller sequence and review data |
+| Owner/source unavailable or invalidated | Coarse unknown state | Private failure detail and current internal history |
+| Revoked or dropped custodian | Withheld requiring exact-policy disclosure | Former disclosure data |
+| Malformed or exhausted exchange | Closed coarse error | Partial decoded input and internal diagnostics |
+
+Repeated allowed queries can infer exact-policy properties. This leakage is
+intentional and bounded by the explicit grant, not eliminated by the byte
+protocol. The full deployment profile options and witness-sensitive caching
+remain separate unfinished FA-142 work; this adapter does not claim them.
+
+## Authenticated precheck process transport
+
+`FilePrecheckChannel` wraps the original wire in bounded newline framing.
+`UnixPrecheckConnection` drives an already connected Unix socket without
+creating a task, runtime or listener. On Linux, use `FilePrecheckPeerSession`
+when the host needs kernel-credential admission before any request is read:
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    FilePrecheckPeerSession, FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES,
+};
+use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+
+// trusted_peer_policy is independently provisioned, never learned from a request.
+// Keep the original disclosure custodian with the supervisor.
+let wire = FilePrecheckWire::new(precheck, 16)?;
+let mut session = FilePrecheckPeerSession::new(
+    trusted_peer_policy, wire, MAX_PRECHECK_FRAME_BYTES, 4,
+)?;
+session.attach(accepted_socket)?;
+let report = session.drive(DriveBudget::default())?;
+// The host schedules the next bounded drive from report.status.interest().
+```
+
+`PeerPolicy` requires both the supplied UID and GID and can additionally require
+a PID. It verifies this socket's kernel-observed connection credentials before
+reading bytes or moving the original channel. A refused candidate is dropped
+without a response, an evaluation, a parser charge, or disruption of an active
+connection. These credentials do not attest executable code, a remote principal,
+or the later recipient of a transferred descriptor. UID/GID-only policies admit
+all connecting processes with those credentials. The policy must be trusted
+configuration, not an identity inferred from the candidate being checked.
+
+The channel retains at most one bounded input document and one response. A
+newline is mandatory; EOF does not complete a fragment. A one-byte frame excess
+closes the channel before parsing. Pipelined bytes after the first newline stay
+unprocessed until that response is fully written **and flushed**. Native async
+integrations can use `feed`, `pending_output`, `acknowledge_written` and
+`acknowledge_flushed` with the same barrier.
+
+Each `drive` requires positive read-byte, write-byte, frame and I/O-attempt
+allowances within the original transport maxima. It reports actual progress;
+`Interrupted` spends an I/O attempt, `WouldBlock` yields, and terminal socket
+failures latch. Scheduler interest distinguishes buffered local work from
+readability, writability and closure. The borrowed descriptor is a capability
+for the **trusted scheduler**, not an isolation boundary against a hostile host
+that can otherwise use or duplicate it. Socket work is bounded per drive;
+the synchronous exact evaluation is not preempted mid-call, and the host must
+enforce its whole-session deadline and bound rejected candidate attempts.
+
+The session owns one original channel across explicit `disconnect`/`attach`
+cycles. Its frame allowance and the native grant's shared query allowance never
+reset on reconnect. Only transport fragments and unsent replies are discarded;
+an evaluated query stays charged even when its reply is lost. Connection
+admissions have a separate finite limit; rejected candidates do not consume it.
+Exhausting the original wire closes further intake after the final reply drains.
+Repeating a query, including its old label, is new work, not an idempotent retry.
+
+`session.revoke()` irreversibly closes that ingress but does not revoke other
+native port copies. Revoking or dropping the original disclosure instead makes
+every such port return `Withheld`; the session does not renew it. Any original
+owner revision change still makes the captured cut unavailable. No precheck
+frame, reconnect or socket teardown observes time, refreshes a source, issues a
+new grant, consumes a submission ID or changes the journal/effect ledger.
+
+The native transport does not implicitly create a source/clock observation.
+The [ordinary live operator service](LIVE_ACTOR_PRECHECK.md) now offers an
+explicit optional bootstrap and separately named endpoint. It retains one grant,
+checks the original source lease on every scheduling turn, and isolates precheck
+transport failures from the ordinary stop/journal path. Actual Submit still
+performs its original fresh acquisition. Generated, learned, predictive and
+cumulative-stream histories retain the native disclosure refusal rather than
+falling back to raw proposals.
+
+## Authenticated one-shot client
+
+The [actor-only operator command](LIVE_ACTOR_PRECHECK.md#actor-only-command)
+uses this native client with public profiles and a bounded proposal document.
+It adds one cumulative socket-work/elapsed allowance and an independently
+selected disclosure ID, without opening private Config, source or journal.
+Pathname connection and output remain synchronous cooperative operator steps.
+
+On Linux, the separate `precheck_wire::client::PrecheckPeerClient` sends one
+request to an independently selected server. It is not the durable actor
+submission client and holds no ticket, journal, source, helper or effect key:
+
+```rust
+use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
+    PrecheckRequest, client::PrecheckPeerClient,
+};
+use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+
+let request = PrecheckRequest { query: 9001, proposal };
+let mut client = PrecheckPeerClient::connect(
+    connected_socket, trusted_server_policy, request, expected_policy_epoch,
+)?;
+let report = client.drive(DriveBudget::default())?;
+// Schedule further bounded calls from report.status.interest().
+// A latched report.status.failure is distinct from a server precheck refusal.
+if let Some(response) = client.take_response() {
+    // response.result is the original Knowledge/result, never admission.
+}
+```
+
+Connection establishment is deliberately outside this API: `connect` takes an
+**already connected** `UnixStream`, verifies its kernel peer before sending any
+request bytes, then selects nonblocking I/O. It does not perform a potentially
+blocking pathname connect, clone a socket, spawn a task or install an executor.
+The host must bound establishment and enforce the whole-exchange elapsed limit.
+The fixed server policy must not be inferred from an untrusted socket. The
+independent expected policy epoch must equal the proposal's epoch, including
+when that expected epoch is zero; the original decoder subsequently binds it to
+the returned observation or stale-generation result.
+
+Partial request writes resume without duplication. The complete request and its
+newline must be written and flushed before the client reads a response. It
+retains at most the existing response-byte ceiling and requires one complete
+newline-delimited document. Query, epoch, schema, `precheck` and mandatory
+`review_required` checks use the original strict response decoder. A matching
+server `Capacity`, `Unavailable` or `Withheld` response is a completed response,
+not a client transport failure; no coarse error is converted into a pass.
+
+After the newline, one further bounded read rejects queued trailing bytes,
+including a second response hidden across drive boundaries. EOF or WouldBlock
+confirms only the currently available frame boundary; WouldBlock cannot prove
+that no later peer bytes could arrive. Success closes this one-shot socket, so
+it is never reused for another response. Truncation, malformed or misbound data,
+and terminal I/O errors instead latch failure and close it. An
+Interrupted operation spends an I/O attempt; WouldBlock yields. Zero frame or
+I/O allowance yields without work, and over-limit budgets refuse without
+poisoning an otherwise valid exchange.
+
+`take_response` succeeds at most once. Pending, failed and already-taken states
+return no response and are distinguished by `status`. Later valid drives on a
+terminal client do no I/O. There is no automatic retry or reconnect: a server
+may have charged an evaluation even when its reply is lost, and an explicit new
+query spends new work. Neither a client failure nor a successful pass changes
+the original submission/review, journal or effect accounting.
 
 ## What a result says
 
@@ -131,3 +347,19 @@ Compilation, runtime tests and the full unchanged gate require execution on the
 configured remote builder. Missing launcher/toolchain is not qualification.
 No admission/dispatch semantics, dependency inventory, journal format, policy
 relaxation or production feature gate is changed by enabling these source APIs.
+
+The byte-interface regression source adds request/response round trips, actual
+source-backed pass/deny/stale/unknown/withheld exchanges, malformed/cross-protocol
+input, full-width identifiers, response correlation, strict review-required
+labeling, parser/evaluation budget separation and unchanged journal/request
+state. Targeted and full remote-check attempts exit 127 because `rch` is absent;
+these new tests and compilation have not executed.
+
+The process-transport increment adds fourteen runtime regression functions and
+three compile-fail examples. The authenticated client adds eleven runtime
+functions and one compile-fail example, including deterministic partial-I/O
+faults and real source-backed owner/session exchanges. Tests cover one-byte
+drives, no request bytes before authentication, complete flush ordering, exact
+response limits, wrong query/epoch, extra/truncated replies, latched failures,
+unchanged durable state and work retained after a lost reply. These are authored
+regressions, not executed evidence; the required remote runner remains absent.

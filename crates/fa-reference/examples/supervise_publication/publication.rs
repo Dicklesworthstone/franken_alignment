@@ -7,6 +7,8 @@ mod joint;
 #[cfg(test)]
 #[path = "publication/joint_tests.rs"]
 mod joint_tests;
+#[path = "publication/learned.rs"]
+mod learned;
 #[path = "publication/native.rs"]
 mod native;
 #[path = "publication/wait.rs"]
@@ -38,7 +40,7 @@ use fa_reference::witness::refinement::RefinementBudget;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-const PROFILE_BYTES: usize = 65_536;
+pub(crate) const PROFILE_BYTES: usize = 65_536;
 
 /// Operator-selected original and live sources are separate. Neither is read by
 /// parsing or receipt-only recovery. Requirements cannot be chosen from a later
@@ -223,6 +225,17 @@ impl PublicationProfile {
         })
     }
 
+    pub(crate) fn simple_limits(&self) -> Result<PublicationLimits, String> {
+        if self.feed.is_some()
+            || self.wait.is_some()
+            || self.snapshot_fallback
+            || self.joint.is_some()
+        {
+            return Err("native Andon checked composition currently requires the plain publication witness profile; stronger feed/snapshot/joint publication profiles are not downgraded".into());
+        }
+        Ok(self.limits)
+    }
+
     fn check_scope(&self, profile: &FileOversightProfile) -> Result<(), JournalError> {
         if let PublicationSources::Producer {
             profile: producer, ..
@@ -321,28 +334,26 @@ impl PublicationProfile {
         if host.publication_validation_profile().map_err(debug)? != Some(self.limits) {
             return Err("stored publication limits differ from the explicit profile".into());
         }
-        let stored_fallback =
-            if self.feed.is_some() {
-                host.publication_snapshot_fallback_enabled()
+        match host.publication_change_status() {
+            Ok(_) if self.feed.is_none() => {
+                return Err("stored publication feed differs from the explicit profile".into());
+            }
+            Ok(_) => {
+                if host
+                    .publication_snapshot_fallback_enabled()
                     .map_err(debug)?
-            } else {
-                match host.publication_change_status() {
-                Err(fa_reference::action::consequence::delivery::persistent::JournalError::Contract(
-                    fa_reference::Error::Incomplete,
-                )) => false,
-                Ok(_) => {
+                    != self.snapshot_fallback
+                {
                     return Err(
                         "stored publication history policy differs from the explicit profile"
                             .into(),
                     );
                 }
-                Err(error) => return Err(debug(error)),
             }
-            };
-        if stored_fallback != self.snapshot_fallback {
-            return Err(
-                "stored publication history policy differs from the explicit profile".into(),
-            );
+            // The original fallback getter requires a feed. A plain profile
+            // must explicitly match an owner without one before any source I/O.
+            Err(JournalError::Contract(Error::Incomplete)) if self.feed.is_none() => {}
+            Err(error) => return Err(debug(error)),
         }
         Ok(())
     }
@@ -370,22 +381,14 @@ impl PublicationProfile {
         let reader = host
             .publication_producer_reader(attempt, path, *profile)
             .map_err(debug)?;
-        let original = reader.read_capture().map_err(debug)?;
-        if self.requests.is_empty() {
-            if original.inputs().opaque().is_none() {
-                return Err(
-                    "whole-input supervision requires the original opaque input view (Incomplete)"
-                        .into(),
-                );
-            }
-        } else if original.inputs().structured().is_none() {
-            return Err(
-                "checked supervision requires the original structured witness image".into(),
-            );
-        }
         // Profile parsing fixes the recipe; native binding checks the actual
         // original image (including mandatory opaque input for an empty recipe),
         // stages catch-up first, and never installs this image as fresh evidence.
+        let mode = if self.requests.is_empty() {
+            "whole-input"
+        } else {
+            "structured"
+        };
         host.bind_publication_from_producer(
             host.revision(),
             attempt,
@@ -394,8 +397,8 @@ impl PublicationProfile {
             self.requests.clone(),
             clock,
         )
-        .map_err(debug)?
-        .map_err(debug)?;
+        .map_err(|error| format!("{mode} publication binding failed: {error:?}"))?
+        .map_err(|error| format!("{mode} publication capture failed: {error:?}"))?;
         Ok(PreparedPublication {
             current: CurrentPublication::Producer(reader),
             feed: Some(feed),
@@ -433,8 +436,7 @@ impl PublicationProfile {
         if self.requests.is_empty() {
             if original.inputs().opaque().is_none() {
                 return Err(
-                    "whole-input supervision requires the original opaque input view (Incomplete)"
-                        .into(),
+                    "whole-input supervision requires the original opaque input view".into(),
                 );
             }
         } else if original.inputs().structured().is_none() {

@@ -110,37 +110,8 @@ impl MonitoredKvCheckpoint {
             self.policy.clone(),
         )?;
         let source = self.decoder.cache();
-        let rows = source
-            .len()
-            .checked_mul(self.policy.monitor.taps().len())
-            .ok_or(Error::Overflow)?;
-        if rows > self.policy.monitor.budget().rows {
-            return Err(Error::Limit);
-        }
-        let allowance = self.policy.restrict(budget.audit);
-        let audit = if source.is_empty() {
-            None
-        } else {
-            let (image, compression) = self.policy.codec.evaluate_held_out(
-                self.evaluation_origin,
-                source,
-                allowance.preparation.compression,
-            )?;
-            let retention = retained_groups(&self.policy.retention, source)?;
-            let checked = CheckedLearnedKv::new(
-                image,
-                source,
-                retention,
-                allowance.preparation.source_check,
-            )?;
-            let monitoring = self
-                .policy
-                .monitor
-                .analyze_with_budget(&checked, allowance.monitoring)?;
-            Some(RestartAudit {
-                compression,
-                monitoring,
-            })
+        let audit = if source.is_empty() { None } else {
+            Some(audit_restart_source(&self.policy, self.evaluation_origin, source, budget.audit)?)
         };
         Ok(MonitoredKvRestart {
             checkpoint: self.clone(),
@@ -153,10 +124,26 @@ impl MonitoredKvCheckpoint {
     }
 }
 
-fn retained_groups(
-    policy: &LearnedStreamRetention,
-    source: &ModelKvImage,
-) -> Result<ResidualRetention, Error> {
+// Shared numerical operation, not an evidence importer. Both callers obtain
+// their source from an ORIGINAL owned cache: the typed checkpoint above, or the
+// actually restored successor in learned_source::host. Stream lineage stays in
+// the source descriptor; this never relabels the earlier checkpoint audit.
+pub(crate) fn audit_restart_source(policy: &LearnedDecoderPolicy, evaluation_origin: u64,
+    source: &ModelKvImage, budget: LearnedDecoderAllowance) -> Result<RestartAudit, Error>
+{
+    if source.is_empty() { return Err(Error::Incomplete); }
+    let rows = source.len().checked_mul(policy.monitor.taps().len()).ok_or(Error::Overflow)?;
+    if rows > policy.monitor.budget().rows { return Err(Error::Limit); }
+    let allowance = policy.restrict(budget);
+    let (image, compression) = policy.codec.evaluate_held_out(evaluation_origin,
+        source, allowance.preparation.compression)?;
+    let retention = retained_groups(&policy.retention, source)?;
+    let checked = CheckedLearnedKv::new(image, source, retention, allowance.preparation.source_check)?;
+    let monitoring = policy.monitor.analyze_with_budget(&checked, allowance.monitoring)?;
+    Ok(RestartAudit { compression, monitoring })
+}
+
+fn retained_groups(policy: &LearnedStreamRetention, source: &ModelKvImage) -> Result<ResidualRetention, Error> {
     match policy {
         LearnedStreamRetention::None => Ok(ResidualRetention::None),
         LearnedStreamRetention::All => Ok(ResidualRetention::All),

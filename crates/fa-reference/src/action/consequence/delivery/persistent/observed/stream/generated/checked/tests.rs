@@ -259,7 +259,45 @@ fn checked_native_invalid_limits_and_foreign_clock_fail_before_store_creation() 
             .is_err()
         );
         assert!(!root.store().exists());
+        let valid = selection(true, false);
+        let host = create(&root, valid);
+        assert_eq!(valid.check(&host.events), Ok(()));
+        assert_eq!(host.decoder_inspection().unwrap().numerical.position, 0);
+        assert_eq!(host.inspect().executions, 0);
     }
+}
+
+#[test]
+fn native_replay_and_encoding_enforce_the_same_original_publication_clock() {
+    let root = Directory::new();
+    let host = create(&root, selection(true, false));
+    let before = bytes(&host);
+    let mut changed = host.events.clone();
+    let mut replacements = 0;
+    for event in &mut changed {
+        if let Event::PublicationWitness(WitnessEvent::Freshness(FreshnessEvent::Enable(policy))) =
+            event
+        {
+            policy.clock_domain += 1;
+            replacements += 1;
+        }
+    }
+    assert_eq!(replacements, 1);
+    assert_eq!(
+        journal::encode(&host.profile, host.store.identity(), &changed).err(),
+        Some(Error::Binding)
+    );
+    assert_eq!(
+        Machine::replay(&host.profile, &changed).err(),
+        Some(Error::Binding)
+    );
+    let valid = Machine::replay(&host.profile, &host.events).unwrap();
+    assert_eq!(valid.snapshot(host.events.len()), host.inspect());
+    assert_eq!(
+        journal::encode(&host.profile, host.store.identity(), &host.events).unwrap(),
+        before
+    );
+    assert_eq!(bytes(&host), before);
 }
 
 #[test]

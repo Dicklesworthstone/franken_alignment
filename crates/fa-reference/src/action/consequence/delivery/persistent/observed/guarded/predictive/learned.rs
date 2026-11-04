@@ -1,21 +1,25 @@
 //! Recover a pinned predictive learned owner through the original replay/fence.
 //! The full guard inventory and recipe are independent inputs, never disk defaults.
 mod inspection;
+use crate::action::consequence::delivery::credential_broker::{
+    CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
+};
+use crate::action::consequence::delivery::persistent::observed::credential::FileCredentialStatus;
+use super::{FilePredictiveRequirements, FilePredictiveRoles};
+use super::super::{FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
+    learned_recovery::check_recovery_reserve};
+use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
+use super::super::super::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery};
+use crate::action::consequence::delivery::StopRequest;
+use crate::action::ElapsedTick;
 use super::super::super::credibility::CredibilityEvent;
 use super::super::super::decoder::learned::{
     FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus,
     checkpoint::FileLearnedResetIntent,
 };
-use super::super::super::shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery};
-use super::super::super::{Event, FileOversight, FileOversightProfile, JournalError};
-use super::super::{
-    FileOversightRoles, anchored::FileHistoryAnchor, learned::check_profile,
-    learned_recovery::check_recovery_reserve,
-};
-use super::{FilePredictiveRequirements, FilePredictiveRoles};
 use crate::Error;
-use crate::action::ElapsedTick;
-use crate::action::consequence::delivery::StopRequest;
+use crate::action::consequence::oversight::actor::{ActorOutcome, Knowledge};
+use super::super::super::stream::FileStreamProposal;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::fmt;
 use std::path::Path;
@@ -148,6 +152,176 @@ fn check_history(events: &[Event], expected: &FilePredictiveRequirements) -> Res
 }
 
 impl FilePredictiveLearnedRecovery {
+    // Sealed fleet composition: framing is inspected before event zero, while
+    // extraction requires this wrapper's COMPLETE independent Ready checks.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn shutdown_history(&self)
+        -> (&FileOversightProfile, &[Event], &Path, usize)
+    {
+        self.inner.shutdown_history()
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn into_shutdown_terminal(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStopRecovery, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_terminal()
+    }
+
+    /// Select one original external request for offline historical policy
+    /// diagnosis before any replay. The same exclusive recovery lock, numerical
+    /// recipe and independent guard requirements remain held; no new admission
+    /// or fictional proposal is created for a request that was not admitted.
+    pub fn require_request_proposal_investigation(mut self, request: u64,
+        scope: crate::action::consequence::experiment::InterventionScope)
+        -> Result<Self, JournalError>
+    {
+        self.inner = self.inner.require_request_proposal_investigation(request, scope)?;
+        Ok(self)
+    }
+
+    /// Return only the selected historical policy experiment after the whole
+    /// numerical history and every independent guard qualify. The original
+    /// finalizer rechecks the canonical bytes and releases the lock without
+    /// cleanup, clock, fence, effect or live owner.
+    pub fn finish_proposal_investigation(self)
+        -> Result<crate::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_proposal_investigation()
+    }
+
+    /// Compare the complete retained current-policy corpus after the original
+    /// numerical history and EVERY independently selected requirement qualify.
+    /// The inner finalizer rechecks the canonical bytes under the same lock.
+    /// No live owner, campaign key, fence, cleanup or journal mutation escapes.
+    pub fn finish_policy_replay(
+        self,
+        candidate: crate::action::consequence::gate::containment::session::policy::Policy,
+        limits: crate::action::consequence::policy_campaign::ReplayLimits,
+    ) -> Result<(
+        crate::action::consequence::delivery::persistent::FileDeliverySnapshot,
+        crate::action::consequence::policy_campaign::PolicyReplayReport,
+    ), JournalError> {
+        self.check_ready()?;
+        self.inner.finish_policy_replay(candidate, limits)
+    }
+
+    /// Complete only the selected Unknown -> IrrecoverablyUnknown disposition
+    /// after this cursor's full original guard, numerical, policy, credential
+    /// and floor checks. No recovery Fence, clock, live owner or role escapes.
+    /// Exact retries retain the original receipt without another event; charges
+    /// and blocked stream successors remain unchanged.
+    pub fn finish_abandoned_with_anchor(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_anchor(request)
+    }
+
+    /// Preserve independently selected source custody through only this exact
+    /// native abandonment. The saved cut or its one matching event is checked
+    /// before cleanup or mutation, retaining every original wrapper requirement.
+    pub fn finish_abandoned_with_checkpoint(
+        self,
+        request: crate::action::consequence::delivery::persistent::abandonment::FileAbandonRequest,
+        saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+    ) -> Result<super::super::recovery::FileAbandonedHistory, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_abandoned_with_checkpoint(request, saved)
+    }
+
+    /// Inspect only the fully replayed, independently guarded credential state.
+    /// This grants no owner, permit, observer or authority and publishes no fence.
+    pub fn credential_status(&self) -> Result<Option<FileCredentialStatus>, JournalError> {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.credential_status())
+    }
+
+    /// Validate the original rotation, including exact retained-operation retry,
+    /// before cleanup or the recovery fence. Some is the HISTORICAL receipt;
+    /// current generation remains available separately through credential_status.
+    pub fn check_credential_rotation(&self, request: CredentialRotationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_rotation(request)?)
+    }
+
+    /// Apply the same original revocation preflight without issuing live roles
+    /// or changing canonical/staging bytes. Terminal exact retries remain reads.
+    pub fn check_credential_revocation(&self, request: CredentialRevocationRequest)
+        -> Result<Option<CredentialChangeReceipt>, JournalError>
+    {
+        self.check_ready()?;
+        Ok(self.inner.verified_guarded_machine()?.check_credential_revocation(request)?)
+    }
+
+    /// Complete this independently guarded numerical history with the original
+    /// single-replacement Fence/Time/Sweep, then return only the selected actor
+    /// outcome. Guard failures and bad selection precede clock and mutation.
+    /// Ordinary capacity, exact canonical checks and unknown liability rules
+    /// remain unchanged; no observer, reviewer or live owner escapes.
+    pub fn finish_reconciled_receipt<F>(self, request: u64, finish_after: Option<u64>, clock: F)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt(request, finish_after, clock)
+    }
+
+    /// Retain the same original acknowledged reconciliation cut without a live
+    /// owner. Every independent wrapper guard is checked before the clock.
+    pub fn finish_reconciled_receipt_with_history<F>(self, request: u64,
+        finish_after: Option<u64>, clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_history(request, finish_after, clock)
+    }
+
+    /// Admit the exact independently retained source checkpoint on the SAME
+    /// fully guarded cursor before any reconciliation clock or mutation.
+    pub fn finish_reconciled_receipt_with_checkpoint<F>(self, request: u64,
+        finish_after: Option<u64>, saved: &crate::action::consequence::delivery::persistent::observed::driver::topology::checkpoint::TopologyCheckpoint,
+        clock: F)
+        -> Result<crate::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt, JournalError>
+    where F: FnOnce() -> ElapsedTick {
+        self.check_ready()?;
+        self.inner.finish_reconciled_receipt_with_checkpoint(request, finish_after, saved, clock)
+    }
+
+    /// Return only the original historical actor observation after all of this
+    /// wrapper's independent guards pass. None selects a message; Some selects
+    /// a finish's exact confirmed predecessor. The inner finalizer rechecks the
+    /// locked canonical cut without cleanup, fencing, reconciliation or roles.
+    /// No reserve is consumed; pending/unknown liabilities remain unresolved.
+    pub fn finish_receipt(self, request: u64, finish_after: Option<u64>)
+        -> Result<Knowledge<ActorOutcome>, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_receipt(request, finish_after)
+    }
+
+    /// Select an original message only after the complete independent guard,
+    /// policy, recipe and floor checks pass. Read-only; no fence or role issuance.
+    pub fn learned_text_stream_message_request(&self, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Select the exact retained finish and confirmed predecessor under the
+    /// SAME full guard contract. A failed selection changes no stored bytes.
+    pub fn learned_text_stream_finish_request(&self, after_request: u64, request: u64)
+        -> Result<FileStreamProposal, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.learned_text_stream_finish_request(after_request, request)
+    }
+
     /// Require the exact independently selected original terminal reserve before
     /// replay. Missing, changed or late requirements release no observer, perform
     /// no cleanup/fence and replenish no allowance. Full predictive guard and
@@ -209,11 +383,53 @@ impl FilePredictiveLearnedRecovery {
         Ok((host, roles))
     }
 
+    /// Transfer only a fixed Stop target after rechecking this wrapper's
+    /// COMPLETE original recipe, guards, policy, credentials and history floors.
+    /// The original private replay and exclusive lock survive; no weaker cursor,
+    /// live owner or role is released before or after the nonce-bound exchange.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.into_recovery_stop(operation)
+    }
+
     /// Select the original stop predecessor after all independently required
     /// guards, predictor ownership and optional evaluation checks succeed.
     pub fn stop_request(&self, operation: u64) -> Result<StopRequest, JournalError> {
         self.check_ready()?;
         self.inner.stop_request(operation)
+    }
+
+    /// Withdraw admission through the original Stop/Fence without acquiring
+    /// settlement time. Complete independent requirements, the retained reserve
+    /// and canonical custody still apply; no live role or drain receipt escapes.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.check_ready()?;
+        self.inner.finish_admission_stop(request)
+    }
+
+    /// Drain only the matching acknowledged stop through the original terminal
+    /// event. A failed clock preserves that stop and its charged liabilities.
+    /// An already-drained retry does not acquire time or append another event.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.finish_stopped_drain(request, clock)
+    }
+
+    /// Retain the same fully guarded combined terminal transaction while
+    /// allowing the caller to refuse unavailable or late settlement time.
+    /// Refusal returns neither a candidate receipt nor a history anchor.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.check_ready()?;
+        self.inner.try_finish_stopped_with_anchor(request, clock)
     }
 
     /// Finish the sealed predictive replay with original Stop/Fence/StopProgress,

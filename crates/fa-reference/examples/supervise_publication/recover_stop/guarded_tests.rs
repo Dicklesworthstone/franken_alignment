@@ -1,4 +1,6 @@
 //! Actual source-publication operator, original journals and independent files.
+#[path = "guarded/abandonment/operator_tests.rs"]
+mod abandonment_operator_tests;
 use super::super::guarded::{self, Profile};
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::{
@@ -263,7 +265,7 @@ fn every_elapsed_boundary_including_ready_cancels_without_terminal_or_export_mut
         &mut Vec::new(),
     )
     .unwrap();
-    assert_eq!(calls, events + 3);
+    assert_eq!(calls, events + 5);
     assert_eq!(read_anchor(&target).revision(), case.before.revision + 3);
 }
 
@@ -473,7 +475,7 @@ fn actual_guarded_stop_command_uses_the_independent_profile_without_live_assets(
     let config = root.0.join("config.json");
     fs::write(&config, text).unwrap();
     let parsed = Config::read(&config).unwrap();
-    assert_eq!(parsed.profile, case.config.profile);
+    crate::config::assert_oversight_profiles_eq(&parsed.profile, &case.config.profile);
     let profile = root.0.join("recovery.json");
     fs::write(&profile, document(case.floor, &case.anchor, Some(&target))).unwrap();
     let args = vec![

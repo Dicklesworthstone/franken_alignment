@@ -31,8 +31,11 @@ struct Case {
 }
 
 fn generated(mode: Option<bool>, reserve: Option<RecoveryReserve>) -> Case {
-    let root = Root::new();
-    let mut config = configured(&root);
+    generated_at(mode, reserve, false)
+}
+
+fn generated_at(mode: Option<bool>, reserve: Option<RecoveryReserve>, dispatched: bool) -> Case {
+    let root = Root::new(); let mut config = configured(&root);
     let path = fixture::write(&root, b"allow");
     if let Some(owned) = mode {
         super::forecast::install(&root, &path, owned, 60_000);
@@ -80,20 +83,22 @@ fn generated(mode: Option<bool>, reserve: Option<RecoveryReserve>) -> Case {
     let mut prediction =
         observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
-    let mut driver = FileSupervisedDriver::new(supervisor);
+    let mut driver = FileSupervisedDriver::new(supervisor); let mut wire = ActorWire::new(port);
     let mut control = Control::new(&config, loaded.request, None).unwrap();
-    assert!(
-        generate_selected(
-            &mut driver,
-            &reviewer,
-            &mut config,
-            &mut control,
-            &deadline(),
-            &mut || ElapsedTick(1000),
-            prediction.as_mut()
-        )
-        .unwrap()
-    );
+    assert!(generate_selected(&mut driver, &reviewer, &mut config, &mut control,
+        &deadline(), &mut || ElapsedTick(1000), prediction.as_mut()).unwrap());
+    if dispatched {
+        let deadline = deadline();
+        submit(&mut driver, &mut wire, &mut config, &loaded, &deadline, &mut || ElapsedTick(1000)).unwrap();
+        let (reviewed, history) = super::continuation::review_current(
+            &mut config, &loaded, &reviewer, driver, &deadline);
+        driver = reviewed;
+        let human = super::continuation::approve(&mut driver, &mut config, &reviewer, loaded.request);
+        assert!(matches!(driver.step_computed_from_policy_file(&mut config.source,
+            || ElapsedTick(1000), Some(&human)).result.unwrap(), FileDriverEvent::Dispatched { .. }));
+        assert!(driver.supervisor().host().unwrap().inspect().control.ledger.charged > 0);
+        drop(history);
+    }
     let host = driver.supervisor().host().unwrap();
     let numerical = host.learned_generation_inspection().unwrap().numerical;
     assert_eq!(numerical.position, 4);
@@ -104,16 +109,9 @@ fn generated(mode: Option<bool>, reserve: Option<RecoveryReserve>) -> Case {
     assert!(before.stop.is_none());
     let learned = (mode == Some(true)).then(|| host.learned_action_consistency_snapshot().unwrap());
     let mut archive = Vec::new();
-    host.history_anchor()
-        .unwrap()
-        .write_to(&mut archive, MAX_HISTORY_ANCHOR_BYTES)
-        .unwrap();
-    drop(host);
-    drop(port);
-    drop(prediction);
-    assert_eq!(cleanup(driver, 1000, 1), 0);
-    let anchor = root.0.join("independent-stop.anchor");
-    fs::write(&anchor, &archive).unwrap();
+    host.history_anchor().unwrap().write_to(&mut archive, MAX_HISTORY_ANCHOR_BYTES).unwrap();
+    drop(host); drop(wire); drop(prediction); assert_eq!(cleanup(driver, 1000, 1), 0);
+    let anchor = root.0.join("independent-stop.anchor"); fs::write(&anchor, &archive).unwrap();
     // Recovery reloads the independent recipe without native helper intake.
     let mut loaded = recipe::load(&path, &config, false).unwrap();
     assert!(loaded.native.is_none());
@@ -430,7 +428,7 @@ fn actual_offline_stop_cli_needs_no_live_assets_peer_profile_or_credibility_caps
         let case = generated(mode, Some(RecoveryReserve::terminal()));
         let path = write_config(&case.root);
         let disk_config = Config::read(&path).unwrap();
-        assert_eq!(disk_config.profile, case.config.profile);
+        crate::config::assert_oversight_profiles_eq(&disk_config.profile, &case.config.profile);
         assert_eq!(disk_config.source_policy, case.config.source_policy);
         fs::remove_dir(case.root.0.join("peers")).unwrap();
         let missing = case.root.0.join("missing-qualification-capsule");
@@ -544,5 +542,5 @@ fn lost_stop_report_preserves_acknowledged_history_and_retry_only_reports_the_co
     }
 }
 
-#[path = "stopped/anchor_export.rs"]
-mod anchor_export;
+#[path = "stopped/anchor_export.rs"] mod anchor_export;
+#[path = "stopped/phases.rs"] mod phases;

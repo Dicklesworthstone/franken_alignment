@@ -1,7 +1,10 @@
 //! Real inference, files, process helpers and socket clients; synthetic model only.
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::client::ReviewClientProgress;
-use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::ReviewDecision;
+use fa_reference::action::consequence::delivery::persistent::observed::reviewer::wire::{
+    ReviewDecision, ReviewPacket,
+};
+use fa_reference::action::consequence::delivery::stream::ReleaseFrame;
 use fa_reference::action::consequence::oversight::actor::{ActorOutcome, Knowledge, UnknownReason};
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     ActorExchange, ClientIoBudget, ClientIoLimits, ClientProgress,
@@ -76,7 +79,7 @@ fn actor_thread(
             command = Command::Poll {
                 request: profile.request,
             };
-            pause(5);
+            pause(1);
         }
     })
 }
@@ -85,14 +88,16 @@ fn reviewing(
     store: std::path::PathBuf,
     bootstrap: fa_reference::action::consequence::delivery::persistent::observed::FileOversightProfile,
     decision: ReviewDecision,
-) -> std::thread::JoinHandle<()> {
+) -> std::thread::JoinHandle<ReviewPacket> {
     std::thread::spawn(move || {
         let started = Instant::now();
         while !profile.socket(91).exists() {
-            assert!(started.elapsed() < Duration::from_secs(30));
+            assert!(started.elapsed() < Duration::from_secs(10));
             pause(1);
         }
-        let mut client = profile.connect_client(91).unwrap();
+        let remaining = Duration::from_secs(10).saturating_sub(started.elapsed());
+        let mut client = profile.connect_client_waiting(91, remaining).unwrap();
+        let mut packet = None;
         loop {
             assert!(started.elapsed() < Duration::from_secs(30));
             match client.step().unwrap() {
@@ -104,13 +109,80 @@ fn reviewing(
                             .executions,
                         0
                     );
+                    packet = Some(client.packet().unwrap().clone());
                     client.respond(decision).unwrap();
                 }
-                ReviewClientProgress::Complete => return,
+                ReviewClientProgress::Complete => return packet.unwrap(),
                 _ => pause(1),
             }
         }
     })
+}
+
+#[test]
+fn native_source_lease_is_checked_before_the_first_numerical_step() {
+    for now in [1009, 1010] {
+        let root = Root::new();
+        let mut config = configured(&root);
+        config.source_policy.freshness =
+            fa_reference::action::consequence::oversight::policy_state::StateFreshness::new(10)
+                .unwrap();
+        let native = inputs(&root, &config);
+        let (mut host, _) = FileOversight::create_generated_text_stream_with_reserve(
+            &config.store,
+            config.profile.clone(),
+            native.stream,
+            native.decoder.clone(),
+            native.tokenizer.clone(),
+            RecoveryReserve::terminal(),
+        )
+        .unwrap();
+        host.enable_file_source(host.revision(), config.source_policy)
+            .unwrap();
+        host.refresh_file_source(host.revision(), &mut config.source, ElapsedTick(1000))
+            .unwrap();
+        host.observe_time(host.revision(), ElapsedTick(1000))
+            .unwrap();
+        let numerical = host.decoder_inspection().unwrap().numerical;
+        let command = FileTextGenerationCommand::new(
+            native.generation,
+            numerical.actor_revision,
+            numerical.position,
+            native.request.clone(),
+        )
+        .unwrap();
+        host.begin_decoder_text(host.revision(), command).unwrap();
+        let deadline = Deadline {
+            logical: ElapsedTick(10000),
+            started: Instant::now(),
+            wall: Duration::from_secs(10),
+        };
+        let result = stamp(&mut host, &deadline, &mut || ElapsedTick(now));
+        if now == 1009 {
+            result.unwrap();
+            host.advance_decoder_text(host.revision(), native.generation, 0)
+                .unwrap();
+            assert_eq!(host.decoder_inspection().unwrap().numerical.position, 1);
+            assert_eq!(
+                host.decoder_text_progress(native.generation)
+                    .unwrap()
+                    .generation_revision(),
+                1
+            );
+        } else {
+            assert!(result.unwrap_err().contains("Stale"));
+            assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
+            assert_eq!(
+                host.decoder_text_progress(native.generation)
+                    .unwrap()
+                    .generation_revision(),
+                0
+            );
+        }
+        assert_eq!(host.inspect().executions, 0);
+        assert_eq!(host.inspect().control.ledger.charged, 0);
+        assert_eq!(host.inspect().control.ledger.reserved, 0);
+    }
 }
 
 #[test]
@@ -147,8 +219,12 @@ fn native_service_computed_text_requires_original_helpers_and_separate_human_key
             &mut output,
         );
         assert!(result.is_ok(), "{result:?}");
-        human.join().unwrap();
+        let packet = human.join().unwrap();
         let response = client.join().unwrap();
+        let frame = ReleaseFrame::decode(&packet.action().spec().payload).unwrap();
+        assert_eq!(frame.message(), Some("A"));
+        assert!(frame.prior_messages().is_empty());
+        assert_eq!(packet.views().len(), 2);
         let stored = FileOversight::read_publication(&store, &bootstrap).unwrap();
         if approve {
             assert!(matches!(
@@ -159,11 +235,11 @@ fn native_service_computed_text_requires_original_helpers_and_separate_human_key
                 })
             ));
             assert_eq!(stored.executions, 1);
+            // The audience sees text; accounting charges the entire reviewed frame.
             assert_eq!(stored.payload, b"A");
             assert_eq!(
                 stored.control.ledger.charged,
-                (fa_reference::action::consequence::delivery::stream::STREAM_HEADER_BYTES
-                    + stored.payload.len()) as u64
+                packet.action().spec().payload.len() as u64
             );
         } else {
             assert!(matches!(

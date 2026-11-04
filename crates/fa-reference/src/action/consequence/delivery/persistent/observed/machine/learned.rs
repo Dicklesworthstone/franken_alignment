@@ -132,8 +132,34 @@ impl Machine {
                     return Err(Error::WrongState);
                 }
                 let config = config.runtime()?;
-                if config.requires_computed_identity() {
-                    self.check_computed_identity_bootstrap()?;
+                if let Some(policy) = config.required_credential_policy()
+                    && self.credential_policy.as_ref() != Some(policy) {
+                    // The ORIGINAL guarded bootstrap resolved the independent
+                    // perimeter and installed this policy before learned Enable.
+                    // A recipe assertion alone must never create that guard.
+                    return Err(Error::Binding);
+                }
+                if config.requires_computed_identity() { self.check_computed_identity_bootstrap()?; }
+                if let Some(identity) = config.required_computed_identity_registration()
+                    && self.identity_contract() != Some((&identity.passport, identity.policy)) {
+                    return Err(Error::Binding);
+                }
+                if let Some(policy) = config.required_held_out_joint() {
+                    // The independently bound recipe owns this original guard.
+                    // Reuse native bootstrap/mutual-exclusion checks in the same
+                    // candidate transition, never a second acknowledged image.
+                    self.apply_credibility(&super::super::credibility::CredibilityEvent::EnableHeldOutJoint(policy))?;
+                }
+                if let Some(publication) = config.required_publication_validation() {
+                    // The recipe owns these ORIGINAL native guards in the same
+                    // first-image transition. Their complete original encodings
+                    // are pinned by the independent recipe, never read as live
+                    // evidence from the journal. Preserve the original clock
+                    // binding even though no separate witness event is emitted.
+                    for event in publication.events() {
+                        event.check_clock_domain(self.clock_domain)?;
+                        self.apply_publication_witness(&event)?;
+                    }
                 }
                 config.install(&mut self.broker)?;
                 if let Some(policy) = config.required_policy_source() {
@@ -145,15 +171,8 @@ impl Machine {
                 let forecast = config.required_pre_output_forecast().cloned();
                 let owned_forecast = config.required_owned_pre_output_forecast().cloned();
                 let forecast_reset_successors = config.follows_forecast_reset_successors();
-                self.learned = Some(LearnedState {
-                    config,
-                    paused: false,
-                    pending: None,
-                    checkpoints: checkpoint::CheckpointHistory::default(),
-                    sidecar_outcomes: std::collections::BTreeMap::new(),
-                    sidecars: std::collections::BTreeMap::new(),
-                    message_continuation: None,
-                });
+                let owned_forecast_restart_audit = config.requires_owned_forecast_restart_audit();
+                self.learned = Some(LearnedState { config, paused: false, pending: None, checkpoints: checkpoint::CheckpointHistory::default(), sidecar_outcomes: std::collections::BTreeMap::new(), sidecars: std::collections::BTreeMap::new(), message_continuation: None });
                 if let Some(forecast) = forecast {
                     // One independently bound Enable owns BOTH installations.
                     // Use the original consistency route/reducer only after its
@@ -177,6 +196,9 @@ impl Machine {
                     // Only the versioned, independently pinned recipe enables
                     // successor streams in the SAME first-image transition.
                     self.broker.enable_learned_forecast_reset_successors()?;
+                }
+                if owned_forecast_restart_audit {
+                    self.broker.enable_owned_learned_forecast_restart_audit()?;
                 }
                 Ok(Transition::Unit)
             }

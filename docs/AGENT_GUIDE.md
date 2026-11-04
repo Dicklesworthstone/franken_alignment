@@ -1,6 +1,6 @@
 # Agent guide: operating FrankenAlignment from the driver's seat
 
-**Who this is for.** An AI agent (or a human using the same surface) that operates, investigates or supervises a FrankenAlignment deployment: the operator agent, not the controlled actor. Developer conventions are in [`AGENTS.md`](../AGENTS.md); the one-page model is [`docs/SYSTEM_MAP.md`](SYSTEM_MAP.md). Everything here describes the prospective surface of plan §17; none of these commands exists as code today.
+**Who this is for.** An AI agent (or a human using the same surface) that operates, investigates or supervises a FrankenAlignment deployment: the operator agent, not the controlled actor. Developer conventions are in [`AGENTS.md`](../AGENTS.md); the one-page model is [`docs/SYSTEM_MAP.md`](SYSTEM_MAP.md). The `fa ...` commands describe the prospective surface of plan §17. Implemented reference adapters are identified explicitly below; they do not establish the complete deployment surface.
 
 **The contract you can rely on.** Every value you receive carries its epistemic status; every object has an address; every mutation is idempotent with an expected predecessor; every rehearsal is labeled and can never mint a permit; every error is a plan (it names what would change it). You never need to guess whether a number is measured, whether an absence is observed or merely unobserved, or whether a command changed the world.
 
@@ -29,6 +29,36 @@ Each playbook is a sequence of verbs from [`registry/vocabulary.json`](../regist
 
 Failure branches: `BudgetExhausted` names the budget and the governance transition that could raise it (never raise it yourself to finish a hold); `StaleGeneration` means re-read the situation from the returned predecessor; `OutcomeUnknown` on a dispatched effect means reconcile (P3), never retry.
 
+Implemented reference admission diagnosis: for a learned publication, use
+`supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT`.
+It reconstructs the first exact-policy admission through the original guarded
+numerical replay, including a denial before a helper round exists. Optional
+`--payload` or `--search` uses immutable policy experiments; sufficient results
+still require fresh independent review. This offline, privileged projection
+requires the original recovery lock and exact v2 custody when topology is
+selected. It does not implement the full dispatch/helper `why-held` conjunction.
+See [learned diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+
+For an ordinary source-backed actor, the integrating supervisor can separately
+provision the [exact-precheck peer and client](ACTOR_EXACT_PRECHECK.md#authenticated-precheck-process-transport).
+The native Linux peer authenticates ingress; the actor-side one-shot client
+authenticates the server and receives only a correlated exact observation.
+Keep the disclosure custodian, source/clock observation and grant issuance with
+the supervisor. The [ordinary live service's explicit precheck option](LIVE_ACTOR_PRECHECK.md)
+wires that bootstrap to a separate endpoint and enforces the original source
+lease; other service modes have no fallback. A passed precheck still requires
+ordinary submission and review, not the privileged diagnosis above. Reconnects
+and lost replies do not replenish the original allowances. This is a scoped
+reference integration, not the complete prospective `fa` surface.
+
+The actor can run `supervise_publication actor-precheck ACTOR_PROFILE
+PRECHECK_PROFILE PRECHECK_JSON` using only its public profiles and proposal.
+Consume the original Knowledge response: a zero exit requires a passed exact
+precheck, still explicitly requiring review. Denials and other valid refusals
+render their response with a nonzero exit; transport/output failures never cause
+an automatic resend or an ordinary submission. A later Submit uses its original
+separate contract and independently fresh source.
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references; `fa verify fa://…/receipt/<id>` confirms independent bundle and receipt integrity before trusting retained artifacts.
@@ -40,11 +70,49 @@ Failure branches: `BudgetExhausted` names the budget and the governance transiti
 
 The actor gets no channel into this playbook. Its statements, if any, enter only as `ActorStatement` evidence with the untrusted label.
 
+**Implemented predictive-stream containment mapping.** The trusted supervisor
+can select the original owned prompt-audit recipe and use
+`create-learned-generated --prepare-stream-checkpoint` to retain a complete
+prompt before any prediction or sample. The separately requested
+`--narrow-stream-checkpoint` applies the registered `narrow` consequence to the
+exact retained checkpoint and current predecessor. Its original receipt sequence
+can identify the later incident frontier for `--begin-stream-reset` and
+`--complete-stream-reset`. All commands require their full documented inputs;
+the [predictive stream workflow](LEARNED_PREDICTIVE_STREAM_RESET.md) gives the
+grammar and independently retained request/anchor chain. This containment
+preserves policy, predictor, work, audience and charged liabilities. The
+same [topology-protected workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md)
+retains exact source/history pairs at each step and withdraws the accepted cut
+at narrowing; live continuation must freshly certify the current epoch without
+renewing spent source allowances. The
+supervisor's evidence binding does not authenticate a detector; any later
+publication still requires the original native and human review.
+
 ### P3. An effect's outcome is unknown
 
 1. `fa situation --scope run` lists it under unknown effects with its adapter's idempotency contract.
-2. If the adapter is `RemoteIdempotent`: `fa resolve <attempt> --reconcile` re-queries under the same key. If `NonIdempotent`: `fa resolve <attempt> --disposition <ConfirmedNotExecuted|Confirmed|IrrecoverablyUnknown>` requires an independently established outcome and the authority to record it.
-3. Never `propose` the same effect again to "make sure"; the reserved units stay charged until reconciled (plan §25.3).
+2. If the adapter is `RemoteIdempotent`: `fa resolve <attempt> --reconcile` re-queries under the same key. If `NonIdempotent`: `fa resolve <attempt> --disposition <ConfirmedNotExecuted|Confirmed>` requires an independently established outcome and the authority to record it. Selecting `IrrecoverablyUnknown` instead records a permanent unresolved liability; it never establishes whether the effect executed.
+3. Never `propose` the same effect again to "make sure". Unknown and irrecoverably unknown effects retain their conservative charge; retention expiry alone never selects abandonment (plan §25.3).
+
+**Implemented source-publication reference mapping.** The trusted supervisor may
+explicitly record that final unresolved disposition with
+`supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.
+Supply the original attempt, an operation ID and independently selected control
+sequence/authority epoch in the closed `fa.abandon-unknown/1` request. `CONFIG`
+and the `fa.guarded-abandon/1` or `/2` recovery profile must select the complete
+applicable guards and independently retained input history. The profile also
+requires a new output archive outside the authority store. This consumes guarded recovery without returning a live
+owner or advancing the predecessor through a Fence. It removes only the selected
+sendable envelope and records `IrrecoverablyUnknown`; actor outcomes remain
+Unknown, streams remain blocked, and Stop still lists the liability as unresolved
+and irrecoverable. An empty pending sweep is not a drained domain.
+
+Keep the exact original request after acknowledgment, including when anchor
+retention or stdout fails. A retry with that same request returns its original
+receipt without another event; select a new output archive for the retry. Do not
+invent a new operation or resubmit the effect. See
+[the durable abandonment contract](DURABLE_UNKNOWN_ABANDONMENT.md) for schemas,
+profile limits and the pending execution-verification boundary.
 
 ### P4. A helper needs promotion, demotion or rotation
 
@@ -65,11 +133,29 @@ The actor gets no channel into this playbook. Its statements, if any, enter only
 2. If the candidate needs observations the retained closures lack, the campaign says `mode: shadow`; do not present shadow as replay.
 3. `fa promote <policy> --campaign <artifact>`; refused without the campaign artifact.
 
+The executable reference mapping is
+[`supervise_publication policy-replay`](POLICY_REPLAY_OPERATOR.md).
+For learned-model histories use the documented `create-learned-generated`
+read-only recovery mode with independent history custody and the original
+guards; do not open them through the ordinary journal reader. Both report
+the complete retained current-policy corpus, not a caller-selected sample.
+`newly_reviewable` conveys no helper approval or promotion permission, and
+`requires_shadow` is a missing-observation result, not an executed shadow run.
+
 ### P7. Running an experiment
 
 1. `fa preregister H<n> --protocol <file>` before any confirmatory data; the ledger records the digest and date.
 2. Run under `ExperimentCx` only: `fa branch`, `fa intervene`, `fa replay`, canaries through the audit floor. No branch returns a permit.
 3. Record the result artifact against the preregistered row; a late protocol is labeled exploratory and cannot be promoted.
+
+The implemented source-token experiment is
+`supervise_publication compare-learned-prompt PLAN`. Its
+[closed file-backed plan](LEARNED_PROMPT_COUNTERFACTUAL_OPERATOR.md) runs the
+original monitored model under an exact prompt edit and a frozen paired seed
+schedule. Use an unchanged edit as the sham control. Retain the full report,
+including held, interrupted, failed-admission and unstarted trials; a censored
+nonmatch is not a negative observation. This command neither loads a production
+store nor registers a confirmatory protocol in an external ledger.
 
 ### P8. Fencing a fleet
 
@@ -92,4 +178,4 @@ The actor gets no channel into this playbook. Its statements, if any, enter only
 
 ## What this guide does not do
 
-It does not grant authority; every verb's authority requirement is in the vocabulary registry and enforced by purpose contexts. It does not describe the controlled actor's surface, which is deliberately narrower (refusal codes, remedial actions and, under an `exact_predicates` disclosure profile, `fa precheck`). And it does not claim any command exists yet; see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md).
+It does not grant authority; every verb's authority requirement is in the vocabulary registry and enforced by purpose contexts. It does not describe the controlled actor's surface, which is deliberately narrower (refusal codes, remedial actions and, under an `exact_predicates` disclosure profile, `fa precheck`). The explicit reference mappings do not claim the prospective `fa` CLI or a complete deployment exists; see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md).

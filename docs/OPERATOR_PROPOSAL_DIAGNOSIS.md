@@ -22,7 +22,15 @@ repair search over this same anchored admission. It has its own explicit
 registration and result schema; see [proposal repair search](OPERATOR_PROPOSAL_SEARCH.md).
 It cannot be combined with `--payload` and does not change the modes below.
 
-## Independent inputs and supported profile
+Learned numerical histories have an explicit independently guarded offline route:
+`create-learned-generated CONFIG LEARNED_RECIPE --resume --explain-proposal --history-anchor INPUT`.
+It uses the same predicate-tree and bounded search consumers, including hard
+policy denials before a review round exists. Its numerical inputs, exact optional
+v2 topology custody and exclusive recovery lock are described in
+[learned proposal diagnosis](LEARNED_PROPOSAL_DIAGNOSIS.md#learned-operator-command).
+The ordinary source-only command below retains its original non-locking contract.
+
+## Independent inputs and supported ordinary profile
 
 `CONFIG` is the existing operator configuration. This command accepts exactly
 the ordinary source-publication guard set: the configured source policy is
@@ -124,3 +132,24 @@ This increment is authored source with unexecuted Rust tests. The required
 remote-only targeted example and full `xtask` commands must pass against this
 revision before qualification. No roadmap packet, production gate or detector
 performance claim is closed by these fixtures.
+
+
+## 2026-10-24 selected execution
+
+A qualified standard-backend RCH run passed all 21 selected `diagnosis::` tests
+(18 behavioral cases and three renderer cases), with zero failed/ignored and
+706 unrelated example functions filtered. Source: `b688a37bc7baea0efce2d53fc1b0bb769e40af86`
+plus the three owned diagnosis fixture/test paths, overlay fingerprint
+`69126149d57c429e2ae1d0227638da806ab08be68a914f04c3ab80717c972627`.
+The fixture repair funds payload bytes through the original adapter, preserves
+original policy limits and denial/search assertions, and retains occupied
+staging bytes before the separate positive writer phase. No production command,
+policy, budget, storage behavior or test registration changed.
+
+Earlier failed attempts remain retained. In particular, the complete original
+727-function example run recorded failures and aborted on a learned-test stack
+overflow; it has no complete suite result. The frozen full driver still refuses
+the initial package-admission boundary. This selected result does not qualify
+the complete example, roadmap packet, authorization-filtered agent API or release.
+Raw logs are outside the frozen root at
+`/Users/jemanuel/Documents/Codex/2026-10-24/franken-alignment-implementation-0761ea9b/`.

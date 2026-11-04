@@ -6,10 +6,11 @@
 //! independent checker must still verify it before any live gate accepts it.
 //! Completeness, provenance and functioning enforcers remain assumptions.
 
-use super::{
-    AuthorityGraph, CutProposal, GraphSpec, MAX_CUT_NODES, MAX_EDGES, MAX_NODES, NodeKind,
-    PathWitness,
-};
+mod cooperative;
+pub use cooperative::{CutPlanningCursor, CutPlanningProgress, CutPlanningStatus};
+
+use super::{AuthorityGraph, CutProposal, GraphSpec, NodeKind, PathWitness, MAX_CUT_NODES,
+    MAX_EDGES, MAX_NODES};
 use crate::Error;
 use std::collections::{BTreeMap, VecDeque};
 

@@ -3,12 +3,14 @@
 
 mod host;
 mod recovery;
+pub mod receipt;
+#[cfg(target_os = "linux")]
+pub mod learned_intake;
 pub use recovery::FileActorRecoveryPort;
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
-pub use precheck::{
-    FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure, FilePrecheckObservation,
-    FilePrecheckOutcome, MAX_PRECHECK_QUERIES,
-};
+pub use precheck::wire as precheck_wire;
+pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
+    FilePrecheckObservation, FilePrecheckOutcome, MAX_PRECHECK_QUERIES};
 mod generated;
 mod learned_text;
 pub use generated::FileGeneratedTextActorPort;

@@ -64,13 +64,20 @@ fn each_replay_deadline_boundary_preserves_both_files_and_emits_no_acknowledgmen
 
 #[test]
 fn one_cumulative_budget_has_exact_neighbors_and_the_lock_never_gaps() {
-    for succeeds in [false, true] {
+    // Keep the original Ready/before-clock cuts and include the final
+    // post-acquisition check. The exact neighbor may acquire time but must
+    // still refuse before a native terminal replacement is acknowledged.
+    for extra in 1..=4 {
         let root = Directory::new();
         let mut c = configured(&root);
         let host = empty_owner(&c);
         let count = host.revision();
         drop(host);
-        c.timing.runtime_ms = count + 1 + u64::from(succeeds);
+        let canonical = std::fs::read(c.store.join("delivery.bin")).unwrap();
+        let staged = c.store.join("delivery.pending");
+        std::fs::write(&staged, b"preserve before completion").unwrap();
+        c.timing.runtime_ms = count + extra;
+        let succeeds = extra == 4;
         let mut calls = 0;
         let logical = Cell::new(0);
         let mut out = Vec::new();
@@ -94,10 +101,26 @@ fn one_cumulative_budget_has_exact_neighbors_and_the_lock_never_gaps() {
             },
             &mut out,
         );
-        assert_eq!(result.is_ok(), succeeds, "{result:?}");
-        assert_eq!(calls, count + 2);
-        assert_eq!(logical.get(), usize::from(succeeds));
+        assert_eq!(result.is_ok(), succeeds, "cut {extra}: {result:?}");
+        assert_eq!(calls, (count + extra + 1).min(count + 4));
+        assert_eq!(logical.get(), usize::from(extra >= 3));
         assert_eq!(out.is_empty(), !succeeds);
+        if !succeeds {
+            assert_eq!(
+                std::fs::read(c.store.join("delivery.bin")).unwrap(),
+                canonical
+            );
+            assert_eq!(
+                std::fs::read(&staged).unwrap(),
+                b"preserve before completion"
+            );
+        } else {
+            assert_eq!(
+                output(&out).get("status").unwrap().as_str(),
+                Some("stopped_drained")
+            );
+            assert!(!staged.exists());
+        }
     }
 }
 
@@ -202,7 +225,7 @@ fn real_executed_and_unknown_publications_keep_their_original_receipt_accounting
             },
             &mut out,
         );
-        assert_eq!(calls, before.revision + 2);
+        assert_eq!(calls, before.revision + 4);
         assert_eq!(result.is_ok(), !unknown);
         let json = output(&out);
         assert_eq!(json.get("stop_acknowledged").unwrap().as_bool(), Some(true));

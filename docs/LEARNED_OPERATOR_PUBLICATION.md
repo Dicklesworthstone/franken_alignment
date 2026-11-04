@@ -16,7 +16,29 @@ before sampling each message, with a separate forecast for finish. See
 [required operator forecasts](LEARNED_OPERATOR_FORECASTS.md) for the artifact,
 runtime and recovery contract and its pending execution qualification.
 
-The native helper models execute **inside the supervising process**, with separate
+Version 6 explicitly selects separately launched process reviewers using a fixed
+per-round program schedule. It retains finite continuation and supports either
+explicitly absent or required forecasts. See
+[process-backed learned publication](PROCESS_LEARNED_PUBLICATION.md) for its
+recipe, original process protocol, cleanup and remaining containment boundaries.
+
+The optional `fa.learned-identity-publication/1` envelope binds an independently
+registered complete passport and identity policy to any of these recipes. It
+runs original computed anchor measurements before generation, retains separate
+observer custody through recovery and requires fresh native installation before
+publication. It can also wrap the joint-credibility envelope. See
+[computed identity in the learned operator](LEARNED_IDENTITY_OPERATOR.md) for
+the closed format, cancellation, historical selection and trust boundaries.
+
+The optional outer `fa.learned-checked-publication/1` envelope selects the
+original final-publication witness profile. It can wrap the identity and joint
+envelopes, binds complete native validation/feed/freshness requirements into the
+recipe, and reacquires current evidence before each effect boundary. Each actual
+Message and Finish binds its own original evidence before helper review. See
+[checked learned publication](LEARNED_CHECKED_PUBLICATION.md) for supported
+capture/producer profiles, late-change behavior, resident use and offline recovery.
+
+In versions /1 through /5, native helper models execute **inside the supervising process**, with separate
 original evaluator owners and fixed input contracts. They are not helper OS
 processes. Their configured names, models and cohorts do not establish statistical
 independence or process isolation. The reviewer and stop clients use the existing
@@ -25,11 +47,27 @@ Linux peer-checked socket protocols.
 The implementation is
 [`workflow/actor_service/learned.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs).
 The schema parsers are its `learned/recipe.rs`, `weights.rs`, `fit.rs`, `monitor.rs`, `forecast.rs`,
-`native.rs` and `fields.rs` modules. Checkpoint sources use the shared
+`native.rs`, `process.rs`, `process/config.rs` and `fields.rs` modules. Checkpoint sources use the shared
 [`support/checkpoint_source.rs`](../crates/fa-reference/examples/support/checkpoint_source.rs)
 loader and the original decoder, indexed reader and static adapter merger.
 
 ## Commands and ordinary operation
+
+Single live learned actor releases can select an authenticated exact-policy
+precheck endpoint with `--actor-profile ACTOR_PROFILE --precheck-profile
+PRECHECK_PROFILE`. It becomes available after generation and before Submit,
+evaluates the original full cumulative action, and retires before review or on
+Stop, expiry or owner mutation. A pass still requires fresh source admission,
+native helper review and the independent human key. Only the uncached v1 exact
+profile is supported for learned releases; see [the complete service contract
+and actor protocol](LIVE_ACTOR_PRECHECK.md#learned-actor-releases).
+
+For several independently selected releases in one invocation,
+[`serve-learned-generated`](RESIDENT_LEARNED_PUBLICATION.md) retains one original
+owner through 2..=16 Messages and an optional final Finish. It preserves the
+same generation, forecast observer and topology source while requiring a fresh
+actor request, native or process congress and human decision for each release.
+This source remains pending compilation and execution qualification.
 
 Use the repository-built `supervise_publication` example on Linux:
 
@@ -49,7 +87,131 @@ argument. Explicit continuation and finish can independently requalify their
 helpers as described below. There is no unchecked reviewer mode. The receipt-only form accepts `--resume` in that argument's place
 and contacts no reviewer.
 
+### Enforce topology during learned publication
+
+For authenticated learned actor ingress, `--actor-profile ACTOR_PROFILE` and
+`--topology-profile PATH` may appear in either order. Both independently selected
+profiles pass through the complete command admission before any original store
+or transport is created. Duplicate, missing and conflicting option selections
+remain errors.
+
+Add `--topology-profile PATH` to select the original topology custodian for
+learned generation, native or process review, and checked publication. This
+composes with ordinary learned generation, required raw-residual forecasting,
+and required owned-K/V forecasting. The existing learned recipe, numerical
+limits, separate predictor role, native review and independent human key remain
+the selected contracts.
+
+| Invocation | Topology input | Independent history anchor |
+| --- | --- | --- |
+| Fresh creation | `fa.mediated-create/1` or `/2` | Input forbidden; a new output may be retained |
+| `--continue-generation`, `--after-message`, `--finish-after-message` | `fa.mediated-submit/1` or `/2` | Required before opening the store |
+| `--resume`, passive or reconciled receipts, receipt service | `fa.mediated-submit/1` or `/2`, with no checkpoint output | Required; complete historical requirements remain checked |
+| `--recover-stop`, `--stop-admission`, `--drain-stopped` | `fa.mediated-submit/1` or `/2`; v2 permits paired output and explicit terminal-checkpoint recovery | Required; the original source/anchor pair and complete historical requirements remain checked |
+
+For example, using independently provisioned files and a fresh output path:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE --topology-profile CREATE_TOPOLOGY --retain-history-anchor FIRST_ANCHOR
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE --after-message PREVIOUS_REQUEST --topology-profile NEXT_TOPOLOGY --history-anchor FIRST_ANCHOR --retain-history-anchor NEXT_ANCHOR
+supervise_publication create-learned-generated CONFIG FINISH_RECIPE REVIEWER_PROFILE --finish-after-message PREVIOUS_REQUEST --topology-profile FINISH_TOPOLOGY --history-anchor NEXT_ANCHOR
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume --receipts-only --topology-profile SAVED_TOPOLOGY --history-anchor SAVED_ANCHOR
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stop OPERATION --topology-profile SAVED_TOPOLOGY --history-anchor SAVED_ANCHOR
+```
+
+The input formats are the existing [creation profile](TOPOLOGY_SUPERVISED_CREATION.md),
+[continuation profile](TOPOLOGY_SUPERVISED_CONTINUATION.md) and
+[version-2 source checkpoint profiles](TOPOLOGY_CHECKPOINT_OPERATOR.md).
+No second graph parser, checker or learned recipe version is introduced.
+Version 1 requires independently retained original/current graphs, availability,
+spent source work and operation floors. Version 2 takes the current contract and
+spent work from the original source checkpoint. Its nested anchor must describe
+the same cut as the separately selected learned history anchor, and the
+canonical event count must still equal that retained checkpoint's extent.
+Keep history and source outputs at distinct, fresh paths.
+
+Creation installs the original terminal reserve, complete guards, numerical
+generation and mediation in one first canonical image. The unique source is
+attached to the original supervised driver before live preparation. After any
+required fresh helper qualification, the original native cut must be verified
+before learned inference, a forecast, a subsequent message or Finish. The same
+driver retains source custody through both native and process review and checks
+the source again at final publication. Missing inventory or a new bypass at that
+late check cannot acquire permission from earlier native or human approval.
+Already-dispatched uncertainty retains its original charge and outcome rules.
+
+Each live recovery checks the complete original numerical, predictor, guard,
+topology, reserve, policy, anchor and floor requirements before releasing roles.
+Its fresh source must advance both graph and inventory generations, retain the
+exact source/checker limits, and carry forward spent checks, reserved read bytes
+and operation floors. A recovery fence does not recertify the graph or replenish
+source allowances. Output failures cannot undo an acknowledged publication or
+request another send.
+
+Selected source custody is also retained after a learned service error when the
+original native owner remains healthy. Capture preserves the admitted documents,
+actual spent work, historical availability and exact acknowledged cut before
+cleanup. A rejected native cut or missing inventory explicitly withdraws source
+coverage; the archive retains that unavailable state and the spent check. It
+does not certify the graph or turn the failed request into a publication.
+The original service error remains first, with any checkpoint error appended,
+and the independent history-anchor export is still attempted. A poisoned owner
+refuses both captures. Single-request and resident learned services share this
+retention path; neither capture requests another effect or refunds uncertainty.
+
+Historical operations load only the independently selected original/current
+topology requirements; they do not open `next` live topology files or fresh
+native helper/evidence inputs. Receipt and audit modes refuse a requested new
+source checkpoint because no active source is being returned. The three
+terminal modes instead accept explicit paired `--retain-topology-checkpoint`
+and `--retain-history-anchor` outputs from an exact version-2 source cut. The
+native successor validates that only matching Stop, Fence and StopProgress
+events followed that cut, preserving the original source expenditure without
+creating a live source. Passive receipts consume no clock, fence or spare
+journal capacity. Explicit reconciliation retains the original
+`Fence -> Time -> Sweep`, including for an already-known receipt. Offline stop
+uses the original terminal tail directly. These are distinct finalizers, each
+protected by the same complete recovery checks.
+
+An acknowledged terminal write can outlive its checkpoint exports. Explicit
+`--recover-terminal-checkpoint` permits the three terminal modes to consume the
+original version-2 source checkpoint and its matching old anchor across only
+the same stop's closed terminal suffix, then retain a successor pair. Ordinary
+and source events refuse, every original guard and floor remains required, and
+no live finalizer is exposed. Default terminal, live and receipt modes keep
+their exact-cut selection. See
+[interrupted terminal export recovery](LEARNED_STOP_RECOVERY.md#recover-after-interrupted-checkpoint-export).
+
+For ordinary exact-cut selection after a Fence, the next independent historical
+profile must describe the saved unavailable state. A native live Stop or
+StopProgress without that Fence preserves actual historical availability; it
+does not grant current certification. Reusing mismatched availability, a stale
+source checkpoint or an unretained successor cut refuses without silently
+changing expectations. A matching completed stop retry remains clock-free and
+adds no new fence. Select the newly retained pair for later drain or retry as
+described in [terminal recovery](LEARNED_STOP_RECOVERY.md#separate-operator-phases).
+Final-publication witnesses are independently selectable through the outer
+[checked learned envelope](LEARNED_CHECKED_PUBLICATION.md). They compose with
+the original topology guard and do not replace its current cut or source custody.
+
+Four operator regression functions cover authenticated actor/native/human
+message publication and Finish across all three predictor modes, anchored
+source continuity, offline receipts and stop, loss of the source after dispatch,
+an initial bypass before numerical work, and closed option parsing. Five public
+receipt tests additionally cover full capacity, exact envelopes, independent
+recovery requirements, real settlement versus unknown liability, and canonical
+changes. Source review and nonmutating syntax parsing passed; compilation and
+runtime execution remain pending because the required RCH daemon is unavailable.
+
 ### Requalify helpers after recovery
+
+Learned recipes can explicitly require the existing native joint credibility
+check through the `fa.learned-joint-publication/1` envelope. It binds the complete
+held-out policy into the original generation configuration across ordinary,
+raw-predictive and owned-predictive modes. A candidate that improves marginal
+helper scores but newly misses a violation or falsely stops a safe case refuses
+before promotion. See [joint learned qualification](LEARNED_JOINT_CREDIBILITY.md)
+for the closed format, resident use, recovery pins and verification limits.
 
 An original held-out qualification is invalidated by the recovery fence. An
 explicit `--continue-generation`, `--after-message` or `--finish-after-message`
@@ -114,8 +276,9 @@ completion, stop identity, output and finite-capacity contracts.
 Every recovery form can also require a separately retained exact history prefix
 with `--history-anchor INPUT`. `--retain-history-anchor NEW_OUTPUT` exports a
 checked successor from the final acknowledged owner, including after receipt
-recovery. Offline stop accepts only the input option and rejects successor export
-before I/O; initial creation accepts only the output option. See
+recovery. Offline stop exports the sealed native terminal acknowledgement and
+can pair it with an exact source checkpoint; initial creation accepts only the
+output option. See
 [operator history anchors](LEARNED_OPERATOR_HISTORY_ANCHORS.md) for private
 custody, bounded admission, new-file retention and failure semantics.
 
@@ -189,10 +352,20 @@ and bounds bytes before accepting the complete file.
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
-| Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances |
-| Native roster | `fa.learned-native-roster/1` for single weight paths, or `/2` for explicit checkpoint-source selection; actual imported model/tokenizer/monitor/sampling files for every committee member |
+| Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` or `/2` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances; `/2` explicitly selects reset behavior |
+| Native roster | `fa.learned-native-roster/1` for single weight paths, `/2` for explicit checkpoint-source selection, or `/3` for explicit per-member verdict grammar; actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
+
+Forecast `/2` adds the required `reset` field: `"disabled"` preserves the `/1`
+recipe bytes, while `"owned_prompt_audit"` selects the separate owned K/V stream
+restart contract. Raw residual predictors cannot select that contract. The
+[predictive stream lifecycle](LEARNED_PREDICTIVE_STREAM_RESET.md) connects actual
+fresh prompt preparation, exact checkpoint narrowing, reset initiation and
+completion to the original live publication command. It admits no sampled
+history or changed audience, and every later release retains native and human
+review. The new preparation mode produces a maintenance result before sampling;
+it cannot supply a completed message or publication key.
 
 The tokenizer object always has exactly `format` and `path`:
 
@@ -286,10 +459,25 @@ exactly. The configured full-input profiles and questions remain the original
 committee contracts. Model identity labels do not replace those contracts.
 
 Set `initial_payload_hex` to the empty string and match the primary model tenant
-to the configured effect scope. The `actor` block remains the original
-`audit_only` metadata; the imported learned recipe supplies the actual numerical
-owner. Policy predicates must admit the original framed message, target and
-complete charge, not an assumed unframed prompt.
+to the configured effect scope. The single `create-learned-generated` command
+accepts an explicitly selected `actor.grade` of `audit_only` or
+`functional_restart`. The imported learned recipe constructs the actual fresh
+numerical owner, including its cache and sampler, before the first durable
+image. Actor metadata cannot import an advanced numerical state; the native
+bootstrap requires position zero. No grade is inferred from successful inference,
+and `bit_exact` remains unsupported. The functional declaration selects the
+native checkpoint/reset contract; it is not a qualification claim about an
+external model or process. Resident learned creation uses the same scoped
+reader; unrelated creation retains its audit-only reader. Policy predicates
+must admit the original framed message,
+target and complete charge, not an assumed unframed prompt.
+
+Retain the original Config, complete recipe and an independent output history
+anchor. Reopening a functional history requires that same declared grade and all
+original numerical/guard bindings; an audit-only Config cannot relabel it. Actual
+stream checkpoint capture additionally requires a quiet eligible original
+prefix, and reset still performs the native bounded restart audit and monotone
+containment transitions.
 
 Budget the original journal and source histories for the complete operation.
 Generation persists intents and outcomes, source refreshes retain their original
@@ -606,15 +794,15 @@ the actual native sidecar query. A quiet probe result admits original numerical
 input to the helper evaluator; it is not the helper's final categorical judgment
 and is not either publication key.
 
-## Native model roster: fa.learned-native-roster/1 or /2
+## Native model roster: fa.learned-native-roster/1, /2 or /3
 
 `members` is an object keyed by the exact helper names already registered in
 `CONFIG.helpers`. Its keys must equal the complete committee roster.
 
 | Group | Required fields |
 | --- | --- |
-| Root | `schema: "fa.learned-native-roster/1"` or `"fa.learned-native-roster/2"`, `members` |
-| Each member | `model`, `files`, `text` |
+| Root | `schema: "fa.learned-native-roster/1"`, `"fa.learned-native-roster/2"` or `"fa.learned-native-roster/3"`, `members` |
+| Each member | `model`, `files`, `text`; version 3 also requires `verdict_grammar` |
 | Member `model` | `identity`, `context`, `stream` |
 | Member `model.identity` | `tenant`, `model`, `model_generation`, `tokenizer_generation`, `profile_generation` |
 | Member `files` | `model_config`, `weights`, `tokenizer`, `monitor`, `sampling` |
@@ -623,12 +811,21 @@ and is not either publication key.
 
 Each tokenizer is the same explicit format/path object described above.
 In version 1, `files.weights` is a single absolute SafeTensors path. In version
-2, it also accepts the explicit checkpoint-source object described above. Both
+2 or 3, it also accepts the explicit checkpoint-source object described above. Both
 forms feed the same complete effective model into the original native evaluator.
 `files.monitor` is the original `fa.decoder-monitor/1` configuration bound to
 that member's own decoder identity. `files.sampling` is its original
 `fa.decoder-sampling/1` configuration. Each member needs nonzero stream and
 output bounds and explicit controls accepted by its original tokenizer/evaluator.
+
+Version 3 requires each member to select `verdict_grammar` as either
+`finite-words-v1` or `unrestricted`. The finite grammar samples the exact words
+allow, hold, deny or abstain and a reviewed stop from the actual model logits.
+It preserves full input review, numerical budgets and both publication keys.
+Every round uses the same admitted selection; old versions remain unrestricted
+and reject this field. Grammar changes the judgment distribution, so its helper,
+input-profile and evaluation-generation registration must be independently
+selected and qualified. See [NATIVE_VERDICT_GRAMMAR.md](NATIVE_VERDICT_GRAMMAR.md).
 
 The primary recipe uses `decoder_products` and `vocabulary_scores` for its
 learned generation. The native member uses `scalar_products` and
@@ -645,6 +842,28 @@ work reservations are installed before the first round; a failed member is not
 replaced after its result is known.
 
 ## Original transitions and recovery
+
+Fresh single-request or resident creation can select `--campaign-profile PATH` to install
+the original mandatory policy-campaign guard in its first image. Continuation
+and recovery cannot use this creation flag to add governance after work begins;
+they must independently require the installed inventory. See
+[LEARNED_CAMPAIGN_CREATION.md](LEARNED_CAMPAIGN_CREATION.md).
+
+An existing campaign-protected nonpredictive history can use the separate offline
+`--promote-policy GOVERNOR_REQUEST` maintenance mode. It compares the complete
+independently reviewed original policy-replay output, then atomically records
+the original campaign request, approval and promotion. It returns immutable
+history and a retained anchor; all future effects still require their ordinary
+keys. Topology-mediated histories additionally retain their exact source
+checkpoint and unchanged source expenditure in a paired new output. See
+[LEARNED_POLICY_GOVERNANCE.md](LEARNED_POLICY_GOVERNANCE.md) and
+[LEARNED_MEDIATED_POLICY_GOVERNANCE.md](LEARNED_MEDIATED_POLICY_GOVERNANCE.md).
+
+A plain functional-restart Message command can also select
+`--checkpoint-before-generation PROFILE` to capture the exact original quiet
+numerical boundary before its next sampled token. This is explicit supervisor
+capture, with ordinary numerical, review and human gates retained. See the live
+capture contract in [LEARNED_STREAM_RESET_OPERATOR.md](LEARNED_STREAM_RESET_OPERATOR.md).
 
 Creation first admits the external recipe and native inputs. The first original
 store image includes the stream, exact learned generation recipe, mandatory

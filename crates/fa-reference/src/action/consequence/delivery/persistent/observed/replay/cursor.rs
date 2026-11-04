@@ -7,6 +7,8 @@ use super::{
     FileReviewReplay, JournalError, Machine, ObservedDecisionArchive, ObservedReceipt,
     ObservedReviewAnchor, Path, Snapshot, journal, storage,
 };
+use super::{DecoderEvent, FileLearnedSidecarFinish, LearnedEvent, SidecarEvent, finish_round};
+use super::{FileReviewEffectReplay, effect::EffectTrace};
 use std::cell::OnceCell;
 use std::fmt;
 use std::rc::Rc;
@@ -68,6 +70,7 @@ pub struct FileReviewReplayCursor {
     capture: Option<Rc<OnceCell<ObservedDecisionArchive>>>,
     completed: Option<Completed>,
     acknowledged: Option<FileDeliverySnapshot>,
+    effect: EffectTrace,
 }
 
 impl fmt::Debug for FileReviewReplayCursor {
@@ -160,11 +163,15 @@ impl FileReviewReplayCursor {
             .ok_or(Error::Missing)?;
         let finish = events
             .iter()
-            .position(|event| is_round_finish(event, round))
+            .position(|event| finish_round(event) == Some(round))
             .ok_or(Error::Incomplete)?;
         if finish <= begin {
             return Err(Error::Binding.into());
         }
+        let Event::Begin(attempt, ..) = &events[begin] else {
+            return Err(Error::Binding.into());
+        };
+        let effect = EffectTrace::new(*attempt);
         let machine = Machine::new(profile)?;
         Ok(Self {
             events,
@@ -179,6 +186,7 @@ impl FileReviewReplayCursor {
             capture: None,
             completed: None,
             acknowledged,
+            effect,
         })
     }
 
@@ -248,7 +256,19 @@ impl FileReviewReplayCursor {
     }
 
     fn step(&mut self) -> Result<(), Error> {
-        let transition = self.machine.apply(&self.events[self.replayed])?;
+        let event = &self.events[self.replayed];
+        // Finish consumes the original session. Read its attempt before apply;
+        // all attribution below waits for the original transition to succeed.
+        let reviewed_attempt = finish_round(event)
+            .and_then(|round| self.machine.sessions.get(&round).map(|session| session.0));
+        let transition = self.machine.apply(event)?;
+        self.effect.observe(
+            event,
+            &transition,
+            reviewed_attempt,
+            (self.replayed + 1) as u64,
+            &self.machine.broker,
+        )?;
         if self.replayed == self.begin {
             let session = &mut self
                 .machine
@@ -260,19 +280,18 @@ impl FileReviewReplayCursor {
             self.capture = Some(session.retain_replay_archive()?);
         }
         if self.replayed == self.finish {
-            let (application, archive, inputs, snapshot) = match (
-                transition,
-                &self.events[self.replayed],
-            ) {
-                (Transition::Reviewed(application), Event::Finish(_, supplied, snapshot)) => {
-                    // Machine removed the consumed session; only this private observer
-                    // still owns its one-shot output. No archive is reconstructed from
-                    // a caller-supplied verdict or by running Finish a second time.
-                    let capture = self.capture.take().ok_or(Error::Incomplete)?;
-                    let archive = Rc::try_unwrap(capture)
-                        .map_err(|_| Error::WrongState)?
-                        .into_inner()
-                        .ok_or(Error::Incomplete)?;
+            // Machine removed the consumed session; only this private observer
+            // still owns its one-shot output. No archive is reconstructed from
+            // a caller-supplied verdict or by running Finish a second time.
+            let capture = self.capture.take().ok_or(Error::Incomplete)?;
+            let archive = Rc::try_unwrap(capture)
+                .map_err(|_| Error::WrongState)?
+                .into_inner()
+                .ok_or(Error::Incomplete)?;
+            let anchor = self.anchor.as_ref().ok_or(Error::Incomplete)?;
+            archive.verify(anchor)?;
+            let (application, inputs, snapshot) = match (event, transition) {
+                (Event::Finish(_, supplied, snapshot), Transition::Reviewed(application)) => {
                     let inputs = supplied
                         .as_ref()
                         .map(|views| {
@@ -283,38 +302,49 @@ impl FileReviewReplayCursor {
                             )
                         })
                         .transpose()?;
-                    (application, archive, inputs, snapshot.clone())
+                    (
+                        application.map(|receipt| *receipt),
+                        inputs,
+                        snapshot.clone(),
+                    )
                 }
                 (
+                    Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
+                        SidecarEvent::Finish {
+                            attempt, snapshot, ..
+                        },
+                    ))),
                     Transition::LearnedSidecarFinished(result),
-                    Event::Decoder(super::super::decoder::DecoderEvent::Learned(
-                        super::super::decoder::learned::LearnedEvent::Sidecar(
-                            super::super::decoder::learned::sidecar::SidecarEvent::Finish {
-                                snapshot,
-                                ..
-                            },
-                        ),
-                    )),
                 ) => {
-                    let _ = self.capture.take();
-                    match *result {
-                            super::super::decoder::learned::sidecar::FileLearnedSidecarFinish::Applied {
-                                receipt,
-                                archive,
-                                ..
-                            } => {
-                                let inputs = Some(archive.inputs.as_ref().clone());
-                                (receipt, archive, inputs, snapshot.clone())
-                            }
-                            super::super::decoder::learned::sidecar::FileLearnedSidecarFinish::Refined {
-                                ..
-                            } => return Err(Error::Incomplete),
-                        }
+                    let FileLearnedSidecarFinish::Applied {
+                        receipt,
+                        archive: original,
+                        ..
+                    } = *result
+                    else {
+                        // Refinement finished the review but never applied it.
+                        // Do not invent a refusal receipt or an approval for it.
+                        return Err(Error::Incomplete);
+                    };
+                    if original != archive {
+                        return Err(Error::Binding);
+                    }
+                    // The original Applied path supplied its unchanged packet.
+                    // Read only the retained observation, without a live-source
+                    // eligibility check that could reject an applied denial.
+                    let inputs = self
+                        .machine
+                        .broker
+                        .current_inputs(*attempt)?
+                        .cloned()
+                        .ok_or(Error::Incomplete)?;
+                    if &inputs != archive.inputs.as_ref() {
+                        return Err(Error::Binding);
+                    }
+                    (receipt, Some(inputs), snapshot.clone())
                 }
                 _ => return Err(Error::Binding),
             };
-            let anchor = self.anchor.as_ref().ok_or(Error::Incomplete)?;
-            archive.verify(anchor)?;
             if let Ok(receipt) = &application {
                 archive.verify_receipt(anchor, receipt)?;
             }
@@ -332,6 +362,13 @@ impl FileReviewReplayCursor {
     /// Export only after the ENTIRE selected cut verified. An archive captured
     /// earlier cannot escape an invalid or unprocessed suffix. No fence is added.
     pub fn finish(self) -> Result<FileReviewReplay, JournalError> {
+        Ok(self.finish_with_effects()?.review)
+    }
+
+    /// Return the same original review plus the exact selected-attempt effect
+    /// chain. No outcome or consumed-approval link escapes an unverified suffix.
+    /// This never obtains an endpoint receipt from outside the RAM-only replay.
+    pub fn finish_with_effects(self) -> Result<FileReviewEffectReplay, JournalError> {
         match self.status {
             FileReviewReplayStatus::Ready => {}
             FileReviewReplayStatus::Failed(error) => return Err(error.into()),
@@ -339,7 +376,9 @@ impl FileReviewReplayCursor {
             _ => return Err(Error::Incomplete.into()),
         }
         let completed = self.completed.ok_or(Error::Incomplete)?;
-        Ok(FileReviewReplay {
+        let journal = self.machine.snapshot(self.events.len());
+        let effect = self.effect.finish(self.round, &completed.state, &journal)?;
+        let review = FileReviewReplay {
             begin_revision: (self.begin + 1) as u64,
             anchor: self.anchor.ok_or(Error::Incomplete)?,
             archive: completed.archive,
@@ -347,8 +386,9 @@ impl FileReviewReplayCursor {
             application_inputs: completed.inputs,
             application_snapshot: completed.snapshot,
             completed: completed.state,
-            journal: self.machine.snapshot(self.events.len()),
-        })
+            journal,
+        };
+        Ok(FileReviewEffectReplay { review, effect })
     }
 
     /// Discard private reconstruction and report its work, not a refund. A prior

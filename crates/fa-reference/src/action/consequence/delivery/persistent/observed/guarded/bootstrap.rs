@@ -33,12 +33,10 @@ pub(super) struct PreparedGuardedBootstrap {
 }
 
 impl PreparedGuardedBootstrap {
-    pub(super) fn prepare(
-        profile: FileOversightProfile,
-        guards: &FileGuardSet,
-        registration: Option<FileCredentialRegistration<'_>>,
-    ) -> Result<Self, JournalError> {
-        Self::prepare_with_reserve(profile, guards, registration, None)
+    pub(super) fn prepare(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>) -> Result<Self, JournalError>
+    {
+        Self::prepare_with_reserve(profile, guards, registration, None, None)
     }
 
     /// Reserve the original terminal tail before any bootstrap guard counts as
@@ -51,7 +49,28 @@ impl PreparedGuardedBootstrap {
     ) -> Result<Self, JournalError> {
         use super::super::super::recovery_capacity::{Admission, Class};
         Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
-        Self::prepare_with_reserve(profile, guards, registration, Some(reserve))
+        Self::prepare_with_reserve(profile, guards, registration, Some(reserve), None)
+    }
+
+    /// The same checked first image without an implicit recovery reserve.
+    pub(super) fn prepare_publication(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        publication: crate::action::consequence::delivery::publication_gate::PublicationLimits)
+        -> Result<Self, JournalError>
+    {
+        Self::prepare_with_reserve(profile, guards, registration, None, Some(publication))
+    }
+
+    pub(super) fn prepare_publication_reserved(profile: FileOversightProfile, guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        reserve: super::super::super::RecoveryReserve,
+        publication: crate::action::consequence::delivery::publication_gate::PublicationLimits)
+        -> Result<Self, JournalError>
+    {
+        use super::super::super::recovery_capacity::{Admission, Class};
+        Admission::new(profile.delivery.limits).record(Class::Install(reserve), 0, 0)?;
+        if guards.stream.is_some() { return Err(Error::InvalidInput.into()); }
+        Self::prepare_with_reserve(profile, guards, registration, Some(reserve), Some(publication))
     }
 
     fn prepare_with_reserve(
@@ -59,7 +78,9 @@ impl PreparedGuardedBootstrap {
         guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
         reserve: Option<super::super::super::RecoveryReserve>,
-    ) -> Result<Self, JournalError> {
+        publication: Option<crate::action::consequence::delivery::publication_gate::PublicationLimits>)
+        -> Result<Self, JournalError>
+    {
         profile.delivery.limits.check()?;
         guards.validate()?;
         let credential = match (&guards.credential, registration) {
@@ -78,11 +99,15 @@ impl PreparedGuardedBootstrap {
             }
             _ => return Err(Error::InvalidInput.into()),
         };
-        // Stream bootstrap must be first. It itself enables publication checks;
-        // ordinary publication receives the same original guard explicitly.
-        let mut events = vec![match guards.stream {
-            Some(stream) => Event::StreamBootstrap(stream),
-            None => Event::PublicationGuard,
+        // Exactly one first-image publication guard. A checked witness profile
+        // replaces the ordinary PublicationGuard; it is never layered on top of
+        // stream bootstrap or silently reduced to the weaker guard.
+        let mut events = vec![match (publication, guards.stream) {
+            (Some(limits), None) => Event::PublicationWitness(
+                super::super::publication::witness_gate::WitnessEvent::Enable(limits)),
+            (None, Some(stream)) => Event::StreamBootstrap(stream),
+            (None, None) => Event::PublicationGuard,
+            (Some(_), Some(_)) => return Err(Error::InvalidInput.into()),
         }];
         if let Some(reserve) = reserve {
             events.push(Event::Core(super::super::BaseEvent::ReserveRecovery(
@@ -207,11 +232,28 @@ impl PreparedGuardedBootstrap {
 
     /// Compare the complete independently declared guard inventory after native
     /// recipe-owned installations, while the entire bootstrap remains private.
-    pub(super) fn checked_evaluated(
-        self,
-        guards: &FileGuardSet,
-        protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol,
-    ) -> Result<Self, JournalError> {
+    pub(super) fn checked_guards(self, guards: &FileGuardSet) -> Result<Self, JournalError> {
+        guards.check(&self.machine, &self.events)?;
+        Ok(self)
+    }
+
+    /// Match the complete ordinary predictor and guard inventory, including
+    /// owned representation/work bounds, before publishing any separate role.
+    pub(super) fn checked_predictive(self, guards: &FileGuardSet,
+        protocol: Option<&crate::action::consequence::oversight::credibility::EvaluationProtocol>,
+        prediction: &super::mediated::predictive::FileMediatedPredictor)
+        -> Result<Self, JournalError>
+    {
+        prediction.check_machine(&self.machine)?;
+        guards.check_predictive(&self.machine, &self.events, protocol, Some(prediction.consistency()))?;
+        Ok(self)
+    }
+
+    /// Compare the full guard inventory after the native evaluator installation.
+    pub(super) fn checked_evaluated(self, guards: &FileGuardSet,
+        protocol: &crate::action::consequence::oversight::credibility::EvaluationProtocol)
+        -> Result<Self, JournalError>
+    {
         guards.check_evaluated(&self.machine, &self.events, Some(protocol))?;
         Ok(self)
     }

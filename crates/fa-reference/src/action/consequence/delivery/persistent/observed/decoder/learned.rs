@@ -21,13 +21,18 @@ mod recovery;
 pub mod sidecar;
 #[cfg(test)]
 mod tests;
-pub use config::FileLearnedConfig;
-pub use message::FileLearnedTextContinuation;
+pub use config::{FileLearnedConfig, FileLearnedPublicationProfile};
 pub use preparation::{
     FileLearnedIntentPreparation, FileLearnedReplayContinuation, FileLearnedStepPreparation,
     FileLearnedStepPreparationProgress, FileLearnedStepPreparationStatus,
 };
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus};
+pub use recovery::{FileReconciledLearnedReceipt, FileLearnedStreamCheckpointRequest,
+    FileLearnedStreamControlHistory, FileLearnedStreamControlReceipt};
+pub use checkpoint::{FileLearnedStreamNarrowControl, FileLearnedStreamNarrowRequest};
+pub use recovery::{FileLearnedPolicyPromotionHistory, FileLearnedPolicyPromotionRequest,
+    FileLearnedPolicyPromotionReview};
+pub use message::FileLearnedTextContinuation;
 
 use super::super::super::codec::shared::{Reader, Writer};
 use super::super::super::{FileDeliverySnapshot, JournalFailure, JournalIo};

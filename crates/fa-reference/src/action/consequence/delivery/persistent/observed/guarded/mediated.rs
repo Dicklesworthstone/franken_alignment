@@ -1,23 +1,26 @@
 //! Recover topology-observer custody together with the original guarded owner.
 //! Exact graphs are independent requirements, not assumed live capture or a cut.
 mod inspection;
+mod reserved_bootstrap;
+pub use reserved_bootstrap::FileMediatedBootstrap;
 pub mod learned;
 pub mod predictive;
+pub mod terminal;
+pub mod credential;
+pub mod receipt;
+pub mod stream_reset;
 pub use inspection::{FileMediatedSnapshot, FileTopologyUpdateRecord};
+pub use super::recovery::mediated::FileMediatedRecovery;
 
+use super::{FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements};
+use super::bootstrap::PreparedGuardedBootstrap;
+use super::super::{Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage};
+use super::super::mediation::{FileMediationObserver, MediationEvent};
 use super::super::consistency::{FileConsistencyConfig, FileConsistencyObserver};
 use super::super::credibility::{CredibilityEvent, FileIndependentEvaluator};
-use super::super::mediation::{FileMediationObserver, MediationEvent};
-use super::super::{
-    BaseEvent, Event, FileOversight, FileOversightProfile, JournalError, Machine, journal, storage,
-};
-use super::bootstrap::PreparedGuardedBootstrap;
-use super::{
-    FileCredentialRegistration, FileGuardSet, FileOversightRoles, FileRecoveryRequirements,
-};
-use crate::Error;
 use crate::action::consequence::mediation::AuthorityGraph;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
+use crate::Error;
 use std::path::Path;
 use std::rc::Rc;
 
@@ -119,24 +122,11 @@ impl FileOversight {
         Self::open_mediated_store(store, profile, expected)
     }
 
-    fn open_mediated_store(
-        store: storage::Store,
-        profile: FileOversightProfile,
-        expected: &FileMediatedRequirements,
-    ) -> Result<(Self, FileMediatedRoles), JournalError> {
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let (events, machine) = checked_image(&profile, store.identity(), &bytes, expected)?;
-        store.confirm_and_cleanup()?;
-        let (mut host, human) = Self::owner(profile, store, events, machine);
-        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
-        let oversight = FileOversightRoles::provision(&host, human);
-        let roles = FileMediatedRoles::provision(
-            &host,
-            oversight,
-            expected.prediction.is_some(),
-            expected.evaluation.is_some(),
-        );
-        Ok((host, roles))
+    fn open_mediated_store(store: storage::Store, profile: FileOversightProfile,
+        expected: &FileMediatedRequirements) -> Result<(Self, FileMediatedRoles), JournalError>
+    {
+        FileMediatedRecovery::begin_store(store, profile, expected, None)?
+            .finish_synchronously()
     }
 }
 
@@ -167,48 +157,48 @@ fn checked_image(
 
 // Shared native validator after a caller-specific, internal history preflight.
 // No public event import or role-provisioning bypass is exposed.
-pub(super) fn checked_events(
-    profile: &FileOversightProfile,
-    events: &[Event],
-    expected: &FileMediatedRequirements,
-) -> Result<Machine, JournalError> {
-    expected.oversight.guards.check_mediated_replay_config(
-        events,
-        expected.prediction.as_ref(),
-        Some(&expected.topology.initial),
-    )?;
+pub(super) fn checked_events(profile: &FileOversightProfile, events: &[Event],
+    expected: &FileMediatedRequirements) -> Result<Machine, JournalError>
+{
+    check_history(events, expected)?;
+    let machine = Machine::replay(profile, events)?;
+    check_machine(profile, &machine, events, expected)?;
+    Ok(machine)
+}
+
+// Shared with cooperative recovery BEFORE the first original transition.
+// These scans are admission checks, not semantic replay or a topology certificate.
+pub(super) fn check_history(events: &[Event], expected: &FileMediatedRequirements)
+    -> Result<(), Error>
+{
+    expected.oversight.guards.check_mediated_replay_config(events,
+        expected.prediction.as_ref(), Some(&expected.topology.initial))?;
     let mut protocols = events.iter().filter_map(|event| match event {
         Event::Credibility(CredibilityEvent::Enable(protocol)) => Some(protocol),
         _ => None,
     });
-    if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() {
-        return Err(Error::Binding.into());
-    }
-    // Preflight the final input topology too before expensive numerical replay.
-    // Replay, not this scan, validates all intervening transitions and results.
+    if protocols.next() != expected.evaluation.as_ref() || protocols.next().is_some() { return Err(Error::Binding); }
     let current = events.iter().rev().find_map(|event| match event {
         Event::Mediation(MediationEvent::Update(update)) => update.next.as_ref(),
         Event::Mediation(MediationEvent::Enable(graph)) => Some(graph),
         _ => None,
     });
-    if current != Some(&expected.topology.current) {
-        return Err(Error::Binding.into());
-    }
-    let machine = Machine::replay(profile, events)?;
-    expected.oversight.check_mediated(
-        profile,
-        &machine,
-        events,
-        expected.evaluation.as_ref(),
-        expected.prediction.as_ref(),
-        Some(&expected.topology.initial),
-    )?;
+    if current != Some(&expected.topology.current) { return Err(Error::Binding); }
+    Ok(())
+}
+
+// Complete original requirements, checked after semantic replay and again before
+// fencing. Reusing this validator never executes an event a second time.
+pub(super) fn check_machine(profile: &FileOversightProfile, machine: &Machine,
+    events: &[Event], expected: &FileMediatedRequirements) -> Result<(), Error>
+{
+    expected.oversight.check_mediated(profile, machine, events, expected.evaluation.as_ref(),
+        expected.prediction.as_ref(), Some(&expected.topology.initial))?;
     let actual = machine.mediation_snapshot(events.len() as u64)?;
-    if actual.graph != expected.topology.current || actual.available != expected.topology.available
-    {
-        return Err(Error::Binding.into());
+    if actual.graph != expected.topology.current || actual.available != expected.topology.available {
+        return Err(Error::Binding);
     }
-    Ok(machine)
+    Ok(())
 }
 
 #[cfg(test)]

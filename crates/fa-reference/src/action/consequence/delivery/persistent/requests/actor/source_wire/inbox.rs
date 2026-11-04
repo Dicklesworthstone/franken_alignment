@@ -106,6 +106,7 @@ impl<P: ActorRequestPort> FileActorInbox<P> {
             budget.validate()?;
             let supervisor = driver.supervisor_mut();
             check(supervisor, self.session.request_port())?;
+            let was_faulted = supervisor.host()?.storage_failure().is_some();
             // Reserve bounded bookkeeping BEFORE any frame can change a journal.
             let mut seen = Vec::new();
             seen.try_reserve_exact(budget.frames)
@@ -138,6 +139,13 @@ impl<P: ActorRequestPort> FileActorInbox<P> {
                 return Err(error.into());
             }
             let host = supervisor.host()?;
+            // The wire intentionally redacts a failed source transaction into an
+            // actor-visible refusal. Its coordinator must still see a NEW journal
+            // fault, even when preparation refused before adding a ready hint.
+            // Later drives may drain that queued refusal from the faulted inbox.
+            if !was_faulted && let Some(failure) = host.storage_failure() {
+                return Err(JournalError::Io(failure.clone()).into());
+            }
             for request in seen {
                 match host.request_status(request) {
                     Ok(status) if work(status) && !self.ready.contains(&request) => {

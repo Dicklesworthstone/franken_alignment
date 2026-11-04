@@ -2,6 +2,7 @@
 //! A declared graph cut is not proof of operating-system containment.
 mod codec;
 pub mod planning;
+pub mod source;
 pub(super) use codec::{read, write};
 
 use super::{Event, FileOversight, JournalError, Transition};
@@ -136,7 +137,7 @@ impl FileMediationObserver {
         {
             return Err(Error::Limit.into());
         }
-        if &host.machine.mediation_snapshot(host.revision())?.graph != &proposal.graph {
+        if host.machine.mediation_snapshot(host.revision())?.graph != proposal.graph {
             return Err(Error::Binding.into());
         }
         let event = MediationEvent::Check {

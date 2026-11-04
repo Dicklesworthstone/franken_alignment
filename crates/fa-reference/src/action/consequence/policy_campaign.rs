@@ -354,11 +354,11 @@ impl ObservedSlice {
         intervals.sort_unstable();
         let mut closed: Vec<(u64, u64)> = Vec::new();
         for (start, end) in intervals {
-            if let Some(last) = closed.last_mut() {
-                if start <= last.1 {
-                    last.1 = last.1.max(end);
-                    continue;
-                }
+            if let Some(last) = closed.last_mut()
+                && start <= last.1
+            {
+                last.1 = last.1.max(end);
+                continue;
             }
             closed.push((start, end));
         }

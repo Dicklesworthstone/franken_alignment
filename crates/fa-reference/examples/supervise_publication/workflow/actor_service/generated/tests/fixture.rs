@@ -29,7 +29,7 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 pub(in crate::workflow::actor_service::generated) struct Root(pub PathBuf);
 impl Root {
     pub(in crate::workflow::actor_service::generated) fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::test_directory::create(format!(
             "fa-native-pub-{}-{}-{}",
             std::process::id(),
             clock().0,

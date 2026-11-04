@@ -3,15 +3,37 @@
 use super::{FileLearnedRecovery, FileOversight, JournalError};
 use crate::Error;
 use crate::action::ElapsedTick;
-use crate::action::consequence::delivery::{
-    StopRequest,
-    persistent::observed::{
-        guarded::anchored::FileHistoryAnchor,
-        shutdown::recovery::{FileStoppedHistory, FileStoppedRecovery},
-    },
-};
+use crate::action::consequence::delivery::{StopRequest,
+    persistent::observed::{guarded::anchored::FileHistoryAnchor,
+        shutdown::recovery::{FileAdmissionStoppedHistory, FileStopRecovery, FileStoppedHistory, FileStoppedRecovery}}};
 
 impl FileLearnedRecovery {
+    /// Consume the SAME fully replayed learned cursor into a nonce-bound
+    /// Stop-only transport target. No ordinary recovery Fence, live owner,
+    /// reviewer, predictor or numerical continuation escapes. Its independently
+    /// selected outer wrapper must recheck all original requirements first.
+    ///
+    /// A retained recovery reserve is mandatory, as on the live Stop transport;
+    /// this never installs or refills one. The original fixed Stop/Fence consumer
+    /// checks exact capacity and canonical custody only after an explicit request.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        use crate::action::consequence::delivery::persistent::observed::{
+            BaseEvent, Event, reviewer::{client::ReviewerExpectation,
+                peer::control::FileRecoveryStop},
+        };
+        let request = self.stop_request(operation)?;
+        if !self.events.iter().any(|event| matches!(event,
+            Event::Core(BaseEvent::ReserveRecovery(_)))) {
+            return Err(Error::Incomplete.into());
+        }
+        let expected = ReviewerExpectation { reviewer: self.profile.human.reviewer_id,
+            scope: self.profile.delivery.scope, clock_domain: self.profile.delivery.clock_domain };
+        Ok(FileRecoveryStop::from_verified(self.into_terminal()?, expected, request))
+    }
+
     /// Select the original control predecessor only after complete learned
     /// replay. A matching historical stop retains its exact original request;
     /// another operation cannot take it over. This request grants no live role.
@@ -33,6 +55,47 @@ impl FileLearnedRecovery {
             expected_control_sequence: snapshot.control.sequence,
             expected_authority_epoch: snapshot.control.ledger.epoch,
         })
+    }
+
+    /// Withdraw admission without acquiring time or completing a pending
+    /// numerical step. Reuse the original Stop/Fence consumer on this fully
+    /// verified learned machine and its SAME exclusive canonical cut. No owner,
+    /// predictor, reviewer or numerical continuation is returned. Unresolved and
+    /// executed effects keep their original charges; this is not a drain receipt.
+    pub fn finish_admission_stop(self, request: StopRequest)
+        -> Result<FileAdmissionStoppedHistory, JournalError>
+    {
+        self.into_terminal()?.finish_admission_stop(request)
+    }
+
+    /// Settle only an already matching stop through one original StopProgress
+    /// event. A failed clock leaves the acknowledged admission stop unchanged.
+    /// Exact drained retries require no clock, event or write, even at capacity.
+    /// The original terminal consumer checks intent and canonical bytes before
+    /// time acquisition and again before replacement; no numerical work repeats.
+    pub fn finish_stopped_drain<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal()?.finish_stopped_drain(request, clock)
+    }
+
+    /// Fallible-clock combined recovery. Clock refusal returns no candidate
+    /// receipt or anchor and precedes cleanup and the original combined write.
+    /// This permits a caller to reject a late acquisition without inventing time.
+    pub fn try_finish_stopped_with_anchor<F>(self, request: StopRequest, clock: F)
+        -> Result<FileStoppedHistory, JournalError>
+    where F: FnOnce() -> Result<ElapsedTick, JournalError> {
+        self.into_terminal()?.try_finish_stopped_with_anchor(request, clock)
+    }
+
+    // Private handoff after complete ORIGINAL learned replay. A specialised
+    // wrapper must run its full independent checks before delegating here.
+    // Never expose the ordinary cursor or reconstruct an unchecked live owner.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn into_terminal(self) -> Result<FileStopRecovery, JournalError> {
+        self.verified_guarded_machine()?;
+        let Self { profile, store, canonical, events, machine, last_drain, .. } = self;
+        Ok(FileStopRecovery::from_verified_terminal(profile, store, canonical, events, machine, last_drain))
     }
 
     /// Consume completely verified learned history directly into the ORIGINAL

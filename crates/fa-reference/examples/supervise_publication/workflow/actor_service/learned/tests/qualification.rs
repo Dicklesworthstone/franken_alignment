@@ -20,6 +20,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[path = "qualification/joint.rs"] mod joint;
+
 struct Seed {
     config: Config,
     first_recipe: PathBuf,
@@ -29,13 +31,8 @@ struct Seed {
     revision: u64,
 }
 
-fn activation(
-    config: &Config,
-    sequence: u64,
-    epoch: u64,
-    operation: u64,
-    generation: u64,
-) -> CredibilityActivation {
+pub(super) fn activation(config: &Config, sequence: u64, epoch: u64, operation: u64,
+    generation: u64) -> CredibilityActivation {
     // Same explicitly synthetic sequence mapping as the original actor-service
     // qualification fixture. Promotion checks the resulting sequence, so the
     // first real review at sequence1 can admit a campaign sealed at frontier2.
@@ -155,14 +152,19 @@ fn save(root: &Root, request: &CredibilityActivation) -> PathBuf {
 }
 
 fn seed(root: &Root, mode: Option<bool>) -> Seed {
+    seed_with(root, mode, |_, _| {}, activation)
+}
+
+fn seed_with(root: &Root, mode: Option<bool>,
+    provision: impl FnOnce(&mut Config, &Path),
+    first_activation: impl FnOnce(&Config, u64, u64, u64, u64) -> CredibilityActivation) -> Seed {
     let mut config = configured(root);
     let first_recipe = native::write(root);
-    if let Some(owned) = mode {
-        super::forecast::install(root, &first_recipe, owned, 60_000);
-    }
+    if let Some(owned) = mode { super::forecast::install(root, &first_recipe, owned, 60_000); }
+    provision(&mut config, &first_recipe);
     evidence(root, &config, 1, true, false);
     let first = recipe::load(&first_recipe, &config, true).unwrap();
-    let (host, reviewer, observer) = recovery::create_selected(&config, &first).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::create_selected(&config, &first).unwrap();
     let mut prediction = observer.map(|observer| prediction::Session::new(1, observer));
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
@@ -198,13 +200,7 @@ fn seed(root: &Root, mode: Option<bool>) -> Seed {
     let old_capsule = {
         let mut host = driver.supervisor_mut().host_mut().unwrap();
         let state = host.inspect();
-        let old = activation(
-            &config,
-            state.control.sequence,
-            state.control.ledger.epoch,
-            20,
-            2,
-        );
+        let old = first_activation(&config, state.control.sequence, state.control.ledger.epoch, 20, 2);
         let revision = host.revision();
         host.activate_credibility(revision, old.clone(), &config.profile.committee)
             .unwrap();
@@ -247,7 +243,7 @@ struct Live {
 
 fn open(seed: &Seed) -> Live {
     let loaded = recipe::load(&seed.next_recipe, &seed.config, true).unwrap();
-    let (host, reviewer, observer) = recovery::open_selected(&seed.config, &loaded).unwrap();
+    let (host, reviewer, observer, _identity) = recovery::open_selected(&seed.config, &loaded).unwrap();
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert!(
         host.check_credibility().is_err(),
@@ -848,40 +844,14 @@ fn actual_learned_entry_can_retry_omitted_qualification_then_checks_time_after_a
         assert_eq!(result.cleanup_pending, 0);
         let config = configured(&root);
         let loaded = recipe::load(&seed.next_recipe, &config, true).unwrap();
-        let (host, _reviewer, _observer) = recovery::open_selected(&config, &loaded).unwrap();
-        assert_eq!(
-            host.credibility_change(21).unwrap().reducer_generation,
-            3,
-            "the actual entry must reach the supplied original activation before expiry"
-        );
-        assert_eq!(
-            host.learned_generation_inspection()
-                .unwrap()
-                .numerical
-                .sampled_draws,
-            2
-        );
-        assert_eq!(
-            host.learned_generation_inspection()
-                .unwrap()
-                .numerical
-                .position,
-            4
-        );
-        assert!(host.inspect().stop.is_some());
-        assert_eq!(host.inspect().executions, 1);
-        assert_eq!(
-            host.inspect().control.ledger.charged,
-            before.control.ledger.charged
-        );
-        assert_eq!(
-            host.stream_snapshot()
-                .unwrap()
-                .confirmed
-                .messages()
-                .collect::<Vec<_>>(),
-            ["A"]
-        );
+        let (host, _reviewer, _observer, _identity) = recovery::open_selected(&config, &loaded).unwrap();
+        assert_eq!(host.credibility_change(21).unwrap().reducer_generation, 3,
+            "the actual entry must reach the supplied original activation before expiry");
+        assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
+        assert_eq!(host.learned_generation_inspection().unwrap().numerical.position, 4);
+        assert!(host.inspect().stop.is_some()); assert_eq!(host.inspect().executions, 1);
+        assert_eq!(host.inspect().control.ledger.charged, before.control.ledger.charged);
+        assert_eq!(host.stream_snapshot().unwrap().confirmed.messages().collect::<Vec<_>>(), ["A"]);
     }
 }
 
@@ -986,7 +956,7 @@ fn actual_receipt_command_ignores_missing_capsule_and_live_sources_after_qualifi
         .unwrap();
         let config_path = write_config(&root);
         let disk_config = Config::read(&config_path).unwrap();
-        assert_eq!(disk_config.profile, seed.config.profile);
+        crate::config::assert_oversight_profiles_eq(&disk_config.profile, &seed.config.profile);
         assert_eq!(disk_config.source_policy, seed.config.source_policy);
         for name in [
             "evidence.json",
