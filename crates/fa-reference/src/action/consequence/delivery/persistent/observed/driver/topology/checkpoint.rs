@@ -7,6 +7,7 @@ mod reconciled;
 mod abandonment;
 mod terminal;
 mod stream_reset;
+mod stream_control;
 mod policy_promotion;
 pub use recovery::TopologyCheckpointResume;
 

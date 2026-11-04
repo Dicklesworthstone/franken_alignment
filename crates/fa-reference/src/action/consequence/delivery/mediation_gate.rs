@@ -44,6 +44,13 @@ impl DeliveryBroker {
         self.mediation.as_ref().and_then(|state| state.accepted.as_ref())
     }
 
+    /// An authority restriction does not change graph custody or charge a
+    /// second epoch. Its old certificate is historical until the original
+    /// checker qualifies the graph at the current explicit predecessor.
+    pub(super) fn invalidate_mediation_cut(&mut self) {
+        if let Some(state) = &mut self.mediation { state.accepted = None; }
+    }
+
     /// Explicit trusted activation. Every candidate is independently checked
     /// against the currently owned graph; an old VerifiedCut is not accepted as
     /// a caller assertion. This never restores a cancelled attempt or old epoch.

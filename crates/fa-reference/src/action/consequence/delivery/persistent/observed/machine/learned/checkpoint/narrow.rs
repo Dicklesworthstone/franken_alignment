@@ -37,8 +37,7 @@ impl Machine {
         request: &FileLearnedStreamNarrowRequest) -> Result<(), Error>
     {
         request.validate()?;
-        if self.mediation.is_some()
-            || !self.learned_contract().is_some_and(|recipe| recipe.requires_owned_forecast_stream_restart_audit()) {
+        if !self.learned_contract().is_some_and(|recipe| recipe.requires_owned_forecast_stream_restart_audit()) {
             return Err(Error::Binding);
         }
         if self.learned_stream_narrow_retry(request)?.is_some() { return Err(Error::Duplicate); }

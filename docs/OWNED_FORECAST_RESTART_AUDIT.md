@@ -83,8 +83,11 @@ remain unchanged. A later original reset alone increments that incident count.
 
 This API admits only the separately selected owned stream prompt profile with
 the same complete unsampled original prompt and exact confirmed audience. It
-refuses topology-bearing owners, pending work or forecasts, lost coverage and
-any prior sampled work. Retained targets must name the same adapter, object,
+refuses pending work or forecasts, lost coverage and any prior sampled work.
+A mediated owner also loses its accepted topology cut at the original narrowing
+transition; graph availability and source expenditure remain unchanged, and the
+original checker must certify the graph at the new authority epoch before an
+effect can be admitted. Retained targets must name the same adapter, object,
 contract and generation. Endpoint version is part of target identity: a planned
 two-message stream and finish must explicitly retain all three required versions
 in both narrowing and reset requests. An empty selection contains all future
@@ -125,6 +128,42 @@ source stream. Its jobs, numerical work, retained inventory and likelihood
 process are never replaced. After the first new draw clears the private restart
 audit, subsequent message and finish forecasts use their ordinary newly accepted
 source evidence and exact receipt-bound continuation requests.
+
+## Complete topology custody through native stream control
+
+The explicit owned stream profile also composes with the original
+`FilePredictiveMediatedLearnedRecovery`. Before event zero,
+`require_stream_control_checkpoint(saved, request)` seals that cursor to one
+`FileMediatedStreamControlRequest`: `Capture`, `Narrow`, or `BeginReset` with its
+exact intent and incident frontier. The complete independent predictor,
+mediation, guard, policy, credential, floor and terminal-reserve requirements
+remain mandatory. A plain recovery cursor cannot discard installed mediation.
+
+`finish_stream_control` returns an immutable `FileMediatedStreamControlHistory`
+containing both the original control result and a `TopologyCheckpoint` at the
+same acknowledged cut. It checks all guards and source custody on both sides of
+private preparation before the sole canonical replacement. Source documents,
+graph, spent work and last source operation remain the trusted saved values;
+there is no source read, new allowance, forecast, Fence or live role. An old pair
+can explain only an unchanged exact cut or the single exact selected control
+event. An unrelated numerical, time, source, campaign or control suffix refuses.
+Exact acknowledged retries return the original operation without another event.
+
+The same predictive cursor's `require_stream_reset_checkpoint` selects original
+completion and its reset-plus-Fence transaction. The existing stopped-reset
+selector and checked Stop handoff retain priority. Lost completion export can
+be recovered only through the original matching reset/Fence suffix. Completion
+retries preserve both audit charges, statistical evidence and incident count.
+The paused owner must obtain fresh time, source qualification, topology
+certification and its original owned forecast before ordinary reviewed output.
+
+Topology availability means that the original graph remains available; it is
+not an accepted cut. A narrowing clears the broker's actual accepted cut while
+leaving `last_check` as historical evidence, and advances no extra authority
+epoch. Neither an old cut nor old reviewer roles can authorize the successor.
+The checkpoint archive requires independent trusted custody. Its framing does
+not authenticate a coherently forged work history or establish physical
+containment of undeclared operating-system paths.
 
 ## Fresh observation without a sampled-token dependency
 
@@ -205,8 +244,16 @@ overflow/capacity refusal before mutation. The owned durable regressions in
 `guarded/predictive/owned/tests/stream_narrow.rs` cover live and offline narrowing
 through all five original Store failure barriers, wrong capture/current cuts
 and audiences, changed retries, zero-versus-ample ordinary byte/event capacity,
-journal-index and witness tampering, and a real certified-topology refusal with
-an otherwise matching unmediated positive.
+journal-index and witness tampering, and actual topology-cut withdrawal and
+recertification with weaker plain-recovery refusal.
+
+Four new regressions in `tests/mediated_predictive_learned_recovery/stream_control.rs`
+exercise the complete paired lifecycle through actual native and human reviewed
+publication, a matched bypass graph at the same epoch, original source-work
+conservation, exact lost-export retries, independent guards, terminal reserve,
+event-zero selection, changed requests and unrelated suffixes, and original
+canonical/staging failure behavior. Two compile-fail examples protect the new
+sealed cursor from live extraction. These remain authored source regressions.
 
 These are source regression additions pending the repository's required RCH
 gate. No Rust compilation, test execution, conditional-calibration validation,

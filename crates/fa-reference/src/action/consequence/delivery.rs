@@ -518,7 +518,12 @@ impl DeliveryBroker {
     pub(crate) fn narrow_checkpoint(&mut self, request: CheckpointNarrowRequest)
         -> Result<CheckpointNarrowReceipt, Error>
     {
-        self.controller.narrow_checkpoint(request)
+        let receipt = self.controller.narrow_checkpoint(request)?;
+        // The original restriction advances authority exactly once. A graph
+        // remains available, but its previously accepted cut cannot authorize
+        // the new authority epoch without an explicit native certification.
+        self.invalidate_mediation_cut();
+        Ok(receipt)
     }
 
     pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> {

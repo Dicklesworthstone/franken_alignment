@@ -200,7 +200,7 @@ fn journal_index_and_original_narrow_witness_are_checked_independently_on_replay
 }
 
 #[test]
-fn a_real_certified_topology_cannot_enter_the_unmediated_prompt_narrow_profile() {
+fn mediated_narrow_withdraws_the_cut_and_plain_recovery_cannot_drop_topology() {
     use crate::action::consequence::delivery::persistent::observed::guarded::mediated::predictive::FileMediatedPredictor;
     use crate::action::consequence::mediation::{CutCheck, MAX_CHECK_EDGE_VISITS};
     use crate::perimeter_inventory::topology::LoadedAuthorityTopology;
@@ -221,7 +221,7 @@ fn a_real_certified_topology_cannot_enter_the_unmediated_prompt_narrow_profile()
         source: None, identity: None, campaigns: None, credential: None };
     let (mut host, roles) = FileOversight::create_predictive_mediated_guarded_with_learned_generation_reserved(
         root.store(), delivery_profile(), &guards, None, graph.clone(),
-        FileMediatedPredictor::Owned(predictor(true)), None, generation,
+        FileMediatedPredictor::Owned(predictor(true)), None, generation.clone(),
         RecoveryReserve::terminal()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
     let revision = host.revision(); let epoch = host.inspect().control.ledger.epoch;
@@ -230,7 +230,7 @@ fn a_real_certified_topology_cannot_enter_the_unmediated_prompt_narrow_profile()
     step(&mut host); let numerical = host.learned_generation_inspection().unwrap().numerical;
     let saved = host.capture_learned_stream_checkpoint(host.revision(), 1, numerical.actor_revision,
         host.inspect().control.ledger.epoch).unwrap();
-    let before = host.inspect(); let canonical = bytes(&root); let topology = host.mediation_snapshot().unwrap();
+    let before = host.inspect(); let topology = host.mediation_snapshot().unwrap();
     assert!(topology.accepted.is_some());
     let request = FileLearnedStreamNarrowRequest::new(host.revision(), *saved.info(), FileLearnedStreamNarrowControl {
         operation: 800, expected_control_sequence: before.control.sequence,
@@ -238,12 +238,30 @@ fn a_real_certified_topology_cannot_enter_the_unmediated_prompt_narrow_profile()
         binding: ReviewBinding { round: 800, reducer_generation: 1, evidence_root: [8; 32] },
         retained_targets: vec![before.target],
     }).unwrap();
-    assert_eq!(host.narrow_learned_stream_checkpoint(&request).err(), Some(Error::Binding.into()));
-    assert_eq!(host.inspect(), before); assert_eq!(host.mediation_snapshot().unwrap(), topology);
+    let narrowed = host.narrow_learned_stream_checkpoint(&request).unwrap();
+    assert_eq!(narrowed.sequence, before.control.sequence + 1);
+    assert_eq!(narrowed.revocation_floor, before.control.ledger.epoch + 1);
+    assert_eq!(narrowed.incident_count, 0);
+    let current = host.mediation_snapshot().unwrap();
+    assert_eq!(current.graph, topology.graph); assert!(current.available);
+    assert!(current.accepted.is_none(), "the earlier graph cut cannot authorize the new epoch");
+    assert_eq!(current.last_check, topology.last_check, "last_check is historical evidence only");
     assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+    let revision = host.revision();
+    assert_eq!(roles.topology_observer.certify(&mut host, revision, before.control.ledger.epoch,
+        &graph.propose_cut(&[2]).unwrap(), MAX_CHECK_EDGE_VISITS).unwrap(), Err(Error::Stale));
+    assert_eq!(host.revision(), revision + 1, "a rejected native check remains evidence");
+    assert!(host.mediation_snapshot().unwrap().accepted.is_none());
+    let revision = host.revision();
+    assert!(matches!(roles.topology_observer.certify(&mut host, revision, narrowed.revocation_floor,
+        &graph.propose_cut(&[2]).unwrap(), MAX_CHECK_EDGE_VISITS).unwrap().unwrap(), CutCheck::Verified(_)));
+    assert!(host.mediation_snapshot().unwrap().accepted.is_some());
+    let required = expected(&host, &generation, predictor(true));
+    let anchor = host.history_anchor().unwrap(); let canonical = bytes(&root); drop(host);
+    assert_eq!(FileOversight::begin_open_predictive_guarded_anchored_with_owned_learned_consistency(
+        root.store(), delivery_profile(), &required, &generation, &anchor).err(), Some(Error::Binding.into()));
     assert_eq!(bytes(&root), canonical);
-    // The SAME selected profile succeeds without the independent topology
-    // obligation, establishing that prompt/source/capture were not the cause.
+    // The original unmediated recipe still follows its same exact native gate.
     let root = Directory::new(); let (mut host, _, request) = prepared(&root);
     assert_eq!(host.narrow_learned_stream_checkpoint(&request).unwrap().sequence, 1);
 }

@@ -13,6 +13,8 @@ mod custody;
 mod native_fixture;
 #[path = "mediated_predictive_learned_recovery/support.rs"]
 mod support;
+#[path = "mediated_predictive_learned_recovery/stream_control.rs"]
+mod stream_control;
 use support::*;
 use custody::{graph, protocol, assessment, certify, replacement, update, fresh_identity, snapshot};
 

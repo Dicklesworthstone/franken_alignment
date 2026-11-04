@@ -7,9 +7,52 @@ use super::super::super::{
 };
 use super::super::{FileRecoveryFloor, learned_recovery::check_recovery_reserve};
 use super::{FileMediatedRoles, FileTopologyRequirement, JournalError,
-    learned::FileMediatedLearnedRecovery};
+    learned::FileMediatedLearnedRecovery, predictive::FilePredictiveMediatedLearnedRecovery};
 use crate::{Error, action::consequence::delivery::persistent::RecoveryReserve};
 use std::fmt;
+
+enum Inner {
+    Mediated(FileMediatedLearnedRecovery),
+    Predictive(FilePredictiveMediatedLearnedRecovery),
+}
+impl Inner {
+    fn progress(&self) -> FileLearnedRecoveryProgress {
+        match self { Self::Mediated(run) => run.progress(), Self::Predictive(run) => run.progress() }
+    }
+    fn advance(&mut self, expected_events: usize, max_events: usize)
+        -> Result<FileLearnedRecoveryProgress, JournalError>
+    {
+        match self {
+            Self::Mediated(run) => run.advance(expected_events, max_events),
+            Self::Predictive(run) => run.advance(expected_events, max_events),
+        }
+    }
+    #[cfg(target_os = "linux")]
+    fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        match self {
+            Self::Mediated(run) => run.into_recovery_stop(operation),
+            Self::Predictive(run) => run.into_recovery_stop(operation),
+        }
+    }
+    fn finish_pending_stream_reset(self, intent: &FileLearnedResetIntent, first_incident_sequence: u64)
+        -> Result<(FileOversight, FileMediatedRoles), JournalError>
+    {
+        match self {
+            Self::Mediated(run) => run.finish_pending_stream_reset(intent, first_incident_sequence),
+            Self::Predictive(run) => run.finish_pending_stream_reset(intent, first_incident_sequence),
+        }
+    }
+    fn finish_admission_stop(self, operation: u64)
+        -> Result<super::super::super::shutdown::recovery::FileAdmissionStoppedHistory, JournalError>
+    {
+        match self {
+            Self::Mediated(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) },
+            Self::Predictive(run) => { let request = run.stop_request(operation)?; run.finish_admission_stop(request) },
+        }
+    }
+}
 
 /// Replay the complete original numerical history, guards, policy, current
 /// credential epoch and source custody. Only the selected StreamReset and Fence
@@ -30,7 +73,7 @@ use std::fmt;
 /// ```
 #[must_use = "complete the selected reset or drop without changing storage"]
 pub struct FileStreamResetTopologyRecovery {
-    inner: FileMediatedLearnedRecovery,
+    inner: Inner,
     intent: FileLearnedResetIntent,
     first_incident_sequence: u64,
 }
@@ -67,7 +110,11 @@ pub(super) fn prepare(inner: &FileLearnedRecovery, progress: FileLearnedRecovery
 impl FileStreamResetTopologyRecovery {
     pub(super) fn new(inner: FileMediatedLearnedRecovery, intent: &FileLearnedResetIntent,
         first_incident_sequence: u64) -> Self {
-        Self { inner, intent: intent.clone(), first_incident_sequence }
+        Self { inner: Inner::Mediated(inner), intent: intent.clone(), first_incident_sequence }
+    }
+    pub(super) fn predictive(inner: FilePredictiveMediatedLearnedRecovery, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Self {
+        Self { inner: Inner::Predictive(inner), intent: intent.clone(), first_incident_sequence }
     }
     pub fn progress(&self) -> FileLearnedRecoveryProgress { self.inner.progress() }
     /// Advance the original bounded replay under every independent requirement.
@@ -112,7 +159,7 @@ impl FileStreamResetTopologyRecovery {
 /// ```
 #[must_use = "confirm the selected acknowledged Stop or drop without changing storage"]
 pub struct FileStoppedStreamResetRecovery {
-    inner: FileMediatedLearnedRecovery,
+    inner: Inner,
     operation: u64,
 }
 impl fmt::Debug for FileStoppedStreamResetRecovery {
@@ -154,7 +201,10 @@ pub(super) fn prepare_stopped(inner: &FileLearnedRecovery,
 
 impl FileStoppedStreamResetRecovery {
     pub(super) fn new(inner: FileMediatedLearnedRecovery, operation: u64) -> Self {
-        Self { inner, operation }
+        Self { inner: Inner::Mediated(inner), operation }
+    }
+    pub(super) fn predictive(inner: FilePredictiveMediatedLearnedRecovery, operation: u64) -> Self {
+        Self { inner: Inner::Predictive(inner), operation }
     }
     pub fn progress(&self) -> FileLearnedRecoveryProgress { self.inner.progress() }
     /// Advance the SAME original bounded replay under all independent guards.
@@ -174,7 +224,6 @@ impl FileStoppedStreamResetRecovery {
     pub fn finish_admission_stop(self)
         -> Result<super::super::super::shutdown::recovery::FileAdmissionStoppedHistory, JournalError>
     {
-        let request = self.inner.stop_request(self.operation)?;
-        self.inner.finish_admission_stop(request)
+        self.inner.finish_admission_stop(self.operation)
     }
 }

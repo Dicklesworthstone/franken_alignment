@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-04: retain topology custody through native predictive stream control
+
+- Add operation-bound mediated capture, narrow and reset-initiation recovery
+  with immutable paired source/history results and exact lost-export retries.
+- Preserve all original predictor and guard requirements, source expenditure,
+  terminal reserve and reset/Fence/Stop semantics without source rereads.
+- Withdraw accepted topology cuts at original narrowing, retaining graph
+  availability and requiring certification at the new authority epoch.
+- Add four public regressions and two compile-fail examples; update the original
+  topology refusal test to check cut withdrawal and actual recertification.
+  Source/syntax review passed; required RCH compilation and execution are pending.
+
 ## 2026-11-04: execute real prompt counterfactual campaigns from the operator
 
 - Add `compare-learned-prompt PLAN` with original model, tokenizer, fitted codec,

@@ -158,7 +158,7 @@ Not every mechanism is a literal essay idea. These additions exist to make an es
 | Purpose-bound privacy and retention | §16.6 | Authorization and separately governed deletion prevent retention from widening access (FI-A02); live evidence and replay promises remain explicit when retention changes (FI-A06) |
 | Single-owner repair contract | §16.8 | Repair profiles expose authenticated recovery dependencies (FI-A06) and the multiplied redundancy overhead their named failure-layer ownership incurs (FI-A17) |
 | Recovery nonresurrection fence | §16.9 | Restored state never revives old authority or guessed outcomes (FI-A02) |
-| Prompt-boundary containment before reset | §9.8, §11.10 | External control (FI-A02), typed consequences (FI-A09) and one-way rewind containment (FI-A16) preserve spent rights, actor/predictor state and original incident history while narrowing the exact target ceiling |
+| Prompt-boundary containment before reset | §9.8, §11.10, §§15.2/15.6 | External control (FI-A02), typed consequences (FI-A09) and one-way rewind containment (FI-A16) preserve spent rights, actor/predictor state, original incident history and exact topology-source custody while narrowing the target ceiling and withdrawing its old cut |
 | Discovery-versus-proof-complete retrieval | §17.6 | Approximate discovery cannot stand in for the closed evidence domain required by a hard report (FI-A06) |
 | Scaling topology boundaries | §18.5 | Costed control is partitioned before inventing global consensus machinery (FI-A17) |
 | Preallocation asymptotic budgets | §18.7 | Control costs include bounded graph/tensor/decoder working sets before allocation (FI-A17) |

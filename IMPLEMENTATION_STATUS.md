@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: preserve topology custody through native predictive containment
+
+The explicit owned prompt-audit stream now supports sealed mediated capture,
+narrowing and reset initiation. Before replay event zero, a predictive-mediated
+cursor binds the exact request and independently retained source checkpoint.
+It repeats the complete predictor, policy, guard, topology, credential, floor
+and terminal-reserve checks around private preparation, then returns immutable
+control and topology histories at the same acknowledged cut. Source documents,
+spent work and last operation are preserved; only the unchanged cut or one exact
+selected event can explain a lost export. No source reread or new quota occurs.
+
+Successful original narrowing now clears the broker's accepted topology cut
+without withdrawing its graph or adding another epoch change. The old check
+remains historical evidence, and current-epoch certification is required for a
+later effect. Original reset completion and stopped-reset recovery retain the
+same sealed reset/Fence transaction and checked Stop priority. Fresh source,
+topology, forecast and native/human publication gates remain in force.
+
+Four new public regression functions exercise actual restored publication and
+a matched bypass refusal, complete pair/guard/reserve admission, changed requests
+and suffixes, and storage failures. An existing regression now checks actual
+cut withdrawal, stale-epoch refusal, fresh recertification and weaker recovery
+refusal; two compile-fail examples protect sealed custody. All thirteen changed
+Rust files passed syntax checks and independent source review. Required RCH
+compilation, formatting, Clippy and runtime execution remain pending. This
+source capability does not qualify physical containment, authenticated archive
+provenance, sampled-state rewind or calibrated prediction. Operator routing is
+a separate integration. See [the native contract](docs/OWNED_FORECAST_RESTART_AUDIT.md#complete-topology-custody-through-native-stream-control).
+
 ## 2026-11-04: run actual prompt counterfactual campaigns from bounded files
 
 `supervise_publication compare-learned-prompt PLAN` now loads independently

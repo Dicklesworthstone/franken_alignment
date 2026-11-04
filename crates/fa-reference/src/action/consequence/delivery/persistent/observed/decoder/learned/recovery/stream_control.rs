@@ -76,6 +76,18 @@ impl FileLearnedStreamControlHistory {
 }
 
 impl FileLearnedRecovery {
+    // Sealed predictive-mediated selectors use the independently bound recipe
+    // before event zero. This is admission only, never a replay/Ready shortcut.
+    pub(in super::super::super::super) fn check_owned_stream_control_recipe(&self)
+        -> Result<(), JournalError>
+    {
+        if self.expected.text_stream_profile().is_none()
+            || !self.expected.requires_owned_forecast_stream_restart_audit() {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
     pub(in super::super::super::super) fn prepare_narrowed_stream_checkpoint(mut self,
         expected: &FileLearnedStreamNarrowRequest)
         -> Result<(Self, FileLearnedStreamControlReceipt, usize), JournalError>
@@ -184,14 +196,13 @@ impl FileLearnedRecovery {
 
     fn check_stream_control_profile(&self) -> Result<(), JournalError> {
         let machine = self.verified_guarded_machine()?;
-        // Topology custody and every legacy/raw/optional predictor still refuse.
-        // Only the explicit owned prompt-audit recipe can compose with the
-        // original stream protocol; its native per-cut checks prevent sampling
-        // or missing statistical evidence from being erased by this finalizer.
+        // Plain wrappers require absent mediation. The separately sealed
+        // predictive-mediated wrapper qualifies exact paired source custody
+        // before and after this preparation. Neither can bypass its full guard.
+        // Legacy/raw/optional predictors still cannot erase statistical work.
         if self.expected.text_stream_profile().is_none()
             || (machine.broker.action_consistency_required()
-                && !self.expected.requires_owned_forecast_stream_restart_audit())
-            || self.events.iter().any(|event| matches!(event, Event::Mediation(_))) {
+                && !self.expected.requires_owned_forecast_stream_restart_audit()) {
             return Err(Error::Binding.into());
         }
         Ok(())

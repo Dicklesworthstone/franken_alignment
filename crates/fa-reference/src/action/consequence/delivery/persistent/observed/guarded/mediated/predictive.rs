@@ -1,6 +1,9 @@
 //! Keep both topology and pre-output predictor custody through original learned
 //! recovery. The exact recipe owns the predictor; no separate enable or capture
 //! hydration, second numerical replay, or statistical reset is introduced.
+mod stream_control;
+pub use stream_control::{FileMediatedStreamControlHistory,
+    FileMediatedStreamControlRecovery, FileMediatedStreamControlRequest};
 use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileConsistencyConfig, FileCredentialRegistration, FileGuardSet, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
@@ -372,6 +375,42 @@ impl FilePredictiveMediatedLearnedRecovery {
         Ok(super::credential::FileCredentialTopologyRecovery::predictive(self, saved, request))
     }
 
+    /// Seal the explicit owned prompt-audit profile to one exact stream-reset
+    /// intent and independent v2 source cut BEFORE replay. Only its original
+    /// StreamReset/Fence suffix may repair lost export; the source allowance,
+    /// predictor, current policy and all independent guards remain unchanged.
+    /// A checked Stop retains priority on the same Ready cursor.
+    pub fn require_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64)
+        -> Result<super::stream_reset::FileStreamResetTopologyRecovery, JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        let progress = self.progress();
+        super::stream_reset::prepare(&self.inner, progress, &mut self.expected.topology,
+            &mut self.expected.oversight.minimum, saved, intent, first_incident_sequence)?;
+        Ok(super::stream_reset::FileStreamResetTopologyRecovery::predictive(
+            self, intent, first_incident_sequence))
+    }
+
+    /// Confirm only an already recorded Stop after this exact owned stream
+    /// reset. No live role, first Stop, reset audit, source read or extra Fence
+    /// escapes. Both independently retained archives remain mandatory.
+    pub fn require_stopped_stream_reset_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        intent: &FileLearnedResetIntent, first_incident_sequence: u64, operation: u64)
+        -> Result<super::stream_reset::FileStoppedStreamResetRecovery, JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        let progress = self.progress();
+        let selection = super::stream_reset::StoppedStreamResetSelection {
+            intent, first_incident_sequence, operation,
+        };
+        super::stream_reset::prepare_stopped(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum, saved, selection)?;
+        Ok(super::stream_reset::FileStoppedStreamResetRecovery::predictive(self, operation))
+    }
+
     /// Inspect credential state only after the original numerical replay and
     /// every independent topology, predictor, guard and floor check succeeds.
     /// No cleanup, fence, source observation or live role is produced.
@@ -602,6 +641,18 @@ impl FilePredictiveMediatedLearnedRecovery {
     {
         self.check_ready()?;
         self.inner = self.inner.prepare_pending_reset(intent)?;
+        self.finish()
+    }
+
+    // Only the pre-replay, operation-bound source-custody selector exposes this
+    // path. The full predictor/mediation guard runs around original preparation;
+    // the existing sole reset-plus-Fence write provisions the paused owner.
+    pub(super) fn finish_pending_stream_reset(mut self, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Result<(FileOversight, FileMediatedRoles), JournalError>
+    {
+        self.check_owned_stream_recipe()?;
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_stream_reset(intent, first_incident_sequence)?;
         self.finish()
     }
 }
