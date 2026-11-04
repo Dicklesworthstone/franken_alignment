@@ -1,6 +1,8 @@
 //! Real pending numerical reset through the complete operator grammar. Fixtures
 //! use a genuine native Continue review as the later incident frontier, without
 //! changing the effective policy or confirming any new audience-visible output.
+#[path = "stream_reset/predictive.rs"]
+mod predictive;
 use super::super::{anchors as custody, stream_reset as reset};
 use super::*;
 use fa_reference::action::consequence::{
@@ -642,7 +644,7 @@ fn predictive_and_topology_modes_cannot_downgrade_an_original_stream_reset() {
         super::forecast::install(&root, &case.recipe, owned, 60_000);
         let error =
             reset::command(&arguments, None, || ElapsedTick(1000), &mut Vec::new()).unwrap_err();
-        assert!(error.contains("predictive histories"), "{error}");
+        assert!(error.contains("requires the plain owned prompt-audit reset recipe"), "{error}");
         assert_eq!(disk(&case), before);
     }
     fs::write(&case.recipe, original).unwrap();

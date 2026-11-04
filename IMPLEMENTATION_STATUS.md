@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: drive predictive stream containment through the actual operator
+
+The operator now reaches a complete unsampled prompt through explicit fresh
+`--prepare-stream-checkpoint` creation. It reuses the original guarded bootstrap,
+cooperative numerical engine, source/time checks and campaign inventory. A
+distinct maintenance outcome captures and retains the original checkpoint before
+any prediction, draw or actor request, then releases the owner without Stop or
+Fence. Pre-acknowledgment failures use original Stop/drain; later archive/report
+failures preserve the acknowledged cut and never repeat prompt inference.
+
+Forecast artifact `/2` explicitly selects `owned_prompt_audit`; `/1` and `/2`
+with reset disabled retain identical original recipe bytes. A closed exact
+`--narrow-stream-checkpoint` request uses the original native consequence while
+preserving policy/predictor generations. Its original receipt supplies the
+incident frontier separately from the current control sequence. The same
+independent recipe and anchors then drive capture, reset initiation, completion
+and ordinary live continuation through fresh prediction and both review keys.
+Exact narrowing retries after later publication append zero events; original
+reset retries retain their audits and incident count with only the usual Fence.
+
+Fifteen new operator regression functions cover actual preparation/campaigns,
+later native and human approval/rejection, the complete prepare/narrow/reset
+lifecycle, legacy recipe equality, strict input/cut/guard refusal, wrong prompt
+boundaries, source failure and lost archives/reports. Six preparation regressions,
+four forecast/live-capture regressions and five predictive lifecycle regressions
+are source-reviewed; syntax and whitespace checks passed. Required RCH
+compilation, formatting, Clippy and runtime execution remain pending.
+
+This explicit operator path requires a plain owned predictive stream at the
+complete original prompt with zero cumulative sampling. Preparation refuses
+stronger identity, credential, checked-publication and held-out selections until
+their own pre-output contracts are integrated. Predictive topology reset,
+post-sampling reset, detector/governor authentication and host/calibration
+qualification remain open; no packet or bead is closed by source-only evidence.
+
 ## 2026-11-04: contain and restore an owned predictive stream before sampling
 
 A distinct native stream recipe now composes cumulative learned publication

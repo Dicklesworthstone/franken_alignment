@@ -147,16 +147,15 @@ where
     )
 }
 
-/// Topology requires exact paired source/history custody. Predictive histories
-/// retain their original native refusal and cannot downgrade to plain recovery.
+/// Topology requires exact paired source/history custody. Only the separately
+/// selected plain owned prompt-audit profile admits predictive reset completion.
 fn check_selection(loaded: &Loaded) -> Result<(), String> {
     if loaded.generation.required_pre_output_forecast().is_some()
-        || loaded
-            .generation
-            .required_owned_pre_output_forecast()
-            .is_some()
+        || (loaded.generation.required_owned_pre_output_forecast().is_some()
+            && (!loaded.generation.requires_owned_forecast_stream_restart_audit()
+                || loaded.topology.is_some()))
     {
-        return Err("stream-reset recovery does not support predictive histories".into());
+        return Err("predictive stream-reset recovery requires the plain owned prompt-audit reset recipe".into());
     }
     if loaded.generation.text_stream_profile().is_none() {
         return Err("stream-reset recovery requires the original learned text stream".into());

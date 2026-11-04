@@ -6,8 +6,12 @@ native `BeginStreamReset` after a crash. Completion implements the plain and
 nonpredictive mediated guarded recovery paths described in
 [PENDING_LEARNED_RESET_RECOVERY.md](PENDING_LEARNED_RESET_RECOVERY.md) and
 [LEARNED_STREAM_CONTAINMENT.md](LEARNED_STREAM_CONTAINMENT.md). Capture and fresh
-initiation currently support plain nonpredictive histories. Each operation uses
-the original numerical recipe, confirmed audience and native containment rules.
+initiation also support the explicitly selected plain owned prompt-audit stream
+recipe. Its [preparation, narrowing and predictive reset workflow](LEARNED_PREDICTIVE_STREAM_RESET.md)
+reaches the complete unsampled prompt through the actual CLI, preserves the
+pinned policy/predictor and uses the original fresh successor-cache audit before
+sampling. Each operation retains the original confirmed audience and containment
+rules. Raw, legacy owned and topology-backed predictive reset remain unavailable.
 
 ## Capture and independent initiation
 
@@ -52,9 +56,11 @@ option performs no reset, grants no publication key, and leaves all monitor,
 native congress and independent human review requirements in force.
 
 This live selection requires an explicit `functional_restart` configuration and
-a plain nonpredictive stream. It composes with fresh campaign provisioning,
-actor/precheck service and existing anchor options. It cannot be used for
-Finish, historical maintenance, resident sequences or topology-backed capture.
+a plain nonpredictive stream or the explicit owned prompt-audit recipe. The
+owned profile requires the complete original prompt and zero cumulative sampling.
+It composes with fresh campaign provisioning, actor/precheck service and existing
+anchor options; a resident sequence captures only its first selected Message.
+It cannot be used for Finish, historical maintenance or topology-backed capture.
 Use a fresh checkpoint ID. A repeated ID refuses before generation; an already
 acknowledged capture remains in history and ordinary continuation can omit the
 new-capture flag. The usual anchor export is attempted at request completion.
@@ -63,6 +69,11 @@ A stream checkpoint remains eligible only within its captured confirmed audience
 boundary. Successful publication changes that boundary. Existing failure paths
 still apply their original Stop/drain behavior; this option does not implement
 automatic incident reset or make a terminally stopped owner resettable.
+
+For an intentional fresh pause before any prediction or draw, use
+[`--prepare-stream-checkpoint`](LEARNED_PROMPT_PREPARATION.md). It retains the
+captured anchor and exits with a maintenance result, while the live option above
+continues into the original review/publication cycle.
 
 ### Capture an existing quiet prefix or initiate reset
 
@@ -141,10 +152,14 @@ reporting are both attempted even if a deadline or output fails. Preserve the
 same request and old anchor, then choose a new export path to recover a lost
 acknowledgment without duplicating capture or initiation.
 
-These two modes reject topology/predictive selections and all live-service,
-credibility or maintenance combinations. Existing reset **completion** continues
-to support exact nonpredictive topology custody as described below. Predictive
-stream reset still requires a separate forecast-rearming contract.
+These modes reject topology, raw or legacy predictive selections and all
+live-service, credibility or other maintenance combinations. The explicit owned
+prompt-audit profile also admits `--narrow-stream-checkpoint` with an independent
+exact request; its original `NarrowAuthority` consequence supplies a later
+control frontier without changing policy or predictor generations. See the
+[predictive lifecycle and request schema](LEARNED_PREDICTIVE_STREAM_RESET.md).
+Existing reset **completion** continues to support exact nonpredictive topology
+custody as described below.
 
 ## Complete an existing reset
 
@@ -182,9 +197,10 @@ replacement, select the full expected effective policy through the independent
 [recovery policy envelope](LEARNED_RECOVERY_POLICY.md), while retaining the
 original bootstrap Config. Recovery does not read current source/helper evidence,
 launch inference workers, or obtain a fresh publication approval. This increment
-supports plain guarded learned text streams and their nonpredictive mediated
-histories. Predictive histories retain their native stream-reset refusal and are
-never downgraded to a plain profile.
+supports plain guarded learned text streams, their nonpredictive mediated
+histories, and the explicitly selected plain owned prompt-audit stream profile.
+Every other predictive history retains its native refusal and cannot downgrade
+to a plain profile.
 
 `RESET_REQUEST` and `INPUT_ANCHOR` are separately retained files outside the
 mutable authority store. The anchor must be an exact original acknowledged
@@ -322,7 +338,9 @@ the revocation floor backward, or reset incident accounting.
 
 The resulting owner remains internal to this command, paused and without fresh
 time. A restored numerical source is Empty until the original fresh-input path
-accepts new input. No actor gateway, reviewer endpoint, effect permit, or live
+accepts new input. The explicit owned profile privately retains the separately
+audited successor cache only for its next original predictor acquisition. No
+actor gateway, reviewer endpoint, effect permit, or live
 resume is issued by this operation. Filesystem and output calls are synchronous
 cooperative boundaries; the elapsed budget is not a hard preemption guarantee.
 
@@ -352,7 +370,8 @@ path.
 The same scoped declaration is accepted by guarded receipt recovery and service,
 resident continuation, diagnosis, policy replay, credential maintenance,
 abandonment and terminal Stop. Every path retains its original independent
-requirements. Ordinary creation continues to use the audit-only Config reader.
+requirements. Single and resident learned creation use their scoped explicit
+functional-restart reader; unrelated creation keeps its audit-only reader.
 Changing a declaration, model generation or grade cannot relabel an existing
 journal, and `bit_exact` remains unsupported.
 

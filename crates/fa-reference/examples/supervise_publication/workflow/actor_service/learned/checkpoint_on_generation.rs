@@ -60,6 +60,8 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<&Path>
 }
 
 impl Selection {
+    pub(super) fn checkpoint_id(&self) -> u64 { self.checkpoint }
+
     pub(super) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, MAX_BYTES)?)
     }
@@ -85,8 +87,13 @@ impl Selection {
             return Err("live learned checkpoint capture requires an explicit functional_restart profile".into());
         }
         if loaded.topology.is_some() || loaded.generation.required_pre_output_forecast().is_some()
-            || loaded.generation.required_owned_pre_output_forecast().is_some() {
-            return Err("live checkpoint selection currently requires a plain nonpredictive learned stream".into());
+            || (loaded.generation.required_owned_pre_output_forecast().is_some()
+                && !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
+            return Err("live checkpoint selection requires a plain stream with no predictor or the explicit owned prompt-audit reset recipe".into());
+        }
+        if loaded.generation.requires_owned_forecast_stream_restart_audit()
+            && self.sampled_draws != 0 {
+            return Err("owned prompt-audit checkpoint selection requires zero sampled draws".into());
         }
         Ok(())
     }
@@ -99,9 +106,8 @@ impl Selection {
             Ok(_) => return Err("checkpoint ID already exists; continue without a new capture selection".into()),
             Err(error) => return Err(debug(error)),
         }
-        if host.action_consistency_required() {
-            return Err("installed predictors require their own checkpoint rearming contract".into());
-        }
+        // Selection admission verifies the independent predictor/reset recipe.
+        // Original native capture enforces it again at the actual quiet cut.
         let current = host.learned_generation_inspection().map_err(debug)?;
         if current.numerical.position > self.position
             || current.numerical.sampled_draws > self.sampled_draws {

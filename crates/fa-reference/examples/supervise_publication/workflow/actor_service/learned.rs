@@ -31,6 +31,7 @@
 #[path = "learned/stream_reset.rs"] mod stream_reset;
 #[path = "learned/stream_checkpoint.rs"] mod stream_checkpoint;
 #[path = "learned/checkpoint_on_generation.rs"] mod checkpoint_on_generation;
+#[path = "learned/checkpoint_prepare.rs"] mod checkpoint_prepare;
 #[path = "learned/campaigns.rs"] mod campaigns;
 #[path = "learned/policy_promotion.rs"] mod policy_promotion;
 use recipe::Loaded;
@@ -54,7 +55,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH]";
 
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
@@ -73,6 +74,11 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    // Preparation owns its complete fresh-only grammar before live option
+    // extraction can discard an incompatible selection.
+    if args.iter().any(|arg| arg == "--prepare-stream-checkpoint") {
+        return checkpoint_prepare::command(args, credibility, time, &mut std::io::stdout().lock());
+    }
     let (args, checkpoint_path) = checkpoint_on_generation::take_option(args)?;
     // An optional disclosure owns the complete live grammar before another
     // mode can consume it. Without the option the original argv is unchanged.
@@ -83,7 +89,8 @@ where F: FnMut() -> ElapsedTick {
     if args.iter().any(|arg| arg == "--promote-policy") {
         return policy_promotion::command(args, credibility, &mut std::io::stdout().lock());
     }
-    if args.iter().any(|arg| matches!(arg.as_str(), "--capture-stream-checkpoint" | "--begin-stream-reset")) {
+    if args.iter().any(|arg| matches!(arg.as_str(),
+        "--capture-stream-checkpoint" | "--narrow-stream-checkpoint" | "--begin-stream-reset")) {
         return stream_checkpoint::command(args, credibility, time, &mut std::io::stdout().lock());
     }
     if args.iter().any(|arg| arg == "--recover-stopped-stream-reset") {
@@ -536,12 +543,32 @@ fn generate_with_checkpoint<F>(driver: &mut FileSupervisedDriver, reviewer: &Fil
     selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>))
     -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
-    let (mut prediction, mut checkpoint) = selection;
+    match drive_generation(driver, reviewer, config, control, deadline, time,
+        (selection.0, selection.1, GenerationGoal::Message))? {
+        GenerationOutcome::Message => Ok(true),
+        GenerationOutcome::Stopped => Ok(false),
+        GenerationOutcome::CheckpointCaptured => Err("message generation ended at a maintenance checkpoint".into()),
+    }
+}
+
+/// Maintenance cannot be confused with a complete message or actor response.
+enum GenerationGoal { Message, Checkpoint }
+enum GenerationOutcome { Message, CheckpointCaptured, Stopped }
+
+fn drive_generation<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
+    selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>, GenerationGoal))
+    -> Result<GenerationOutcome, String>
+where F: FnMut() -> ElapsedTick {
+    let (mut prediction, mut checkpoint, goal) = selection;
+    if matches!(goal, GenerationGoal::Checkpoint) && checkpoint.is_none() {
+        return Err("checkpoint preparation requires an explicit original boundary".into());
+    }
     if let Some(selected) = checkpoint {
         selected.check_owner(&*driver.supervisor().host().map_err(debug)?)?;
     }
     prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
-    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+    if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
     refresh(driver, config, deadline, time)?;
     {
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
@@ -557,7 +584,7 @@ where F: FnMut() -> ElapsedTick {
     let mut numerical: Option<generation::Session> = None;
     loop {
         deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
         let current = driver.supervisor().host().map_err(debug)?
             .learned_generation_inspection().map_err(debug)?;
         if !current.numerical.status.is_active() {
@@ -573,7 +600,7 @@ where F: FnMut() -> ElapsedTick {
                         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
                         numerical.retain_for_control(&mut host)?;
                     }
-                    Ok(true)
+                    Ok(GenerationOutcome::Message)
                 }
                 _ => Err(format!("learned generation did not finish at a quiet monitored stop: {:?}",
                     current.numerical.status)),
@@ -590,6 +617,11 @@ where F: FnMut() -> ElapsedTick {
                     numerical.retain_for_control(&mut host)?;
                 }
                 selected.capture(&mut host)?;
+                if matches!(goal, GenerationGoal::Checkpoint) {
+                    // Retain this acknowledged prompt before forecasting,
+                    // drawing output, admitting a request or issuing a Stop.
+                    return Ok(GenerationOutcome::CheckpointCaptured);
+                }
                 // Acknowledge capture before another Stop/source/deadline check
                 // and before even the first sampled-token intent is admitted.
                 continue;

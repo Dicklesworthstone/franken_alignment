@@ -118,8 +118,11 @@ position/draw count using the existing
 the first Message served by this invocation. A fresh run can capture the complete
 prompt before its first draw; an explicitly continued plain stream can select
 its first new quiet boundary after the confirmed predecessor. This initial live
-capture selection requires a plain, nonpredictive stream. Required raw or owned
-predictors and topology-backed live capture retain their refusals.
+capture selection requires a plain nonpredictive stream or the explicit
+[owned prompt-audit stream recipe](LEARNED_PREDICTIVE_STREAM_RESET.md), whose
+capture is restricted to the complete original prompt with zero cumulative
+sampling. Required raw or legacy owned predictors and topology-backed live
+capture retain their refusals.
 
 After durably capturing that boundary, the original generation loop services
 Stop, source and deadline checks before the next sampled intent. Later Messages

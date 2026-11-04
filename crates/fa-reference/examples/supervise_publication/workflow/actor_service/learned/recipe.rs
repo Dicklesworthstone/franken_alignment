@@ -199,7 +199,7 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
     let generation = generation.with_required_sidecar().map_err(debug)?
         .with_required_policy_source(config.source_policy).map_err(debug)?;
     let generation = if let Some(forecast) = forecast {
-        forecast.pin(generation)?.with_forecast_text_stream_continuation().map_err(debug)?
+        forecast.pin(generation)?
     } else { generation };
     let generation = if let Some(joint) = recipe.joint {
         generation.with_required_held_out_joint(joint).map_err(debug)?

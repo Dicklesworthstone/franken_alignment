@@ -37,6 +37,7 @@ pub(super) struct ForecastInput {
     stream: u64,
     publication: StreamProfile,
     required: RequiredForecast,
+    owned_prompt_reset: bool,
 }
 
 impl ForecastInput {
@@ -46,9 +47,15 @@ impl ForecastInput {
 
     fn decode(bytes: &[u8]) -> Result<Self, String> {
         let mut root = Fields::parse(bytes, MAX_DATA_BYTES)?;
-        if root.text("schema")? != "fa.learned-forecast/1" {
-            return Err("unsupported learned forecast artifact".into());
-        }
+        let owned_prompt_reset = match root.text("schema")?.as_str() {
+            "fa.learned-forecast/1" => false,
+            "fa.learned-forecast/2" => match root.text("reset")?.as_str() {
+                "disabled" => false,
+                "owned_prompt_audit" => true,
+                _ => return Err("unsupported learned forecast reset selection".into()),
+            },
+            _ => return Err("unsupported learned forecast artifact".into()),
+        };
         let identity = identity(root.object("model_identity")?)?;
         let mut source = root.object("source")?;
         let owned = match source.text("kind")?.as_str() {
@@ -56,6 +63,9 @@ impl ForecastInput {
             "owned_learned_kv" => true,
             _ => return Err("unsupported learned forecast source".into()),
         };
+        if owned_prompt_reset && !owned {
+            return Err("prompt-audit reset requires the original owned K/V predictor".into());
+        }
         let layer = source.number("layer")?;
         let side = if owned { Some(match source.text("side")?.as_str() {
             "key" => KvSide::Key,
@@ -119,7 +129,8 @@ impl ForecastInput {
                 .map_err(debug)?.with_pre_output_forecast().map_err(debug)?),
             _ => return Err("incomplete learned forecast source contract".into()),
         };
-        Ok(Self { identity, layer, side, profile, dimensions, stream, publication, required })
+        Ok(Self { identity, layer, side, profile, dimensions, stream, publication, required,
+            owned_prompt_reset })
     }
 
     /// Compare the explicit registration against the contracts installed by the
@@ -143,19 +154,27 @@ impl ForecastInput {
         if contract.profile() != self.profile || contract.dimensions() != self.dimensions {
             return Err("forecast source profile or dimensions do not match the original model tap".into());
         }
-        Ok(BoundForecast(self.required))
+        Ok(BoundForecast { required: self.required, owned_prompt_reset: self.owned_prompt_reset })
     }
 }
 
 /// Only a locally parsed and model-bound original predictor can reach the recipe
 /// pin. The original generation constructor still validates its own full bytes.
-pub(super) struct BoundForecast(RequiredForecast);
+pub(super) struct BoundForecast {
+    required: RequiredForecast,
+    owned_prompt_reset: bool,
+}
 impl BoundForecast {
+    /// Install the exact predictor and its cumulative-message contract before
+    /// the independently selected reset recipe. Legacy input keeps its bytes.
     pub(super) fn pin(self, generation: FileLearnedConfig) -> Result<FileLearnedConfig, String> {
-        match self.0 {
+        let generation = match self.required {
             RequiredForecast::Raw(predictor) => generation.with_required_pre_output_forecast(predictor),
             RequiredForecast::Owned(predictor) => generation.with_required_owned_pre_output_forecast(predictor),
-        }.map_err(debug)
+        }.map_err(debug)?.with_forecast_text_stream_continuation().map_err(debug)?;
+        if self.owned_prompt_reset {
+            generation.with_owned_forecast_stream_restart_audit().map_err(debug)
+        } else { Ok(generation) }
     }
 }
 

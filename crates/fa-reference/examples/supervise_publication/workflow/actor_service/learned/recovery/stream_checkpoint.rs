@@ -3,14 +3,30 @@ use super::cooperative::{Progress, finish_replay};
 use super::{Config, FileOversight, Loaded, RecoveryReserve, debug, requirements};
 use super::super::stream_checkpoint::{self, Request};
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileLearnedStreamControlHistory;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::predictive::owned::FileOwnedPredictiveRequirements;
 
 pub(in super::super) fn execute(config: &Config, loaded: &Loaded, request: &Request,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>)
     -> Result<FileLearnedStreamControlHistory, String>
 {
-    stream_checkpoint::check_selection(loaded)?;
+    stream_checkpoint::check_request_selection(loaded, request)?;
     checkpoint(None)?;
     let anchor = loaded.recovery_anchor.as_ref().ok_or("missing independent stream-control history anchor")?;
+    if let Some(prediction) = loaded.generation.required_owned_pre_output_forecast() {
+        let expected = FileOwnedPredictiveRequirements {
+            oversight: requirements(config, loaded), prediction: prediction.clone(), evaluation: None,
+        };
+        let run = FileOversight::begin_open_predictive_guarded_anchored_with_owned_learned_consistency(
+            &config.store, config.profile.clone(), &expected, &loaded.generation, anchor)
+            .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal())).map_err(debug)?;
+        return finish_replay(run, checkpoint, |run| run.progress(), |run, done| run.advance(done, 1),
+            |run| match request {
+                Request::Capture(expected) => run.finish_captured_stream_checkpoint(*expected),
+                Request::Narrow(expected) => run.finish_narrowed_stream_checkpoint(expected),
+                Request::Begin(expected) => run.finish_begun_stream_reset(
+                    &expected.intent, expected.first_incident_sequence),
+            });
+    }
     let run = FileOversight::begin_open_guarded_anchored_with_learned_generation(
         &config.store, config.profile.clone(), &requirements(config, loaded),
         &loaded.generation, anchor)
@@ -18,6 +34,8 @@ pub(in super::super) fn execute(config: &Config, loaded: &Loaded, request: &Requ
     finish_replay(run, checkpoint, |run| run.progress(), |run, done| run.advance(done, 1),
         |run| match request {
             Request::Capture(expected) => run.finish_captured_stream_checkpoint(*expected),
+            Request::Narrow(_) => Err(fa_reference::action::consequence::delivery::persistent::JournalError::Contract(
+                fa_reference::Error::Binding)),
             Request::Begin(expected) => run.finish_begun_stream_reset(
                 &expected.intent, expected.first_incident_sequence),
         })

@@ -409,8 +409,8 @@ impl Cursor {
         }
     }
 
-    /// Preserve all original Plain guards around exact pending stream reset
-    /// preparation. Predictive and mediated owners have no operator path here.
+    /// Preserve the original guards and predictor lifetime around exact pending
+    /// stream reset preparation. Topology uses its separately sealed path.
     pub(super) fn finish_pending_stream_reset(
         self,
         intent: &fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent,
@@ -418,6 +418,7 @@ impl Cursor {
     ) -> Result<TopologyCustody, JournalError> {
         match self {
             Self::Plain(run) => Self::finish_plain_stream_reset(run, intent, first_incident_sequence),
+            Self::Owned(run) => Self::finish_owned_stream_reset(run, intent, first_incident_sequence),
             _ => Err(fa_reference::Error::Incomplete.into()),
         }
     }
@@ -430,6 +431,17 @@ impl Cursor {
     ) -> Result<TopologyCustody, JournalError> {
         let (host, roles) = run.finish_pending_stream_reset(intent, first_incident_sequence)?;
         Ok(((host, roles.human, None, roles.identity_observer), None))
+    }
+
+    #[inline(never)]
+    fn finish_owned_stream_reset(
+        run: FileOwnedPredictiveRecovery,
+        intent: &fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::checkpoint::FileLearnedResetIntent,
+        first_incident_sequence: u64,
+    ) -> Result<TopologyCustody, JournalError> {
+        let (host, roles) = run.finish_pending_stream_reset(intent, first_incident_sequence)?;
+        Ok(((host, roles.oversight.human, Some(roles.consistency_observer),
+            roles.oversight.identity_observer), None))
     }
 
     fn finish_plain(run: FileGuardedLearnedRecovery) -> Result<TopologyCustody, JournalError> {

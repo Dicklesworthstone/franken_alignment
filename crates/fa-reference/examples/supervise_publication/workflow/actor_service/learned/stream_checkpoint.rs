@@ -1,23 +1,26 @@
-//! Exact offline checkpoint capture and independent stream-reset initiation.
+//! Exact checkpoint capture, prompt containment and stream-reset initiation.
 //! The sealed native finalizer returns only acknowledged history and no roles.
 use super::{Config, Deadline, Duration, ElapsedTick, Instant, Loaded, anchors,
     checked, debug, fields, plus, recipe, recovery, stream_reset};
 use crate::config::read_regular;
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::{
-    FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
+    FileLearnedStreamCheckpointRequest, FileLearnedStreamNarrowRequest, FileLearnedStreamControlHistory,
     FileLearnedStreamControlReceipt,
 };
 use std::{collections::BTreeSet, fs, io::Write, path::Path};
 
 #[path = "stream_checkpoint/request.rs"]
 mod request;
+#[path = "stream_checkpoint/narrow.rs"]
+mod narrow;
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_REQUEST | --begin-stream-reset RESET_REQUEST) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_REQUEST | --narrow-stream-checkpoint NARROW_REQUEST | --begin-stream-reset RESET_REQUEST) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT";
 const REQUEST_BYTES: usize = 262_144;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) enum Request {
     Capture(FileLearnedStreamCheckpointRequest),
+    Narrow(FileLearnedStreamNarrowRequest),
     Begin(stream_reset::Request),
 }
 
@@ -25,10 +28,14 @@ pub(super) fn decode_capture(bytes: &[u8]) -> Result<FileLearnedStreamCheckpoint
     request::decode(bytes)
 }
 
+pub(super) fn decode_narrow(bytes: &[u8]) -> Result<FileLearnedStreamNarrowRequest, String> {
+    narrow::decode(bytes)
+}
+
 fn arguments(args: &[String]) -> Result<(), String> {
     if args.len() != 9 || args.first().map(String::as_str) != Some("create-learned-generated")
         || !matches!(args.get(3).map(String::as_str),
-            Some("--capture-stream-checkpoint" | "--begin-stream-reset")) {
+            Some("--capture-stream-checkpoint" | "--narrow-stream-checkpoint" | "--begin-stream-reset")) {
         return Err(USAGE.into());
     }
     for index in [1, 2, 4] { fields::path(&args[index])?; }
@@ -58,16 +65,19 @@ where F: FnMut() -> ElapsedTick {
         return Err("stream checkpoint/reset expectation must be retained outside the authority store".into());
     }
     let bytes = read_regular(path, REQUEST_BYTES)?;
-    let request = if args[3] == "--capture-stream-checkpoint" {
-        Request::Capture(decode_capture(&bytes)?)
-    } else { Request::Begin(stream_reset::decode(&bytes)?) };
+    let request = match args[3].as_str() {
+        "--capture-stream-checkpoint" => Request::Capture(decode_capture(&bytes)?),
+        "--narrow-stream-checkpoint" => Request::Narrow(decode_narrow(&bytes)?),
+        "--begin-stream-reset" => Request::Begin(stream_reset::decode(&bytes)?),
+        _ => return Err(USAGE.into()),
+    };
     deadline.check(time())?;
     // Historical selection pins all original native contracts without reading
     // current helper/source files or constructing a publication service.
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     checked::check_selection(&config, &loaded)?;
     options.admit(&config, &mut loaded, true)?;
-    check_selection(&loaded)?;
+    check_request_selection(&loaded, &request)?;
     deadline.check(time())?;
     run(&config, &loaded, &request, &deadline, &mut time, output)
 }
@@ -77,8 +87,9 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
         return Err("stream checkpoint control requires the original learned text stream".into());
     }
     if loaded.generation.required_pre_output_forecast().is_some()
-        || loaded.generation.required_owned_pre_output_forecast().is_some() {
-        return Err("stream checkpoint control does not support predictive histories".into());
+        || (loaded.generation.required_owned_pre_output_forecast().is_some()
+            && !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
+        return Err("predictive stream checkpoint control requires the explicit owned prompt-audit reset recipe".into());
     }
     if loaded.topology.is_some() {
         return Err("stream checkpoint control requires a plain history; topology custody is unsupported".into());
@@ -89,11 +100,21 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn check_request_selection(loaded: &Loaded, request: &Request) -> Result<(), String> {
+    check_selection(loaded)?;
+    if matches!(request, Request::Narrow(_))
+        && (loaded.generation.required_owned_pre_output_forecast().is_none()
+            || !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
+        return Err("stream checkpoint narrowing requires the explicit owned prompt-audit reset recipe".into());
+    }
+    Ok(())
+}
+
 pub(super) fn run<F>(config: &Config, loaded: &Loaded, request: &Request,
     deadline: &Deadline, time: &mut F, output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     checked::check_selection(config, loaded)?;
-    check_selection(loaded)?;
+    check_request_selection(loaded, request)?;
     let acknowledged = recovery::stream_checkpoint::execute(config, loaded, request,
         &mut |_| deadline.check(time())).map_err(|error| format!(
             "native stream checkpoint control is unconfirmed: {error}; preserve the original independent expectation and input history anchor"))?;

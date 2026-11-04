@@ -1,5 +1,7 @@
 //! Actual artifact admission and exact original predictor configuration.
 //! Runtime publication/forecast ordering is exercised in the predictive tests.
+#[path = "forecast/restart.rs"]
+mod restart;
 use super::*;
 use super::super::{fields::{Assets, Fields, MAX_DATA_BYTES}, forecast::ForecastInput};
 use fa_reference::action::consequence::activation::{
@@ -44,6 +46,15 @@ pub(super) fn install(root: &Root, recipe: &Path, owned: bool, max_prediction_ag
     fs::write(recipe, updated.replacen("\"files\":{",
         &format!("\"files\":{{\"forecast\":\"{}\",", path.display()), 1)).unwrap();
     path
+}
+
+pub(super) fn install_restart(root: &Root, recipe: &Path, age: u64) -> PathBuf {
+    let file = install(root, recipe, true, age);
+    let original = fs::read_to_string(&file).unwrap();
+    fs::write(&file, original.replacen(
+        r#""schema":"fa.learned-forecast/1""#,
+        r#""schema":"fa.learned-forecast/2","reset":"owned_prompt_audit""#, 1)).unwrap();
+    file
 }
 
 fn expected(stream: StreamProfile, owned: bool) -> FileConsistencyConfig {

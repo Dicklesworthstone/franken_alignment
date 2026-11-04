@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-04: expose the complete predictive prompt containment workflow
+
+- Prepare a fresh original prompt, capture its selected checkpoint and retain
+  an anchor before forecasting or sampling, with an explicit maintenance result
+  and no successful-path Stop/Fence or actor submission.
+- Add closed forecast `/2` reset selection and exact operator checkpoint
+  narrowing; compose original owned capture, reset initiation/completion and
+  live continuation without changing the predictor's policy generation.
+- Preserve legacy recipe bytes, independent custody, both publication keys,
+  original incident frontiers and zero-event historical narrowing retries.
+- Add fifteen operator regression functions covering the real lifecycle,
+  compatibility, guard/cut refusals and post-acknowledgment output failures.
+  Syntax and independent source review passed; required RCH execution remains
+  pending, as do post-sampling and predictive-topology reset qualification.
+
 ## 2026-11-04: contain and restore owned predictive streams before sampling
 
 - Add an explicit native cumulative-stream recipe for complete unsampled prompt

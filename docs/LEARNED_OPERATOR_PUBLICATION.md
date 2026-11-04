@@ -352,10 +352,20 @@ and bounds bytes before accepting the complete file.
 | Prompt and sampling file | Actual UTF-8 prompt bytes and original `fa.decoder-sampling/1` sampling configuration |
 | Fit binding and fit archive | Independently retained `fa.learned-fit-binding/1` plus original `FAKVFIT/1` archive |
 | Learned monitor | `FAKVMON2` bound artifact or legacy `fa.learned-kv-monitor/1`, with every original layer and both K/V sides |
-| Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances |
+| Required forecast (recipe `/5`) | Independent closed `fa.learned-forecast/1` or `/2` artifact selected by `files.forecast`; exact original predictor, model/source/stream contracts and lifetime allowances; `/2` explicitly selects reset behavior |
 | Native roster | `fa.learned-native-roster/1` for single weight paths, `/2` for explicit checkpoint-source selection, or `/3` for explicit per-member verdict grammar; actual imported model/tokenizer/monitor/sampling files for every committee member |
 | `REVIEWER_PROFILE` | Existing peer profile matching the host's reviewer, scope and Unix-millisecond clock |
 | `CONFIG.evidence_path` | Fresh policy-only evidence with the exact complete committee member keys and **empty helper contexts** |
+
+Forecast `/2` adds the required `reset` field: `"disabled"` preserves the `/1`
+recipe bytes, while `"owned_prompt_audit"` selects the separate owned K/V stream
+restart contract. Raw residual predictors cannot select that contract. The
+[predictive stream lifecycle](LEARNED_PREDICTIVE_STREAM_RESET.md) connects actual
+fresh prompt preparation, exact checkpoint narrowing, reset initiation and
+completion to the original live publication command. It admits no sampled
+history or changed audience, and every later release retains native and human
+review. The new preparation mode produces a maintenance result before sampling;
+it cannot supply a completed message or publication key.
 
 The tokenizer object always has exactly `format` and `path`:
 
@@ -457,8 +467,9 @@ image. Actor metadata cannot import an advanced numerical state; the native
 bootstrap requires position zero. No grade is inferred from successful inference,
 and `bit_exact` remains unsupported. The functional declaration selects the
 native checkpoint/reset contract; it is not a qualification claim about an
-external model or process. Ordinary and resident creation retain their existing
-audit-only readers. Policy predicates must admit the original framed message,
+external model or process. Resident learned creation uses the same scoped
+reader; unrelated creation retains its audit-only reader. Policy predicates
+must admit the original framed message,
 target and complete charge, not an assumed unframed prompt.
 
 Retain the original Config, complete recipe and an independent output history

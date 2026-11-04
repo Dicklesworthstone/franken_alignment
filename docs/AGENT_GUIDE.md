@@ -70,6 +70,20 @@ separate contract and independently fresh source.
 
 The actor gets no channel into this playbook. Its statements, if any, enter only as `ActorStatement` evidence with the untrusted label.
 
+**Implemented predictive-stream containment mapping.** The trusted supervisor
+can select the original owned prompt-audit recipe and use
+`create-learned-generated --prepare-stream-checkpoint` to retain a complete
+prompt before any prediction or sample. The separately requested
+`--narrow-stream-checkpoint` applies the registered `narrow` consequence to the
+exact retained checkpoint and current predecessor. Its original receipt sequence
+can identify the later incident frontier for `--begin-stream-reset` and
+`--complete-stream-reset`. All commands require their full documented inputs;
+the [predictive stream workflow](LEARNED_PREDICTIVE_STREAM_RESET.md) gives the
+grammar and independently retained request/anchor chain. This containment
+preserves policy, predictor, work, audience and charged liabilities. The
+supervisor's evidence binding does not authenticate a detector; any later
+publication still requires the original native and human review.
+
 ### P3. An effect's outcome is unknown
 
 1. `fa situation --scope run` lists it under unknown effects with its adapter's idempotency contract.
