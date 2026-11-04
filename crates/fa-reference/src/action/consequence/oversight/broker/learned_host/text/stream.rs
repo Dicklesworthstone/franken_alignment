@@ -127,7 +127,9 @@ impl OversightBroker {
         let (target, view) = self.stream_state().ok_or(Error::Binding)?;
         if view.finished() { return Err(Error::WrongState); }
         if target != basis.target || view != &basis.view { return Err(Error::Stale); }
-        if basis.forecast_messages { return Err(Error::Incomplete); }
+        if basis.forecast_messages && !self.owned_learned_forecast_restart_audit_required() {
+            return Err(Error::Incomplete);
+        }
         Ok((target, view.clone(), host.run.host_text_output_start()?, basis.continuation))
     }
 

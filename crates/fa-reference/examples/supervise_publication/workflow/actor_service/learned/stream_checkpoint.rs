@@ -121,6 +121,12 @@ fn report(history: &FileLearnedStreamControlHistory, retained: bool, late: bool,
         FileLearnedStreamControlReceipt::Captured(info) => (
             if history.appended_events() == 0 { "already_captured" } else { "captured" },
             info.checkpoint, "null".to_owned(), "null".to_owned()),
+        FileLearnedStreamControlReceipt::Narrowed { request, receipt } => (
+            if history.appended_events() == 0 { "already_narrowed" } else { "narrowed" },
+            request.checkpoint().checkpoint, format!("\"{}\"", request.control().operation),
+            // A later exact retry may observe a newer current control cut. The
+            // original receipt, never that newer cut, supplies this frontier.
+            format!("\"{}\"", receipt.sequence)),
         FileLearnedStreamControlReceipt::ResetBegun { intent, first_incident_sequence, already_completed } => (
             if *already_completed { "already_completed" } else if history.appended_events() == 0 {
                 "already_pending"

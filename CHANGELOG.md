@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-04: contain and restore owned predictive streams before sampling
+
+- Add an explicit native cumulative-stream recipe for complete unsampled prompt
+  restoration, preserving the original confirmed audience and requiring fresh
+  successor-cache auditing and prediction before ordinary reviewed output.
+- Apply checkpoint-bound `NarrowAuthority` through the original gate without
+  changing policy, predictor or actor state; preserve Unknown/spent charges,
+  intersect exact target versions and count incidents only during reset.
+- Retain full semantic witnesses and exact journal-index binding, ordinary
+  capacity, guarded finalizers and zero-event historical retries without roles.
+- Add seventeen native regression functions. Syntax, whitespace and independent
+  source review passed; required RCH execution and qualification remain pending.
+
 ## 2026-11-04: promote learned policy with paired topology-source custody
 
 - Extend the explicit offline governor to nonpredictive mediated histories,

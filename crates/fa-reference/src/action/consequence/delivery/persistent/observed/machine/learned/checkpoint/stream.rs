@@ -18,7 +18,7 @@ impl Machine {
     // Endpoint state can be ahead of the broker while a receipt is missing.
     // Neither that state nor an already consumed later-message request may be
     // rebound by restoring a numerical prefix under the same publication basis.
-    fn check_learned_stream_reset_boundary(&self) -> Result<(), Error> {
+    pub(super) fn check_learned_stream_reset_boundary(&self) -> Result<(), Error> {
         self.broker.check_hosted_learned_stream_capture_basis()?;
         let (_, confirmed) = self.broker.stream_state().ok_or(Error::Binding)?;
         if self.endpoint.stream_view() != Some(confirmed) { return Err(Error::Incomplete); }
@@ -80,7 +80,7 @@ impl Machine {
         Ok(w.finish())
     }
 
-    fn write_learned_stream_basis(&self, w: &mut Writer, id: u64) -> Result<(), Error> {
+    pub(super) fn write_learned_stream_basis(&self, w: &mut Writer, id: u64) -> Result<(), Error> {
         let basis = self.broker.hosted_learned_stream_checkpoint_basis(id)?;
         w.target(basis.target)?;
         let profile = basis.view.profile();

@@ -26,6 +26,7 @@ pub use preparation::{FileLearnedReplayContinuation, FileLearnedIntentPreparatio
 pub use recovery::{FileLearnedRecovery, FileLearnedRecoveryProgress, FileLearnedRecoveryStatus, FileReconciledLearnedReceipt};
 pub use recovery::{FileLearnedStreamCheckpointRequest, FileLearnedStreamControlHistory,
     FileLearnedStreamControlReceipt};
+pub use checkpoint::{FileLearnedStreamNarrowControl, FileLearnedStreamNarrowRequest};
 pub use recovery::{FileLearnedPolicyPromotionHistory, FileLearnedPolicyPromotionRequest,
     FileLearnedPolicyPromotionReview};
 pub use message::FileLearnedTextContinuation;

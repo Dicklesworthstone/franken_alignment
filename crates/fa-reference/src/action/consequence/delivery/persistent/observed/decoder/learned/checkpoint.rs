@@ -7,8 +7,12 @@ use crate::Error;
 use std::rc::Rc;
 
 mod inspection;
+mod narrow;
 mod reset;
 mod stream;
+pub use narrow::{FileLearnedStreamNarrowControl, FileLearnedStreamNarrowRequest};
+pub(in super::super::super) use narrow::write_narrow_request;
+pub(in super::super::super) use narrow::check_retry_event as check_stream_narrow_retry_event;
 pub use stream::FileLearnedStreamCheckpoint;
 pub use super::preparation::{FileLearnedCheckpointPreparation, FileLearnedCheckpointPreparationProgress,
     FileLearnedResetPreparation, FileLearnedResetPreparationProgress};
@@ -61,6 +65,7 @@ pub(in super::super::super) enum CheckpointEvent {
     StreamCapture { checkpoint: u64, actor_revision: u64, epoch: u64, witness: Rc<[u8]> },
     BeginStreamReset { intent: Rc<FileLearnedResetIntent>, first_incident_sequence: u64 },
     StreamReset { operation: u64, witness: Rc<[u8]> },
+    StreamNarrow { request: Rc<FileLearnedStreamNarrowRequest>, witness: Rc<[u8]> },
 }
 
 impl FileOversight {
@@ -121,6 +126,10 @@ impl FileOversight {
 
 pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) -> Result<(), Error> {
     match event {
+        CheckpointEvent::StreamNarrow { request, witness } => {
+            check_witness(witness)?;
+            w.u8(6)?; narrow::write_narrow_request(w, request)?; w.blob(witness)?;
+        }
         CheckpointEvent::BeginReset(intent) => { w.u8(1)?; reset::write_intent(w, intent)?; }
         CheckpointEvent::BeginStreamReset { intent, first_incident_sequence } => {
             if *first_incident_sequence == 0 { return Err(Error::InvalidInput); }
@@ -151,6 +160,12 @@ pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) ->
 }
 pub(in super::super::super) fn read(r: &mut Reader<'_>) -> Result<CheckpointEvent, Error> {
     match r.u8()? {
+        6 => {
+            let request = Rc::new(narrow::read_narrow_request(r)?);
+            let witness = r.blob(MAX_WITNESS_BYTES)?;
+            check_witness(witness)?;
+            Ok(CheckpointEvent::StreamNarrow { request, witness: Rc::from(witness) })
+        }
         1 => Ok(CheckpointEvent::BeginReset(Rc::new(reset::read_intent(r)?))),
         4 => {
             let intent = Rc::new(reset::read_intent(r)?);

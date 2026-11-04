@@ -1974,6 +1974,18 @@
       ]
     },
     {
+      "mechanism": "Prompt-boundary containment before reset",
+      "serves": [
+        "FI-A02",
+        "FI-A09",
+        "FI-A16"
+      ],
+      "plan_sections": [
+        "§9.8",
+        "§11.10"
+      ]
+    },
+    {
       "mechanism": "Policy disclosure profile and actor precheck",
       "serves": [
         "FI-A13",

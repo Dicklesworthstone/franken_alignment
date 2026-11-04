@@ -1,6 +1,7 @@
 //! Original guarded recovery with an independently pinned OWNED K/V predictor.
 //! No supplied capture map, imported fidelity bounds or second replay engine.
 mod inspection;
+mod stream_control;
 pub use inspection::FileOwnedPredictiveSnapshot;
 use crate::action::consequence::delivery::credential_broker::{
     CredentialChangeReceipt, CredentialRotationRequest, CredentialRevocationRequest,
@@ -453,6 +454,21 @@ impl FileOwnedPredictiveRecovery {
     {
         self.check_ready()?;
         self.inner = self.inner.prepare_pending_reset(intent)?;
+        self.finish()
+    }
+
+    /// Complete the exact original stream reset without dropping the owned
+    /// predictor, independent guards, effective policy, reserve or recovery
+    /// floors. The original stream protocol verifies the unchanged audience and
+    /// selected incident frontier; its explicit fresh-audit recipe additionally
+    /// refuses all historical sampling and unresolved prediction obligations.
+    /// Completion and the ordinary recovery fence remain one canonical write.
+    /// An exact completed retry returns its historical result without new work.
+    pub fn finish_pending_stream_reset(mut self, intent: &FileLearnedResetIntent,
+        first_incident_sequence: u64) -> Result<(FileOversight, FilePredictiveRoles), JournalError>
+    {
+        self.check_ready()?;
+        self.inner = self.inner.prepare_pending_stream_reset(intent, first_incident_sequence)?;
         self.finish()
     }
 }

@@ -17,6 +17,7 @@ use std::rc::Rc;
 
 mod stream;
 pub use stream::{HostedLearnedStreamCheckpointHandle, HostedLearnedStreamResetRequest};
+pub(crate) use stream::HostedLearnedStreamNarrowRequest;
 pub(crate) use stream::StreamCheckpointBasis;
 
 /// References a private ORIGINAL numerical checkpoint paired with its original

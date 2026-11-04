@@ -278,3 +278,4 @@ fn original_numerical_and_forecast_witness_corruption_are_sticky_replay_failures
 
 mod lifecycle;
 mod pending_reset;
+mod stream_narrow;

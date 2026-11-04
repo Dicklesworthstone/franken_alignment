@@ -13,6 +13,8 @@ use fa_reference::action::consequence::oversight::{
 };
 #[path = "native.rs"]
 mod native;
+#[path = "owned_native/reset.rs"]
+mod reset;
 
 fn pinned(owned: bool) -> FileLearnedConfig {
     let base = finite_recipe(4, false, false).with_required_sidecar().unwrap();

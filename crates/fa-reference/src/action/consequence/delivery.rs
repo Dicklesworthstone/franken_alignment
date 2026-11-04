@@ -31,7 +31,8 @@ use super::gate::containment::session::policy::controller::{
     ControllerConfig, PolicyAuthority, PolicyChange, PolicyReceipt, PolicyReview, PolicySession,
     Proposal,
 };
-use super::gate::containment::{ActorState, CheckpointHandle, ResetReceipt, ResetRequest};
+use super::gate::containment::{ActorState, CheckpointHandle, CheckpointNarrowReceipt,
+    CheckpointNarrowRequest, ResetReceipt, ResetRequest};
 use super::gate::ControlInspection;
 use super::mediation::VerifiedCut;
 use super::oversight::policy_state::CapturedSnapshot;
@@ -508,6 +509,16 @@ impl DeliveryBroker {
 
     pub fn capture_checkpoint(&mut self, id: u64, revision: u64) -> Result<CheckpointHandle, Error> {
         self.controller.capture_checkpoint(id, revision)
+    }
+
+    pub(crate) fn check_checkpoint_narrow(&self, request: &CheckpointNarrowRequest) -> Result<(), Error> {
+        self.controller.check_checkpoint_narrow(request)
+    }
+
+    pub(crate) fn narrow_checkpoint(&mut self, request: CheckpointNarrowRequest)
+        -> Result<CheckpointNarrowReceipt, Error>
+    {
+        self.controller.narrow_checkpoint(request)
     }
 
     pub fn replace_actor_state(&mut self, revision: u64, actor: ActorState) -> Result<(), Error> {

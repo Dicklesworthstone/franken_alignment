@@ -3,11 +3,13 @@
 use super::{BaseEvent, Event, FileLearnedRecovery, FileLearnedRecoveryStatus,
     JournalError, journal};
 use super::super::{DecoderEvent, LearnedEvent,
-    checkpoint::{CheckpointEvent, FileLearnedCheckpointInfo, FileLearnedResetIntent}};
+    checkpoint::{CheckpointEvent, FileLearnedCheckpointInfo, FileLearnedResetIntent,
+        FileLearnedStreamNarrowRequest, check_stream_narrow_retry_event}};
 use crate::action::consequence::delivery::persistent::{FileDeliverySnapshot, JournalCapacity};
 use crate::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor;
 use crate::action::consequence::oversight::learned_host::{HostedLearnedInspection,
     checkpoint::HostedLearnedRecoveryUsage};
+use crate::action::consequence::gate::containment::CheckpointNarrowReceipt;
 use crate::Error;
 use std::rc::Rc;
 
@@ -35,6 +37,10 @@ impl FileLearnedStreamCheckpointRequest {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum FileLearnedStreamControlReceipt {
     Captured(FileLearnedCheckpointInfo),
+    Narrowed {
+        request: FileLearnedStreamNarrowRequest,
+        receipt: CheckpointNarrowReceipt,
+    },
     ResetBegun {
         intent: FileLearnedResetIntent,
         first_incident_sequence: u64,
@@ -70,6 +76,31 @@ impl FileLearnedStreamControlHistory {
 }
 
 impl FileLearnedRecovery {
+    pub(in super::super::super::super) fn prepare_narrowed_stream_checkpoint(mut self,
+        expected: &FileLearnedStreamNarrowRequest)
+        -> Result<(Self, FileLearnedStreamControlReceipt, usize), JournalError>
+    {
+        self.check_stream_control_profile()?;
+        if !self.expected.requires_owned_forecast_stream_restart_audit() { return Err(Error::Binding.into()); }
+        expected.validate()?;
+        if let Some((receipt, witness)) = self.machine.learned_stream_narrow_retry(expected)? {
+            check_stream_narrow_retry_event(&self.events, expected, &witness)?;
+            return Ok((self, FileLearnedStreamControlReceipt::Narrowed {
+                request: expected.clone(), receipt }, 0));
+        }
+        if self.events.len() as u64 != expected.revision() { return Err(Error::Stale.into()); }
+        self.machine.check_learned_stream_narrow(expected)?;
+        // Ordinary capacity only; no terminal reserve, Fence, inference, audit
+        // or role is spent to produce this original containment consequence.
+        self.check_stream_control_capacity(1)?;
+        self.status = FileLearnedRecoveryStatus::Interrupted;
+        let narrowed = self.machine.prepare_learned_stream_narrow(expected)?;
+        let receipt = self.machine.learned_stream_narrow_retry(expected)?.ok_or(Error::Incomplete)?.0;
+        self.append_stream_control(narrowed)?;
+        Ok((self, FileLearnedStreamControlReceipt::Narrowed {
+            request: expected.clone(), receipt }, 1))
+    }
+
     // Only the original guarded wrapper calls these consuming preparations.
     // It checks its complete independent requirements on BOTH sides before
     // invoking the sole storage boundary below. Unwind drops the candidate.
@@ -153,9 +184,13 @@ impl FileLearnedRecovery {
 
     fn check_stream_control_profile(&self) -> Result<(), JournalError> {
         let machine = self.verified_guarded_machine()?;
-        // This first operator lifecycle has no topology source-custody repair
-        // or predictor rearm contract. Native optional predictors refuse too.
-        if self.expected.text_stream_profile().is_none() || machine.broker.action_consistency_required()
+        // Topology custody and every legacy/raw/optional predictor still refuse.
+        // Only the explicit owned prompt-audit recipe can compose with the
+        // original stream protocol; its native per-cut checks prevent sampling
+        // or missing statistical evidence from being erased by this finalizer.
+        if self.expected.text_stream_profile().is_none()
+            || (machine.broker.action_consistency_required()
+                && !self.expected.requires_owned_forecast_stream_restart_audit())
             || self.events.iter().any(|event| matches!(event, Event::Mediation(_))) {
             return Err(Error::Binding.into());
         }

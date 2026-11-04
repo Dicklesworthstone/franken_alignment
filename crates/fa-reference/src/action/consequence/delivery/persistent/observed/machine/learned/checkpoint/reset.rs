@@ -62,7 +62,9 @@ impl Machine {
         operation: u64,
         stream: bool,
     ) -> Result<(), Error> {
-        let history = &self.learned.as_ref().ok_or(Error::Incomplete)?.checkpoints.resets;
+        let checkpoints = &self.learned.as_ref().ok_or(Error::Incomplete)?.checkpoints;
+        if checkpoints.narrows.completed.contains_key(&operation) { return Err(Error::Binding); }
+        let history = &checkpoints.resets;
         if let Some(pending) = &history.pending
             && pending.intent.control.operation == operation
             && history.pending_stream.is_some() != stream

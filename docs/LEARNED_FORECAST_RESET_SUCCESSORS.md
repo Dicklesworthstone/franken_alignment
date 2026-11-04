@@ -18,7 +18,8 @@ The equivalent owned-K/V configuration uses
 `with_required_owned_pre_output_forecast` before the same final option.
 `follows_forecast_reset_successors` reports the immutable selection. A duplicate
 selection refuses. Unpinned predictors and cumulative text-stream owners cannot
-enable it; cumulative streams retain their distinct frontier/reset obligations.
+enable this wrapper. The separate owned stream restart-audit recipe described
+below retains the stream's distinct frontier/reset obligations.
 
 ## Why this is a new recipe version
 
@@ -82,6 +83,22 @@ complete prompt boundary before any sampling, while preserving the pending,
 lost-coverage and sampled-history barriers described here. The ordinary
 observation still stays Empty; only that explicit predictor path can use the
 second audit before a newly accepted token.
+
+For cumulative streams, `with_owned_forecast_stream_restart_audit()` separately
+binds `FALKRFS\x01` after the required owned predictor and optional forecasted
+message continuation. It atomically selects both successor following and the
+fresh complete-prompt audit; the two nonstream wrappers keep their original
+refusals. Only the original unsampled prompt can be captured/restored. The
+existing paired stream protocol additionally checks the exact confirmed and
+published audience, target, message boundaries, output offset and later incident
+frontier. It cannot clear a pending forecast, repair lost coverage, refund work,
+reset later messages or rewind audience knowledge. The bounded original
+checkpoint-narrow operation creates a real pre-output containment frontier
+without changing the predictor's policy generation. It revokes old authority
+and intersects the current audience target ceiling; Unknown and spent rights
+stay charged, and exact acknowledgment retries perform no additional narrowing.
+Guarded offline capture, narrowing, initiation and completion retain the complete independently selected owned
+predictor and authority contract. See [the stream contract](OWNED_FORECAST_RESTART_AUDIT.md#cumulative-stream-selection-and-original-custody).
 
 ## Regression coverage
 

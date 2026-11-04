@@ -6,6 +6,9 @@
 //! Checkpoints contain actor state, never permits, reservations or live rights.
 
 pub mod session;
+mod narrow;
+pub use narrow::CheckpointNarrowReceipt;
+pub(crate) use narrow::CheckpointNarrowRequest;
 
 use super::{
     ConsequenceAuthority, ControlInspection, ControlReceipt, MAX_DECISIONS, ReviewBinding,

@@ -100,6 +100,7 @@ fn encode_iter<'a>(p: &FileOversightProfile, path: &Path, count: usize, events: 
     let mut admission = recovery_capacity::Admission::new(p.delivery.limits);
     let mut evidence_budget = HistoryBudget::default();
     for (index, event) in events.enumerate() {
+        check_stream_narrow_revision(index, event)?;
         record_credibility_budget(&mut evidence_budget, event)?;
         if let Event::PublicationWitness(event) = event { event.check_clock_domain(p.delivery.clock_domain)?; }
         let mut record = Writer::new(p.delivery.limits.bytes);
@@ -132,9 +133,10 @@ pub(super) fn decode(p: &FileOversightProfile, path: &Path, bytes: &[u8]) -> Res
     let mut events = Vec::new();
     events.try_reserve_exact(count).map_err(|_| Error::Limit)?;
     let mut evidence_budget = HistoryBudget::default();
-    for _ in 0..count {
+    for index in 0..count {
         let mut record = Reader::new(r.blob(p.delivery.limits.bytes)?);
         let event = read_event(&mut record)?;
+        check_stream_narrow_revision(index, &event)?;
         record_credibility_budget(&mut evidence_budget, &event)?;
         events.push(event);
         record.end()?;
@@ -142,6 +144,17 @@ pub(super) fn decode(p: &FileOversightProfile, path: &Path, bytes: &[u8]) -> Res
     r.end()?;
     if encode(p, path, &events)?.as_slice() != bytes { return Err(Error::Binding); }
     Ok(events)
+}
+
+// This new request independently selects its journal predecessor. Bind it to
+// the ORIGINAL record position on both encode and decode, before any replay;
+// legacy event formats and their bytes remain unchanged.
+fn check_stream_narrow_revision(index: usize, event: &Event) -> Result<(), Error> {
+    use super::decoder::learned::{LearnedEvent, checkpoint::CheckpointEvent};
+    if let Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
+        CheckpointEvent::StreamNarrow { request, .. }))) = event
+        && request.revision() != index as u64 { return Err(Error::Binding); }
+    Ok(())
 }
 
 // Bound the complete archive before retaining arbitrarily many individually

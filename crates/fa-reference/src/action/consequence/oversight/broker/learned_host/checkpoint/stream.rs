@@ -5,6 +5,8 @@ use crate::action::ResolvedTarget;
 use crate::action::consequence::delivery::stream::StreamView;
 use crate::Error;
 use std::rc::Rc;
+mod narrow;
+pub(crate) use narrow::HostedLearnedStreamNarrowRequest;
 
 /// Sealed stream-kind identity. It cannot be supplied to the legacy reset API.
 #[derive(Clone, Debug)]
@@ -44,13 +46,14 @@ impl StreamCheckpointBasis {
 
 impl OversightBroker {
     /// Capture only a quiet active original stream within its unchanged exact
-    /// confirmed publication basis. Installed predictors need a separate rearm
-    /// contract and are unavailable here. The original restart grade, numerical
-    /// snapshot, actor equality and aggregate storage ceilings remain mandatory.
+    /// confirmed publication basis. Only the separately selected owned fresh-audit
+    /// predictor profile can capture the complete original unsampled prompt.
+    /// The original restart grade, numerical snapshot, actor equality and
+    /// aggregate storage ceilings remain mandatory.
     pub fn capture_hosted_learned_stream_checkpoint(&mut self, id: u64, actor_revision: u64)
         -> Result<HostedLearnedStreamCheckpointHandle, Error>
     {
-        if self.action_consistency_required() { return Err(Error::Incomplete); }
+        self.check_learned_stream_forecast_reset()?;
         let (target, view, output_start, continuation) = self.learned_stream_checkpoint_basis()?;
         let stream = StreamCheckpointBasis { target, view, output_start, continuation,
             control_sequence: self.inspect().sequence };
@@ -59,9 +62,20 @@ impl OversightBroker {
     }
 
     pub(crate) fn check_hosted_learned_stream_capture_basis(&self) -> Result<(), Error> {
-        if self.action_consistency_required() { return Err(Error::Incomplete); }
+        self.check_learned_stream_forecast_reset()?;
         self.learned_stream_checkpoint_basis()?;
         Ok(())
+    }
+
+    // Legacy/raw/optional predictors retain their original refusal. The new
+    // immutable profile never clears pending evidence, spent work or likelihood
+    // state; its owned prompt-only check runs for capture and every reset cut.
+    fn check_learned_stream_forecast_reset(&self) -> Result<(), Error> {
+        if !self.action_consistency_required() { return Ok(()); }
+        if !self.owned_learned_forecast_restart_audit_required() {
+            return Err(Error::Incomplete);
+        }
+        self.check_owned_learned_forecast_restart()
     }
 
     pub(crate) fn hosted_learned_stream_output_start(&self) -> Result<usize, Error> {
@@ -84,7 +98,7 @@ impl OversightBroker {
     pub(super) fn check_hosted_learned_stream_reset(&self, checkpoint: &HostedLearnedCheckpointHandle,
         first_incident_sequence: u64) -> Result<(), Error>
     {
-        if self.action_consistency_required() { return Err(Error::Incomplete); }
+        self.check_learned_stream_forecast_reset()?;
         let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
         if !Rc::ptr_eq(&checkpoint.issuer, &host.recovery.issuer) { return Err(Error::Binding); }
         let saved = self.hosted_learned_stream_checkpoint_basis(checkpoint.id())?;
@@ -101,7 +115,9 @@ impl OversightBroker {
     /// message boundary. No actor, audience, source or publication ledger is
     /// imported. The original reset performs the fresh audit, budget conservation,
     /// narrowing, epoch advance, incident escalation and stale-key withdrawal.
-    /// A fresh accepted token and ordinary review remain required afterward.
+    /// Ordinary review remains required afterward. The explicit owned predictor
+    /// profile first audits the restored successor before a newly sampled token;
+    /// every other profile needs a fresh accepted token for current evidence.
     pub fn reset_hosted_learned_stream(&mut self, request: HostedLearnedStreamResetRequest)
         -> Result<HostedLearnedResetReceipt, Error>
     {

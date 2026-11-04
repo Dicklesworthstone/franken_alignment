@@ -31,8 +31,9 @@ impl FileLearnedStreamCheckpoint {
 impl FileOversight {
     /// Capture a quiet active original prefix within the exact confirmed stream
     /// target, profile, complete-message history and original text output offset.
-    /// Pending/visible-but-unconfirmed/finished output and installed predictors
-    /// refuse. Existing legacy capture/reset APIs keep refusing stream owners.
+    /// Pending/visible-but-unconfirmed/finished output and legacy predictors
+    /// refuse. The explicit owned fresh-audit profile admits only the complete
+    /// unsampled prompt. Legacy capture/reset APIs keep refusing stream owners.
     pub fn capture_learned_stream_checkpoint(&mut self, revision: u64, checkpoint: u64,
         actor_revision: u64, authority_epoch: u64) -> Result<FileLearnedStreamCheckpoint, JournalError>
     {
@@ -130,8 +131,9 @@ impl FileOversight {
     /// preserves the unresolved barrier; it cannot rebase to a newer epoch.
     /// The original reset engine conserves cumulative numerical/audit work,
     /// publication history, spent rights, incident count and authority floors.
-    /// Restored evidence starts Empty and requires a fresh accepted token plus
-    /// ordinary congress and both configured keys before any new publication.
+    /// Restored evidence starts Empty. The explicit owned fresh-audit predictor
+    /// can forecast before the next sampled token; all other current evidence,
+    /// ordinary congress and both configured publication keys remain mandatory.
     pub fn complete_learned_stream_reset(&mut self, revision: u64, operation: u64)
         -> Result<Result<HostedLearnedResetReceipt, Error>, JournalError>
     {

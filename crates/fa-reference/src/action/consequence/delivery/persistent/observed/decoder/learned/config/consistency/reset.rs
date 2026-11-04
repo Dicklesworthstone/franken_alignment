@@ -15,7 +15,7 @@ impl FileLearnedConfig {
     /// A fresh accepted prefill token must establish current source evidence
     /// before forecasting. Pending/lost forecasts and abandoned sampled work
     /// remain unavailable; this grants no fresh work or likelihood budget.
-    /// Cumulative text streams retain their separate, unsupported reset protocol.
+    /// Cumulative text streams use the separate owned stream restart-audit recipe.
     pub fn with_forecast_reset_successors(mut self) -> Result<Self, Error> {
         if self.forecast_reset_successors { return Err(Error::Duplicate); }
         if self.text_stream_profile().is_some()
@@ -64,5 +64,37 @@ impl FileLearnedConfig {
     /// Immutable fresh-audit selection, not evidence or a predictor reset role.
     pub fn requires_owned_forecast_restart_audit(&self) -> bool {
         self.owned_forecast_restart_audit
+    }
+
+    /// Restore the complete ORIGINAL prompt of a cumulative text stream, then
+    /// forecast from a fresh audit of its actual successor cache. Call after
+    /// pinning the required owned K/V pre-output predictor and, when needed,
+    /// selecting per-message forecast continuation. This distinct recipe opts
+    /// into both source successors and the second fresh audit atomically.
+    ///
+    /// The original paired stream protocol still binds the exact confirmed
+    /// audience, target, message boundaries, output offset and incident frontier.
+    /// ANY cumulative sampling, pending/lost forecast, crossed likelihood or
+    /// unreported work refuses capture/reset. Thus this enables recovery before
+    /// the first message; it cannot rewind later messages or audience knowledge.
+    /// Original numerical, prediction, audit and authority budgets never reset.
+    pub fn with_owned_forecast_stream_restart_audit(mut self) -> Result<Self, Error> {
+        if self.owned_forecast_restart_audit || self.forecast_reset_successors {
+            return Err(Error::Duplicate);
+        }
+        if self.text_stream_profile().is_none() || !self.sidecar_required
+            || self.owned_pre_output_forecast.is_none() { return Err(Error::Binding); }
+        let mut writer = Writer::new(MAX_CONFIG_BYTES);
+        writer.raw(DOMAIN)?; writer.u64(0)?; writer.raw(b"FALKRFS\x01")?;
+        writer.blob(&self.bytes)?;
+        self.bytes = writer.finish().into();
+        self.forecast_reset_successors = true;
+        self.owned_forecast_restart_audit = true;
+        Ok(self)
+    }
+
+    /// Immutable cumulative-stream restart selection, not a live reset role.
+    pub fn requires_owned_forecast_stream_restart_audit(&self) -> bool {
+        self.owned_forecast_restart_audit && self.text_stream_profile().is_some()
     }
 }

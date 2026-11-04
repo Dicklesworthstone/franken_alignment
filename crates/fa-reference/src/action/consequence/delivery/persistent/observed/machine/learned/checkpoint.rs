@@ -18,10 +18,12 @@ use std::rc::Rc;
 
 mod reset;
 mod stream;
+mod narrow;
 
 #[derive(Default)]
 pub(super) struct CheckpointHistory {
     resets: reset::ResetHistory,
+    narrows: narrow::NarrowHistory,
     captures: BTreeMap<u64, (FileLearnedCheckpointInfo, HostedLearnedCheckpointHandle)>,
     stream_captures: BTreeMap<u64, (FileLearnedCheckpointInfo, HostedLearnedStreamCheckpointHandle)>,
 }
@@ -67,6 +69,7 @@ impl Machine {
     }
     pub(super) fn apply_learned_checkpoint(&mut self, event: &CheckpointEvent) -> Result<Transition, Error> {
         match event {
+            CheckpointEvent::StreamNarrow { request, witness } => self.apply_learned_stream_narrow(request, witness),
             CheckpointEvent::BeginStreamReset { intent, first_incident_sequence } =>
                 self.apply_learned_stream_reset_intent(intent, *first_incident_sequence),
             CheckpointEvent::StreamReset { operation, witness } => self.apply_learned_stream_reset(*operation, witness),

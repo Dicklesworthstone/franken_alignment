@@ -7,8 +7,9 @@ impl OversightBroker {
     pub(crate) fn enable_owned_learned_forecast_restart_audit(&mut self) -> Result<(), Error> {
         let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
         if state.owned_restart_audit { return Err(Error::Duplicate); }
-        if !state.follow_learned_resets || !self.owned_learned_consistency_required()
-            || self.learned_text_stream_required() { return Err(Error::Binding); }
+        if !state.follow_learned_resets || !self.owned_learned_consistency_required() {
+            return Err(Error::Binding);
+        }
         let source = self.hosted_learned_generation()?;
         if source.position != 0 || source.cumulative_work.admitted_tokens != 0
             || source.host_failure.is_some() || source.availability != LearnedAvailability::Empty

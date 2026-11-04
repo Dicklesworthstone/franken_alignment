@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-04: contain and restore an owned predictive stream before sampling
+
+A distinct native stream recipe now composes cumulative learned publication
+with the owned successor-cache restart audit. It accepts only the complete
+original prompt before any cumulative sampling, retaining the exact confirmed
+audience, target, output offset, original predictor and lifetime work. Raw,
+optional and legacy predictor recipes keep their previous bytes and refusals.
+The original reset reserves both audits, retains failed costs and requires a
+fresh owned forecast before the first draw and ordinary review thereafter.
+
+An exact checkpoint-bound supervisor narrowing operation closes the control
+frontier gap without changing policy or predictor generations. The original gate
+intersects explicit versions of the same target, advances the authority epoch
+and cancels/refunds only undispatched reservations. Actor state, numerical and
+statistical work, admitted/Unknown charges and incident accounting remain intact.
+Only the later reset increments the incident count. Native replay recomputes
+the complete consequence witness and binds its requested journal predecessor
+to the event's actual index; old event tags and encodings remain unchanged.
+
+Sealed owned recovery finalizers capture, narrow and begin a reset without a
+Fence or live roles. They check all independent guards and recipes before and
+after preparation, use ordinary capacity and preserve terminal reserves. Exact
+historical retries append zero events even after publication. Reset completion
+retains its atomic completion/Fence replacement and original incident/audit
+retry behavior. Predictive topology reset and post-sampling statistical reset
+remain outside this capability.
+
+Seventeen new regression functions cover the native two-Message/Finish path,
+exact cuts and target versions, stale roles, both audits, prediction exhaustion,
+Unknown/spent conservation, all five storage barriers, ordinary capacity,
+semantic witness/index tampering and a certified-topology refusal. The native
+Rust sources passed syntax and whitespace checks and independent source review.
+Required RCH compilation, formatting, Clippy, tests and operational/model
+qualification remain pending; this does not close FA-108 or FA-111. The
+complete operator preparation/narrowing lifecycle is a separate integration.
+
 ## 2026-11-04: promote learned policy with exact topology-source custody
 
 The explicit policy governor now supports nonpredictive mediated learned
