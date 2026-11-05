@@ -332,11 +332,14 @@ impl Machine {
         ) {
             self.check_decoder_admission(event)?;
         }
+        // Abandonment only marks an existing charged Unknown as irrecoverable.
+        // It remains available after a Fence without fresh time or a new effect.
         let without_current_time = matches!(
             event,
             Event::Core(
                 BaseEvent::Time(_)
                     | BaseEvent::Cancel(_)
+                    | BaseEvent::AbandonUnknown(_)
                     | BaseEvent::Fence
                     | BaseEvent::Stop(_)
                     | BaseEvent::StopProgress(_)

@@ -90,7 +90,11 @@ fn current_and_unversioned_sources_keep_authorized_traversal_and_basis() {
     let (mut resolver, caller, source, target) = fixture();
     for requested in [source.clone(), source.without_generation()] {
         let result = resolver.fa_related(&caller, &requested, None);
-        let Knowledge::Known { value, basis: actual } = result else {
+        let Knowledge::Known {
+            value,
+            basis: actual,
+        } = result
+        else {
             panic!("current source must resolve");
         };
         assert_eq!(actual, basis(4));
@@ -169,11 +173,7 @@ fn refreshing_source_does_not_let_its_old_address_read_current_edges() {
 fn an_authorized_missing_source_does_not_expose_dangling_edges() {
     let (mut resolver, caller, _, target) = fixture();
     let missing = address(Noun::Closure, "missing-source", Some(4));
-    resolver.insert_edge(
-        missing.clone(),
-        RelationKind::ClosureStrongRef,
-        target,
-    );
+    resolver.insert_edge(missing.clone(), RelationKind::ClosureStrongRef, target);
     assert_eq!(
         resolver.fa_related(&caller, &missing, None),
         Knowledge::unknown(UnknownReason::MissingExactDomain)
@@ -220,7 +220,9 @@ fn missing_plane_and_missing_authority_each_hide_target_metadata_before_resoluti
         .allowed_planes
         .remove(&ResolverPlane::DerivedProjections);
     let mut authority_denied = caller;
-    authority_denied.granted_authorities.remove(&AuthorityKind::Judge);
+    authority_denied
+        .granted_authorities
+        .remove(&AuthorityKind::Judge);
     for scope in [plane_denied, authority_denied] {
         let mut expected_resolver = baseline.clone();
         let expected = expected_resolver.fa_related(&scope, &source, None);
@@ -287,11 +289,7 @@ fn permitted_target_uncertainty_and_relation_filter_are_preserved() {
     for target in [&old, &future, &missing] {
         resolver.insert_edge(source.clone(), RelationKind::Provenance, target.clone());
     }
-    let edges = known_edges(resolver.fa_related(
-        &caller,
-        &source,
-        Some(RelationKind::Provenance),
-    ));
+    let edges = known_edges(resolver.fa_related(&caller, &source, Some(RelationKind::Provenance)));
     assert_eq!(edges.len(), 3);
     assert_eq!(edges[0].to, old);
     assert!(matches!(
@@ -310,9 +308,12 @@ fn permitted_target_uncertainty_and_relation_filter_are_preserved() {
         Knowledge::unknown(UnknownReason::MissingExactDomain)
     );
     assert!(edges.iter().all(|edge| edge.to != visible));
-    assert!(resolver.logs().iter().all(|entry| {
-        entry.requested_address != visible.canonical_string()
-    }));
+    assert!(
+        resolver
+            .logs()
+            .iter()
+            .all(|entry| { entry.requested_address != visible.canonical_string() })
+    );
 }
 
 #[test]
@@ -337,11 +338,7 @@ fn malformed_public_address_fields_cannot_resolve_even_after_unchecked_insertion
         let mut resolver = AddressResolver::new();
         insert(&mut resolver, &malformed, 4);
         let target = Address::new("tenant-a", Noun::Evidence, "visible", Some(4)).unwrap();
-        resolver.insert_edge(
-            malformed.clone(),
-            RelationKind::ClosureStrongRef,
-            target,
-        );
+        resolver.insert_edge(malformed.clone(), RelationKind::ClosureStrongRef, target);
         assert_eq!(
             resolver.fa_get(&caller, &malformed),
             Knowledge::unknown(UnknownReason::MissingExactDomain)
@@ -367,11 +364,7 @@ fn malformed_target_addresses_are_filtered_without_changing_visible_results() {
             generation: Some(4),
         };
         insert(&mut actual_resolver, &malformed, 4);
-        actual_resolver.insert_edge(
-            source.clone(),
-            RelationKind::Provenance,
-            malformed,
-        );
+        actual_resolver.insert_edge(source.clone(), RelationKind::Provenance, malformed);
     }
     assert_eq!(
         actual_resolver.fa_related(&caller, &source, None),

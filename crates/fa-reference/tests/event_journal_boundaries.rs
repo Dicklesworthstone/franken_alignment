@@ -107,7 +107,10 @@ fn admitted_text_fields_round_trip_as_data_in_causal_and_wire_json() {
             .emit_transition(Vec::new(), vec![address("org")], kind, [0; 32], 7, 42)
             .unwrap();
         assert_eq!(emitted.control_seq, (index + 1) as u64);
-        assert_eq!(journal.fa_tail(index as u64, 1).events, vec![emitted.clone()]);
+        assert_eq!(
+            journal.fa_tail(index as u64, 1).events,
+            vec![emitted.clone()]
+        );
 
         for (encoded, expected_fields) in [
             (emitted.encode_causal_canonical(), 9),
@@ -119,7 +122,10 @@ fn admitted_text_fields_round_trip_as_data_in_causal_and_wire_json() {
             assert_eq!(decoded.get("realized_cost").and_then(Json::as_u64), Some(7));
             assert!(decoded.get("injected").is_none());
             let detail = decoded.get("detail").unwrap();
-            assert_eq!(detail.get(field).and_then(Json::as_str), Some(text.as_str()));
+            assert_eq!(
+                detail.get(field).and_then(Json::as_str),
+                Some(text.as_str())
+            );
             assert!(detail.get("injected").is_none());
         }
 

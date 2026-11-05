@@ -437,7 +437,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_control/durable/refusals.rs",
         "docs/LEARNED_RECOVERY_POLICY.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery_policy.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_policy.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/recovery_policy.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/machine.rs",
+        "artifacts/execution/2026-11-05-unknown-abandonment-receipt.json"
       ]
     },
     {

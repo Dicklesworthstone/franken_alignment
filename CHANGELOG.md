@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-05: finish fenced Unknown disposition without fresh time
+
+- Allow the observed machine to record AbandonUnknown after a recovery Fence
+  without restoring clock readiness, refunding expenditure or sending an effect.
+- Preserve original replay, predecessor, source-custody and ordinary-capacity
+  checks; leave all six learned abandonment test cases and their assertions intact.
+- Reproduce the two PublishedUnknown failures, then pass all six recovery cases
+  and the integrated 74-test interface/dispatcher/recovery run.
+- Format the eight changed agent-interface Rust files and retain scoped execution
+  evidence. The full gate still fails at the pre-existing snapshot binding.
+
 ## 2026-11-05: connect seven Tower reads through the canonical response envelope
 
 - Add a bounded immutable Tower builder and common dispatcher for get, related,

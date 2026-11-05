@@ -1,0 +1,53 @@
+warning: unreachable pattern
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/checkpoint.rs:197:9
+    |
+192 |         CheckpointEvent::Reset { operation, witness } => {
+    |         --------------------------------------------- matches all the relevant values
+...
+197 |         CheckpointEvent::Reset { operation, witness } => {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `inspection`
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/requests.rs:538:13
+    |
+538 |         let inspection = self.broker.inspect();
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_inspection`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `fa-reference` (lib) generated 2 warnings (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/workspace/scratch/9834ba96bfba/franken_alignment/crates/fa-reference)
+    Finished `test` profile [unoptimized] target(s) in 4.51s
+     Running tests/learned_unknown_abandonment.rs (/workspace/scratch/9834ba96bfba/alignment-target/debug/build/fa-reference/570dc399fe4648e2/out/learned_unknown_abandonment-570dc399fe4648e2)
+
+running 6 tests
+test all_original_learned_families_abandon_real_unknown_without_refund_resend_or_stream_advance ... FAILED
+test every_guarded_family_preserves_independent_guards_policy_credential_floors_and_topology ... ok
+test source_custody_survives_only_exact_abandonment_with_active_or_withdrawn_topology ... FAILED
+test learned_abandonment_checks_the_same_canonical_image_after_readiness ... ok
+test ordinary_capacity_never_spends_terminal_reserve_and_exact_retry_needs_no_new_slot ... ok
+test incomplete_replay_bad_predecessors_and_other_stages_preserve_canonical_and_staging ... ok
+
+failures:
+
+---- all_original_learned_families_abandon_real_unknown_without_refund_resend_or_stream_advance stdout ----
+
+thread 'all_original_learned_families_abandon_real_unknown_without_refund_resend_or_stream_advance' (43) panicked at crates/fa-reference/tests/learned_unknown_abandonment.rs:915:67:
+called `Result::unwrap()` on an `Err` value: Contract(Incomplete)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- source_custody_survives_only_exact_abandonment_with_active_or_withdrawn_topology stdout ----
+
+thread 'source_custody_survives_only_exact_abandonment_with_active_or_withdrawn_topology' (48) panicked at crates/fa-reference/tests/learned_unknown_abandonment.rs:1122:18:
+called `Result::unwrap()` on an `Err` value: Contract(Incomplete)
+
+
+failures:
+    all_original_learned_families_abandon_real_unknown_without_refund_resend_or_stream_advance
+    source_custody_survives_only_exact_abandonment_with_active_or_withdrawn_topology
+
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.97s
+
+error: test failed, to rerun pass `-p fa-reference --test learned_unknown_abandonment`

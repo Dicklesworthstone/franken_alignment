@@ -118,7 +118,11 @@ pub fn sort_situation_items_by_relevance(items: &mut [Knowledge<SituationItem>])
             .is_hard_floor
             .cmp(&va.is_hard_floor)
             .then_with(|| vb.decision_relevance_voi.cmp(&va.decision_relevance_voi))
-            .then_with(|| va.address.canonical_string().cmp(&vb.address.canonical_string())),
+            .then_with(|| {
+                va.address
+                    .canonical_string()
+                    .cmp(&vb.address.canonical_string())
+            }),
         (Knowledge::Known { .. }, _) => std::cmp::Ordering::Less,
         (_, Knowledge::Known { .. }) => std::cmp::Ordering::Greater,
         _ => std::cmp::Ordering::Equal,
@@ -648,7 +652,10 @@ pub enum AnnotationClaimClass {
 pub enum AnnotationError {
     UnsignedAnnotationRefused,
     MissingSupportingAddresses,
-    TextTooLong { len: usize, max: usize },
+    TextTooLong {
+        len: usize,
+        max: usize,
+    },
     AnnotationForbiddenInAuthoritativePath,
     CurrencyExceedsSituationExactness {
         claimed_seq: u64,
@@ -737,9 +744,13 @@ pub fn fa_handoff(
         });
     }
 
-    let handoff_address =
-        Address::new(&situation.tenant, Noun::Handoff, handoff_id, Some(generation))
-            .expect("valid handoff address");
+    let handoff_address = Address::new(
+        &situation.tenant,
+        Noun::Handoff,
+        handoff_id,
+        Some(generation),
+    )
+    .expect("valid handoff address");
     let latest_address = Address::new(&situation.tenant, Noun::Handoff, "latest", Some(generation))
         .expect("valid latest handoff address");
 
@@ -929,7 +940,10 @@ pub fn fa_doctor_layers(
 
     for layer in LayerId::ALL {
         if !lower_layer_verified {
-            results.insert(layer, Knowledge::unknown(UnknownReason::LowerLayerUnverified));
+            results.insert(
+                layer,
+                Knowledge::unknown(UnknownReason::LowerLayerUnverified),
+            );
             continue;
         }
         match by_layer.get(&layer) {
@@ -991,7 +1005,8 @@ pub fn rehearse_all_agent_guide_playbooks(
     cx: &ExperimentCx,
 ) -> Result<Vec<PlaybookRehearsalReceipt>, RehearsalError> {
     let prod_journal = DomainEventJournal::new_production("org", "dom-prod");
-    let mut branch_journal = DomainEventJournal::new_branch(cx, "org", "dom-branch", cx.branch_id());
+    let mut branch_journal =
+        DomainEventJournal::new_branch(cx, "org", "dom-branch", cx.branch_id());
 
     let closure_addr = Address::new("org", Noun::Closure, "playbook-clos", Some(1)).expect("addr");
     let ev_addr = Address::new("org", Noun::Evidence, "playbook-ev", Some(1)).expect("addr");
@@ -1432,10 +1447,6 @@ mod tests {
             .expect("all 10 AGENT_GUIDE playbooks rehearse green in branch");
         assert_eq!(receipts.len(), 10);
         assert!(receipts.iter().all(|r| r.production_events_emitted == 0));
-        assert!(
-            receipts
-                .iter()
-                .all(|r| r.final_rehearsal_outcome.rehearsal)
-        );
+        assert!(receipts.iter().all(|r| r.final_rehearsal_outcome.rehearsal));
     }
 }

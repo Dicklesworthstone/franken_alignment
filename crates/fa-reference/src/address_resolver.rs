@@ -965,9 +965,12 @@ mod tests {
         assert_eq!(edges[1].target_resolution.variant_name(), "Known");
         // The cross-tenant edge's address and existence are private too.
         assert!(edges.iter().all(|edge| edge.to != cross_tenant_secret));
-        assert!(resolver.logs().iter().all(|entry| {
-            entry.requested_address != cross_tenant_secret.canonical_string()
-        }));
+        assert!(
+            resolver
+                .logs()
+                .iter()
+                .all(|entry| { entry.requested_address != cross_tenant_secret.canonical_string() })
+        );
 
         // Lint test: addressed event record passes; raw ID JSON fails.
         let addressed_event = AddressedEventRecord {

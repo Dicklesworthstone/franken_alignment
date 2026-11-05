@@ -69,7 +69,12 @@ additional cases in `crates/fa-reference/tests/agent_projection_boundaries.rs`
 cover relationship generations, real handoff discovery and scoped journal
 projections, including permitted updates and identity-bound hold retractions.
 
-Compilation, test execution, formatting and Clippy for this change remain
-pending: the execution environment became unavailable. These source tests are
-not execution evidence and do not close the unified dispatcher or production
-qualification gates.
+The 25 resolver/projection regressions passed with the qualified
+nightly-2026-09-08 compiler as part of a combined 74-test run. The eight changed
+agent-interface Rust files also passed their targeted formatting check. See
+[the scoped execution receipt](../artifacts/execution/2026-11-05-unknown-abandonment-receipt.json)
+for exact source hashes, commands and retained logs.
+
+The canonical repository gate still stops at the pre-existing snapshot-policy
+binding mismatch before the later workspace gates. Full workspace formatting,
+Clippy, tests, complete dispatcher and production qualification remain open.

@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: restore fenced Unknown abandonment and execute scoped regressions
+
+FA-014's observed machine now admits AbandonUnknown without a fresh clock.
+Recovery Fence deliberately invalidates live clock readiness, but terminal
+disposition only marks an existing charged Unknown as IrrecoverablyUnknown.
+The observed path had omitted this event from its clock-independent admission
+list even though the base delivery path and the public abandonment contract
+already allowed it. No time event, new Fence, endpoint call or refund is added.
+
+Original guarded replay, exact request/sequence/epoch checks, canonical rereads,
+source custody, ordinary-capacity admission and actor Unknown projection remain
+unchanged. The clock stays unready for live operations. Independent review traced
+the final reducer through the original authority path and confirmed that it
+changes only the terminal stage, removes the send envelope and records the receipt.
+
+The failure was reproduced on 955a381: learned_unknown_abandonment passed four
+cases and failed two at the first PublishedUnknown abandonment with
+Contract(Incomplete). The unchanged six-case suite then passed after the
+production fix. The eight changed agent-interface Rust files were formatted
+with the qualified toolchain and passed their targeted rustfmt check.
+
+After preserving concurrent Tower and Knowledge JSON work at 3ed77f7, the
+combined seven-target run passed 74 tests, with no failures or ignored cases:
+event_journal_boundaries (9), proposal_retry_boundaries (8),
+address_resolver_boundaries (10), agent_projection_boundaries (15),
+learned_unknown_abandonment (6), knowledge_surface_wire (12), tower_dispatch (14).
+The compiler was nightly-2026-09-08, rustc commit
+cea272fa356e94bd2ee2cadf376630aa0683867a, x86_64-unknown-linux-gnu.
+Execution used one Cargo build job, disabled incremental compilation and zero
+dev/test debuginfo. Source hashes, commands, prior failures and retained logs are
+recorded in
+[the scoped execution receipt](artifacts/execution/2026-11-05-unknown-abandonment-receipt.json).
+
+The required xtask check was executed again on the integrated source. It passed
+the reference lockfile, source inventory and qualified compiler identity checks,
+then failed at snapshot_binding_mismatch before source-snapshot verification
+and the later workspace gates. The dependency policy and snapshot manifest are
+byte-identical to pre-session ef65c85; neither their binding nor the gate was
+changed. Full workspace formatting, Clippy, all-target tests, doctests, remote
+execution and production qualification remain unclaimed. FA-014 and the agent
+surface packets remain in progress with their original acceptance requirements.
+Earlier source-only entries below describe the state before execution recovered.
+
 ## 2026-11-05: connect bounded Tower reads with complete evidence and executed regressions
 
 The new `fa_reference::tower` facade connects `get`, `related`, `tail`,

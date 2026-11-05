@@ -2,7 +2,9 @@
 //! These exercise proposal identity and accounting, not effect dispatch.
 
 use fa_reference::address_resolver::{Address, Noun};
-use fa_reference::event_journal::{DomainEventJournal, JournalError, JournalEvent, JournalEventKind};
+use fa_reference::event_journal::{
+    DomainEventJournal, JournalError, JournalEvent, JournalEventKind,
+};
 use fa_reference::explain_affordances::{Affordance, DecisionCard, ExplainError, ProposalEngine};
 use fa_reference::typestate_cx::{PurposeTag, RootCx};
 
@@ -198,30 +200,14 @@ fn equal_domain_names_and_keys_do_not_reuse_another_journals_result() {
     let mut first = DomainEventJournal::new_production("org", "control");
     let mut independent = DomainEventJournal::new_production("org", "control");
     propose(&mut engine, &mut first, 0, "request", &chosen, &[]).unwrap();
-    propose(
-        &mut engine,
-        &mut independent,
-        0,
-        "request",
-        &chosen,
-        &[],
-    )
-    .unwrap();
+    propose(&mut engine, &mut independent, 0, "request", &chosen, &[]).unwrap();
     assert_eq!(first.len(), 1);
     assert_eq!(independent.len(), 1);
     assert_eq!(engine.remaining_budget(), 12);
 
     let mut other_tenant = DomainEventJournal::new_production("other", "control");
     let other = affordance("other");
-    let card = propose(
-        &mut engine,
-        &mut other_tenant,
-        0,
-        "request",
-        &other,
-        &[],
-    )
-    .unwrap();
+    let card = propose(&mut engine, &mut other_tenant, 0, "request", &other, &[]).unwrap();
     assert_eq!(card.chosen.target.tenant, "other");
     assert_eq!(other_tenant.len(), 1);
     assert_eq!(engine.remaining_budget(), 8);
@@ -300,14 +286,7 @@ fn exhausted_sequence_and_empty_key_are_nonmutating() {
 
     journal.append(note(u64::MAX, "org")).unwrap();
     assert_eq!(
-        propose(
-            &mut engine,
-            &mut journal,
-            u64::MAX,
-            "request",
-            &chosen,
-            &[],
-        ),
+        propose(&mut engine, &mut journal, u64::MAX, "request", &chosen, &[],),
         Err(ExplainError::JournalFailure(
             JournalError::ControlSequenceExhausted,
         )),

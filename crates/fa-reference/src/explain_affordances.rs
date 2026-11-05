@@ -262,10 +262,7 @@ fn status_tag(status: &Knowledge<bool>) -> String {
         Knowledge::Stale {
             basis,
             current_generation,
-        } => format!(
-            "stale:{}<{current_generation}",
-            basis.semantic_generation()
-        ),
+        } => format!("stale:{}<{current_generation}", basis.semantic_generation()),
         Knowledge::Absent { domain } => format!("absent:{}", domain.domain().domain_id()),
     }
 }
@@ -769,11 +766,12 @@ impl ProposalEngine {
             });
         }
 
-        let next_seq = expected_predecessor_seq
-            .checked_add(1)
-            .ok_or(ExplainError::JournalFailure(
-                JournalError::ControlSequenceExhausted,
-            ))?;
+        let next_seq =
+            expected_predecessor_seq
+                .checked_add(1)
+                .ok_or(ExplainError::JournalFailure(
+                    JournalError::ControlSequenceExhausted,
+                ))?;
         let event = journal
             .emit_transition(
                 vec![SourceFrontierEntry {
@@ -1097,14 +1095,7 @@ mod tests {
 
         // 5. Refinement storm / budget exhaustion fails closed.
         assert!(matches!(
-            engine.fa_propose(
-                PurposeTag::Judge,
-                1,
-                "idem-2",
-                &alt_aff,
-                &[],
-                &mut journal,
-            ),
+            engine.fa_propose(PurposeTag::Judge, 1, "idem-2", &alt_aff, &[], &mut journal,),
             Err(ExplainError::RefinementStormBlocked { .. })
         ));
     }

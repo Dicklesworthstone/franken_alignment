@@ -162,8 +162,7 @@ fn related_hides_inaccessible_edges_before_resolution_and_logging() {
     let edges = known_edges(&granted);
     assert_eq!(edges.len(), 3);
     assert!(edges.iter().any(|edge| {
-        edge.to.kind == Noun::Finding
-            && matches!(edge.target_resolution, Knowledge::Known { .. })
+        edge.to.kind == Noun::Finding && matches!(edge.target_resolution, Knowledge::Known { .. })
     }));
     assert!(edges.iter().all(|edge| edge.to.tenant == "alpha"));
 }
@@ -317,8 +316,12 @@ fn partial_situations_preserve_visible_items_without_hidden_metadata() {
                 .expect("valid pending frontier"),
             );
             hidden.items.push(Knowledge::stale(basis(31, 37), 41));
-            hidden.items.push(Knowledge::unknown(UnknownReason::Incomplete));
-            hidden.items.push(Knowledge::withheld(AuthorityKind::ExactRead));
+            hidden
+                .items
+                .push(Knowledge::unknown(UnknownReason::Incomplete));
+            hidden
+                .items
+                .push(Knowledge::withheld(AuthorityKind::ExactRead));
             assert_eq!(project_situation_for_scope(&hidden, &caller), expected);
         }
     }
@@ -436,7 +439,10 @@ fn maximum_control_sequence_folds_without_inventing_a_successor() {
         Knowledge::Known { value, basis }
             if value.address == held && basis.control_seq() == u64::MAX
     ));
-    assert_eq!(folded.items[1], Knowledge::unknown(UnknownReason::Incomplete));
+    assert_eq!(
+        folded.items[1],
+        Knowledge::unknown(UnknownReason::Incomplete)
+    );
     assert!(journal.fa_tail(u64::MAX, 1).events.is_empty());
 }
 
@@ -696,10 +702,8 @@ fn unrelated_private_events_do_not_refresh_visible_item_provenance() {
                 reason: "review_updated".to_owned(),
             },
         );
-        let updated = project_situation_for_scope(
-            &fold_situation_report(&journal, cut + 1),
-            &caller,
-        );
+        let updated =
+            project_situation_for_scope(&fold_situation_report(&journal, cut + 1), &caller);
         assert_ne!(updated, expected);
         assert!(matches!(
             &updated.items[0],
@@ -721,8 +725,7 @@ fn full_scope_still_authorizes_the_pagination_cursor() {
     assert_eq!(project_situation_for_scope(&report, &caller), report);
 
     let mut foreign_cursor = report.clone();
-    foreign_cursor.pagination_cursor =
-        Some(address("beta", Noun::Attempt, "private-cursor", 99));
+    foreign_cursor.pagination_cursor = Some(address("beta", Noun::Attempt, "private-cursor", 99));
     let mut expected = report;
     expected.pagination_cursor = None;
     assert_eq!(
@@ -784,10 +787,7 @@ fn item_producers_require_typed_subjects_and_preserve_known_state_on_omission() 
 
         emit_event(&mut journal, 2, vec![unrelated.clone()], kind.clone());
         let incomplete = fold_situation_report(&journal, 2);
-        assert_eq!(
-            incomplete,
-            recompute_situation_batch_oracle(&journal, 2),
-        );
+        assert_eq!(incomplete, recompute_situation_batch_oracle(&journal, 2),);
         assert_eq!(
             incomplete.items,
             vec![
@@ -809,10 +809,8 @@ fn item_producers_require_typed_subjects_and_preserve_known_state_on_omission() 
 fn finding_payloads_cannot_borrow_an_unrelated_attempts_authority() {
     let (visible_journal, _) = held_journal();
     let caller = no_judgment_scope();
-    let expected = project_situation_for_scope(
-        &fold_situation_report(&visible_journal, 1),
-        &caller,
-    );
+    let expected =
+        project_situation_for_scope(&fold_situation_report(&visible_journal, 1), &caller);
     let (mut journal, _) = held_journal();
     let unrelated = address("alpha", Noun::Attempt, "unrelated-attempt", 1);
     let finding = address("alpha", Noun::Finding, "restricted-finding", 2);
@@ -828,10 +826,7 @@ fn finding_payloads_cannot_borrow_an_unrelated_attempts_authority() {
     );
     let report = fold_situation_report(&journal, 2);
     assert_eq!(project_situation_for_scope(&report, &caller), expected);
-    let full = project_situation_for_scope(
-        &report,
-        &CallerScope::full_tenant_access("alpha"),
-    );
+    let full = project_situation_for_scope(&report, &CallerScope::full_tenant_access("alpha"));
     assert_eq!(full, report);
     assert!(full.items.iter().any(|item| matches!(
         item,
@@ -853,7 +848,11 @@ fn finding_payloads_cannot_borrow_an_unrelated_attempts_authority() {
         },
     );
     let incomplete = fold_situation_report(&journal, 3);
-    assert!(incomplete.items.contains(&Knowledge::unknown(UnknownReason::Incomplete)));
+    assert!(
+        incomplete
+            .items
+            .contains(&Knowledge::unknown(UnknownReason::Incomplete))
+    );
     assert!(incomplete.items.contains(&full.items[0]));
     assert_eq!(project_situation_for_scope(&incomplete, &caller), expected);
 }

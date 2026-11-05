@@ -1,0 +1,90 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-05T22:01:05Z",
+  "qualification": "scoped_local_execution; full_repository_gate_blocked",
+  "scope": "Fenced Unknown abandonment, journal/proposal boundaries, scoped graph/situation projections, Knowledge JSON and bounded Tower reads",
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "release": "1.100.0-nightly",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "source": {
+    "frozen_checkout_base": "3ed77f77b222e686d20cb837261e36836b2b0ac5",
+    "changed_source_sha256": {
+      "crates/fa-reference/src/action/consequence/delivery/persistent/observed/machine.rs": "5e4bf47a50e519ba0a5a6841d862255a6f1826f73a8574832685a6a9d5d94930",
+      "crates/fa-reference/src/event_journal.rs": "d8d04c5c743a5358435ac44912f4153ba1db645aad27f5b0b2f5cb3bcf0042ff",
+      "crates/fa-reference/src/explain_affordances.rs": "a9bfd328d11fc1f1ff1e25dc60db1ef5d1411171b55292cd386db30a140ea599",
+      "crates/fa-reference/src/address_resolver.rs": "52e46700d75e08d1e6ecf499bbb54738a9d70c81520a9e7fe7b938e758594506",
+      "crates/fa-reference/src/situation_rehearsal.rs": "d041ab340cc139830fc88142d1aac85b7f1778b0e2e18bdcecba19cb97f7cdfd",
+      "crates/fa-reference/tests/event_journal_boundaries.rs": "abcc7e0cbde3ca045d090d230a564e1225cc943a92c64c7f9ff112abe7e203c4",
+      "crates/fa-reference/tests/proposal_retry_boundaries.rs": "fb4485b36d6c677841de52e9fe50abadc0da3df77d3bd90034bf61e730d70e61",
+      "crates/fa-reference/tests/address_resolver_boundaries.rs": "5ac21576349245a8eb0e3d8432b663640825a9d38589bb20fdc48cf87824f01e",
+      "crates/fa-reference/tests/agent_projection_boundaries.rs": "7d79ee3ea55f3e0b44371775bc5fcef430cfaee46738920ea3a23dbbad256a42"
+    },
+    "note": "The source remained unchanged during the combined run. Tested bytes were rechecked against all nine Git blobs before publication. Documentation and retained execution artifacts were added after execution."
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "RUSTUP_TOOLCHAIN": "nightly-2026-09-08"
+  },
+  "baseline": {
+    "source_commit": "955a381d7b5bee4e8fad2580cea86e8c616f7315",
+    "command": "cargo test --locked -p fa-reference --test learned_unknown_abandonment",
+    "exit_code": 101,
+    "passed": 4,
+    "failed": 2,
+    "failure": "Contract(Incomplete) at first PublishedUnknown abandonment after Fence",
+    "log": "2026-11-05-unknown-abandonment-before.log",
+    "log_sha256": "5732ef43e46971e8f0735d597bf828a4c59624604b6361486dac11fd4db143de"
+  },
+  "targeted_command": "cargo test --locked --offline -p fa-reference --test event_journal_boundaries --test proposal_retry_boundaries --test address_resolver_boundaries --test agent_projection_boundaries --test learned_unknown_abandonment --test knowledge_surface_wire --test tower_dispatch",
+  "targeted_results": {
+    "exit_code": 0,
+    "passed": 74,
+    "failed": 0,
+    "ignored": 0,
+    "suites": {
+      "address_resolver_boundaries": 10,
+      "agent_projection_boundaries": 15,
+      "event_journal_boundaries": 9,
+      "knowledge_surface_wire": 12,
+      "learned_unknown_abandonment": 6,
+      "proposal_retry_boundaries": 8,
+      "tower_dispatch": 14
+    },
+    "log": "2026-11-05-unknown-abandonment-tests.log",
+    "log_sha256": "dfb7a7d913774d1c329b6843ac141ed13cbb0b43ad208f6ca8b4ec44469ee446"
+  },
+  "formatting": {
+    "command": "rustfmt --edition 2024 --check crates/fa-reference/src/event_journal.rs crates/fa-reference/src/explain_affordances.rs crates/fa-reference/src/address_resolver.rs crates/fa-reference/src/situation_rehearsal.rs crates/fa-reference/tests/event_journal_boundaries.rs crates/fa-reference/tests/proposal_retry_boundaries.rs crates/fa-reference/tests/address_resolver_boundaries.rs crates/fa-reference/tests/agent_projection_boundaries.rs",
+    "exit_code": 0,
+    "git_diff_check_exit_code": 0,
+    "note": "Qualified nightly rustfmt was used. This is a targeted check, not a full workspace formatting claim."
+  },
+  "canonical_gate": {
+    "command": "cargo run --locked -p xtask -- check",
+    "exit_code": 1,
+    "passed_stages": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false,
+    "log": "2026-11-05-unknown-abandonment-gate.log",
+    "log_sha256": "c914447cdc72883302ab174d1238bd0dfa40fde3d59edcaa1ffa81eec09c1f09"
+  },
+  "limits": [
+    "No RCH or remote execution claim",
+    "No complete source-snapshot, dependency-admission or workspace qualification",
+    "No full workspace formatting, Clippy, all-target test or doctest claim",
+    "The abandonment tests and their assertions were unchanged",
+    "FA-014 and agent-interface packets remain in progress; no production or complete dispatcher qualification"
+  ]
+}

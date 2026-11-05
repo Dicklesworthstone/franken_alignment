@@ -192,17 +192,39 @@ pub enum JournalError {
     MissingControlSeq,
     ControlSequenceExhausted,
     EmptyAddresses,
-    InvalidAddress { index: usize },
+    InvalidAddress {
+        index: usize,
+    },
     TenantMismatch,
-    BranchMismatch { expected: u64, actual: u64 },
-    TooManyAddresses { count: usize, max: usize },
-    TooManySourceFrontiers { count: usize, max: usize },
-    NonMonotonicControlSeq { previous: u64, attempted: u64 },
-    DuplicateControlSeq { control_seq: u64 },
+    BranchMismatch {
+        expected: u64,
+        actual: u64,
+    },
+    TooManyAddresses {
+        count: usize,
+        max: usize,
+    },
+    TooManySourceFrontiers {
+        count: usize,
+        max: usize,
+    },
+    NonMonotonicControlSeq {
+        previous: u64,
+        attempted: u64,
+    },
+    DuplicateControlSeq {
+        control_seq: u64,
+    },
     RehearsalForbiddenInProduction,
     UnflaggedRehearsal,
-    JournalGapDetected { missing_from_seq: u64, missing_through_seq: u64 },
-    IntegrityFailure { round_id: u64, reason: String },
+    JournalGapDetected {
+        missing_from_seq: u64,
+        missing_through_seq: u64,
+    },
+    IntegrityFailure {
+        round_id: u64,
+        reason: String,
+    },
 }
 
 /// Canonical journal event emitted by an L3–L8 transition.
@@ -397,9 +419,9 @@ fn encode_kind_canonical(kind: &JournalEventKind) -> String {
         JournalEventKind::Reset {
             checkpoint_id,
             incident_counter,
-        } => format!(
-            "{{\"checkpoint_id\":{checkpoint_id},\"incident_counter\":{incident_counter}}}"
-        ),
+        } => {
+            format!("{{\"checkpoint_id\":{checkpoint_id},\"incident_counter\":{incident_counter}}}")
+        }
         JournalEventKind::Promotion {
             from_epoch,
             to_epoch,
@@ -693,7 +715,8 @@ impl DomainEventJournal {
         wall_clock_annotation_ms: u64,
     ) -> Result<JournalEvent, JournalError> {
         let JournalScope::Branch {
-            branch_id: expected, ..
+            branch_id: expected,
+            ..
         } = &self.scope
         else {
             return Err(JournalError::RehearsalForbiddenInProduction);
@@ -729,7 +752,9 @@ impl DomainEventJournal {
             if events.len() >= max_events {
                 break;
             }
-            if let Some(missing_from_seq) = next_cursor_seq.checked_add(1).filter(|next| *next < seq) {
+            if let Some(missing_from_seq) =
+                next_cursor_seq.checked_add(1).filter(|next| *next < seq)
+            {
                 gaps.push((
                     JournalGapRange {
                         missing_from_seq,
