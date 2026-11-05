@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-05: preserve generation and disclosure boundaries in related reads
+
+- Share source admission between get and related, preserving stale, future and
+  missing outcomes before graph expansion.
+- Filter hidden target addresses, relation metadata and target logs before
+  disclosure; preserve permitted traversal and visible target uncertainty.
+- Recheck public address components at the resolver boundary.
+- Add ten public regression functions and strengthen the existing hidden-edge
+  assertion. Source-reviewed; Rust execution and formatting remain pending
+  because the execution environment is unavailable.
+
 ## 2026-11-05: preserve proposal retry identity and atomic admission accounting
 
 - Bind a reference proposal key to its original mutable journal, purpose,

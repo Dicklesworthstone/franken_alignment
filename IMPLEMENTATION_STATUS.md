@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: bind graph traversal to source generation and visible targets
+
+The FA-134 reference resolver now applies the same source admission to get and
+related. A request for an older source returns Stale, a future source returns
+Unknown(IncompatibleGeneration), and a missing source returns Unknown before
+adjacency or target lookup. A historical source address cannot label current
+edges as its own. This does not add historical adjacency storage.
+
+Related-edge disclosure now checks target tenant, plane and authority before
+resolving, counting or logging that target. The returned graph contains only
+authorized edges, retaining the original uncertainty and basis of visible
+targets. Hidden edges do not introduce addresses, relation kinds or target
+resolution logs. Publicly constructed addresses are revalidated at the read
+boundary, including when an unchecked backing entry has matching malformed
+fields. Direct unauthorized requests still return the uniform Withheld shape.
+
+Ten new public regression functions pair permitted traversal with old/future
+source cuts, missing sources, hidden target existence, denied planes/authorities,
+visible target uncertainty, and malformed public address fields. The existing
+related test now requires hidden targets to be omitted instead of exposing their
+addresses with a Withheld payload. Source review is complete; Rust compilation,
+formatting, Clippy and test execution remain pending after the environment went
+offline. The attempted general development gate did not execute: the selected
+nightly-2026-09-08 installation reported a missing manifest before rustc could
+start. No production authentication, constant-time disclosure, proof-complete
+graph query, or complete dispatcher qualification is claimed. See
+[the resolver contract](docs/ADDRESS_RESOLVER_REFERENCE.md).
+
 ## 2026-11-05: bind reference proposal retries to their exact request and journal
 
 The FA-138 reference proposal recorder checks purpose and hard-floor admission

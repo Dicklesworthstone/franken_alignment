@@ -353,6 +353,15 @@ impl Address {
         }
     }
 
+    // Public fields allow construction without `new` or `parse`; resolver
+    // admission must check the canonical components again.
+    fn has_canonical_components(&self) -> bool {
+        !self.tenant.is_empty()
+            && !self.id.is_empty()
+            && self.tenant.chars().all(is_valid_segment_char)
+            && self.id.chars().all(is_valid_segment_char)
+    }
+
     pub fn without_generation(&self) -> Self {
         Self {
             tenant: self.tenant.clone(),
@@ -562,6 +571,28 @@ impl AddressResolver {
         &self.resolution_logs
     }
 
+    /// Resolve an already authorized address without emitting another audit entry.
+    /// Both read verbs use this admission path before inspecting object contents
+    /// or expanding graph edges.
+    fn resolve_authorized(&self, address: &Address) -> Knowledge<ResolvedObject> {
+        if !address.has_canonical_components() {
+            return Knowledge::unknown(UnknownReason::MissingExactDomain);
+        }
+        let key = (address.tenant.clone(), address.kind, address.id.clone());
+        match self.plane_map(address.kind.plane()).get(&key) {
+            Some(entry) => match address.generation {
+                Some(requested_gen) if requested_gen < entry.object.generation => {
+                    Knowledge::stale(entry.basis, entry.object.generation)
+                }
+                Some(requested_gen) if requested_gen > entry.object.generation => {
+                    Knowledge::unknown(UnknownReason::IncompatibleGeneration)
+                }
+                _ => Knowledge::known(entry.object.clone(), entry.basis),
+            },
+            None => Knowledge::unknown(UnknownReason::MissingExactDomain),
+        }
+    }
+
     /// `fa get`: Resolve any [`Address`] to `Knowledge<ResolvedObject>` with
     /// strict authorization filtering (`2fkx.2`).
     ///
@@ -580,19 +611,7 @@ impl AddressResolver {
             return result;
         }
 
-        let key = (address.tenant.clone(), address.kind, address.id.clone());
-        let result = match self.plane_map(address.kind.plane()).get(&key) {
-            Some(entry) => match address.generation {
-                Some(requested_gen) if requested_gen < entry.object.generation => {
-                    Knowledge::stale(entry.basis, entry.object.generation)
-                }
-                Some(requested_gen) if requested_gen > entry.object.generation => {
-                    Knowledge::unknown(UnknownReason::IncompatibleGeneration)
-                }
-                _ => Knowledge::known(entry.object.clone(), entry.basis),
-            },
-            None => Knowledge::unknown(UnknownReason::MissingExactDomain),
-        };
+        let result = self.resolve_authorized(address);
 
         self.resolution_logs.push(ResolutionLogEntry {
             verb: "get",
@@ -606,6 +625,8 @@ impl AddressResolver {
 
     /// `fa related`: Return typed edges from `source` across closure DAG strong/weak
     /// references, provenance, thought-graph edges, support sets, and annotations (`2fkx.3`).
+    /// Source admission matches `fa get`; unauthorized or malformed targets do not
+    /// enter the result or its target-resolution log (plan §17.6).
     pub fn fa_related(
         &mut self,
         caller: &CallerScope,
@@ -624,41 +645,52 @@ impl AddressResolver {
             return result;
         }
 
-        let key = (source.tenant.clone(), source.kind, source.id.clone());
-        let Some(source_entry) = self.plane_map(source.kind.plane()).get(&key).cloned() else {
-            let result = Knowledge::unknown(UnknownReason::MissingExactDomain);
-            self.resolution_logs.push(ResolutionLogEntry {
-                verb: "related",
-                caller_tenant: caller.caller_tenant.clone(),
-                requested_address: source.canonical_string(),
-                returned_variant: result.variant_name(),
-                authorization_decision: "allow_missing",
-            });
-            return result;
-        };
-
-        let raw_edges = self.edges.get(&key).cloned().unwrap_or_default();
-        let mut resolved_edges = Vec::new();
-        for (rel, target_addr) in raw_edges {
-            if relation_filter.is_some_and(|f| f != rel) {
-                continue;
+        // A historical or future source must not acquire current graph edges
+        // under the requested generation's label.
+        let source_resolution = self.resolve_authorized(source);
+        let result = source_resolution.map(|_| {
+            let key = (source.tenant.clone(), source.kind, source.id.clone());
+            let visible_edges: Vec<_> = self
+                .edges
+                .get(&key)
+                .into_iter()
+                .flatten()
+                .filter(|(rel, target)| {
+                    relation_filter.is_none_or(|filter| filter == *rel)
+                        && caller.is_authorized_for(target).is_ok()
+                        && target.has_canonical_components()
+                })
+                .cloned()
+                .collect();
+            let mut resolved_edges = Vec::new();
+            for (rel, target_addr) in visible_edges {
+                // Address, relation and result count are protected metadata too.
+                // Hidden targets never reach resolution or its audit log.
+                let target_resolution = self.fa_get(caller, &target_addr);
+                resolved_edges.push(RelatedEdge {
+                    from: source.clone(),
+                    to: target_addr,
+                    relation: rel,
+                    target_resolution,
+                });
             }
-            let target_resolution = self.fa_get(caller, &target_addr);
-            resolved_edges.push(RelatedEdge {
-                from: source.clone(),
-                to: target_addr,
-                relation: rel,
-                target_resolution,
-            });
-        }
-
-        let result = Knowledge::known(resolved_edges, source_entry.basis);
+            resolved_edges
+        });
         self.resolution_logs.push(ResolutionLogEntry {
             verb: "related",
             caller_tenant: caller.caller_tenant.clone(),
             requested_address: source.canonical_string(),
             returned_variant: result.variant_name(),
-            authorization_decision: "allow",
+            authorization_decision: if matches!(
+                &result,
+                Knowledge::Unknown {
+                    reason: UnknownReason::MissingExactDomain
+                }
+            ) {
+                "allow_missing"
+            } else {
+                "allow"
+            },
         });
         result
     }
@@ -905,11 +937,14 @@ mod tests {
         let (edges, _) = related
             .as_known(ClaimClass::Invariant, 1)
             .expect("authorized source should return Known edge list");
-        assert_eq!(edges.len(), 3);
+        assert_eq!(edges.len(), 2);
         assert_eq!(edges[0].target_resolution.variant_name(), "Known");
         assert_eq!(edges[1].target_resolution.variant_name(), "Known");
-        // Cross-tenant target edge has its target_resolution filtered to Withheld!
-        assert_eq!(edges[2].target_resolution.variant_name(), "Withheld");
+        // The cross-tenant edge's address and existence are private too.
+        assert!(edges.iter().all(|edge| edge.to != cross_tenant_secret));
+        assert!(resolver.logs().iter().all(|entry| {
+            entry.requested_address != cross_tenant_secret.canonical_string()
+        }));
 
         // Lint test: addressed event record passes; raw ID JSON fails.
         let addressed_event = AddressedEventRecord {
