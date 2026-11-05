@@ -10,6 +10,8 @@
 //! branch-scoped journal, never to a production authority domain's journal (`FA-INV-040`).
 
 use std::collections::BTreeMap;
+use std::ops::Bound::{Excluded, Unbounded};
+use std::sync::Arc;
 
 use crate::action::consequence::{Consequence, Rule};
 use crate::address_resolver::{Address, Noun};
@@ -188,7 +190,11 @@ impl JournalEventKind {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum JournalError {
     MissingControlSeq,
+    ControlSequenceExhausted,
     EmptyAddresses,
+    InvalidAddress { index: usize },
+    TenantMismatch,
+    BranchMismatch { expected: u64, actual: u64 },
     TooManyAddresses { count: usize, max: usize },
     TooManySourceFrontiers { count: usize, max: usize },
     NonMonotonicControlSeq { previous: u64, attempted: u64 },
@@ -215,38 +221,14 @@ pub struct JournalEvent {
 impl JournalEvent {
     pub fn new(
         control_seq: u64,
-        mut source_frontiers: Vec<SourceFrontierEntry>,
+        source_frontiers: Vec<SourceFrontierEntry>,
         addresses: Vec<Address>,
         kind: JournalEventKind,
         payload_digest: [u8; 32],
         realized_cost: u64,
         wall_clock_annotation_ms: u64,
     ) -> Result<Self, JournalError> {
-        if control_seq == 0 {
-            return Err(JournalError::MissingControlSeq);
-        }
-        if addresses.is_empty() {
-            return Err(JournalError::EmptyAddresses);
-        }
-        if addresses.len() > MAX_EVENT_ADDRESSES {
-            return Err(JournalError::TooManyAddresses {
-                count: addresses.len(),
-                max: MAX_EVENT_ADDRESSES,
-            });
-        }
-        if source_frontiers.len() > MAX_SOURCE_FRONTIERS {
-            return Err(JournalError::TooManySourceFrontiers {
-                count: source_frontiers.len(),
-                max: MAX_SOURCE_FRONTIERS,
-            });
-        }
-        if let JournalEventKind::RehearsalOutcome { rehearsal, .. } = &kind
-            && !rehearsal
-        {
-            return Err(JournalError::UnflaggedRehearsal);
-        }
-        source_frontiers.sort();
-        Ok(Self {
+        let mut event = Self {
             control_seq,
             source_frontiers,
             addresses,
@@ -254,7 +236,47 @@ impl JournalEvent {
             payload_digest,
             realized_cost,
             wall_clock_annotation_ms,
-        })
+        };
+        event.validate()?;
+        event.source_frontiers.sort();
+        Ok(event)
+    }
+
+    /// Validate again at journal admission because events and addresses have public fields.
+    fn validate(&self) -> Result<(), JournalError> {
+        if self.control_seq == 0 {
+            return Err(JournalError::MissingControlSeq);
+        }
+        if self.addresses.is_empty() {
+            return Err(JournalError::EmptyAddresses);
+        }
+        if self.addresses.len() > MAX_EVENT_ADDRESSES {
+            return Err(JournalError::TooManyAddresses {
+                count: self.addresses.len(),
+                max: MAX_EVENT_ADDRESSES,
+            });
+        }
+        if self.source_frontiers.len() > MAX_SOURCE_FRONTIERS {
+            return Err(JournalError::TooManySourceFrontiers {
+                count: self.source_frontiers.len(),
+                max: MAX_SOURCE_FRONTIERS,
+            });
+        }
+        for (index, address) in self.addresses.iter().enumerate() {
+            Address::new(
+                address.tenant.clone(),
+                address.kind,
+                address.id.clone(),
+                address.generation,
+            )
+            .map_err(|_| JournalError::InvalidAddress { index })?;
+        }
+        if let JournalEventKind::RehearsalOutcome { rehearsal, .. } = &self.kind
+            && !rehearsal
+        {
+            return Err(JournalError::UnflaggedRehearsal);
+        }
+        Ok(())
     }
 
     /// Canonical causal encoding independent of `wall_clock_annotation_ms`.
@@ -284,7 +306,7 @@ impl JournalEvent {
                 .join(","),
             addrs
                 .iter()
-                .map(|s| format!("\"{s}\""))
+                .map(|s| encode_json_string(s))
                 .collect::<Vec<_>>()
                 .join(","),
             hex_bytes(&self.payload_digest),
@@ -315,7 +337,10 @@ fn encode_kind_canonical(kind: &JournalEventKind) -> String {
     match kind {
         JournalEventKind::Proposal { attempt_id } => format!("{{\"attempt_id\":{attempt_id}}}"),
         JournalEventKind::Hold { attempt_id, reason } => {
-            format!("{{\"attempt_id\":{attempt_id},\"reason\":\"{reason}\"}}")
+            format!(
+                "{{\"attempt_id\":{attempt_id},\"reason\":{}}}",
+                encode_json_string(reason)
+            )
         }
         JournalEventKind::Permit {
             attempt_id,
@@ -328,7 +353,10 @@ fn encode_kind_canonical(kind: &JournalEventKind) -> String {
         JournalEventKind::Outcome {
             attempt_id,
             outcome_class,
-        } => format!("{{\"attempt_id\":{attempt_id},\"outcome_class\":\"{outcome_class}\"}}"),
+        } => format!(
+            "{{\"attempt_id\":{attempt_id},\"outcome_class\":{}}}",
+            encode_json_string(outcome_class)
+        ),
         JournalEventKind::RoundOpen { round_id } => format!("{{\"round_id\":{round_id}}}"),
         JournalEventKind::RoundCommit {
             round_id,
@@ -385,7 +413,8 @@ fn encode_kind_canonical(kind: &JournalEventKind) -> String {
             detector_id,
             severity,
         } => format!(
-            "{{\"finding_id\":{finding_id},\"detector_id\":\"{detector_id}\",\"severity\":{severity}}}"
+            "{{\"finding_id\":{finding_id},\"detector_id\":{},\"severity\":{severity}}}",
+            encode_json_string(detector_id)
         ),
         JournalEventKind::BranchOutcome {
             branch_id,
@@ -403,6 +432,26 @@ fn encode_kind_canonical(kind: &JournalEventKind) -> String {
             *would_consequence as u8
         ),
     }
+}
+
+fn encode_json_string(value: &str) -> String {
+    let mut out = String::new();
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\u{08}' => out.push_str("\\b"),
+            '\u{0c}' => out.push_str("\\f"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            '\u{00}'..='\u{1f}' => out.push_str(&format!("\\u{:04x}", ch as u32)),
+            _ => out.push(ch),
+        }
+    }
+    out.push('"');
+    out
 }
 
 pub const fn rule_tag(rule: Rule) -> &'static str {
@@ -454,7 +503,7 @@ pub struct TailBatch {
     pub domain_id: String,
     pub since_seq: u64,
     pub events: Vec<JournalEvent>,
-    /// Reported gaps with explicit `UnknownReason::Absent` epistemic provenance; never filled.
+    /// Reported gaps with explicit `UnknownReason::Incomplete` provenance; never filled.
     pub gaps: Vec<(JournalGapRange, UnknownReason)>,
     pub next_cursor_seq: u64,
 }
@@ -470,12 +519,28 @@ pub trait JournalFold: Sized {
 }
 
 /// Ordered event journal for a single authority domain or isolated branch.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct DomainEventJournal {
     scope: JournalScope,
     tenant: String,
+    branch_context_id: Option<u64>,
+    instance_token: Arc<()>,
     events_by_seq: BTreeMap<u64, JournalEvent>,
     last_seq: u64,
+}
+
+impl Clone for DomainEventJournal {
+    fn clone(&self) -> Self {
+        Self {
+            scope: self.scope.clone(),
+            tenant: self.tenant.clone(),
+            branch_context_id: self.branch_context_id,
+            // Each independently mutable copy owns a distinct retry identity.
+            instance_token: Arc::new(()),
+            events_by_seq: self.events_by_seq.clone(),
+            last_seq: self.last_seq,
+        }
+    }
 }
 
 impl DomainEventJournal {
@@ -485,21 +550,30 @@ impl DomainEventJournal {
                 domain_id: domain_id.to_owned(),
             },
             tenant: tenant.to_owned(),
+            branch_context_id: None,
+            instance_token: Arc::new(()),
             events_by_seq: BTreeMap::new(),
             last_seq: 0,
         }
     }
 
-    pub fn new_branch(_cx: &ExperimentCx, tenant: &str, domain_id: &str, branch_id: u64) -> Self {
+    pub fn new_branch(cx: &ExperimentCx, tenant: &str, domain_id: &str, branch_id: u64) -> Self {
         Self {
             scope: JournalScope::Branch {
                 domain_id: domain_id.to_owned(),
                 branch_id,
             },
             tenant: tenant.to_owned(),
+            branch_context_id: Some(cx.branch_id()),
+            instance_token: Arc::new(()),
             events_by_seq: BTreeMap::new(),
             last_seq: 0,
         }
+    }
+
+    /// In-memory journal identity for retry isolation; neither a wire identity nor authority.
+    pub(crate) fn instance_token(&self) -> Arc<()> {
+        Arc::clone(&self.instance_token)
     }
 
     pub fn scope(&self) -> &JournalScope {
@@ -522,12 +596,45 @@ impl DomainEventJournal {
         self.events_by_seq.is_empty()
     }
 
-    /// Append a pre-validated [`JournalEvent`]. Production journals reject rehearsal outcomes.
-    pub fn append(&mut self, event: JournalEvent) -> Result<u64, JournalError> {
-        if self.scope.is_production()
-            && matches!(event.kind, JournalEventKind::RehearsalOutcome { .. })
+    /// Validate and append an event atomically within this journal's tenant and branch scope.
+    pub fn append(&mut self, mut event: JournalEvent) -> Result<u64, JournalError> {
+        event.validate()?;
+        if event
+            .addresses
+            .iter()
+            .any(|address| address.tenant != self.tenant)
         {
-            return Err(JournalError::RehearsalForbiddenInProduction);
+            return Err(JournalError::TenantMismatch);
+        }
+        match &self.scope {
+            JournalScope::Production { .. } => {
+                if matches!(&event.kind, JournalEventKind::RehearsalOutcome { .. }) {
+                    return Err(JournalError::RehearsalForbiddenInProduction);
+                }
+            }
+            JournalScope::Branch { branch_id, .. } => {
+                if let Some(context_branch_id) = self.branch_context_id
+                    && context_branch_id != *branch_id
+                {
+                    return Err(JournalError::BranchMismatch {
+                        expected: context_branch_id,
+                        actual: *branch_id,
+                    });
+                }
+                if let JournalEventKind::BranchOutcome {
+                    branch_id: actual, ..
+                }
+                | JournalEventKind::RehearsalOutcome {
+                    branch_id: actual, ..
+                } = &event.kind
+                    && actual != branch_id
+                {
+                    return Err(JournalError::BranchMismatch {
+                        expected: *branch_id,
+                        actual: *actual,
+                    });
+                }
+            }
         }
         if self.events_by_seq.contains_key(&event.control_seq) {
             return Err(JournalError::DuplicateControlSeq {
@@ -540,6 +647,7 @@ impl DomainEventJournal {
                 attempted: event.control_seq,
             });
         }
+        event.source_frontiers.sort();
         let seq = event.control_seq;
         self.events_by_seq.insert(seq, event);
         self.last_seq = seq;
@@ -556,7 +664,10 @@ impl DomainEventJournal {
         realized_cost: u64,
         wall_clock_annotation_ms: u64,
     ) -> Result<JournalEvent, JournalError> {
-        let next_seq = self.last_seq + 1;
+        let next_seq = self
+            .last_seq
+            .checked_add(1)
+            .ok_or(JournalError::ControlSequenceExhausted)?;
         let event = JournalEvent::new(
             next_seq,
             source_frontiers,
@@ -573,7 +684,7 @@ impl DomainEventJournal {
     /// Emit a rehearsal outcome to a branch journal. Requires `&ExperimentCx`.
     pub fn emit_rehearsal_outcome(
         &mut self,
-        _cx: &ExperimentCx,
+        cx: &ExperimentCx,
         branch_id: u64,
         would_consequence: Consequence,
         addresses: Vec<Address>,
@@ -581,6 +692,18 @@ impl DomainEventJournal {
         would_cost: u64,
         wall_clock_annotation_ms: u64,
     ) -> Result<JournalEvent, JournalError> {
+        let JournalScope::Branch {
+            branch_id: expected, ..
+        } = &self.scope
+        else {
+            return Err(JournalError::RehearsalForbiddenInProduction);
+        };
+        if cx.branch_id() != *expected {
+            return Err(JournalError::BranchMismatch {
+                expected: *expected,
+                actual: cx.branch_id(),
+            });
+        }
         self.emit_transition(
             Vec::new(),
             addresses,
@@ -600,17 +723,16 @@ impl DomainEventJournal {
     pub fn fa_tail(&self, since_seq: u64, max_events: usize) -> TailBatch {
         let mut events = Vec::new();
         let mut gaps = Vec::new();
-        let mut expected_seq = since_seq + 1;
         let mut next_cursor_seq = since_seq;
 
-        for (&seq, event) in self.events_by_seq.range((since_seq + 1)..) {
+        for (&seq, event) in self.events_by_seq.range((Excluded(since_seq), Unbounded)) {
             if events.len() >= max_events {
                 break;
             }
-            if seq > expected_seq {
+            if let Some(missing_from_seq) = next_cursor_seq.checked_add(1).filter(|next| *next < seq) {
                 gaps.push((
                     JournalGapRange {
-                        missing_from_seq: expected_seq,
+                        missing_from_seq,
                         missing_through_seq: seq - 1,
                     },
                     UnknownReason::Incomplete,
@@ -618,7 +740,6 @@ impl DomainEventJournal {
             }
             events.push(event.clone());
             next_cursor_seq = seq;
-            expected_seq = seq + 1;
         }
 
         TailBatch {
@@ -633,19 +754,17 @@ impl DomainEventJournal {
     /// Run a deterministic [`JournalFold`] over the entire journal through `up_to_seq`.
     pub fn run_fold<F: JournalFold>(&self, up_to_seq: u64) -> F::Output {
         let mut fold = F::initial_state();
-        let mut expected_seq = 1u64;
         let mut exact_seq = 0u64;
 
-        for (&seq, event) in self.events_by_seq.range(1..=up_to_seq) {
-            if seq > expected_seq {
+        for (&seq, event) in self.events_by_seq.range(..=up_to_seq) {
+            if let Some(missing_from_seq) = exact_seq.checked_add(1).filter(|next| *next < seq) {
                 fold.on_gap(JournalGapRange {
-                    missing_from_seq: expected_seq,
+                    missing_from_seq,
                     missing_through_seq: seq - 1,
                 });
             }
             fold.step(event);
             exact_seq = seq;
-            expected_seq = seq + 1;
         }
 
         fold.finalize(exact_seq)

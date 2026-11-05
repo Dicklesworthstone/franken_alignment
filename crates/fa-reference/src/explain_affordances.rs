@@ -7,9 +7,11 @@
 //!
 //! Unsatisfied predicate nodes yield typed [`Affordance`]s. `fa next` ranks admissible
 //! affordances by bounded value-of-information per unit cost while surfacing hard floors first,
-//! and `fa propose` executes an affordance idempotently and returns a [`DecisionCard`].
+//! and the reference `fa propose` recorder returns an idempotent [`DecisionCard`].
+//! It records the selected proposal; execution of the suggested verb remains a separate boundary.
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::action::consequence::{Consequence, DecisionInputs, Rule, decide};
 use crate::address_resolver::{Address, Noun};
@@ -115,6 +117,11 @@ pub enum ExplainError {
         expected: u64,
         actual: u64,
     },
+    InvalidIdempotencyKey,
+    IdempotencyConflict {
+        idempotency_key: String,
+    },
+    ProductionExperimentForbidden,
     JournalFailure(JournalError),
 }
 
@@ -650,14 +657,26 @@ pub struct DecisionCard {
     pub new_control_seq: u64,
 }
 
-/// Stateful proposal executor enforcing idempotency, authority checks, floor-skipping refusal,
-/// and admission limits against refinement storms (`o7j5.3`, `o7j5.4`).
+/// One original reference proposal and its journal instance. Neither a shared
+/// display domain nor an equal predecessor is sufficient to replay its result.
+#[derive(Debug)]
+struct CachedProposal {
+    journal_instance: Arc<()>,
+    expected_predecessor_seq: u64,
+    caller_purpose: PurposeTag,
+    alternatives: Vec<Affordance>,
+    card: DecisionCard,
+}
+
+/// Stateful reference proposal recorder enforcing exact retry binding, purpose
+/// checks, floor-skipping refusal and bounded admission (`o7j5.3`, `o7j5.4`).
+/// Recording a proposal does not execute its suggested verb or mint a permit.
 #[derive(Debug)]
 pub struct ProposalEngine {
     remaining_budget: u64,
     max_requests_per_window: usize,
     requests_in_window: usize,
-    idempotency_cache: BTreeMap<(u64, String), DecisionCard>,
+    idempotency_cache: BTreeMap<String, Vec<CachedProposal>>,
 }
 
 impl ProposalEngine {
@@ -683,11 +702,6 @@ impl ProposalEngine {
         alternatives: &[Affordance],
         journal: &mut DomainEventJournal,
     ) -> Result<DecisionCard, ExplainError> {
-        let key = (expected_predecessor_seq, idempotency_key.to_owned());
-        if let Some(cached) = self.idempotency_cache.get(&key) {
-            return Ok(cached.clone());
-        }
-
         if chosen.verb == "skip-floor" {
             return Err(ExplainError::FloorSkippingForbidden {
                 affordance_id: chosen.affordance_id.clone(),
@@ -699,6 +713,35 @@ impl ProposalEngine {
                 required: chosen.authority_required,
                 actual: caller_purpose,
             });
+        }
+
+        if caller_purpose == PurposeTag::Experiment && journal.scope().is_production() {
+            return Err(ExplainError::ProductionExperimentForbidden);
+        }
+        if idempotency_key.is_empty() {
+            return Err(ExplainError::InvalidIdempotencyKey);
+        }
+
+        let journal_instance = journal.instance_token();
+        if let Some(cached) = self
+            .idempotency_cache
+            .get(idempotency_key)
+            .and_then(|entries| {
+                entries
+                    .iter()
+                    .find(|entry| Arc::ptr_eq(&entry.journal_instance, &journal_instance))
+            })
+        {
+            if cached.expected_predecessor_seq != expected_predecessor_seq
+                || cached.caller_purpose != caller_purpose
+                || &cached.card.chosen != chosen
+                || cached.alternatives.as_slice() != alternatives
+            {
+                return Err(ExplainError::IdempotencyConflict {
+                    idempotency_key: idempotency_key.to_owned(),
+                });
+            }
+            return Ok(cached.card.clone());
         }
 
         if expected_predecessor_seq != journal.last_control_seq() {
@@ -726,18 +769,20 @@ impl ProposalEngine {
             });
         }
 
-        self.remaining_budget -= chosen.cost_estimate;
-        self.requests_in_window += 1;
-
+        let next_seq = expected_predecessor_seq
+            .checked_add(1)
+            .ok_or(ExplainError::JournalFailure(
+                JournalError::ControlSequenceExhausted,
+            ))?;
         let event = journal
             .emit_transition(
                 vec![SourceFrontierEntry {
                     source_id: 1,
-                    frontier_seq: expected_predecessor_seq + 1,
+                    frontier_seq: next_seq,
                 }],
                 vec![chosen.target.clone()],
                 JournalEventKind::Proposal {
-                    attempt_id: expected_predecessor_seq + 1,
+                    attempt_id: next_seq,
                 },
                 [0x44; 32],
                 chosen.cost_estimate,
@@ -760,7 +805,20 @@ impl ProposalEngine {
             fallback_verb: "hold",
             new_control_seq: event.control_seq,
         };
-        self.idempotency_cache.insert(key, card.clone());
+        // A rejected append has recorded no proposal and must not consume a
+        // budget unit, an admission slot or this operation's retry identity.
+        self.remaining_budget -= chosen.cost_estimate;
+        self.requests_in_window += 1;
+        self.idempotency_cache
+            .entry(idempotency_key.to_owned())
+            .or_default()
+            .push(CachedProposal {
+                journal_instance,
+                expected_predecessor_seq,
+                caller_purpose,
+                alternatives: alternatives.to_vec(),
+                card: card.clone(),
+            });
         Ok(card)
     }
 

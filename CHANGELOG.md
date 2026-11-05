@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-05: preserve proposal retry identity and atomic admission accounting
+
+- Bind a reference proposal key to its original mutable journal, purpose,
+  predecessor, complete affordance and ordered alternatives; reject changed
+  retries and recheck purpose/floor admission before returning cached data.
+- Treat journal copies as independent instances, preserve original exact retries
+  after later events, and charge budget/request capacity only after append.
+- Refuse empty operation keys, sequence exhaustion and experiment proposals in
+  production journals without recording or charging a proposal.
+- Add eight public regression functions. Independent source review is complete;
+  Rust compilation, execution, formatting and Clippy remain pending because the
+  executor is unavailable. No dispatcher or production qualification is claimed.
+
+## 2026-11-05: validate agent journal scope and preserve valid event encoding
+
+- Revalidate public event fields at append and bind admitted addresses and
+  rehearsal/branch outcomes to the journal's tenant and experiment branch.
+- Escape all variable JSON string fields while preserving existing valid event
+  bytes and the separation between causal order and wall-clock annotations.
+- Handle empty/zero/maximal cursors and sequence exhaustion without wrapping,
+  panics, fabricated gaps or partial mutation.
+- Add nine public regression functions and independent source review. Rust
+  compilation, formatting, Clippy and runtime execution remain pending after
+  loss of the execution environment.
+
 ## 2026-11-04: connect predictive containment to the mediated learned operator
 
 - Prepare a topology-protected original prompt and retain its exact source and

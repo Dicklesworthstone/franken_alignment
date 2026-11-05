@@ -1,5 +1,57 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: bind reference proposal retries to their exact request and journal
+
+The FA-138 reference proposal recorder checks purpose and hard-floor admission
+before returning a cached decision card. A nonempty operation key is local to
+one mutable journal instance and binds the original predecessor, complete chosen
+affordance, ordered alternatives and caller purpose. Reusing it for a different
+request returns an explicit conflict. A separately constructed or cloned journal
+must perform its own admission; equal tenant/domain names or copied event bytes
+do not identify the original operation. Exact retries on the original journal
+remain usable after later events and exhausted allowance, with no second charge.
+
+A proposal's budget and request slot are consumed only after its journal append
+succeeds. Invalid event scope and exhausted control sequence leave both unchanged.
+An experiment-purpose proposal cannot enter a production journal. The existing
+API records a reference proposal and returns a decision card; it does not execute
+the affordance's suggested verb, authenticate a caller or issue a production
+permit. This repair does not complete the unified dispatcher.
+
+Eight public regression functions cover useful exact retries, changed request
+fields, purpose/floor checks, independent equal-scope journals, cloned histories,
+failed-append accounting, empty keys, the maximum sequence and branch isolation.
+Independent source review found and removed an insufficient shared-clone/event-
+equality identity check before publication. The executor became unavailable
+before Rust compilation, test execution, formatting or Clippy could run.
+FA-138 and the P0 dispatcher/qualification beads remain open; existing packet
+acceptance and dependency requirements are unchanged.
+
+## 2026-11-05: enforce reference journal admission and total sequence boundaries
+
+The FA-135 domain journal now revalidates every public event at append, including
+events constructed or modified outside its constructor. Admission checks the
+existing count bounds, nonzero control sequence, canonical addresses, exact
+tenant and branch/context binding before changing the stored map or sequence.
+Production rehearsal refusal remains enforced. A cloned mutable journal has its
+own private process-local instance identity; this supports exact proposal retry
+isolation without adding a serialized identifier or claiming authentication.
+
+Hold reasons, outcome labels, detector identifiers and address strings are JSON
+data even when they contain quotes, backslashes, Unicode or control characters.
+Previously valid ordinary event bytes, field order, schema and causal exclusion
+of wall-clock annotations remain unchanged. Emission fails explicitly at sequence
+exhaustion. Tailing and folding handle empty, zero and maximum-u64 cuts without
+wrapping or panicking, while preserving explicit missing-event gaps.
+
+Nine public regressions exercise actual admitted event encoding through the
+independent strict JSON parser, an explicit unchanged-byte control, constructor
+bypass, tenant/branch/context refusals and the complete sequence boundaries.
+These are source-reviewed tests, not execution evidence: the executor became
+unavailable before compilation, formatting, Clippy or test execution. No durable
+broker, cryptographic journal, authenticated context or full FA-135 qualification
+is claimed. The original roadmap dependencies and acceptance remain open.
+
 ## 2026-11-04: expose the topology-protected predictive containment lifecycle
 
 The learned operator now routes fresh preparation, offline capture/narrowing,
