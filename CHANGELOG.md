@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-05: connect seven Tower reads through the canonical response envelope
+
+- Add a bounded immutable Tower builder and common dispatcher for get, related,
+  tail, situation, explain, why-held and next, using all 38 registered verb names
+  and the exact sixteen-field response envelope.
+- Preserve complete structured Knowledge, source and object generations,
+  producing event cuts, independent proofs, hidden evidence boundaries and
+  purpose/cost-filtered affordances; refuse unsupported operations explicitly.
+- Enforce import, query and output bounds without truncating Known results,
+  refunding spent work, disclosing global accounting to partial callers or
+  changing the authority journal.
+- Execute 68 public regressions on the qualified nightly compiler, including
+  fourteen dispatcher functions and the earlier resolver, projection, Knowledge,
+  journal and proposal suites. Record source hashes, exact commands and logs.
+- Document the remaining canonical gate failure at source-snapshot binding;
+  later full-gate stages and complete dispatcher/deployment qualification remain
+  open. This adapter is a Rust reference API, not a new authenticated service.
+
 ## 2026-11-05: encode complete epistemic evidence on agent surfaces
 
 - Preserve the complete Known/Stale basis, Pending source frontiers and Absent

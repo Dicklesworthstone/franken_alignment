@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: connect bounded Tower reads with complete evidence and executed regressions
+
+The new `fa_reference::tower` facade connects `get`, `related`, `tail`,
+`situation`, `explain`, `why-held` and `next` to the existing reference backends.
+It consumes an immutable host-provisioned snapshot and uses the registry's exact
+38-verb vocabulary, twelve reason codes and sixteen-field response envelope.
+Unconnected registered operations explicitly refuse before spending a read unit
+or entering a backend. No native mutation, `fa` CLI or authentication is claimed.
+
+Imports validate object and edge identity, snapshot cuts, monotone source
+frontiers, explanation metadata, unique predicate IDs and nested known-predicate
+epochs. Reads enforce subject and evidence visibility, operator/domain grants,
+generation checks, purpose and cost intersections, finite query allowances and
+complete-output limits. Partial reads retain their own object bases without
+disclosing global accounting. Situation items retain their producing event
+sequence. Every result includes its full structured body and original nested
+Knowledge; oversized output remains explicit uncertainty with spent work kept.
+
+The qualified `nightly-2026-09-08` compiler executed all 68 selected public
+regressions successfully: Tower 14, resolver 10, agent projections 15, Knowledge
+JSON 12, journal boundaries 9 and proposal retries 8; none failed or were ignored.
+The changed Rust source hashes match the frozen execution checkout. This supplies
+scoped execution evidence for the earlier source-only boundary entries below,
+including the independently landed projection changes. New Tower and serializer
+Rust files were formatted, and the final facade received independent source
+review. See the [contract](docs/TOWER_REFERENCE.md) and
+[receipt with logs](artifacts/execution/2026-11-05-tower-read-receipt.json).
+
+The canonical local `xtask check` passed the reference lock, source inventory and
+qualified compiler identity, then failed `snapshot_binding_mismatch`: policy
+expects `449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25`,
+while the manifest hashes to
+`1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a`.
+Later full-gate stages, RCH and native deployment qualification are unexecuted.
+The dispatcher and canonical source-snapshot P0 beads remain open; their original
+acceptance and dependency requirements are unchanged.
+
 ## 2026-11-05: preserve complete Knowledge evidence in agent JSON
 
 The shared Knowledge JSON surface now retains complete identity, epoch and

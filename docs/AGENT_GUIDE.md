@@ -4,6 +4,20 @@
 
 **The contract you can rely on.** Every value you receive carries its epistemic status; every object has an address; every mutation is idempotent with an expected predecessor; every rehearsal is labeled and can never mint a permit; every error is a plan (it names what would change it). You never need to guess whether a number is measured, whether an absence is observed or merely unobserved, or whether a command changed the world.
 
+## Implemented shared reference reads
+
+The [bounded Tower Rust API](TOWER_REFERENCE.md) connects `get`, `related`,
+`tail`, `situation`, `explain`, `why-held` and `next` to the existing reference
+backends. Its JSON response includes the common sixteen-field envelope and
+complete nested `Knowledge`, including original bases and uncertainty. The host
+provisions its immutable snapshot, grants and read allowance. Global reports
+require complete domain scope; operator-only routes and hidden evidence checks
+remain enforced. Other registered verbs explicitly refuse without a side effect.
+
+This is a scoped reference adapter, not a `fa` CLI or authenticated service.
+The playbook commands below remain the prospective deployment interface unless
+their own implementation notes identify an executable operator command.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

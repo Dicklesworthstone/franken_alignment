@@ -47,6 +47,7 @@ pub mod situation_rehearsal;
 pub mod standing_oversight;
 pub mod strict_json;
 pub mod trace_independence;
+pub mod tower;
 pub mod typestate_cx;
 pub mod witness;
 

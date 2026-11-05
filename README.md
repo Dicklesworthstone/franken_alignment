@@ -29,6 +29,14 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The [reference Tower dispatcher](docs/TOWER_REFERENCE.md) connects `get`,
+`related`, `tail`, `situation`, `explain`, `why-held` and `next` through one Rust
+API and the common sixteen-field response envelope. Complete typed evidence,
+generation and disclosure boundaries, bounded reads and explicit unsupported
+operations are covered by a [68-test scoped execution receipt](artifacts/execution/2026-11-05-tower-read-receipt.json).
+The remaining registered verbs, command-line integration and full verification
+gate remain open.
+
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
 complete monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision

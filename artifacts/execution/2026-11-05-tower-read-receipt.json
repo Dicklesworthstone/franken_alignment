@@ -1,0 +1,70 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-05T21:39:06.296807+00:00",
+  "qualification": "scoped_local_execution; full_repository_gate_blocked",
+  "scope": "Bounded read-only Tower, Knowledge JSON, resolver/projection, journal and proposal retry boundaries",
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "release": "1.100.0-nightly",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "source": {
+    "frozen_checkout_base": "7b3d406bfc8857156f045524c1689229bfe2b5f4",
+    "changed_source_sha256": {
+      "crates/fa-reference/src/address_resolver.rs": "d4154247040ae5d104b67bd68078b598216200244c332dea1eca3f6d1d15594f",
+      "crates/fa-reference/src/situation_rehearsal.rs": "a8c762ebd0252ede112a35932bf205461ce882d3a28315715dab80fd62587047",
+      "crates/fa-reference/src/knowledge_surface.rs": "33d7db6eaebcb6853b45a14152655998451b4d041d82a22640b1ae4efd571215",
+      "crates/fa-reference/src/lib.rs": "fc69e224cb894b81666bc8d241d49095b08d0064d3fcd99005934f3099d93882",
+      "crates/fa-reference/src/tower.rs": "4605a3019a57af9f419cee9f5330162d8e5d05d26c06593eaea9b0513f3044da",
+      "crates/fa-reference/src/tower/vocabulary.rs": "10db21393042e06447f22ec6254334c1de4f0661a0029a5a817c0e89a4b8114e",
+      "crates/fa-reference/src/tower/wire.rs": "feedde37b78d4881e5d3520cf3d285ff3ae45be3dccddbacdd7b307f16437898",
+      "crates/fa-reference/tests/address_resolver_boundaries.rs": "82a01096e60efc86a5884649e397a94a976157e616b0c50244b41d5035c0afc8",
+      "crates/fa-reference/tests/agent_projection_boundaries.rs": "d0f53ab8942ecc7772f7c959f1b5ffe329ecec746aedf232a386e365a5ca4fc1",
+      "crates/fa-reference/tests/knowledge_surface_wire.rs": "9f932cf4fb496a95ab86be95b1842eff8b8d7eab3e88a996ae448c9064fb5524",
+      "crates/fa-reference/tests/tower_dispatch.rs": "7d8778ec942c6a9fb009625e6f400b91cf529e3a8e081b2364574ec1caeaa345"
+    },
+    "note": "Listed source files were copied into a frozen worktree before execution; all hashes were rechecked against the candidate source. Documentation and this receipt were added after the run."
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0"
+  },
+  "targeted_command": "cargo +nightly-2026-09-08 test --locked --offline -p fa-reference --test tower_dispatch --test address_resolver_boundaries --test agent_projection_boundaries --test knowledge_surface_wire --test event_journal_boundaries --test proposal_retry_boundaries",
+  "targeted_results": {
+    "passed": 68,
+    "failed": 0,
+    "ignored": 0,
+    "suites": {
+      "tower_dispatch": 14,
+      "address_resolver_boundaries": 10,
+      "agent_projection_boundaries": 15,
+      "knowledge_surface_wire": 12,
+      "event_journal_boundaries": 9,
+      "proposal_retry_boundaries": 8
+    },
+    "log": "2026-11-05-tower-read-tests.log"
+  },
+  "canonical_gate": {
+    "command": "cargo +nightly-2026-09-08 run --locked --offline -p xtask -- check",
+    "exit_code": 1,
+    "passed_stages": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false,
+    "log": "2026-11-05-tower-read-gate.log"
+  },
+  "limits": [
+    "No RCH or remote execution claim",
+    "No full workspace fmt, Clippy or test-suite qualification",
+    "No authenticated service or native deployment qualification",
+    "Seven of thirty-eight registered verbs are connected; no mutation backend is exposed",
+    "Snapshot schema, binding and full dispatcher beads remain open"
+  ]
+}

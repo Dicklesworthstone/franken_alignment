@@ -1,0 +1,24 @@
+   Compiling xtask v0.2.0 (/workspace/scratch/12a990c29243/franken_alignment/xtask)
+warning: function `hash_chunk_fast` is never used
+   --> xtask/src/source_snapshot.rs:788:4
+    |
+788 | fn hash_chunk_fast(tool: &Tool, root: &Path, chunk: &[String]) -> Option<Vec<(String, String)>> {
+    |    ^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `xtask` (bin "xtask") generated 1 warning
+    Finished `dev` profile [unoptimized] target(s) in 7.15s
+     Running `/workspace/scratch/12a990c29243/fa-build/debug/xtask check`
+PASS reference_lock: exactly fa-journal, fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+binary: rustc
+commit-hash: cea272fa356e94bd2ee2cadf376630aa0683867a
+commit-date: 2026-09-07
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: cea272fa356e94bd2ee2cadf376630aa0683867a on x86_64-unknown-linux-gnu; compiler-reported identity only
+FAIL: snapshot_binding_mismatch: policy expects 449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25, operator computed 1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a
