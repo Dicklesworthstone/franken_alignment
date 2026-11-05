@@ -542,6 +542,14 @@ impl<T> Knowledge<T> {
 pub trait SafetyRelevant {
     fn safety_type_name() -> &'static str;
     fn canonical_payload_string(&self) -> String;
+
+    /// JSON payload for the known value. Existing implementations retain their
+    /// textual representation as an escaped JSON string. Domain types may
+    /// override this to return structured JSON; the surface validates it under
+    /// bounded strict parsing before embedding it inside the Knowledge wrapper.
+    fn canonical_payload_json(&self) -> String {
+        quote_json(&self.canonical_payload_string())
+    }
 }
 
 /// Typed safety verdict (replaces bare `bool` `safe` fields above L0).
@@ -596,6 +604,27 @@ pub struct SerializedAgentField {
     pub canonical_json: String,
 }
 
+/// Bounds for a complete encoded Knowledge field. These are format/resource
+/// bounds, not proof of the value's authority or of its observation provenance.
+pub const KNOWLEDGE_JSON_LIMITS: crate::strict_json::Limits = crate::strict_json::Limits {
+    max_bytes: 1024 * 1024,
+    max_depth: 64,
+    max_items: 32_768,
+    max_string_bytes: 256 * 1024,
+};
+
+const MAX_KNOWLEDGE_METADATA_BYTES: usize = 1024;
+
+/// Leave room for the epistemic wrapper and its complete basis around a custom
+/// payload. A SafetyRelevant implementation is trusted Rust code; these limits
+/// bound parsing and embedding its returned string, not the implementation's work.
+const PAYLOAD_JSON_LIMITS: crate::strict_json::Limits = crate::strict_json::Limits {
+    max_bytes: KNOWLEDGE_JSON_LIMITS.max_bytes,
+    max_depth: 56,
+    max_items: 30_000,
+    max_string_bytes: KNOWLEDGE_JSON_LIMITS.max_string_bytes,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SerializerRefusal {
     BareScalarRejected {
@@ -603,91 +632,435 @@ pub enum SerializerRefusal {
         detected_type: String,
         log_line: String,
     },
+    /// Includes malformed syntax, duplicate keys and the strict payload bounds.
+    /// No untrusted payload text is copied into this refusal.
+    InvalidPayloadJson { safety_type: &'static str },
+    EncodingLimitExceeded {
+        component: &'static str,
+        limit: usize,
+    },
+}
+
+/// Encode one complete epistemic value without an enclosing field name.
+///
+/// All six Knowledge variants retain their distinguishing data. Known and Stale
+/// include the entire basis, Pending names each source/projection frontier, and
+/// Absent retains the exact domain, closed frontier and caller-declared marker.
+/// This records reference evidence; it does not authenticate a declared proof.
+pub fn encode_knowledge_json<T: SafetyRelevant>(
+    wrapped: &Knowledge<T>,
+) -> Result<String, SerializerRefusal> {
+    bounded_knowledge_json(encode_object(&knowledge_json_fields(wrapped)?))
+}
+
+fn bounded_knowledge_json(encoded: String) -> Result<String, SerializerRefusal> {
+    if encoded.len() > KNOWLEDGE_JSON_LIMITS.max_bytes {
+        return Err(SerializerRefusal::EncodingLimitExceeded {
+            component: "encoded_knowledge",
+            limit: KNOWLEDGE_JSON_LIMITS.max_bytes,
+        });
+    }
+    Ok(encoded)
+}
+
+fn knowledge_json_fields<T: SafetyRelevant>(
+    wrapped: &Knowledge<T>,
+) -> Result<Vec<(&'static str, String)>, SerializerRefusal> {
+    let safety_type = T::safety_type_name();
+    if safety_type.len() > MAX_KNOWLEDGE_METADATA_BYTES {
+        return Err(SerializerRefusal::EncodingLimitExceeded {
+            component: "safety_type",
+            limit: MAX_KNOWLEDGE_METADATA_BYTES,
+        });
+    }
+    let mut fields = vec![
+        ("type", quote_json(safety_type)),
+        ("state", quote_json(wrapped.variant_name())),
+    ];
+    match wrapped {
+        Knowledge::Known { value, basis } => {
+            let payload = value.canonical_payload_json();
+            let parsed = crate::strict_json::parse(payload.as_bytes(), PAYLOAD_JSON_LIMITS)
+                .map_err(|_| SerializerRefusal::InvalidPayloadJson { safety_type })?;
+            fields.extend([
+                ("value", encode_json_value(&parsed)),
+                (
+                    "claim_class",
+                    quote_json(&format!("{:?}", basis.claim_class())),
+                ),
+                ("generation", basis.semantic_generation().to_string()),
+                ("control_seq", basis.control_seq().to_string()),
+                ("basis", encode_basis(*basis)),
+            ]);
+        }
+        Knowledge::Pending {
+            frontiers,
+            expected_cost,
+        } => {
+            if frontiers.len() > crate::observation_algebra::MAX_OPERATOR_FRONTIERS {
+                return Err(SerializerRefusal::EncodingLimitExceeded {
+                    component: "frontiers",
+                    limit: crate::observation_algebra::MAX_OPERATOR_FRONTIERS,
+                });
+            }
+            fields.extend([
+                ("frontier_count", frontiers.len().to_string()),
+                (
+                    "frontiers",
+                    format!(
+                        "[{}]",
+                        frontiers
+                            .iter()
+                            .map(|frontier| encode_frontier(*frontier))
+                            .collect::<Vec<_>>()
+                            .join(",")
+                    ),
+                ),
+                ("expected_cost", expected_cost.to_string()),
+                (
+                    "would_change_this",
+                    quote_json(&wrapped.would_change_this_hint()),
+                ),
+            ]);
+        }
+        Knowledge::Unknown { reason } => {
+            fields.extend([
+                ("reason", quote_json(&format!("{reason:?}"))),
+                (
+                    "would_change_this",
+                    quote_json(&wrapped.would_change_this_hint()),
+                ),
+            ]);
+        }
+        Knowledge::Withheld { authority_required } => {
+            fields.extend([
+                (
+                    "authority_required",
+                    quote_json(&format!("{authority_required:?}")),
+                ),
+                (
+                    "would_change_this",
+                    quote_json(&wrapped.would_change_this_hint()),
+                ),
+            ]);
+        }
+        Knowledge::Stale {
+            basis,
+            current_generation,
+        } => {
+            fields.extend([
+                ("basis_generation", basis.semantic_generation().to_string()),
+                ("current_generation", current_generation.to_string()),
+                ("basis", encode_basis(*basis)),
+                (
+                    "would_change_this",
+                    quote_json(&wrapped.would_change_this_hint()),
+                ),
+            ]);
+        }
+        Knowledge::Absent { domain } => {
+            fields.extend([
+                ("closed_domain_id", domain.domain_id().to_string()),
+                ("revision", domain.revision().to_string()),
+                ("domain", encode_closed_domain(domain)),
+                (
+                    "would_change_this",
+                    quote_json(&wrapped.would_change_this_hint()),
+                ),
+            ]);
+        }
+    }
+    Ok(fields)
+}
+
+/// JSON string quoting is required even for field/type names: a caller-defined
+/// SafetyRelevant type is not an exemption from the wire syntax boundary.
+fn quote_json(value: &str) -> String {
+    let mut encoded = String::new();
+    encoded.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => encoded.push_str("\\\""),
+            '\\' => encoded.push_str("\\\\"),
+            '\n' => encoded.push_str("\\n"),
+            '\r' => encoded.push_str("\\r"),
+            '\t' => encoded.push_str("\\t"),
+            '\u{08}' => encoded.push_str("\\b"),
+            '\u{0c}' => encoded.push_str("\\f"),
+            ch if ch <= '\u{1f}' => {
+                let _ = write!(encoded, "\\u{:04x}", ch as u32);
+            }
+            ch => encoded.push(ch),
+        }
+    }
+    encoded.push('"');
+    encoded
+}
+
+fn encode_object(fields: &[(&str, String)]) -> String {
+    format!(
+        "{{{}}}",
+        fields
+            .iter()
+            .map(|(name, value)| format!("{}:{value}", quote_json(name)))
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+
+/// Parsing rejects duplicate keys before this deterministic re-encoding. Object
+/// order and whitespace cannot change the emitted structure, and exact JSON
+/// number spelling is retained without a lossy floating-point conversion.
+fn encode_json_value(value: &crate::strict_json::Json) -> String {
+    use crate::strict_json::Json;
+    match value {
+        Json::Null => "null".to_owned(),
+        Json::Bool(value) => value.to_string(),
+        Json::Number(value) => value.lexeme().to_owned(),
+        Json::String(value) => quote_json(value),
+        Json::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(encode_json_value)
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+        Json::Object(fields) => format!(
+            "{{{}}}",
+            fields
+                .iter()
+                .map(|(name, value)| format!("{}:{}", quote_json(name), encode_json_value(value)))
+                .collect::<Vec<_>>()
+                .join(",")
+        ),
+    }
+}
+
+fn encode_basis(basis: Basis) -> String {
+    let identity = basis.identity();
+    let proofs = basis.proofs();
+    encode_object(&[
+        (
+            "identity",
+            encode_object(&[
+                ("subject_id", identity.subject_id.to_string()),
+                ("question_id", identity.question_id.to_string()),
+                ("profile_id", identity.profile_id.to_string()),
+                (
+                    "semantic_generation",
+                    identity.semantic_generation.to_string(),
+                ),
+                ("policy_epoch", identity.policy_epoch.to_string()),
+                ("model_epoch", identity.model_epoch.to_string()),
+                ("tokenizer_epoch", identity.tokenizer_epoch.to_string()),
+                ("codec_epoch", identity.codec_epoch.to_string()),
+                ("control_seq", identity.control_seq.to_string()),
+            ]),
+        ),
+        (
+            "claim_class",
+            quote_json(&format!("{:?}", basis.claim_class())),
+        ),
+        (
+            "proofs",
+            encode_object(&[
+                (
+                    "authentic_origin",
+                    encode_scoped_proof(proofs.authentic_origin),
+                ),
+                (
+                    "complete_for_contract",
+                    encode_scoped_proof(proofs.complete_for_contract),
+                ),
+                (
+                    "semantically_valid",
+                    encode_scoped_proof(proofs.semantically_valid),
+                ),
+                (
+                    "available_for_replay",
+                    encode_scoped_proof(proofs.available_for_replay),
+                ),
+            ]),
+        ),
+    ])
+}
+
+fn encode_scoped_proof(proof: ScopedProof) -> String {
+    match proof {
+        ScopedProof::Declared {
+            scope_id,
+            generation,
+        } => encode_object(&[
+            ("state", quote_json("Declared")),
+            ("scope_id", scope_id.to_string()),
+            ("generation", generation.to_string()),
+        ]),
+        ScopedProof::Gapped {
+            scope_id,
+            first_missing,
+        } => encode_object(&[
+            ("state", quote_json("Gapped")),
+            ("scope_id", scope_id.to_string()),
+            ("first_missing", first_missing.to_string()),
+        ]),
+        ScopedProof::Unsupported { scope_id } => encode_object(&[
+            ("state", quote_json("Unsupported")),
+            ("scope_id", scope_id.to_string()),
+        ]),
+        ScopedProof::Expired {
+            scope_id,
+            generation,
+        } => encode_object(&[
+            ("state", quote_json("Expired")),
+            ("scope_id", scope_id.to_string()),
+            ("generation", generation.to_string()),
+        ]),
+    }
+}
+
+fn encode_projection(key: crate::product_frontier::ProjectionKey) -> String {
+    encode_object(&[
+        ("source", key.source.to_string()),
+        ("branch", key.branch.to_string()),
+        ("projection", key.projection.to_string()),
+        ("source_epoch", key.source_epoch.to_string()),
+    ])
+}
+
+fn encode_frontier(frontier: FrontierRequirement) -> String {
+    encode_object(&[
+        ("key", encode_projection(frontier.key)),
+        ("stage", quote_json(&format!("{:?}", frontier.stage))),
+        ("through", frontier.through.to_string()),
+        (
+            "closure",
+            frontier
+                .closure
+                .map_or_else(|| "null".to_owned(), |value| value.to_string()),
+        ),
+    ])
+}
+
+fn encode_closed_domain(domain: &ClosedDomain) -> String {
+    let projection = domain.domain();
+    let marker = domain.marker();
+    encode_object(&[
+        ("domain_id", projection.domain_id().to_string()),
+        ("domain_epoch", projection.domain_epoch().to_string()),
+        ("projection", encode_projection(projection.projection())),
+        ("revision", domain.revision().to_string()),
+        ("control_cut", domain.control_cut().to_string()),
+        ("semantic_epoch", domain.semantic_epoch().to_string()),
+        ("requirement", encode_frontier(domain.requirement())),
+        (
+            "marker",
+            encode_object(&[
+                ("key", encode_projection(marker.key)),
+                ("final_sequence", marker.final_sequence.to_string()),
+                ("marker_generation", marker.marker_generation.to_string()),
+            ]),
+        ),
+    ])
 }
 
 pub struct AgentSurfaceSerializer;
 
 impl AgentSurfaceSerializer {
-    /// Compile-time and runtime enforced serializer: accepts ONLY `&Knowledge<T>`
-    /// where `T: SafetyRelevant` (`b0qg.2`).
-    ///
-    /// Notice that `Withheld` serializes to a constant shape that depends ONLY on
-    /// `authority_required`, never on whether an underlying object exists (`b0qg.4`).
+    /// Compatibility entry point for existing domain surfaces. Invalid custom
+    /// payloads become an explicit Unknown integrity refusal, never malformed
+    /// JSON or a Known value. New callers should use the fallible method below.
     pub fn serialize_safety_field<T: SafetyRelevant>(
         field_name: &str,
         wrapped: &Knowledge<T>,
     ) -> SerializedAgentField {
-        let safety_type = T::safety_type_name();
-        let variant = wrapped.variant_name();
-        let canonical_json = match wrapped {
-            Knowledge::Known { value, basis } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Known\",\"value\":\"{}\",\"claim_class\":\"{:?}\",\"generation\":{},\"control_seq\":{}}}",
-                value.canonical_payload_string(),
-                basis.claim_class(),
-                basis.semantic_generation(),
-                basis.control_seq()
-            ),
-            Knowledge::Pending {
-                frontiers,
-                expected_cost,
-            } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Pending\",\"frontier_count\":{},\"expected_cost\":{expected_cost},\"would_change_this\":\"{}\"}}",
-                frontiers.len(),
-                wrapped.would_change_this_hint()
-            ),
-            Knowledge::Unknown { reason } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Unknown\",\"reason\":\"{reason:?}\",\"would_change_this\":\"{}\"}}",
-                wrapped.would_change_this_hint()
-            ),
-            Knowledge::Withheld { authority_required } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Withheld\",\"authority_required\":\"{authority_required:?}\",\"would_change_this\":\"present capability granting AuthorityKind::{authority_required:?}\"}}"
-            ),
-            Knowledge::Stale {
-                basis,
-                current_generation,
-            } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Stale\",\"basis_generation\":{},\"current_generation\":{current_generation},\"would_change_this\":\"{}\"}}",
-                basis.semantic_generation(),
-                wrapped.would_change_this_hint()
-            ),
-            Knowledge::Absent { domain } => format!(
-                "{{\"field\":\"{field_name}\",\"type\":\"{safety_type}\",\"state\":\"Absent\",\"closed_domain_id\":{},\"revision\":{},\"would_change_this\":\"{}\"}}",
-                domain.domain_id(),
-                domain.revision(),
-                wrapped.would_change_this_hint()
-            ),
-        };
-        SerializedAgentField {
-            field_name: field_name.to_owned(),
-            safety_type,
-            variant,
-            canonical_json,
+        match Self::try_serialize_safety_field(field_name, wrapped) {
+            Ok(field) => field,
+            Err(_) => {
+                let bounded_metadata = |value: &str| {
+                    if value.len() <= MAX_KNOWLEDGE_METADATA_BYTES {
+                        quote_json(value)
+                    } else {
+                        quote_json("<metadata-limit-exceeded>")
+                    }
+                };
+                SerializedAgentField {
+                    field_name: field_name.to_owned(),
+                    safety_type: T::safety_type_name(),
+                    variant: "Unknown",
+                    canonical_json: encode_object(&[
+                        ("field", bounded_metadata(field_name)),
+                        ("type", bounded_metadata(T::safety_type_name())),
+                        ("state", quote_json("Unknown")),
+                        ("reason", quote_json("ConflictingEvidence")),
+                        ("serialization_error", quote_json("IntegrityFailure")),
+                        (
+                            "would_change_this",
+                            quote_json("supply valid bounded Knowledge JSON"),
+                        ),
+                    ]),
+                }
+            }
         }
     }
 
-    /// Runtime boundary guard that inspects raw JSON/wire fragments for bare
-    /// safety-relevant scalar fields (`"safe": true`, `"permitted": false`, etc.)
-    /// and logs the refusal with the rejected type name (`b0qg.2`).
+    /// Compile-time and runtime enforced serializer accepting only Knowledge of
+    /// a SafetyRelevant domain type. Withheld output depends on the requested
+    /// field/type and required authority, never on hidden object existence.
+    pub fn try_serialize_safety_field<T: SafetyRelevant>(
+        field_name: &str,
+        wrapped: &Knowledge<T>,
+    ) -> Result<SerializedAgentField, SerializerRefusal> {
+        if field_name.len() > MAX_KNOWLEDGE_METADATA_BYTES {
+            return Err(SerializerRefusal::EncodingLimitExceeded {
+                component: "field_name",
+                limit: MAX_KNOWLEDGE_METADATA_BYTES,
+            });
+        }
+        let mut fields = knowledge_json_fields(wrapped)?;
+        fields.insert(0, ("field", quote_json(field_name)));
+        Ok(SerializedAgentField {
+            field_name: field_name.to_owned(),
+            safety_type: T::safety_type_name(),
+            variant: wrapped.variant_name(),
+            canonical_json: bounded_knowledge_json(encode_object(&fields))?,
+        })
+    }
+
+    /// Check bounded strict JSON syntax and a real, recognized top-level
+    /// Knowledge wrapper, rather than accepting the word "state" inside prose.
+    /// This is a shape guard, not an evidence decoder or permit-admission gate.
     pub fn validate_wire_field_is_wrapped(
         field_name: &str,
         raw_value_fragment: &str,
     ) -> Result<(), SerializerRefusal> {
-        let trimmed = raw_value_fragment.trim();
-        let detected_type = if trimmed == "true" || trimmed == "false" {
-            Some("bool")
-        } else if trimmed.starts_with('"') && trimmed.ends_with('"') {
-            Some("bare_string")
-        } else if !trimmed.is_empty() && trimmed.chars().all(|ch| ch.is_ascii_digit()) {
-            Some("bare_integer")
-        } else if !trimmed.starts_with('{') || !trimmed.contains("\"state\":") {
-            Some("unwrapped_object")
-        } else {
-            None
+        use crate::strict_json::Json;
+        let parsed =
+            crate::strict_json::parse(raw_value_fragment.as_bytes(), KNOWLEDGE_JSON_LIMITS);
+        let detected_type = match parsed {
+            Ok(Json::Bool(_)) => Some("bool"),
+            Ok(Json::String(_)) => Some("bare_string"),
+            Ok(Json::Number(number)) => Some(if number.as_u64().is_some() {
+                "bare_integer"
+            } else {
+                "bare_number"
+            }),
+            Ok(Json::Object(fields))
+                if fields.get("type").and_then(Json::as_str).is_some()
+                    && matches!(
+                        fields.get("state").and_then(Json::as_str),
+                        Some("Known" | "Pending" | "Unknown" | "Withheld" | "Stale" | "Absent")
+                    ) =>
+            {
+                None
+            }
+            _ => Some("unwrapped_object"),
         };
 
         if let Some(bad_type) = detected_type {
             let log_line = format!(
-                "event=serializer_refusal field={field_name} rejected_type={bad_type} reason=FA-INV-039_bare_safety_scalar_forbidden"
+                "event=serializer_refusal field={} rejected_type={bad_type} reason=FA-INV-039_bare_safety_scalar_forbidden",
+                quote_json(field_name),
             );
             return Err(SerializerRefusal::BareScalarRejected {
                 field_name: field_name.to_owned(),
@@ -1082,6 +1455,7 @@ mod tests {
                     assert_eq!(detected_type, expected_type);
                     assert!(log_line.contains("FA-INV-039_bare_safety_scalar_forbidden"));
                 }
+                other => panic!("expected bare scalar refusal, got {other:?}"),
             }
         }
     }

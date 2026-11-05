@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: preserve complete Knowledge evidence in agent JSON
+
+The shared Knowledge JSON surface now retains complete identity, epoch and
+proof metadata instead of reducing Known and Stale to a few scalar fields.
+Pending names its actual source/projection frontiers and closure requirements;
+Absent retains its closed domain, control cut, semantic epoch and closing
+marker. Unknown and Withheld remain distinct and do not invoke a value encoder.
+
+Field names, type names and textual payloads are escaped. Existing
+SafetyRelevant implementations retain their textual values through a default
+method; domain implementations can opt into structured JSON that is strictly
+parsed, duplicate-key checked and deterministically re-encoded before embedding.
+The fallible encode_knowledge_json and try_serialize_safety_field APIs report
+invalid or oversized encoding. The existing infallible API preserves its
+signature and returns explicit Unknown integrity output on an encoding failure.
+
+The wire-wrapper shape guard now parses bounded JSON and checks actual
+top-level type/state fields, closing the nested-string/substring bypass. It is
+still a shape guard, not an evidence decoder, authentication check or permission
+decision. Declared proofs remain declarations. The legacy binary verdict
+encoding is unchanged.
+
+Twelve public regression functions cover all six epistemic variants, all four
+proof states, every identity epoch, escaped attacker-controlled text, structured
+u64 values, malformed custom payloads, named frontiers, closed-domain evidence,
+resource bounds and forged wrapper tags. Independent source review and qualified
+rustfmt completed. A qualified compiler was recovered after the executor was
+replaced; compilation and focused execution are in progress and are not yet
+claimed as passing in this entry. See
+[the JSON surface contract](docs/KNOWLEDGE_JSON_REFERENCE.md). Existing project
+qualification, source admission and unified dispatcher acceptance remain open.
+
 ## 2026-11-05: preserve scoped graph and situation identities
 
 The FA-134 reference resolver authorizes the source before lookup and applies

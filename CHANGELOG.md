@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-05: encode complete epistemic evidence on agent surfaces
+
+- Preserve the complete Known/Stale basis, Pending source frontiers and Absent
+  closure/marker evidence across JSON serialization.
+- Escape field, type and value strings; validate custom structured JSON under
+  explicit byte/depth/item limits and reject duplicate keys.
+- Add fallible encoders while retaining the existing infallible API with an
+  explicit Unknown integrity fallback.
+- Parse wrapper syntax and top-level tags instead of trusting a substring.
+- Add twelve public regression functions. Qualified formatting and independent
+  source review completed; focused compilation/execution remains in progress.
+
 ## 2026-11-05: preserve authorized graph and situation projections
 
 - Filter inaccessible relationship targets before lookup and logging; enforce
