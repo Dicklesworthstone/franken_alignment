@@ -510,6 +510,13 @@ struct StoredEntry {
     basis: Basis,
 }
 
+#[derive(Clone, Debug)]
+struct StoredEdge {
+    source_generation: Option<u64>,
+    relation: RelationKind,
+    target: Address,
+}
+
 /// Single address resolver (`fa get` and `fa related`) dispatching by [`Noun`]
 /// across the four planes (`ControlLedger`, `EvidenceStore`, `DerivedProjections`, `ExperimentStore`).
 #[derive(Clone, Debug, Default)]
@@ -518,7 +525,7 @@ pub struct AddressResolver {
     evidence_store: BTreeMap<(String, Noun, String), StoredEntry>,
     derived_projections: BTreeMap<(String, Noun, String), StoredEntry>,
     experiment_store: BTreeMap<(String, Noun, String), StoredEntry>,
-    edges: BTreeMap<(String, Noun, String), Vec<(RelationKind, Address)>>,
+    edges: BTreeMap<(String, Noun, String), Vec<StoredEdge>>,
     resolution_logs: Vec<ResolutionLogEntry>,
 }
 
@@ -562,9 +569,22 @@ impl AddressResolver {
     }
 
     /// Register a typed cross-plane or intra-plane edge for `fa related` (`2fkx.3`).
+    ///
+    /// An explicit source generation remains exact, including when its object arrives later.
+    /// An unqualified source binds only to the current object at insertion. Without that object
+    /// the edge remains unbound and cannot become visible merely because an object later appears.
     pub fn insert_edge(&mut self, from: Address, relation: RelationKind, to: Address) {
         let key = (from.tenant, from.kind, from.id);
-        self.edges.entry(key).or_default().push((relation, to));
+        let source_generation = from.generation.or_else(|| {
+            self.plane_map(from.kind.plane())
+                .get(&key)
+                .map(|entry| entry.object.generation)
+        });
+        self.edges.entry(key).or_default().push(StoredEdge {
+            source_generation,
+            relation,
+            target: to,
+        });
     }
 
     pub fn logs(&self) -> &[ResolutionLogEntry] {
@@ -648,29 +668,32 @@ impl AddressResolver {
         // A historical or future source must not acquire current graph edges
         // under the requested generation's label.
         let source_resolution = self.resolve_authorized(source);
-        let result = source_resolution.map(|_| {
+        let result = source_resolution.map(|source_object| {
             let key = (source.tenant.clone(), source.kind, source.id.clone());
+            let mut resolved_source = source.clone();
+            resolved_source.generation = Some(source_object.generation);
             let visible_edges: Vec<_> = self
                 .edges
                 .get(&key)
                 .into_iter()
                 .flatten()
-                .filter(|(rel, target)| {
-                    relation_filter.is_none_or(|filter| filter == *rel)
-                        && caller.is_authorized_for(target).is_ok()
-                        && target.has_canonical_components()
+                .filter(|edge| {
+                    edge.source_generation == Some(source_object.generation)
+                        && relation_filter.is_none_or(|filter| filter == edge.relation)
+                        && caller.is_authorized_for(&edge.target).is_ok()
+                        && edge.target.has_canonical_components()
                 })
                 .cloned()
                 .collect();
             let mut resolved_edges = Vec::new();
-            for (rel, target_addr) in visible_edges {
+            for edge in visible_edges {
                 // Address, relation and result count are protected metadata too.
                 // Hidden targets never reach resolution or its audit log.
-                let target_resolution = self.fa_get(caller, &target_addr);
+                let target_resolution = self.fa_get(caller, &edge.target);
                 resolved_edges.push(RelatedEdge {
-                    from: source.clone(),
-                    to: target_addr,
-                    relation: rel,
+                    from: resolved_source.clone(),
+                    to: edge.target,
+                    relation: edge.relation,
                     target_resolution,
                 });
             }

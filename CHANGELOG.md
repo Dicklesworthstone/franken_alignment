@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-05: preserve authorized graph and situation projections
+
+- Filter inaccessible relationship targets before lookup and logging; enforce
+  source generations on traversal and retain each edge's registration generation.
+- Keep latest-handoff discovery tied to the current generation while preserving
+  independently addressable historical handoffs.
+- Retain situation-item causal bases across unrelated events, select typed
+  subjects and preserve held state when a retraction cannot identify its subject.
+- Project partial reports without hidden counts, global cuts, frontiers or
+  cursor addresses; preserve useful authorized items and full-scope metadata.
+- Add fifteen public regression functions and independent source review. Compilation,
+  runtime tests, formatting, Clippy and the complete verification gate remain
+  pending after the execution environment became unavailable.
+
 ## 2026-11-05: preserve generation and disclosure boundaries in related reads
 
 - Share source admission between get and related, preserving stale, future and

@@ -95,7 +95,8 @@ fn current_and_unversioned_sources_keep_authorized_traversal_and_basis() {
         };
         assert_eq!(actual, basis(4));
         assert_eq!(value.len(), 1);
-        assert_eq!(value[0].from, requested);
+        // An unqualified query still identifies the exact source generation traversed.
+        assert_eq!(value[0].from, source);
         assert_eq!(value[0].to, target);
         assert!(matches!(
             value[0].target_resolution,

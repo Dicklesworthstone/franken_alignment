@@ -153,55 +153,90 @@ fn default_report_basis(control_seq: u64) -> Basis {
 }
 
 /// Incremental [`JournalFold`] building a [`SituationReport`] (`2jvm.2`).
+///
+/// Each item's basis retains its producing event's causal sequence. The report separately
+/// records the final folded cut; unrelated later events cannot refresh an item's provenance.
 #[derive(Default)]
 pub struct SituationReportFold {
-    active_items: BTreeMap<String, SituationItem>,
+    active_items: BTreeMap<String, (SituationItem, u64)>,
     open_frontiers: BTreeMap<u64, u64>,
     gaps: Vec<JournalGapRange>,
+    incomplete_subject: bool,
 }
 
 impl SituationReportFold {
+    // A typed subject carries the authorization boundary of each derived item.
+    // Missing subjects cannot create, replace, or retract known state.
+    fn subject_address(&mut self, event: &JournalEvent, kind: Noun) -> Option<Address> {
+        let address = event.addresses.iter().find(|address| address.kind == kind);
+        if address.is_none() {
+            self.incomplete_subject = true;
+        }
+        address.cloned()
+    }
+
     fn apply_event(&mut self, event: &JournalEvent) {
         for f in &event.source_frontiers {
             self.open_frontiers.insert(f.source_id, f.frontier_seq);
         }
-        let primary_addr = event.addresses.first().cloned().unwrap_or_else(|| {
-            Address::new("org", Noun::Attempt, "fallback", Some(1)).expect("fallback")
-        });
-
         match &event.kind {
             JournalEventKind::Hold { attempt_id, reason } => {
+                let Some(primary_addr) = self.subject_address(event, Noun::Attempt) else {
+                    return;
+                };
                 self.active_items.insert(
                     format!("hold-{attempt_id}"),
-                    SituationItem {
-                        address: primary_addr,
-                        section: SituationSectionKind::HeldEffects,
-                        summary: format!("attempt {attempt_id} held: {reason}"),
-                        decision_relevance_voi: 40,
-                        is_hard_floor: true,
-                    },
+                    (
+                        SituationItem {
+                            address: primary_addr,
+                            section: SituationSectionKind::HeldEffects,
+                            summary: format!("attempt {attempt_id} held: {reason}"),
+                            decision_relevance_voi: 40,
+                            is_hard_floor: true,
+                        },
+                        event.control_seq,
+                    ),
                 );
             }
             JournalEventKind::Permit { attempt_id, .. }
             | JournalEventKind::Outcome { attempt_id, .. } => {
-                // Resolving or permitting an attempt clears its held-effect entry (retraction/resolution).
-                self.active_items.remove(&format!("hold-{attempt_id}"));
+                let key = format!("hold-{attempt_id}");
+                if let Some((held, _)) = self.active_items.get(&key) {
+                    // Match the complete held identity anywhere in the event, including generation.
+                    if event.addresses.contains(&held.address) {
+                        self.active_items.remove(&key);
+                    } else {
+                        self.incomplete_subject = true;
+                    }
+                } else if !event
+                    .addresses
+                    .iter()
+                    .any(|address| address.kind == Noun::Attempt)
+                {
+                    self.incomplete_subject = true;
+                }
             }
             JournalEventKind::Reset {
                 checkpoint_id,
                 incident_counter,
             } => {
+                let Some(primary_addr) = self.subject_address(event, Noun::Checkpoint) else {
+                    return;
+                };
                 self.active_items.insert(
                     format!("reset-{checkpoint_id}"),
-                    SituationItem {
-                        address: primary_addr,
-                        section: SituationSectionKind::IncidentCounters,
-                        summary: format!(
-                            "checkpoint {checkpoint_id} reset (incident_counter={incident_counter})"
-                        ),
-                        decision_relevance_voi: 80,
-                        is_hard_floor: true,
-                    },
+                    (
+                        SituationItem {
+                            address: primary_addr,
+                            section: SituationSectionKind::IncidentCounters,
+                            summary: format!(
+                                "checkpoint {checkpoint_id} reset (incident_counter={incident_counter})"
+                            ),
+                            decision_relevance_voi: 80,
+                            is_hard_floor: true,
+                        },
+                        event.control_seq,
+                    ),
                 );
             }
             JournalEventKind::Finding {
@@ -209,30 +244,42 @@ impl SituationReportFold {
                 detector_id,
                 severity,
             } => {
+                let Some(primary_addr) = self.subject_address(event, Noun::Finding) else {
+                    return;
+                };
                 self.active_items.insert(
                     format!("finding-{finding_id}"),
-                    SituationItem {
-                        address: primary_addr,
-                        section: SituationSectionKind::RiskTheaterFindings,
-                        summary: format!("detector {detector_id} severity {severity}"),
-                        decision_relevance_voi: u64::from(*severity) * 15,
-                        is_hard_floor: *severity >= 3,
-                    },
+                    (
+                        SituationItem {
+                            address: primary_addr,
+                            section: SituationSectionKind::RiskTheaterFindings,
+                            summary: format!("detector {detector_id} severity {severity}"),
+                            decision_relevance_voi: u64::from(*severity) * 15,
+                            is_hard_floor: *severity >= 3,
+                        },
+                        event.control_seq,
+                    ),
                 );
             }
             JournalEventKind::Fence {
                 fence_id,
                 ack_count,
             } => {
+                let Some(primary_addr) = self.subject_address(event, Noun::Fence) else {
+                    return;
+                };
                 self.active_items.insert(
                     format!("fence-{fence_id}"),
-                    SituationItem {
-                        address: primary_addr,
-                        section: SituationSectionKind::Authority,
-                        summary: format!("fence {fence_id} acknowledged by {ack_count} nodes"),
-                        decision_relevance_voi: 25,
-                        is_hard_floor: false,
-                    },
+                    (
+                        SituationItem {
+                            address: primary_addr,
+                            section: SituationSectionKind::Authority,
+                            summary: format!("fence {fence_id} acknowledged by {ack_count} nodes"),
+                            decision_relevance_voi: 25,
+                            is_hard_floor: false,
+                        },
+                        event.control_seq,
+                    ),
                 );
             }
             _ => {}
@@ -241,11 +288,7 @@ impl SituationReportFold {
 }
 
 impl JournalFold for SituationReportFold {
-    type Output = (
-        Vec<Knowledge<SituationItem>>,
-        Vec<SourceFrontierEntry>,
-         u64,
-    );
+    type Output = (Vec<Knowledge<SituationItem>>, Vec<SourceFrontierEntry>, u64);
 
     fn initial_state() -> Self {
         Self::default()
@@ -260,13 +303,15 @@ impl JournalFold for SituationReportFold {
     }
 
     fn finalize(self, exact_at_control_seq: u64) -> Self::Output {
-        let basis = default_report_basis(exact_at_control_seq);
         let mut items: Vec<Knowledge<SituationItem>> = self
             .active_items
             .into_values()
-            .map(|item| Knowledge::known(item, basis))
+            .map(|(item, produced_at)| Knowledge::known(item, default_report_basis(produced_at)))
             .collect();
 
+        if self.incomplete_subject {
+            items.push(Knowledge::unknown(UnknownReason::Incomplete));
+        }
         for _gap in self.gaps {
             items.push(Knowledge::unknown(UnknownReason::Incomplete));
         }
@@ -322,7 +367,7 @@ pub fn recompute_situation_batch_oracle(
         }
         batch_state.apply_event(event);
         exact_seq = event.control_seq;
-        expected_seq = event.control_seq + 1;
+        expected_seq = event.control_seq.saturating_add(1);
     }
     let (items, open_frontiers, exact_at_control_seq) = batch_state.finalize(exact_seq);
     let pagination_cursor = items.last().and_then(|k| match k {
@@ -341,9 +386,19 @@ pub fn recompute_situation_batch_oracle(
 
 /// Project a [`SituationReport`] for `caller_scope` (`2jvm.4`).
 ///
-/// If the caller is not authorized for the report's tenant, returns a single uniform
-/// `Knowledge::Withheld { authority_required: AuthorityKind::Verify }` entry regardless of how
-/// many items exist in the underlying report, preventing cross-scope existence or count leakage.
+/// The scope is a trusted caller declaration, not an authentication mechanism. Cross-tenant
+/// reports have one uniform refusal. Within a tenant, only addressed Known items whose noun
+/// is authorized are disclosed. A partial scope cannot authorize unaddressed epistemic entries
+/// or whole-domain metadata: those are replaced by one scope-dependent Withheld marker even
+/// when no private items exist. Omitted entries produce no per-entry placeholders or private
+/// cursor and frontier metadata.
+///
+/// Authorized items retain their original basis, including their causal sequence. With the
+/// same authorized records and bases, changing inaccessible entries or aggregate metadata
+/// leaves a partial projection unchanged. This does not hide provenance already authorized
+/// for an item. Only complete tenant scope retains aggregate exactness and frontiers; a
+/// partial projection has no whole-domain freshness claim and derives its cursor from visible
+/// items. Complete-scope cursors are also checked for address authorization.
 pub fn project_situation_for_scope(
     report: &SituationReport,
     caller_scope: &CallerScope,
@@ -358,25 +413,58 @@ pub fn project_situation_for_scope(
             items: vec![Knowledge::withheld(AuthorityKind::Verify)],
         };
     }
-    let projected_items = report
+
+    // This decision depends on the granted scope, never the number or kinds of hidden items.
+    let missing_authority = Noun::ALL.into_iter().find_map(|kind| {
+        if caller_scope.allowed_planes.contains(&kind.plane())
+            && caller_scope
+                .granted_authorities
+                .contains(&kind.required_authority())
+        {
+            None
+        } else {
+            Some(kind.required_authority())
+        }
+    });
+    let mut projected_items: Vec<Knowledge<SituationItem>> = report
         .items
         .iter()
-        .map(|entry| match entry {
-            Knowledge::Known { value, basis } => {
-                match caller_scope.is_authorized_for(&value.address) {
-                    Ok(()) => Knowledge::known(value.clone(), *basis),
-                    Err(req) => Knowledge::withheld(req),
-                }
-            }
-            other => other.clone(),
+        .filter_map(|entry| match entry {
+            Knowledge::Known { value, .. } => caller_scope
+                .is_authorized_for(&value.address)
+                .is_ok()
+                .then(|| entry.clone()),
+            other if missing_authority.is_none() => Some(other.clone()),
+            _ => None,
         })
         .collect();
+
+    if let Some(required) = missing_authority {
+        let pagination_cursor = projected_items.last().and_then(|entry| match entry {
+            Knowledge::Known { value, .. } => Some(value.address.clone()),
+            _ => None,
+        });
+        projected_items.push(Knowledge::withheld(required));
+        return SituationReport {
+            tenant: report.tenant.clone(),
+            domain_id: "withheld".to_owned(),
+            exact_at_control_seq: 0,
+            open_frontiers: Vec::new(),
+            pagination_cursor,
+            items: projected_items,
+        };
+    }
+
     SituationReport {
         tenant: report.tenant.clone(),
         domain_id: report.domain_id.clone(),
         exact_at_control_seq: report.exact_at_control_seq,
         open_frontiers: report.open_frontiers.clone(),
-        pagination_cursor: report.pagination_cursor.clone(),
+        pagination_cursor: report
+            .pagination_cursor
+            .as_ref()
+            .filter(|cursor| caller_scope.is_authorized_for(cursor).is_ok())
+            .cloned(),
         items: projected_items,
     }
 }
@@ -1153,13 +1241,14 @@ mod tests {
     fn annotations_and_handoff_seal_latest_resolution_and_two_agent_reconstruction() {
         let mut journal = DomainEventJournal::new_production("org", "dom-handoff");
         let ev_addr = Address::new("org", Noun::Evidence, "ev-h1", Some(1)).expect("addr");
+        let attempt_addr = Address::new("org", Noun::Attempt, "att-h1", Some(1)).expect("addr");
         journal
             .emit_transition(
                 vec![SourceFrontierEntry {
                     source_id: 1,
                     frontier_seq: 1,
                 }],
-                vec![ev_addr.clone()],
+                vec![ev_addr.clone(), attempt_addr],
                 JournalEventKind::Hold {
                     attempt_id: 77,
                     reason: "mandatory_absent".to_owned(),

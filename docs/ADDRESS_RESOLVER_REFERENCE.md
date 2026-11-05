@@ -25,6 +25,26 @@ object generation:
 A non-Known source does not expand adjacency or resolve targets. Related preserves
 the same source outcome and basis as get.
 
+## Relationship generations
+
+An edge retains the source generation established at registration:
+
+| Source supplied to insert_edge | Association |
+|---|---|
+| Explicit generation | Exactly that generation, including zero |
+| Unqualified, with a stored source | The source's current generation at insertion |
+| Unqualified, without a stored source | Unbound; later insertion does not attach it |
+
+Traversal expands only edges bound to the admitted source's current generation.
+An explicit future edge can become visible when that exact source generation is
+registered. An old edge cannot be relabeled as a newer source's relationship.
+Every returned RelatedEdge.from carries the exact generation traversed, including
+when the request used an unqualified address.
+
+The handoff/latest resolver therefore discovers the current generation's
+provenance while older concrete handoff objects remain separately addressable.
+This does not make object insertion immutable or prevent version rollback.
+
 ## Visible graph projection
 
 Related applies the optional relation filter and target authorization before
@@ -36,15 +56,18 @@ retain their distinct Knowledge states.
 
 This is an authorization-filtered reference graph. It is not proof that no
 hidden or unobserved edge exists. The backing adjacency remains indexed by
-tenant/kind/id, without an immutable history for each source generation. The
-implementation does not claim timing noninterference or a production datastore
+tenant/kind/id, with a source-generation binding on each edge. It does not supply
+an immutable object history, timing noninterference or a production datastore
 authentication boundary.
 
 ## Regression scope
 
 `crates/fa-reference/tests/address_resolver_boundaries.rs` contains ten public
 regressions covering useful traversal and its causal negatives. The in-module
-related test also rejects disclosure of a secret target address.
+related test also rejects disclosure of a secret target address. The fifteen
+additional cases in `crates/fa-reference/tests/agent_projection_boundaries.rs`
+cover relationship generations, real handoff discovery and scoped journal
+projections, including permitted updates and identity-bound hold retractions.
 
 Compilation, test execution, formatting and Clippy for this change remain
 pending: the execution environment became unavailable. These source tests are

@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: preserve scoped graph and situation identities
+
+The FA-134 reference resolver authorizes the source before lookup and applies
+the same requested-generation checks to traversal as to direct resolution.
+It filters inaccessible targets before target resolution or audit logging, so
+private edges contribute no address, placeholder or count to the returned graph.
+Authorized present and missing targets retain their typed Knowledge results.
+A Known related list describes the authorized projection; it is not a complete
+absence proof for the unprojected graph.
+
+Edges retain the source generation supplied at registration. An unqualified
+source binds to the object generation present at that registration; a missing
+unqualified source stays unbound. A current-generation lookup cannot reuse an
+old or future generation's edge. This binds registered versions; it does not
+make object insertion immutable or enforce monotonic version replacement.
+Returned source addresses retain the resolved generation. In particular,
+replacing the reference handoff/latest object exposes
+the new handoff provenance without discarding the old handoff object.
+
+The FA-136 fold retains each active item's own causal event sequence, while the
+whole report records the processed control cut separately. It selects typed
+subject addresses instead of using an unrelated first address. Missing or
+mismatched subjects preserve conservative prior state and surface incompleteness;
+a correctly addressed Permit or Outcome still retracts the corresponding hold.
+Thus an unrelated event cannot relabel a finding as a less restricted noun.
+
+A partial situation projection keeps authorized items and their original bases,
+uses one scope-dependent Withheld marker, suppresses unaddressed status entries
+and whole-domain metadata, and derives its cursor only from visible items.
+The marker is present even when no private items exist. Full own-tenant scope
+retains aggregate exactness and frontiers, with cursor authorization checked.
+Equal ordered authorized records and bases yield equal partial projections despite
+different hidden suffixes; an item's disclosed sequence remains its authorized
+causal provenance, not a claim of whole-domain currency or a timing guarantee.
+
+Fifteen public regression functions pair useful authorized traversal, latest-handoff
+discovery and situation updates with hidden-edge, generation-replacement,
+malformed-subject, retraction, private-metadata and maximum-sequence boundaries.
+Independent source review is complete. Compilation, runtime tests, rustfmt,
+Clippy and the required xtask gate remain unexecuted because the executor is
+unavailable. FA-134 and FA-136 remain in progress with their original acceptance
+and dependency requirements; authenticated scope, complete situation coverage
+and the unified dispatcher are not qualified by this change.
+
 ## 2026-11-05: bind graph traversal to source generation and visible targets
 
 The FA-134 reference resolver now applies the same source admission to get and

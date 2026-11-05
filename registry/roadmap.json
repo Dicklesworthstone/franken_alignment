@@ -3393,7 +3393,7 @@
       "id": "FA-134",
       "gate": "G1",
       "title": "Address scheme and single resolver",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-007",
         "FA-005"
@@ -3409,7 +3409,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "crates/fa-reference/src/address_resolver.rs",
+        "crates/fa-reference/tests/agent_projection_boundaries.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A06"
       ]
@@ -3449,7 +3453,7 @@
       "id": "FA-136",
       "gate": "G2",
       "title": "Situation report with decision-relevance ordering",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-135",
         "FA-133",
@@ -3467,7 +3471,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "crates/fa-reference/src/situation_rehearsal.rs",
+        "crates/fa-reference/tests/agent_projection_boundaries.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A02",
         "FI-A18"
