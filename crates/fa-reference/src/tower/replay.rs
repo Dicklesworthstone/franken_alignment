@@ -79,6 +79,33 @@ pub struct ReplayProperties {
     pub full_ledger_accounting: Knowledge<bool>,
 }
 
+/// The actual registered edit surface, not a grant of live authority.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayInterventionRegistration {
+    pub id: u64,
+    pub allow_payload: bool,
+    pub allow_target: bool,
+    pub allow_units: bool,
+    pub keys: Vec<u64>,
+}
+
+/// Inspection of installed data only. Native identities come from the retained
+/// expected anchor; a present receipt's sequence has not been verified here.
+/// The Tower supplies the full source basis outside this metadata.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayPlanMetadata {
+    pub profile: ReplayProfile,
+    pub native_scope: Scope,
+    pub native_attempt: u64,
+    pub native_round: u64,
+    pub native_expected_control_sequence: u64,
+    pub native_receipt_control_sequence: Option<u64>,
+    pub has_receipt: bool,
+    pub retained_bytes: usize,
+    pub registration: ReplayInterventionRegistration,
+    pub properties: ReplayProperties,
+}
+
 /// Historical evidence and the native paired experiment, never an authorization
 /// token. Native control sequences retain their original namespace and need
 /// not equal either the imported Tower cut or the branch journal sequence.
@@ -192,6 +219,45 @@ impl ObservedReplayRecord {
     /// not a measurement of physical allocator or inference work.
     pub fn retained_bytes(&self) -> usize {
         self.retained_bytes
+    }
+
+    /// Read the frozen registration without verifying or executing its history.
+    /// Every epistemic property remains unknown, including after a prior replay.
+    pub fn plan_metadata(&self) -> ReplayPlanMetadata {
+        let unavailable = || Knowledge::Unknown {
+            reason: UnknownReason::Unavailable,
+        };
+        ReplayPlanMetadata {
+            profile: ReplayProfile::ObservedPolicyExperiment,
+            native_scope: self.native_scope,
+            native_attempt: self.expected.policy.attempt,
+            native_round: self.expected.policy.round,
+            native_expected_control_sequence: self.expected.policy.expected_control_sequence,
+            native_receipt_control_sequence: self
+                .receipt
+                .as_ref()
+                .map(|receipt| receipt.policy.control.sequence),
+            has_receipt: self.has_receipt(),
+            retained_bytes: self.retained_bytes,
+            registration: ReplayInterventionRegistration {
+                id: self.intervention_scope.id(),
+                allow_payload: self.intervention_scope.allows_payload(),
+                allow_target: self.intervention_scope.allows_target(),
+                allow_units: self.intervention_scope.allows_units(),
+                keys: self.intervention_scope.keys().iter().copied().collect(),
+            },
+            properties: ReplayProperties {
+                replay_consistency: unavailable(),
+                retained_anchor_binding: unavailable(),
+                receipt_binding: unavailable(),
+                cryptographic_authentication: unavailable(),
+                independent_verifier_isolation: unavailable(),
+                provider_truth: unavailable(),
+                external_execution: unavailable(),
+                current_eligibility: unavailable(),
+                full_ledger_accounting: unavailable(),
+            },
+        }
     }
 
     /// Recompute the original observed history before every paired experiment.

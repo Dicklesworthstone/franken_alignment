@@ -36,6 +36,16 @@ const DOMAIN: &str = "operations";
 const GENERATION: u64 = 42;
 const CONTROL_SEQ: u64 = 3;
 const READ_UNITS: u64 = 128;
+// Replay and its plan use the genuine historical-source fixture in tower_replay.
+const SNAPSHOT_READS: [Verb; 7] = [
+    Verb::Get,
+    Verb::Related,
+    Verb::Tail,
+    Verb::Situation,
+    Verb::Explain,
+    Verb::WhyHeld,
+    Verb::Next,
+];
 const HOLD_REASON: &str = "await \"capture\"\nkeep \\ provenance 雪";
 
 fn basis(control_seq: u64) -> Basis {
@@ -367,7 +377,7 @@ fn registry_verbs_classes_and_envelope_are_exact_not_a_second_vocabulary() {
         .filter(|verb| verb.is_connected())
         .collect();
     assert_eq!(connected, CONNECTED_VERBS.into_iter().collect());
-    assert_eq!(connected.len(), 8);
+    assert_eq!(connected.len(), 9);
     for retired in field(&registry, "retired_verbs")
         .as_array()
         .expect("retired verbs")
@@ -398,11 +408,7 @@ fn all_seven_reads_return_full_bodies_exact_basis_and_an_immutable_journal() {
     let expected_tree = tree();
     let expected_events: Vec<_> = imported_journal().events().cloned().collect();
     // Branch experiments have their own native-history fixture in tower_replay.
-    for (index, verb) in CONNECTED_VERBS
-        .into_iter()
-        .filter(|verb| verb.class() == VerbClass::Read)
-        .enumerate()
-    {
+    for (index, verb) in SNAPSHOT_READS.into_iter().enumerate() {
         let query = request(&tower, verb);
         let response = tower.dispatch(&access(), query);
         assert_eq!(
@@ -562,6 +568,7 @@ fn all_seven_reads_return_full_bodies_exact_basis_and_an_immutable_journal() {
                 "next"
             }
             TowerValue::Replay(_) => panic!("a read cannot produce a branch experiment"),
+            TowerValue::ReplayPlan(_) => panic!("replay planning uses its original-source fixture"),
         };
         assert_eq!(
             text(field(field(&json, "result"), "value"), "kind"),
@@ -607,10 +614,7 @@ fn denied_scope_role_and_partial_domain_do_not_disclose_snapshot_or_budget() {
             ),
             // This fixture is a production snapshot. Branch replay has its own
             // populated/empty admission controls in tower_replay.
-            CONNECTED_VERBS
-                .into_iter()
-                .filter(|verb| verb.class() == VerbClass::Read)
-                .collect(),
+            SNAPSHOT_READS.to_vec(),
         ),
         (
             TowerAccess::new(
@@ -768,10 +772,7 @@ fn partial_get_and_related_preserve_object_cut_without_disclosing_global_account
 
 #[test]
 fn stale_and_future_cuts_are_not_relabelled_as_current_reads() {
-    for verb in CONNECTED_VERBS
-        .into_iter()
-        .filter(|verb| verb.class() == VerbClass::Read)
-    {
+    for verb in SNAPSHOT_READS {
         let mut tower = fixture();
         for requested_generation in [0, GENERATION - 1, GENERATION + 1, u64::MAX] {
             let mut query = request(&tower, verb);
@@ -1351,7 +1352,7 @@ fn every_unconnected_registered_verb_refuses_without_read_charge_or_journal_tran
         assert!(field(&json, "result").get("value").is_none());
         refused += 1;
     }
-    assert_eq!(refused, 30);
+    assert_eq!(refused, 29);
     let query = request(&tower, Verb::Tail);
     let response = tower.dispatch(&access(), query);
     let (TowerValue::Tail(batch), _) = known(&response.result) else {

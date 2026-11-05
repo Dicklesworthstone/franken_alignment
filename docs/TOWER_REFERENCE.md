@@ -2,7 +2,7 @@
 
 `fa_reference::tower` connects the existing object resolver, event journal,
 situation fold and predicate explanations through one Rust request/response API.
-It implements seven read operations, branch-only paired policy `replay`, and the
+It implements eight read operations, branch-only paired policy `replay`, and the
 sixteen-field common envelope in
 [`registry/vocabulary.json`](../registry/vocabulary.json). The vocabulary has
 **38** registered verbs; the older dispatcher bead's title says 35.
@@ -27,6 +27,7 @@ FA-133/FA-134/FA-135/FA-136/FA-137/FA-138 contracts and dispatcher bead remain o
 | `explain` | Imported predicate tree with all nodes, statuses, evidence references and bases | Complete domain scope and every evidence address |
 | `why-held` | Unsatisfied predicate items and permitted remedies | Operator, complete domain scope and every evidence address |
 | `next` | Ranked affordances within the host's allowed purposes and cost allowance | Operator, complete domain scope and every evidence address |
+| `replay-plan` | Actual installed intervention registration, source lineage and execution requirements | Branch and source-family visibility; sensitive native metadata requires full domain scope |
 | `replay` | Real baseline/treated policy report, explicitly labeled rehearsal | Operator, full scope, Experiment purpose, owned `ExperimentCx`, branch journal and exact request key |
 
 Complete domain scope means the journal's tenant, all four resolver planes and
@@ -141,6 +142,12 @@ are retained. A hidden evidence address withholds the entire explanation
 surface. `next` intersects its request cost cap with the host cap, and
 `why-held` applies the same permitted set to its embedded suggestions.
 
+`replay-plan` inspects the installed branch artifact without verifying its
+historical source. Full-domain readers need neither operator status nor an
+Experiment purpose to inspect metadata. Partial callers receive withheld native
+metadata, and all plan assurance properties remain Unknown. Planning never reads
+or writes the replay result cache. See [the planning contract](TOWER_REPLAY.md#inspect-the-plan-before-running-an-experiment).
+
 One admitted read spends one logical read unit, including an unknown result or
 an oversized response. Malformed requests, unsupported verbs, denied access and
 pre-admission limit failures do not spend a unit. These units measure this
@@ -171,6 +178,12 @@ with an error reason and preserves the spent read charge; it never truncates a
 value while labeling it `Known`.
 
 ## Executed verification and remaining gates
+
+The replay-plan extension passed all **82 selected public regressions** and the
+no-Permit compile-fail contract. The
+[planning receipt](../artifacts/execution/2026-11-05-tower-replay-plan-receipt.json)
+binds this result to the changed source and records the canonical gate stopping
+at the unchanged source-snapshot binding failure.
 
 The subsequent paired-replay extension passed the qualified compiler's library
 check and all **77 selected public regressions**, including its nine genuine

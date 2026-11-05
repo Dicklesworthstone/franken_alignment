@@ -1,0 +1,123 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-05T22:52:05.911800+00:00",
+  "consumer": "Tower replay planning API qualification and subsequent source-bound regression review",
+  "feature_gate": "Readonly scoped planning over actual retained intervention registration",
+  "observed_defect_class": "Missing agent inspection of replay registration; avoid confusing installed metadata with verified history or cached execution",
+  "retirement_condition": "Superseded as current qualification when these source hashes change; retained as historical execution evidence",
+  "qualification": "scoped_local_execution; full_repository_gate_blocked",
+  "base_commit": "a90f32537100da8e6021a66f0706f331e3d45cd0",
+  "changed_source_sha256": {
+    "crates/fa-reference/src/tower.rs": "2f3d2aa12ce7018fb1abcf2cdf5854cfd854753b77154e287ea9ba784d5cc2a7",
+    "crates/fa-reference/src/tower/vocabulary.rs": "d3bf21f77b7fde061a420449b8651d0268306161ce761d1ab15c05e806b58f7f",
+    "crates/fa-reference/src/tower/wire.rs": "a4b243c4bbc9be1b68f6537586a470027543d36acb39484d48a7f2104fca49e2",
+    "crates/fa-reference/src/tower/replay.rs": "e4cf4d776dca3ac3742b53c51dfe0a1ccba6b3b21b9340265252ba2d5d1e4ccf",
+    "crates/fa-reference/src/tower/dispatch_replay.rs": "7b28d53baa48010b9326c3f15ba2f17ad2d7861fbec00381374e91c27a388998",
+    "crates/fa-reference/src/tower/wire/replay.rs": "f64def90db5abc0fdaf557d187f2b79b7a2db61073c61aec12f70347264747ea",
+    "crates/fa-reference/src/action/consequence/experiment.rs": "dcfcadc9a25f626c994669a9c4b2920571ed4eb29cdecec5f51f3468d5f26000",
+    "crates/fa-reference/tests/tower_dispatch.rs": "ac41a1261f27b914e996363d95219ea0a0037c9052d36332ae8763f1b26ee174",
+    "crates/fa-reference/tests/tower_replay.rs": "88ed4249a288eac2ba112dae8c26ab7c83cb08b33140dfb27917beed125a0fba"
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "RUSTFLAGS": "-C codegen-units=512 -Z threads=1 -Z mir-opt-level=0",
+    "temporary_directory": "task-owned available tmpfs; forced-TMPDIR default overridden per command"
+  },
+  "targeted_command": [
+    "cargo",
+    "--config",
+    "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "fa-reference",
+    "--test",
+    "tower_replay",
+    "--test",
+    "tower_dispatch",
+    "--test",
+    "address_resolver_boundaries",
+    "--test",
+    "agent_projection_boundaries",
+    "--test",
+    "knowledge_surface_wire",
+    "--test",
+    "event_journal_boundaries",
+    "--test",
+    "proposal_retry_boundaries"
+  ],
+  "targeted_results": {
+    "passed": 82,
+    "failed": 0,
+    "ignored": 0,
+    "suites": {
+      "tower_replay": 14,
+      "tower_dispatch": 14,
+      "address_resolver_boundaries": 10,
+      "agent_projection_boundaries": 15,
+      "knowledge_surface_wire": 12,
+      "event_journal_boundaries": 9,
+      "proposal_retry_boundaries": 8
+    }
+  },
+  "compile_fail_contract": {
+    "passed": 1,
+    "command": [
+      "cargo",
+      "--config",
+      "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+      "test",
+      "--locked",
+      "--offline",
+      "-p",
+      "fa-reference",
+      "--doc",
+      "tower::TowerRehearsalOutcome"
+    ],
+    "claim": "TowerRehearsalOutcome cannot convert to Permit"
+  },
+  "canonical_gate": {
+    "command": [
+      "cargo",
+      "--config",
+      "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+      "run",
+      "--locked",
+      "--offline",
+      "-p",
+      "xtask",
+      "--",
+      "check"
+    ],
+    "exit_code": 1,
+    "passed": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false
+  },
+  "logs": [
+    "2026-11-05-tower-replay-plan-tests.log",
+    "2026-11-05-tower-replay-plan-no-permit.log",
+    "2026-11-05-tower-replay-plan-gate.log"
+  ],
+  "limits": [
+    "Planning is metadata inspection, not a verified readiness grade",
+    "Current profile is indexed by branch artifact; no generic closure discovery or durable retention lease",
+    "No RCH/full-workspace/deployment qualification claim",
+    "No authentication, current permission, provider truth, external execution or independent-verifier claim"
+  ]
+}

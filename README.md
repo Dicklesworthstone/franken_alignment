@@ -30,7 +30,7 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
 The [reference Tower dispatcher](docs/TOWER_REFERENCE.md) connects `get`,
-`related`, `tail`, `situation`, `explain`, `why-held` and `next` through one Rust
+`related`, `tail`, `situation`, `explain`, `why-held`, `next` and `replay-plan` through one Rust
 API and the common sixteen-field response envelope. Complete typed evidence,
 generation and disclosure boundaries, bounded reads and explicit unsupported
 operations are covered by a [68-test scoped execution receipt](artifacts/execution/2026-11-05-tower-read-receipt.json).
@@ -42,8 +42,13 @@ explicit experiment branch. It reconstructs original observed decisions and
 receipts, applies registered interventions, preserves historical evidence and
 requires fresh independent review after a policy repair. Exact request retries
 reuse their original result without another experiment charge or branch event.
-All 77 selected public regressions pass, including the nine new replay tests;
+All 82 selected public regressions pass, including fourteen replay and planning tests;
 full source-snapshot and deployment qualification remain open.
+
+`replay-plan` lets an authorized reader inspect the actual intervention flags,
+registered keys, source lineage and execution requirements before replay. It
+does not run verification, claim readiness or consume an experiment cache slot;
+partial callers receive withheld native metadata.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

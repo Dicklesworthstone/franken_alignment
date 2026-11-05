@@ -7,7 +7,8 @@ use super::{
 };
 use crate::ReadWitness;
 use crate::action::consequence::experiment::{
-    CounterfactualReport, EmpiricalStatus, Intervention, NextRequirement,
+    CounterfactualReport, EmpiricalStatus, Intervention, MAX_INTERVENTION_BYTES, MAX_INTERVENTIONS,
+    NextRequirement,
 };
 use crate::action::consequence::gate::containment::session::policy::controller::ReplayedDecision;
 use crate::action::consequence::gate::containment::session::policy::{Evaluation, Truth};
@@ -15,8 +16,11 @@ use crate::action::{Purpose, ResolvedTarget, Scope};
 use crate::event_journal::{ReferenceDigestHasher, rule_tag};
 use crate::observation_algebra::Knowledge;
 use crate::reducer::{Outcome, Reduction};
-use crate::tower::TowerRehearsalOutcome;
-use crate::tower::replay::{ObservedReplayReport, ReplayProfile, ReplayProperties};
+use crate::tower::replay::{
+    ObservedReplayReport, ReplayPlanMetadata, ReplayProfile, ReplayProperties,
+};
+use crate::tower::{TowerRehearsalOutcome, TowerReplayPlan};
+use crate::typestate_cx::PurposeTag;
 
 const REPLAY_SUMMARY_MAX_BYTES: usize = 1_048_576;
 const REPLAY_SUMMARY_DOMAIN: &[u8] =
@@ -30,6 +34,11 @@ impl KnowledgeKind for SourceControlSequence {
 struct ReplayProperty;
 impl KnowledgeKind for ReplayProperty {
     const NAME: &'static str = "ReplayProperty";
+}
+
+struct ReplayPlanPayload;
+impl KnowledgeKind for ReplayPlanPayload {
+    const NAME: &'static str = "ReplayPlanMetadata";
 }
 
 /// Deterministic reference checksum of the complete structured report, before
@@ -50,6 +59,104 @@ pub(crate) fn replay_summary_digest(
 }
 
 impl Encoder {
+    pub(super) fn replay_plan(&self, plan: &TowerReplayPlan) -> Result<String, TowerEncodingError> {
+        if plan.branch_id == 0 {
+            return Err(TowerEncodingError::InvalidKnowledge);
+        }
+        let source_basis = self.knowledge::<_, SourceControlSequence>(
+            &Knowledge::known(plan.source_basis.control_seq(), plan.source_basis),
+            |sequence| Ok(sequence.to_string()),
+        )?;
+        // The shared encoder invokes this closure only for Known metadata.
+        // Withheld plans disclose no native identity or registration payload.
+        let metadata = self.knowledge::<_, ReplayPlanPayload>(&plan.metadata, |metadata| {
+            self.replay_plan_metadata(metadata)
+        })?;
+        self.bounded(object_json(&[
+            ("branch_id", plan.branch_id.to_string()),
+            ("branch_policy_epoch", plan.branch_policy_epoch.to_string()),
+            ("source_address", address_json(&plan.source_address)),
+            ("source_basis", source_basis),
+            ("metadata", metadata),
+            ("supported_semantics", quote("decision_replay")),
+            ("retention", quote("in_memory")),
+            (
+                "requirements",
+                object_json(&[
+                    ("operator", "true".to_owned()),
+                    ("full_domain_access", "true".to_owned()),
+                    ("purpose", quote(PurposeTag::Experiment.as_str())),
+                    ("owned_experiment_context", "true".to_owned()),
+                    ("matching_native_tenant_and_run", "true".to_owned()),
+                    ("current_branch_epoch", "true".to_owned()),
+                    ("branch_distinct_from_source", "true".to_owned()),
+                    ("idempotency_key", quote("exact_request")),
+                ]),
+            ),
+            (
+                "bounds",
+                object_json(&[
+                    ("max_interventions", MAX_INTERVENTIONS.to_string()),
+                    ("max_intervention_bytes", MAX_INTERVENTION_BYTES.to_string()),
+                ]),
+            ),
+            ("logical_replay_cost", "1".to_owned()),
+        ]))
+    }
+
+    fn replay_plan_metadata(
+        &self,
+        metadata: &ReplayPlanMetadata,
+    ) -> Result<String, TowerEncodingError> {
+        if metadata.registration.keys.len() > MAX_INTERVENTIONS {
+            return Err(TowerEncodingError::OutputLimit);
+        }
+        let properties = self.replay_properties(&metadata.properties)?;
+        self.bounded(object_json(&[
+            (
+                "profile",
+                quote(match metadata.profile {
+                    ReplayProfile::ObservedPolicyExperiment => "observed_policy_experiment",
+                }),
+            ),
+            ("native_scope", native_scope_json(metadata.native_scope)),
+            ("native_attempt", metadata.native_attempt.to_string()),
+            ("native_round", metadata.native_round.to_string()),
+            (
+                "native_expected_control_sequence",
+                metadata.native_expected_control_sequence.to_string(),
+            ),
+            (
+                "native_receipt_control_sequence",
+                metadata
+                    .native_receipt_control_sequence
+                    .map_or_else(|| "null".to_owned(), |sequence| sequence.to_string()),
+            ),
+            ("has_receipt", metadata.has_receipt.to_string()),
+            ("retained_bytes", metadata.retained_bytes.to_string()),
+            (
+                "registration",
+                object_json(&[
+                    ("id", metadata.registration.id.to_string()),
+                    (
+                        "allow_payload",
+                        metadata.registration.allow_payload.to_string(),
+                    ),
+                    (
+                        "allow_target",
+                        metadata.registration.allow_target.to_string(),
+                    ),
+                    ("allow_units", metadata.registration.allow_units.to_string()),
+                    (
+                        "keys",
+                        array_json(metadata.registration.keys.iter().map(u64::to_string)),
+                    ),
+                ]),
+            ),
+            ("properties", properties),
+        ]))
+    }
+
     pub(super) fn replay_outcome(
         &self,
         outcome: &TowerRehearsalOutcome,

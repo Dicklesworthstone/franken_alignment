@@ -32,11 +32,13 @@ use fa_reference::observation_algebra::{
 use fa_reference::reducer::MAX_VOTES;
 use fa_reference::round::Verdict;
 use fa_reference::strict_json::{self, Json};
-use fa_reference::tower::replay::{ObservedReplayRecord, ObservedReplayReport, ReplayProfile};
+use fa_reference::tower::replay::{
+    ObservedReplayRecord, ObservedReplayReport, ReplayPlanMetadata, ReplayProfile,
+};
 use fa_reference::tower::{
-    ReadArguments, ReasonCode, ReferenceTower, ResponseStatus, TowerAccess, TowerBuilder,
-    TowerInstallError, TowerLimits, TowerRehearsalOutcome, TowerRequest, TowerResponse, TowerValue,
-    Verb,
+    MAX_REPLAY_OPERATIONS, ReadArguments, ReasonCode, ReferenceTower, ResponseStatus, TowerAccess,
+    TowerBuilder, TowerInstallError, TowerLimits, TowerRehearsalOutcome, TowerReplayPlan,
+    TowerRequest, TowerResponse, TowerValue, Verb,
 };
 use fa_reference::typestate_cx::{ExperimentCx, PurposeTag, RootCx};
 use fa_reference::{Error, Snapshot};
@@ -386,6 +388,10 @@ fn replay_request(key: &str, interventions: Vec<Intervention>) -> TowerRequest {
     request
 }
 
+fn plan_request() -> TowerRequest {
+    TowerRequest::new("inspect-replay-plan", artifact_address(), Verb::ReplayPlan)
+}
+
 fn known<T>(knowledge: &Knowledge<T>) -> (&T, Basis) {
     match knowledge {
         Knowledge::Known { value, basis } => (value, *basis),
@@ -397,6 +403,29 @@ fn outcome(response: &TowerResponse) -> (&TowerRehearsalOutcome, Basis) {
     match known(&response.result) {
         (TowerValue::Replay(outcome), basis) => (outcome, basis),
         _ => panic!("expected a typed rehearsal outcome"),
+    }
+}
+
+fn plan(response: &TowerResponse) -> (&TowerReplayPlan, Basis) {
+    match known(&response.result) {
+        (TowerValue::ReplayPlan(plan), basis) => (plan, basis),
+        _ => panic!("expected an inspection of the registered replay plan"),
+    }
+}
+
+fn assert_unverified_plan(metadata: &ReplayPlanMetadata) {
+    for property in [
+        &metadata.properties.replay_consistency,
+        &metadata.properties.retained_anchor_binding,
+        &metadata.properties.receipt_binding,
+        &metadata.properties.cryptographic_authentication,
+        &metadata.properties.independent_verifier_isolation,
+        &metadata.properties.provider_truth,
+        &metadata.properties.external_execution,
+        &metadata.properties.current_eligibility,
+        &metadata.properties.full_ledger_accounting,
+    ] {
+        assert_eq!(property, &Knowledge::unknown(UnknownReason::Unavailable));
     }
 }
 
@@ -466,6 +495,12 @@ fn number(value: &Json, name: &str) -> u64 {
 fn body(json: &Json) -> &Json {
     let payload = field(field(json, "result"), "value");
     assert_eq!(text(payload, "kind"), "replay");
+    field(payload, "value")
+}
+
+fn plan_body(json: &Json) -> &Json {
+    let payload = field(field(json, "result"), "value");
+    assert_eq!(text(payload, "kind"), "replay-plan");
     field(payload, "value")
 }
 
@@ -1390,6 +1425,468 @@ fn output_limit_keeps_completed_branch_work_and_caches_the_exact_unknown_result(
     assert_eq!(retry.to_json().expect("same refusal"), refused_json);
     assert_eq!(bounded.remaining_read_units(), 0);
     assert_eq!(bounded.journal_control_seq(), 1);
+    assert_eq!(history.endpoint.execution_count(), 0);
+    assert_eq!(history.endpoint.payload(), b"initial");
+}
+
+#[test]
+fn replay_plan_reports_actual_registration_without_verifying_or_executing_history() {
+    let history = original_history(
+        Roster::Complete,
+        OriginalPolicy::Satisfied,
+        ORIGINAL_EVIDENCE,
+    );
+    let original = history.broker.inspect();
+    for with_receipt in [false, true] {
+        let source = ObservedReplayRecord::new(
+            history.anchor.policy.action.spec().scope,
+            history.anchor.clone(),
+            history.archive.clone(),
+            with_receipt.then(|| history.receipt.clone()),
+            InterventionScope::new(BRANCH_ID, false, true, true, &[9, 7, 3])
+                .expect("actual host registration"),
+        )
+        .expect("bounded original source");
+        let retained_bytes = source.retained_bytes();
+        let mut tower = tower(Some(source), with_receipt, TowerLimits::default(), 2);
+        let response = tower.dispatch(&access(), plan_request());
+        assert_eq!(response.envelope.status, ResponseStatus::Ok);
+        assert!(response.envelope.retry_safe);
+        let (plan, basis) = plan(&response);
+        assert_eq!(basis, branch_basis(0));
+        assert_eq!(plan.branch_id, BRANCH_ID);
+        assert_eq!(plan.branch_policy_epoch, BRANCH_POLICY_EPOCH);
+        assert_eq!(plan.source_address, source_address(with_receipt));
+        assert_eq!(plan.source_basis, source_basis());
+        let (metadata, metadata_basis) = known(&plan.metadata);
+        assert_eq!(metadata_basis, source_basis());
+        assert_eq!(metadata.profile, ReplayProfile::ObservedPolicyExperiment);
+        assert_eq!(
+            metadata.native_scope,
+            history.anchor.policy.action.spec().scope
+        );
+        assert_eq!(metadata.native_attempt, 1);
+        assert_eq!(metadata.native_round, 101);
+        assert_eq!(
+            metadata.native_expected_control_sequence,
+            history.anchor.policy.expected_control_sequence
+        );
+        assert_eq!(
+            metadata.native_receipt_control_sequence,
+            with_receipt.then_some(history.receipt.policy.control.sequence)
+        );
+        assert_eq!(metadata.has_receipt, with_receipt);
+        assert_eq!(metadata.retained_bytes, retained_bytes);
+        assert_eq!(metadata.registration.id, BRANCH_ID);
+        assert!(!metadata.registration.allow_payload);
+        assert!(metadata.registration.allow_target);
+        assert!(metadata.registration.allow_units);
+        assert_eq!(
+            metadata.registration.keys,
+            [3, 7, 9],
+            "inspection reports every registered key, including unobserved keys"
+        );
+        assert_unverified_plan(metadata);
+        assert_eq!(*known(&response.envelope.realized_cost).0, 1);
+        assert_eq!(tower.remaining_read_units(), 1);
+        assert_eq!(tower.journal_control_seq(), 0);
+
+        let json = parse(&response.to_json().expect("complete plan JSON"));
+        let wire = plan_body(&json);
+        assert_eq!(number(wire, "branch_id"), BRANCH_ID);
+        assert_eq!(number(wire, "branch_policy_epoch"), BRANCH_POLICY_EPOCH);
+        assert_eq!(
+            text(wire, "source_address"),
+            source_address(with_receipt).canonical_string()
+        );
+        let source = field(wire, "source_basis");
+        assert_eq!(number(source, "value"), SOURCE_CUT);
+        assert_eq!(
+            number(field(field(source, "basis"), "identity"), "policy_epoch"),
+            0
+        );
+        let metadata = field(wire, "metadata");
+        assert_eq!(text(metadata, "state"), "Known");
+        assert_eq!(
+            number(field(field(metadata, "basis"), "identity"), "control_seq"),
+            SOURCE_CUT
+        );
+        let metadata = field(metadata, "value");
+        assert_eq!(field(metadata, "has_receipt").as_bool(), Some(with_receipt));
+        assert_eq!(number(metadata, "retained_bytes"), retained_bytes as u64);
+        let registration = field(metadata, "registration");
+        assert_eq!(field(registration, "allow_payload").as_bool(), Some(false));
+        assert_eq!(field(registration, "allow_target").as_bool(), Some(true));
+        assert_eq!(field(registration, "allow_units").as_bool(), Some(true));
+        assert_eq!(
+            field(registration, "keys")
+                .as_array()
+                .expect("all registered keys")
+                .iter()
+                .map(|key| key.as_u64().expect("native key"))
+                .collect::<Vec<_>>(),
+            [3, 7, 9]
+        );
+        assert_eq!(text(wire, "supported_semantics"), "decision_replay");
+        assert_eq!(text(wire, "retention"), "in_memory");
+        assert_eq!(number(wire, "logical_replay_cost"), 1);
+        assert_eq!(
+            number(field(wire, "bounds"), "max_interventions"),
+            MAX_INTERVENTIONS as u64
+        );
+        let requirements = field(wire, "requirements");
+        assert_eq!(field(requirements, "operator").as_bool(), Some(true));
+        assert_eq!(text(requirements, "purpose"), "experiment");
+        assert_eq!(text(requirements, "idempotency_key"), "exact_request");
+        for (_, property) in field(metadata, "properties")
+            .as_object()
+            .expect("per-property uncertainty")
+        {
+            assert_eq!(text(property, "state"), "Unknown");
+            assert!(property.get("value").is_none());
+        }
+    }
+    assert_eq!(history.broker.inspect(), original);
+    assert_eq!(history.endpoint.execution_count(), 0);
+    assert_eq!(history.endpoint.payload(), b"initial");
+}
+
+#[test]
+fn plan_inspection_needs_no_replay_purpose_and_withholds_partial_scope_metadata() {
+    let history = original_history(
+        Roster::Complete,
+        OriginalPolicy::Satisfied,
+        ORIGINAL_EVIDENCE,
+    );
+    let original = history.broker.inspect();
+    let mut tower = tower(
+        Some(record(&history, false)),
+        false,
+        TowerLimits::default(),
+        5,
+    );
+    let nonoperator = TowerAccess::new(
+        CallerScope::full_tenant_access(TENANT),
+        false,
+        Vec::new(),
+        0,
+    );
+    let inspected = tower.dispatch(&nonoperator, plan_request());
+    assert_unverified_plan(known(&plan(&inspected).0.metadata).0);
+    for accounting in [
+        &inspected.envelope.budgets_remaining,
+        &inspected.envelope.realized_cost,
+    ] {
+        assert_eq!(accounting, &Knowledge::withheld(AuthorityKind::Verify));
+    }
+    assert_eq!(tower.remaining_read_units(), 4);
+    let refused = tower.dispatch(
+        &nonoperator,
+        replay_request("requires-operator", Vec::new()),
+    );
+    assert!(matches!(refused.result, Knowledge::Withheld { .. }));
+    assert_eq!(tower.remaining_read_units(), 4);
+
+    let no_experiment = TowerAccess::new(
+        CallerScope::full_tenant_access(TENANT),
+        true,
+        vec![PurposeTag::Capture],
+        0,
+    );
+    let inspected = tower.dispatch(&no_experiment, plan_request());
+    assert_unverified_plan(known(&plan(&inspected).0.metadata).0);
+    assert_eq!(*known(&inspected.envelope.realized_cost).0, 1);
+    let refused = tower.dispatch(
+        &no_experiment,
+        replay_request("requires-experiment", Vec::new()),
+    );
+    assert_eq!(
+        refused.envelope.reason_code,
+        Some(ReasonCode::PurposeMismatch)
+    );
+    assert_eq!(tower.remaining_read_units(), 3);
+
+    let mut partial = CallerScope::full_tenant_access(TENANT);
+    partial.allowed_planes.remove(&ResolverPlane::EvidenceStore);
+    partial
+        .allowed_planes
+        .remove(&ResolverPlane::DerivedProjections);
+    partial
+        .granted_authorities
+        .remove(&AuthorityKind::ExactRead);
+    partial.granted_authorities.remove(&AuthorityKind::Judge);
+    let partial = TowerAccess::new(partial, false, Vec::new(), 0);
+    let inspected = tower.dispatch(&partial, plan_request());
+    let (inspected_plan, basis) = plan(&inspected);
+    assert_eq!(basis, branch_basis(0));
+    assert_eq!(inspected_plan.source_address, source_address(false));
+    assert_eq!(inspected_plan.source_basis, source_basis());
+    assert_eq!(
+        inspected_plan.metadata,
+        Knowledge::withheld(AuthorityKind::ExactRead)
+    );
+    assert_eq!(
+        inspected.envelope.realized_cost,
+        Knowledge::withheld(AuthorityKind::Verify)
+    );
+    let encoded = inspected.to_json().expect("redacted partial plan");
+    let json = parse(&encoded);
+    let metadata = field(plan_body(&json), "metadata");
+    assert_eq!(text(metadata, "state"), "Withheld");
+    assert!(metadata.get("value").is_none());
+    assert!(!encoded.contains("\"native_scope\""));
+    assert!(!encoded.contains("\"registration\""));
+    assert_eq!(tower.remaining_read_units(), 2);
+    assert_eq!(tower.journal_control_seq(), 0);
+    assert!(matches!(
+        tower
+            .dispatch(
+                &partial,
+                replay_request("partial-cannot-execute", Vec::new())
+            )
+            .result,
+        Knowledge::Withheld { .. }
+    ));
+    assert_eq!(tower.remaining_read_units(), 2);
+
+    let replayed = tower.dispatch(&access(), replay_request("authorized-twin", Vec::new()));
+    assert!(outcome(&replayed).0.rehearsal);
+    assert_eq!(tower.remaining_read_units(), 1);
+    assert_eq!(tower.journal_control_seq(), 1);
+    assert_eq!(history.broker.inspect(), original);
+    assert_eq!(history.endpoint.execution_count(), 0);
+}
+
+#[test]
+fn replay_plan_withholds_source_families_before_record_lookup() {
+    let history = original_history(
+        Roster::Complete,
+        OriginalPolicy::Satisfied,
+        ORIGINAL_EVIDENCE,
+    );
+    let mut missing_source_plane = CallerScope::full_tenant_access(TENANT);
+    missing_source_plane
+        .allowed_planes
+        .remove(&ResolverPlane::ControlLedger);
+    let mut missing_source_authority = CallerScope::full_tenant_access(TENANT);
+    missing_source_authority
+        .granted_authorities
+        .remove(&AuthorityKind::Verify);
+    let mut missing_subject_plane = CallerScope::full_tenant_access(TENANT);
+    missing_subject_plane
+        .allowed_planes
+        .remove(&ResolverPlane::ExperimentStore);
+    let mut missing_subject_authority = CallerScope::full_tenant_access(TENANT);
+    missing_subject_authority
+        .granted_authorities
+        .remove(&AuthorityKind::Probe);
+    let denied_scopes = [
+        CallerScope::full_tenant_access("another-tenant"),
+        missing_source_plane,
+        missing_source_authority,
+        missing_subject_plane,
+        missing_subject_authority,
+    ];
+    for with_receipt in [false, true] {
+        for scope in &denied_scopes {
+            let denied = TowerAccess::new(scope.clone(), true, Vec::new(), 0);
+            let mut present = tower(
+                Some(record(&history, with_receipt)),
+                with_receipt,
+                TowerLimits::default(),
+                3,
+            );
+            let mut absent = tower(None, with_receipt, TowerLimits::default(), 9);
+            let refused = present.dispatch(&denied, plan_request());
+            let missing = absent.dispatch(&denied, plan_request());
+            assert_eq!(refused, missing);
+            assert_eq!(refused.to_json(), missing.to_json());
+            assert_eq!(refused.result, Knowledge::withheld(AuthorityKind::Verify));
+            assert_eq!(
+                refused.envelope.reason_code,
+                Some(ReasonCode::DeniedByPolicy)
+            );
+            let json = parse(&refused.to_json().expect("uniform refusal"));
+            assert!(field(&json, "result").get("value").is_none());
+            assert_eq!(present.remaining_read_units(), 3);
+            assert_eq!(absent.remaining_read_units(), 9);
+            assert_eq!(present.journal_control_seq(), 0);
+            assert_eq!(absent.journal_control_seq(), 0);
+            let accepted = present.dispatch(&access(), plan_request());
+            assert_eq!(
+                plan(&accepted).0.source_address,
+                source_address(with_receipt)
+            );
+            assert_unverified_plan(known(&plan(&accepted).0.metadata).0);
+            assert_eq!(present.remaining_read_units(), 2);
+            assert_eq!(present.journal_control_seq(), 0);
+        }
+    }
+    assert_eq!(history.endpoint.execution_count(), 0);
+}
+
+#[test]
+fn installed_tampered_history_has_inspectable_metadata_but_fails_actual_replay() {
+    let history = original_history(
+        Roster::Complete,
+        OriginalPolicy::Satisfied,
+        ORIGINAL_EVIDENCE,
+    );
+    let original = history.broker.inspect();
+    let mut tampered = history.archive.clone();
+    tampered.inputs = Rc::new(native_fixture::inputs(
+        &history.anchor.policy.action,
+        b"spliced final paragraph after the original commitments",
+    ));
+    assert!(
+        tampered
+            .verify_receipt(&history.anchor, &history.receipt)
+            .is_err(),
+        "causal negative control uses the actual native replay backend"
+    );
+    let source = ObservedReplayRecord::new(
+        history.anchor.policy.action.spec().scope,
+        history.anchor.clone(),
+        tampered,
+        Some(history.receipt.clone()),
+        registration(),
+    )
+    .expect("bounded retained data are not verified at installation");
+    let mut tower = tower(Some(source), true, TowerLimits::default(), 4);
+    let inspected = tower.dispatch(&access(), plan_request());
+    let (inspected_plan, basis) = plan(&inspected);
+    assert_eq!(basis, branch_basis(0));
+    assert_eq!(inspected_plan.source_basis, source_basis());
+    assert_unverified_plan(known(&inspected_plan.metadata).0);
+    assert_eq!(tower.remaining_read_units(), 3);
+    assert_eq!(tower.journal_control_seq(), 0);
+    let request = replay_request("real-verification-is-required", Vec::new());
+    let failed = tower.dispatch(&access(), request.clone());
+    assert_eq!(
+        failed.envelope.reason_code,
+        Some(ReasonCode::IntegrityFailure)
+    );
+    assert_eq!(*known(&failed.envelope.realized_cost).0, 1);
+    assert_eq!(tower.remaining_read_units(), 2);
+    assert_eq!(tower.journal_control_seq(), 0);
+    assert_eq!(tower.dispatch(&access(), request), failed);
+    assert_eq!(tower.remaining_read_units(), 2);
+    let after_failure = tower.dispatch(&access(), plan_request());
+    assert_eq!(plan(&after_failure).0, inspected_plan);
+    assert_unverified_plan(known(&plan(&after_failure).0.metadata).0);
+    assert_eq!(tower.remaining_read_units(), 1);
+    assert_eq!(tower.journal_control_seq(), 0);
+
+    let mut permitted = self::tower(
+        Some(record(&history, true)),
+        true,
+        TowerLimits::default(),
+        2,
+    );
+    let positive_plan = permitted.dispatch(&access(), plan_request());
+    assert_unverified_plan(known(&plan(&positive_plan).0.metadata).0);
+    let accepted = permitted.dispatch(
+        &access(),
+        replay_request("real-verification-is-required", Vec::new()),
+    );
+    assert!(outcome(&accepted).0.rehearsal);
+    assert_eq!(permitted.remaining_read_units(), 0);
+    assert_eq!(permitted.journal_control_seq(), 1);
+    assert_eq!(history.broker.inspect(), original);
+    assert_eq!(history.endpoint.execution_count(), 0);
+}
+
+#[test]
+fn replay_plan_reads_do_not_occupy_or_overwrite_the_replay_idempotency_cache() {
+    let history = original_history(
+        Roster::Complete,
+        OriginalPolicy::Satisfied,
+        ORIGINAL_EVIDENCE,
+    );
+    let initial_units = MAX_REPLAY_OPERATIONS as u64 + 10;
+    let mut tower = tower(
+        Some(record(&history, true)),
+        true,
+        TowerLimits::default(),
+        initial_units,
+    );
+    let mut wrong_arguments = plan_request();
+    wrong_arguments.arguments = ReadArguments::Replay {
+        interventions: vec![Intervention::Payload(b"not-a-plan-argument".to_vec())],
+    };
+    let refused = tower.dispatch(&access(), wrong_arguments);
+    assert_eq!(
+        refused.envelope.reason_code,
+        Some(ReasonCode::IntegrityFailure)
+    );
+    assert_eq!(*known(&refused.envelope.realized_cost).0, 0);
+    assert_eq!(tower.remaining_read_units(), initial_units);
+
+    for generation in [BRANCH_GENERATION - 1, BRANCH_GENERATION + 1] {
+        let mut request = plan_request();
+        request.address.generation = Some(generation);
+        let response = tower.dispatch(&access(), request);
+        assert_eq!(
+            response.envelope.reason_code,
+            Some(ReasonCode::StaleGeneration)
+        );
+        if generation < BRANCH_GENERATION {
+            assert_eq!(
+                response.result,
+                Knowledge::stale(branch_basis(0), BRANCH_GENERATION)
+            );
+        } else {
+            assert_eq!(
+                response.result,
+                Knowledge::unknown(UnknownReason::IncompatibleGeneration)
+            );
+        }
+        assert_eq!(*known(&response.envelope.realized_cost).0, 1);
+        assert_eq!(tower.journal_control_seq(), 0);
+    }
+    let mut absent = plan_request();
+    absent.address.id = "missing-replay-plan".to_owned();
+    let missing = tower.dispatch(&access(), absent);
+    assert!(matches!(missing.result, Knowledge::Unknown { .. }));
+    assert_eq!(*known(&missing.envelope.realized_cost).0, 1);
+    assert_eq!(tower.remaining_read_units(), initial_units - 3);
+
+    for index in 0..=MAX_REPLAY_OPERATIONS {
+        let mut request = plan_request();
+        request.idempotency_key = Some(format!("plan-key-{index}"));
+        let response = tower.dispatch(&access(), request);
+        assert_unverified_plan(known(&plan(&response).0.metadata).0);
+        assert_eq!(*known(&response.envelope.realized_cost).0, 1);
+        assert_eq!(tower.journal_control_seq(), 0);
+    }
+    let before_replay = tower.remaining_read_units();
+    assert_eq!(before_replay, 6);
+    let request = replay_request("plan-key-0", Vec::new());
+    let accepted = tower.dispatch(&access(), request.clone());
+    assert!(outcome(&accepted).0.rehearsal);
+    assert_eq!(tower.remaining_read_units(), before_replay - 1);
+    assert_eq!(tower.journal_control_seq(), 1);
+    assert_eq!(tower.dispatch(&access(), request.clone()), accepted);
+    assert_eq!(tower.remaining_read_units(), before_replay - 1);
+
+    let mut inspection = plan_request();
+    inspection.idempotency_key = Some("plan-key-0".to_owned());
+    let after_replay = tower.dispatch(&access(), inspection);
+    let (inspected, basis) = plan(&after_replay);
+    assert_eq!(basis, branch_basis(0));
+    assert_eq!(inspected.source_basis, source_basis());
+    let (metadata, metadata_basis) = known(&inspected.metadata);
+    assert_eq!(metadata_basis, source_basis());
+    assert_unverified_plan(metadata);
+    assert_eq!(tower.remaining_read_units(), before_replay - 2);
+    assert_eq!(tower.journal_control_seq(), 1);
+    assert_eq!(
+        tower.dispatch(&access(), request),
+        accepted,
+        "a plan read with the same key cannot replace the exact replay response"
+    );
+    assert_eq!(tower.remaining_read_units(), before_replay - 2);
+    assert_eq!(tower.journal_control_seq(), 1);
     assert_eq!(history.endpoint.execution_count(), 0);
     assert_eq!(history.endpoint.payload(), b"initial");
 }

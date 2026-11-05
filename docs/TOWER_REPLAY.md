@@ -12,6 +12,41 @@ It does not run new helpers, restart a model, predict an external effect or rene
 historical approval. The independent `verify` verb remains unsupported: the
 plan's isolated verifier must not share the policy code used by this replay.
 
+## Inspect the plan before running an experiment
+
+`Verb::ReplayPlan` is a cheap read at the **installed branch artifact address**.
+It returns that artifact's historical source address and complete source basis,
+the actual intervention registration and the requirements for executing replay.
+This profile does not implement generic discovery from an arbitrary closure
+address, durable retention leases or a verified model-restart grade.
+
+The metadata contains the original native scope, attempt, round and sequence
+coordinates, receipt presence, retained-data charge, registration ID, permission
+flags for payload/target/units, and every registered key in sorted order. Keys
+are not silently filtered to those currently observed. The wire also names the
+native edit count/byte bounds, the logical operation cost and the required
+operator, full-domain, Experiment-context and exact-key admission.
+
+An authorized reader can inspect a plan without operator status or an Experiment
+purpose grant. Both possible source families are admitted before record lookup
+so a hidden source cannot disclose its existence. Partial callers receive the
+authorized plan with sensitive native metadata `Withheld`; full-domain callers
+can inspect that metadata. Global accounting is disclosed only to a full-domain
+operator, as on the other Tower reads.
+
+`Known` plan metadata means the registration was inspected. It does not mean the
+archive passed replay. The planner calls no verifier, performs no evaluation and
+looks up no cached experiment. All nine assurance properties remain `Unknown`,
+including after a previous replay. An installed but tampered history can have a
+truthful plan and subsequently fail the real replay checks.
+
+Each admitted plan read consumes one read unit, including missing, stale or
+future records. It appends no branch event and occupies no replay operation
+slot. An optional request key does not enter the experiment cache. Malformed
+arguments and denied source scope fail before a read charge. The outer result
+keeps the branch artifact's registration basis; the historical source basis and
+metadata basis remain in their separate original domain.
+
 ## A real baseline and a real intervention
 
 The host supplies an `ObservedReplayRecord` containing an original

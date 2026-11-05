@@ -107,6 +107,99 @@ impl TowerBuilder {
 }
 
 impl ReferenceTower {
+    pub(super) fn dispatch_replay_plan(
+        &mut self,
+        access: &TowerAccess,
+        request: TowerRequest,
+    ) -> TowerResponse {
+        // The source kind is stored data. Admit both possible source families
+        // before lookup so a hidden source cannot become an existence oracle.
+        for kind in [Noun::Closure, Noun::Receipt] {
+            let scope_address =
+                Address::new(self.snapshot.journal.tenant(), kind, "replay-source", None)
+                    .expect("bounded installed tenant and constant source identity");
+            if access.scope.is_authorized_for(&scope_address).is_err() {
+                return self.withheld(&request);
+            }
+        }
+        let full_scope = access.full_domain(self.snapshot.journal.tenant());
+        let disclose_accounting = access.operator && full_scope;
+        if request.arguments != ReadArguments::None {
+            return self.refusal(&request, ReasonCode::IntegrityFailure, disclose_accounting);
+        }
+        if self.snapshot.remaining_read_units == 0 {
+            return self.refusal(&request, ReasonCode::BudgetExhausted, disclose_accounting);
+        }
+
+        self.snapshot.remaining_read_units -= 1;
+        let result = match self
+            .snapshot
+            .replays
+            .get(&request.address.without_generation())
+        {
+            None => Knowledge::unknown(UnknownReason::MissingExactDomain),
+            Some(registration) => {
+                if access
+                    .scope
+                    .is_authorized_for(&registration.source_address)
+                    .is_err()
+                {
+                    Knowledge::withheld(AuthorityKind::ExactRead)
+                } else if let Some(knowledge) =
+                    requested_generation(&request.address, registration.basis)
+                {
+                    knowledge
+                } else {
+                    let cx = self
+                        .snapshot
+                        .replay_context
+                        .as_ref()
+                        .expect("registered replay context");
+                    let metadata = if full_scope {
+                        Knowledge::known(
+                            registration.record.plan_metadata(),
+                            registration.source_basis,
+                        )
+                    } else {
+                        Knowledge::withheld(AuthorityKind::ExactRead)
+                    };
+                    Knowledge::known(
+                        TowerValue::ReplayPlan(TowerReplayPlan {
+                            branch_id: cx.branch_id(),
+                            branch_policy_epoch: cx.epoch(),
+                            source_address: registration.source_address.clone(),
+                            source_basis: registration.source_basis,
+                            metadata,
+                        }),
+                        registration.basis,
+                    )
+                }
+            }
+        };
+        let unavailable = matches!(
+            result,
+            Knowledge::Unknown {
+                reason: UnknownReason::MissingExactDomain
+            }
+        );
+        let mut response = self.response(&request, result, 1, disclose_accounting);
+        if unavailable {
+            response.envelope.reason_code = Some(ReasonCode::ReplayClosureUnavailable);
+        }
+        if let Err(error) = response.to_json() {
+            response = self.response(
+                &request,
+                Knowledge::unknown(UnknownReason::Incomplete),
+                1,
+                disclose_accounting,
+            );
+            response.envelope.reason_code = Some(encoding_reason(error));
+        }
+        // This is an ordinary read. The request key neither reads nor writes
+        // the separate bounded replay cache, and no verifier or journal runs.
+        response
+    }
+
     pub(super) fn dispatch_replay(
         &mut self,
         access: &TowerAccess,

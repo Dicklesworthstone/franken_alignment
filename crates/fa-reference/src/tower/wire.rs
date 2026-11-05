@@ -255,6 +255,7 @@ impl Encoder {
             TowerValue::WhyHeld(report) => ("why-held", self.why_held(report)?),
             TowerValue::Next(affordances) => ("next", affordances_json(affordances)),
             TowerValue::Replay(outcome) => ("replay", self.replay_outcome(outcome)?),
+            TowerValue::ReplayPlan(plan) => ("replay-plan", self.replay_plan(plan)?),
         };
         self.bounded(object_json(&[("kind", quote(kind)), ("value", body)]))
     }

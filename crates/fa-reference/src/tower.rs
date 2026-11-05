@@ -27,12 +27,12 @@ pub mod vocabulary;
 mod wire;
 use dispatch_replay::{CachedReplay, ReplayRegistration};
 pub use dispatch_replay::{MAX_REPLAY_OPERATIONS, MAX_REPLAY_RECORDS, MAX_REPLAY_RETAINED_BYTES};
-pub use replay::{ObservedReplayRecord, ObservedReplayReport};
+pub use replay::{ObservedReplayRecord, ObservedReplayReport, ReplayPlanMetadata};
 pub use vocabulary::{ENVELOPE_FIELDS, ReasonCode, UnknownVerb, Verb, VerbClass};
 pub use wire::TowerEncodingError;
 
 pub const RESPONSE_SCHEMA: &str = "fa.tower_response/1";
-pub const CONNECTED_VERBS: [Verb; 8] = [
+pub const CONNECTED_VERBS: [Verb; 9] = [
     Verb::Get,
     Verb::Related,
     Verb::Tail,
@@ -41,6 +41,7 @@ pub const CONNECTED_VERBS: [Verb; 8] = [
     Verb::WhyHeld,
     Verb::Next,
     Verb::Replay,
+    Verb::ReplayPlan,
 ];
 
 /// Explicit bounds on the immutable imported snapshot and every query.
@@ -191,6 +192,18 @@ pub enum TowerValue {
     WhyHeld(WhyHeldReport),
     Next(Vec<Affordance>),
     Replay(TowerRehearsalOutcome),
+    ReplayPlan(TowerReplayPlan),
+}
+
+/// Inspected registration metadata, not a completed or authenticated replay.
+/// Sensitive native fields remain withheld unless the caller has full scope.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TowerReplayPlan {
+    pub branch_id: u64,
+    pub branch_policy_epoch: u64,
+    pub source_address: Address,
+    pub source_basis: Basis,
+    pub metadata: Knowledge<ReplayPlanMetadata>,
 }
 
 /// An actual paired policy experiment, never a receipt verifier or live approval.
@@ -513,6 +526,9 @@ impl ReferenceTower {
         }
         if request.verb == Verb::Replay {
             return self.dispatch_replay(access, request);
+        }
+        if request.verb == Verb::ReplayPlan {
+            return self.dispatch_replay_plan(access, request);
         }
         let needs_domain = matches!(
             request.verb,

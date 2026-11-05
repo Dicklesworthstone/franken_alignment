@@ -27,6 +27,14 @@ both source and branch histories, invalidate old votes when inputs change and
 require fresh independent review after repair. The independent `verify` backend
 remains a separate open contract.
 
+For this adapter, inspect `replay-plan` at the installed **branch artifact**
+address before executing `replay`. The plan exposes the real host registration
+and required grants, with source verification still Unknown. Operator status or
+Experiment purpose is not required just to inspect an authorized plan; sensitive
+native metadata is withheld from partial-domain callers. The generic closure
+lookup and durable retention planning shown in the prospective playbook remain
+outside this bounded profile.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

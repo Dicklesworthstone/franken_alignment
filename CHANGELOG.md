@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-05: inspect actual replay registration through scoped plans
+
+- Connect replay-plan to immutable native registration metadata and complete
+  historical source lineage, including all permitted keys and execution bounds.
+- Allow authorized inspection without replay privileges while withholding
+  sensitive native fields from partial callers and global accounting from
+  nonoperators; admit source families before lookup to avoid existence leaks.
+- Keep all plan assurance properties Unknown and perform no verification,
+  counterfactual, event append or replay-cache operation during planning.
+- Add five public controls and pass all 82 selected regressions plus the
+  no-Permit compile-fail contract; retain exact source hashes and logs. The
+  pre-existing canonical snapshot binding failure remains open.
+
 ## 2026-11-05: execute real paired policy replay through the Tower
 
 - Connect branch-only replay to original observed-history verification and the

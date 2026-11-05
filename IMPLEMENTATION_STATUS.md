@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: expose scoped replay plans without claiming verified history
+
+The registered read verb `replay-plan` now inspects an installed branch artifact
+and returns its exact intervention flags, complete sorted key registration,
+source lineage, native identifiers, retained-data charge and execution
+requirements. The original InterventionScope exposes immutable metadata only.
+Planning runs no verifier, counterfactual, hash or journal transition and never
+reads or occupies the separate replay operation cache. All nine assurance
+properties remain Unknown, including for previously replayed source data.
+
+Branch and possible source-family grants are checked before lookup. Authorized
+full-domain readers do not need operator or Experiment privileges merely to
+inspect metadata; partial callers receive withheld sensitive fields and no
+global accounting. Historical source/metadata bases remain separate from the
+branch artifact's imported basis. Missing and stale/future plans retain typed
+uncertainty and ordinary bounded read charges. The current profile accepts the
+installed branch artifact address; arbitrary closure discovery and durable
+retention leases remain open.
+
+Five new genuine-history tests exercise exact registration, partial disclosure,
+no-execution/cache isolation, authorized inspection without execution grants,
+and inspectable tampered history that fails actual replay. All 82 selected
+public regressions pass, plus the no-Permit compile-fail contract. Source review,
+changed-source formatting and source-hash checks passed. The
+[execution receipt](artifacts/execution/2026-11-05-tower-replay-plan-receipt.json)
+records the exact qualified compiler settings and raw logs. The canonical check
+again passes reference lock, source inventory and compiler identity, then stops
+at the unchanged snapshot_binding_mismatch; later full-gate stages remain
+unexecuted. Nine of the 38 registered verbs are connected, with original broader
+acceptance and qualification requirements unchanged.
+
 ## 2026-11-05: connect original paired policy experiments through branch-scoped Tower replay
 
 The shared Tower now connects the registered L7 `replay` operation to original

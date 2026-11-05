@@ -61,6 +61,26 @@ impl InterventionScope {
             keys: unique,
         })
     }
+
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    pub fn allows_payload(&self) -> bool {
+        self.payload
+    }
+
+    pub fn allows_target(&self) -> bool {
+        self.target
+    }
+
+    pub fn allows_units(&self) -> bool {
+        self.units
+    }
+
+    pub fn keys(&self) -> &BTreeSet<u64> {
+        &self.keys
+    }
 }
 
 /// Key edits name their expected baseline value. None is an observed absence,

@@ -189,6 +189,7 @@ impl Verb {
                 | Self::WhyHeld
                 | Self::Next
                 | Self::Replay
+                | Self::ReplayPlan
         )
     }
 }
