@@ -1,5 +1,47 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: connect original paired policy experiments through branch-scoped Tower replay
+
+The shared Tower now connects the registered L7 `replay` operation to original
+observed-history verification followed by `PolicyExperiment`. It verifies full
+helper inputs, accepted phase times and optional receipt binding against an
+independently retained anchor, then evaluates actual host-registered changes
+against the same immutable baseline. The structured report retains the original
+congress consequence, full policy trace and witnesses, tally, exact intervention
+bytes and actual baseline/treated results. A repaired exact predicate invalidates
+old empirical approval and still requires fresh independent review.
+
+Execution requires a host-installed `ExperimentCx`, full-domain operator grants,
+Experiment purpose, a fresh branch, visible historical source and an exact
+idempotency key. Source Tower cuts, native predecessor/receipt sequences and the
+branch's current cut/epoch remain separate. A completed experiment records one
+real BranchOutcome, while production owners and endpoints remain untouched.
+Exact retries return the original result without another charge or event; errors
+after admitted work preserve expenditure. Requested output overflow preserves
+the completed branch event and caches explicit uncertainty instead of truncating
+Known data. Imports, public collections, total retained bytes, edits, response
+sizes and retry capacity are bounded, including caller-owned spare capacities.
+
+The native replay shares policy code and is not attached to the independent
+`verify` contract. Authentication, provider truth, external execution, current
+eligibility and complete accounting remain Unknown. No live rights are copied
+into the experiment. The larger dispatcher, independent-verifier and full
+qualification requirements remain open. See [the contract](docs/TOWER_REPLAY.md).
+
+The qualified nightly library check and all 77 selected public regressions now
+pass, including nine genuine-oversight replay functions and the previous 68
+Tower/Knowledge/resolver/projection/journal/retry tests. No tests were ignored.
+Independent review corrected retained caller-buffer capacity in the retry cache.
+The first test compilation hit the environment's memory limit; smaller compiler
+work units and an available temporary directory allowed execution. That run
+exposed a production-only read fixture attempting the new branch operation;
+scoping its positive controls to read verbs preserved its original assertions,
+while the new suite supplies genuine positive and negative branch controls.
+The final rerun passed all 77. Failed and successful attempts are retained.
+See the [scoped execution receipt](artifacts/execution/2026-11-05-tower-replay-receipt.json)
+for exact source hashes and compiler settings. Full repository qualification
+remains blocked by the previously observed source-snapshot binding mismatch.
+
 ## 2026-11-05: restore fenced Unknown abandonment and execute scoped regressions
 
 FA-014's observed machine now admits AbandonUnknown without a fresh clock.

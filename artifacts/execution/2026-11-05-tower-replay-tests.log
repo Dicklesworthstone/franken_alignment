@@ -1,0 +1,141 @@
+warning: unreachable pattern
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/checkpoint.rs:197:9
+    |
+192 |         CheckpointEvent::Reset { operation, witness } => {
+    |         --------------------------------------------- matches all the relevant values
+...
+197 |         CheckpointEvent::Reset { operation, witness } => {
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no value can reach this
+    |
+    = note: `#[warn(unreachable_patterns)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `inspection`
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/requests.rs:538:13
+    |
+538 |         let inspection = self.broker.inspect();
+    |             ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_inspection`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `fa-reference` (lib) generated 2 warnings (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/dev/shm/franken_alignment-replay-12a990c29243/crates/fa-reference)
+    Finished `test` profile [unoptimized] target(s) in 1.88s
+     Running tests/address_resolver_boundaries.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/4d1514ce717e1266/out/address_resolver_boundaries-4d1514ce717e1266)
+
+running 10 tests
+test an_authorized_missing_source_does_not_expose_dangling_edges ... ok
+test current_and_unversioned_sources_keep_authorized_traversal_and_basis ... ok
+test malformed_target_addresses_are_filtered_without_changing_visible_results ... ok
+test malformed_public_address_fields_cannot_resolve_even_after_unchecked_insertion ... ok
+test missing_plane_and_missing_authority_each_hide_target_metadata_before_resolution ... ok
+test permitted_target_uncertainty_and_relation_filter_are_preserved ... ok
+test hidden_cross_tenant_edges_do_not_change_results_serialization_or_logs ... ok
+test refreshing_source_does_not_let_its_old_address_read_current_edges ... ok
+test unauthorized_sources_are_indistinguishable_before_generation_or_graph_lookup ... ok
+test old_and_future_source_generations_match_get_without_expanding_targets ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/agent_projection_boundaries.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/01f262d9f0179ceb/out/agent_projection_boundaries-01f262d9f0179ceb)
+
+running 15 tests
+test fully_denied_situations_have_uniform_shape_for_empty_and_populated_reports ... ok
+test full_scope_still_authorizes_the_pagination_cursor ... ok
+test full_tenant_scope_retains_a_real_fold_and_permitted_partial_work ... ok
+test finding_payloads_cannot_borrow_an_unrelated_attempts_authority ... ok
+test maximum_control_sequence_folds_without_inventing_a_successor ... ok
+test item_producers_require_typed_subjects_and_preserve_known_state_on_omission ... ok
+test latest_handoff_discovery_tracks_the_current_generation_only ... ok
+test partial_situations_preserve_visible_items_without_hidden_metadata ... ok
+test related_edges_bind_exact_source_generations_including_zero ... ok
+test unauthorized_source_refusal_precedes_existence_and_generation_checks ... ok
+test unqualified_edges_without_a_source_never_attach_to_later_objects ... ok
+test related_hides_inaccessible_edges_before_resolution_and_logging ... ok
+test retractions_require_the_complete_held_attempt_identity ... ok
+test related_checks_source_generation_before_expanding_current_edges ... ok
+test unrelated_private_events_do_not_refresh_visible_item_provenance ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/event_journal_boundaries.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/2aaf2eaad53bf4e5/out/event_journal_boundaries-2aaf2eaad53bf4e5)
+
+running 9 tests
+test constructor_and_append_reject_malformed_address_values ... ok
+test append_revalidates_public_fields_before_any_journal_mutation ... ok
+test empty_and_zero_frontier_reads_are_total ... ok
+test already_valid_wire_bytes_remain_stable ... ok
+test mixed_tenant_events_are_refused_atomically_in_production_and_branches ... ok
+test maximum_sequence_can_be_emitted_tailed_and_folded_but_never_wraps ... ok
+test rehearsal_branch_and_context_must_match_without_spending_a_sequence ... ok
+test exhausted_rehearsal_journal_fails_without_appending_or_wrapping ... ok
+test admitted_text_fields_round_trip_as_data_in_causal_and_wire_json ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/knowledge_surface_wire.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/949acd5d845be8ca/out/knowledge_surface_wire-949acd5d845be8ca)
+
+running 12 tests
+test absent_retains_exact_closed_domain_epoch_cut_and_terminal_marker ... ok
+test public_pending_construction_cannot_bypass_wire_frontier_limit ... ok
+test default_text_payload_and_untrusted_field_type_names_cannot_inject_json ... ok
+test structured_payload_preserves_objects_arrays_and_exact_integer_values ... ok
+test stale_retains_old_basis_and_current_generation_without_restoring_value ... ok
+test known_keeps_every_identity_epoch_and_noninterchangeable_proof_state ... ok
+test invalid_custom_payload_is_refused_and_legacy_surface_never_claims_known ... ok
+test unknown_reasons_remain_unknown_without_synthetic_values ... ok
+test pending_names_each_source_projection_stage_and_closure_instead_of_only_count ... ok
+test withheld_never_calls_a_payload_encoder_or_discloses_existence ... ok
+test wrapper_guard_rejects_nested_forged_duplicate_and_unknown_state_tags ... ok
+test custom_payload_depth_size_and_metadata_bounds_have_permitted_twins ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/proposal_retry_boundaries.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/727484f5b2828d07/out/proposal_retry_boundaries-727484f5b2828d07)
+
+running 8 tests
+test equal_domain_names_and_keys_do_not_reuse_another_journals_result ... ok
+test cached_reply_rechecks_purpose_and_floor_admission ... ok
+test cloned_journals_record_their_own_proposals_and_never_borrow_cached_results ... ok
+test exact_retry_after_later_events_keeps_original_card_and_single_charge ... ok
+test exhausted_sequence_and_empty_key_are_nonmutating ... ok
+test experiment_proposal_uses_branch_journal_without_touching_production ... ok
+test reused_key_cannot_change_target_cost_verb_alternatives_or_predecessor ... ok
+test rejected_journal_append_does_not_charge_or_consume_the_only_admission_slot ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/tower_dispatch.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/99d6143777d139f1/out/tower_dispatch-99d6143777d139f1)
+
+running 14 tests
+test admitted_unknown_reads_spend_budget_but_invalid_queries_and_exhaustion_do_not ... ok
+test import_boundaries_refuse_mismatched_bases_limits_and_duplicate_predicate_ids ... ok
+test partial_get_and_related_preserve_object_cut_without_disclosing_global_accounting ... ok
+test explanation_retains_all_six_nested_knowledge_variants_and_their_original_basis ... ok
+test registry_verbs_classes_and_envelope_are_exact_not_a_second_vocabulary ... ok
+test hidden_explanation_references_withhold_every_explanation_surface ... ok
+test every_unconnected_registered_verb_refuses_without_read_charge_or_journal_transition ... ok
+test next_and_why_held_respect_host_purposes_budget_and_request_narrowing ... ok
+test tail_pages_keep_control_order_despite_clock_order_and_preserve_gap_uncertainty ... ok
+test permitted_sixteen_level_tree_reaches_the_wire_without_a_shallower_accidental_limit ... ok
+test all_seven_reads_return_full_bodies_exact_basis_and_an_immutable_journal ... ok
+test denied_scope_role_and_partial_domain_do_not_disclose_snapshot_or_budget ... ok
+test stale_and_future_cuts_are_not_relabelled_as_current_reads ... ok
+test response_byte_cap_refuses_complete_work_without_truncating_known_or_refunding_budget ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/tower_replay.rs (/dev/fa-replay-build-12a990c29243/debug/build/fa-reference/ef3381c44daff0db/out/tower_replay-ef3381c44daff0db)
+
+running 9 tests
+test generation_key_argument_and_work_admission_failures_do_not_consume_or_poison_replay ... ok
+test source_registration_binds_native_identity_historical_metadata_and_a_fresh_branch_context ... ok
+test missing_specialist_and_noop_replays_stay_historical_without_receipt_or_permission_claims ... ok
+test production_missing_context_and_wrong_branch_epoch_cannot_enter_replay ... ok
+test semantic_edit_failures_are_charged_and_branch_capacity_refuses_before_more_work ... ok
+test original_anchor_input_vote_time_and_receipt_failures_spend_once_without_branch_events ... ok
+test authorization_is_checked_before_history_lookup_and_before_returning_cached_results ... ok
+test real_policy_repair_preserves_original_denial_source_proofs_and_live_owners ... ok
+test output_limit_keeps_completed_branch_work_and_caches_the_exact_unknown_result ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

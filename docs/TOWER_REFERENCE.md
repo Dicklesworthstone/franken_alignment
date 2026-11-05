@@ -1,12 +1,17 @@
-# Bounded reference Tower reads
+# Bounded reference Tower operations
 
 `fa_reference::tower` connects the existing object resolver, event journal,
 situation fold and predicate explanations through one Rust request/response API.
-It implements seven read operations and the sixteen-field common envelope in
+It implements seven read operations, branch-only paired policy `replay`, and the
+sixteen-field common envelope in
 [`registry/vocabulary.json`](../registry/vocabulary.json). The vocabulary has
 **38** registered verbs; the older dispatcher bead's title says 35.
 
-This is an immutable, host-provisioned reference snapshot. It does not implement
+The host-provisioned imports remain fixed. An enabled experiment can append its
+actual outcome only to its owned branch journal; production reads remain
+immutable. The [paired replay contract](TOWER_REPLAY.md) describes the native
+baseline, interventions, separate source/branch bases and exact retries.
+The facade does not implement
 a `fa` command-line executable, a network service, request authentication,
 durable subscription, native mutations or deployment qualification. The larger
 FA-133/FA-134/FA-135/FA-136/FA-137/FA-138 contracts and dispatcher bead remain open.
@@ -22,6 +27,7 @@ FA-133/FA-134/FA-135/FA-136/FA-137/FA-138 contracts and dispatcher bead remain o
 | `explain` | Imported predicate tree with all nodes, statuses, evidence references and bases | Complete domain scope and every evidence address |
 | `why-held` | Unsatisfied predicate items and permitted remedies | Operator, complete domain scope and every evidence address |
 | `next` | Ranked affordances within the host's allowed purposes and cost allowance | Operator, complete domain scope and every evidence address |
+| `replay` | Real baseline/treated policy report, explicitly labeled rehearsal | Operator, full scope, Experiment purpose, owned `ExperimentCx`, branch journal and exact request key |
 
 Complete domain scope means the journal's tenant, all four resolver planes and
 `Verify`, `ExactRead`, `Judge` and `Probe` authorities. `TowerAccess` is constructed
@@ -45,8 +51,10 @@ The facade never treats the reference proposal recorder as an executed effect.
    Object identity, tenant and generation must agree. An edge needs an existing
    source and binds its registration generation. An explanation must refer to
    an imported object with the same basis at the snapshot's control cut.
-3. Call `build()`. The resulting `ReferenceTower` owns the snapshot; dispatch
-   cannot replace objects, explanations or the journal.
+3. Optionally provision the explicit branch replay context and original history
+   records as described in [TOWER_REPLAY.md](TOWER_REPLAY.md), then call `build()`.
+   The resulting `ReferenceTower` owns its imports. Dispatch cannot replace
+   objects or explanations; only an admitted experiment can append a branch event.
 4. Construct `TowerRequest::new(operation_id, address, verb)` and, where useful,
    select `ReadArguments::Related`, `Tail` or `Next`. Call `dispatch` with the
    host-provisioned `TowerAccess` and serialize the response using `to_json()`.
@@ -133,12 +141,14 @@ are retained. A hidden evidence address withholds the entire explanation
 surface. `next` intersects its request cost cap with the host cap, and
 `why-held` applies the same permitted set to its embedded suggestions.
 
-One admitted query spends one logical read unit, including an unknown result or
+One admitted read spends one logical read unit, including an unknown result or
 an oversized response. Malformed requests, unsupported verbs, denied access and
 pre-admission limit failures do not spend a unit. These units measure this
 facade's query allowance; they are not inference, elapsed-time or byte costs.
 Read retries do not append authority events, but there is no result cache or
 read-accounting deduplication keyed by `idempotency_key`.
+Paired replay has its own required exact-request key and bounded result cache;
+an exact replay retry spends no additional unit or branch event.
 
 ## Resource bounds
 
@@ -161,6 +171,14 @@ with an error reason and preserves the spent read charge; it never truncates a
 value while labeling it `Known`.
 
 ## Executed verification and remaining gates
+
+The subsequent paired-replay extension passed the qualified compiler's library
+check and all **77 selected public regressions**, including its nine genuine
+oversight integration functions. The
+[replay receipt](../artifacts/execution/2026-11-05-tower-replay-receipt.json)
+retains source hashes, compiler settings, the failed memory-limit attempt and the
+corrected production-read fixture attempt. Independent source review and changed
+source formatting are complete. Full repository and deployment gates remain open.
 
 On 2026-11-05 the qualified `nightly-2026-09-08` compiler executed **68 passing
 public regressions**: Tower (14), resolver (10), agent projections (15),

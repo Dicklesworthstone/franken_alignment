@@ -1,0 +1,143 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-05T22:41:15.827555+00:00",
+  "consumer": "Tower replay API qualification and subsequent source-bound regression review",
+  "feature_gate": "Bounded paired policy replay with branch isolation and exact retries",
+  "observed_defect_classes": [
+    "retained caller spare capacity",
+    "production read fixture applied to branch rehearsal",
+    "environment compiler memory exhaustion"
+  ],
+  "retirement_condition": "Superseded as current qualification when these source hashes change; retained as historical execution evidence",
+  "qualification": "scoped_local_execution; full_repository_gate_blocked",
+  "base_commit": "a83cdcd61b99ccc435b2900324d6bf81bc221213",
+  "changed_source_sha256": {
+    "crates/fa-reference/src/tower.rs": "3765943afff436866de23af35c1fc3f590f73b35b7ef4482c8fdcc767fd2fa96",
+    "crates/fa-reference/src/tower/vocabulary.rs": "fe227985c36273e31ea696e1d51f0d7382fc6c3031282c32857a1f4ea9ce0634",
+    "crates/fa-reference/src/tower/wire.rs": "e2049a9f6634bbcad6ceb61493d670a3ff04b87c514134ca25669d35dd12acba",
+    "crates/fa-reference/src/tower/replay.rs": "0ae80de1f0a5b676f9900316ca389f3bae4b9707b424ed0f5dbbd6dfa85eb0f0",
+    "crates/fa-reference/src/tower/dispatch_replay.rs": "9c8958dcb7625c6e4716f8fda39120d57bfb72b1ccaac03ec576be07c82b1658",
+    "crates/fa-reference/src/tower/wire/replay.rs": "a0a0943b0d6b08715f1aa9fac2d2ea2b1c2f9f37351287e2dd2d143f6d7c3dbb",
+    "crates/fa-reference/tests/tower_dispatch.rs": "be0c3a27c6770797da775da0d50af16afb6f08bbabf3af88cfd340faa72b1728",
+    "crates/fa-reference/tests/tower_replay.rs": "76572275a5c4c3990973ae4260ccbefcbe459f1b6ac06be99ca3ef4226a37494"
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "RUSTFLAGS": "-C codegen-units=512 -Z threads=1 -Z mir-opt-level=0",
+    "temporary_directory": "task-owned available tmpfs; cargo forced-TMPDIR default overridden per command"
+  },
+  "targeted_command": [
+    "cargo",
+    "--config",
+    "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "fa-reference",
+    "--test",
+    "tower_replay",
+    "--test",
+    "tower_dispatch",
+    "--test",
+    "address_resolver_boundaries",
+    "--test",
+    "agent_projection_boundaries",
+    "--test",
+    "knowledge_surface_wire",
+    "--test",
+    "event_journal_boundaries",
+    "--test",
+    "proposal_retry_boundaries"
+  ],
+  "targeted_results": {
+    "passed": 77,
+    "failed": 0,
+    "ignored": 0,
+    "suites": {
+      "tower_replay": 9,
+      "tower_dispatch": 14,
+      "address_resolver_boundaries": 10,
+      "agent_projection_boundaries": 15,
+      "knowledge_surface_wire": 12,
+      "event_journal_boundaries": 9,
+      "proposal_retry_boundaries": 8
+    }
+  },
+  "compile_fail_contract": {
+    "passed": 1,
+    "command": [
+      "cargo",
+      "--config",
+      "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+      "test",
+      "--locked",
+      "--offline",
+      "-p",
+      "fa-reference",
+      "--doc",
+      "tower::TowerRehearsalOutcome"
+    ],
+    "claim": "TowerRehearsalOutcome cannot convert to Permit"
+  },
+  "attempts": [
+    {
+      "log": "2026-11-05-tower-replay-memory-limit.log",
+      "outcome": "rustc SIGKILL at environment memory limit; no tests ran"
+    },
+    {
+      "log": "2026-11-05-tower-replay-read-fixture.log",
+      "outcome": "legacy production fixture expected branch replay Known; original read controls restricted to read-class verbs, genuine new branch controls retained"
+    },
+    {
+      "log": "2026-11-05-tower-replay-tests.log",
+      "outcome": "77 passed; none failed or ignored"
+    }
+  ],
+  "canonical_gate": {
+    "command": [
+      "cargo",
+      "--config",
+      "env.TMPDIR.value=\"/dev/fa-replay-tmp-12a990c29243\"",
+      "run",
+      "--locked",
+      "--offline",
+      "-p",
+      "xtask",
+      "--",
+      "check"
+    ],
+    "exit_code": 1,
+    "passed": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false
+  },
+  "logs": [
+    "2026-11-05-tower-replay-library.log",
+    "2026-11-05-tower-replay-memory-limit.log",
+    "2026-11-05-tower-replay-read-fixture.log",
+    "2026-11-05-tower-replay-tests.log",
+    "2026-11-05-tower-replay-no-permit.log",
+    "2026-11-05-tower-replay-gate.log"
+  ],
+  "limits": [
+    "No RCH or remote execution claim",
+    "No full-workspace Clippy/test qualification",
+    "No independent cryptographic verification, live mutation, current permission, provider truth or external execution claim",
+    "Exact retry cache is bounded and process-local; durable restart is not implemented"
+  ]
+}

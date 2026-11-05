@@ -367,7 +367,7 @@ fn registry_verbs_classes_and_envelope_are_exact_not_a_second_vocabulary() {
         .filter(|verb| verb.is_connected())
         .collect();
     assert_eq!(connected, CONNECTED_VERBS.into_iter().collect());
-    assert_eq!(connected.len(), 7);
+    assert_eq!(connected.len(), 8);
     for retired in field(&registry, "retired_verbs")
         .as_array()
         .expect("retired verbs")
@@ -397,7 +397,12 @@ fn all_seven_reads_return_full_bodies_exact_basis_and_an_immutable_journal() {
     let mut tower = fixture();
     let expected_tree = tree();
     let expected_events: Vec<_> = imported_journal().events().cloned().collect();
-    for (index, verb) in CONNECTED_VERBS.into_iter().enumerate() {
+    // Branch experiments have their own native-history fixture in tower_replay.
+    for (index, verb) in CONNECTED_VERBS
+        .into_iter()
+        .filter(|verb| verb.class() == VerbClass::Read)
+        .enumerate()
+    {
         let query = request(&tower, verb);
         let response = tower.dispatch(&access(), query);
         assert_eq!(
@@ -556,6 +561,7 @@ fn all_seven_reads_return_full_bodies_exact_basis_and_an_immutable_journal() {
                 }
                 "next"
             }
+            TowerValue::Replay(_) => panic!("a read cannot produce a branch experiment"),
         };
         assert_eq!(
             text(field(field(&json, "result"), "value"), "kind"),
@@ -599,7 +605,12 @@ fn denied_scope_role_and_partial_domain_do_not_disclose_snapshot_or_budget() {
                 all_purposes(),
                 10,
             ),
-            CONNECTED_VERBS.to_vec(),
+            // This fixture is a production snapshot. Branch replay has its own
+            // populated/empty admission controls in tower_replay.
+            CONNECTED_VERBS
+                .into_iter()
+                .filter(|verb| verb.class() == VerbClass::Read)
+                .collect(),
         ),
         (
             TowerAccess::new(
@@ -757,7 +768,10 @@ fn partial_get_and_related_preserve_object_cut_without_disclosing_global_account
 
 #[test]
 fn stale_and_future_cuts_are_not_relabelled_as_current_reads() {
-    for verb in CONNECTED_VERBS {
+    for verb in CONNECTED_VERBS
+        .into_iter()
+        .filter(|verb| verb.class() == VerbClass::Read)
+    {
         let mut tower = fixture();
         for requested_generation in [0, GENERATION - 1, GENERATION + 1, u64::MAX] {
             let mut query = request(&tower, verb);
@@ -1337,7 +1351,7 @@ fn every_unconnected_registered_verb_refuses_without_read_charge_or_journal_tran
         assert!(field(&json, "result").get("value").is_none());
         refused += 1;
     }
-    assert_eq!(refused, 31);
+    assert_eq!(refused, 30);
     let query = request(&tower, Verb::Tail);
     let response = tower.dispatch(&access(), query);
     let (TowerValue::Tail(batch), _) = known(&response.result) else {

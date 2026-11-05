@@ -4,6 +4,9 @@
 use std::fmt::Write as _;
 use std::marker::PhantomData;
 
+mod replay;
+pub(super) use replay::replay_summary_digest;
+
 use super::{ResponseStatus, TowerEnvelope, TowerLimits, TowerResponse, TowerValue};
 use crate::action::consequence::Consequence;
 use crate::address_resolver::{Address, RelatedEdge, RelationKind, ResolvedObject, ResolverPlane};
@@ -251,6 +254,7 @@ impl Encoder {
             TowerValue::Explain(tree) => ("explain", self.tree(tree)?),
             TowerValue::WhyHeld(report) => ("why-held", self.why_held(report)?),
             TowerValue::Next(affordances) => ("next", affordances_json(affordances)),
+            TowerValue::Replay(outcome) => ("replay", self.replay_outcome(outcome)?),
         };
         self.bounded(object_json(&[("kind", quote(kind)), ("value", body)]))
     }

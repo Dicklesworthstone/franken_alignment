@@ -37,6 +37,14 @@ operations are covered by a [68-test scoped execution receipt](artifacts/executi
 The remaining registered verbs, command-line integration and full verification
 gate remain open.
 
+The Tower also runs [paired policy replay](docs/TOWER_REPLAY.md) inside an
+explicit experiment branch. It reconstructs original observed decisions and
+receipts, applies registered interventions, preserves historical evidence and
+requires fresh independent review after a policy repair. Exact request retries
+reuse their original result without another experiment charge or branch event.
+All 77 selected public regressions pass, including the nine new replay tests;
+full source-snapshot and deployment qualification remain open.
+
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
 complete monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision

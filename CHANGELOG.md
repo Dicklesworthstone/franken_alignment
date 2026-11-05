@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-05: execute real paired policy replay through the Tower
+
+- Connect branch-only replay to original observed-history verification and the
+  native paired PolicyExperiment engine, preserving original decisions and
+  requiring fresh independent review after a successful exact-policy repair.
+- Keep source provenance, native control sequences and current branch cuts
+  separate; emit one actual BranchOutcome after a completed experiment.
+- Enforce real ExperimentCx ownership, scoped intervention registration, bounded
+  retention/work/output and exact request-key caching without repeat charges.
+- Preserve complete replay and counterfactual evidence on the wire; keep broader
+  assurance properties Unknown and the independent Verify contract unsupported.
+- Add nine genuine-oversight integration tests and pass all 77 selected public
+  regressions on the qualified nightly. Retain the memory-limit attempt and the
+  corrected production-read fixture attempt; full snapshot qualification stays
+  open. Independent review and formatting are complete.
+
 ## 2026-11-05: finish fenced Unknown disposition without fresh time
 
 - Allow the observed machine to record AbandonUnknown after a recovery Fence

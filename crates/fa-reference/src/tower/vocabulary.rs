@@ -188,6 +188,7 @@ impl Verb {
                 | Self::Explain
                 | Self::WhyHeld
                 | Self::Next
+                | Self::Replay
         )
     }
 }

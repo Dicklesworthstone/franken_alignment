@@ -18,6 +18,15 @@ This is a scoped reference adapter, not a `fa` CLI or authenticated service.
 The playbook commands below remain the prospective deployment interface unless
 their own implementation notes identify an executable operator command.
 
+The Tower's [paired replay adapter](TOWER_REPLAY.md) additionally connects the
+registered `replay` verb to original observed-history verification and exact
+policy counterfactuals. An integrating host installs the original source, an
+independent pre-vote anchor, permitted interventions and a real `ExperimentCx`.
+Agents select that branch artifact with an exact request key. Results preserve
+both source and branch histories, invalidate old votes when inputs change and
+require fresh independent review after repair. The independent `verify` backend
+remains a separate open contract.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

@@ -1,8 +1,10 @@
-//! Bounded, read-only composition of the existing reference Tower surfaces.
+//! Bounded composition of reference reads and branch-only policy experiments.
 //!
-//! This facade consumes a host-provisioned snapshot and caller grants. It does
-//! not authenticate those declarations, execute effects, or qualify a deployment.
-//! Native mutation owners remain separate; unconnected verbs explicitly refuse.
+//! This facade consumes host-provisioned evidence and caller grants. Reads do
+//! not change the snapshot; paired replay requires a retained ExperimentCx and
+//! records its outcome only in the owned branch journal. It does not authenticate
+//! declarations, execute live effects, or qualify a deployment. Native mutation
+//! owners remain separate; unconnected verbs explicitly refuse.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -17,15 +19,20 @@ use crate::explain_affordances::{
 };
 use crate::observation_algebra::{AuthorityKind, Basis, Knowledge, ScopedProof, UnknownReason};
 use crate::situation_rehearsal::{SituationReport, fold_situation_report};
-use crate::typestate_cx::PurposeTag;
+use crate::typestate_cx::{ExperimentCx, PurposeTag};
 
+mod dispatch_replay;
+pub mod replay;
 pub mod vocabulary;
 mod wire;
+use dispatch_replay::{CachedReplay, ReplayRegistration};
+pub use dispatch_replay::{MAX_REPLAY_OPERATIONS, MAX_REPLAY_RECORDS, MAX_REPLAY_RETAINED_BYTES};
+pub use replay::{ObservedReplayRecord, ObservedReplayReport};
 pub use vocabulary::{ENVELOPE_FIELDS, ReasonCode, UnknownVerb, Verb, VerbClass};
 pub use wire::TowerEncodingError;
 
 pub const RESPONSE_SCHEMA: &str = "fa.tower_response/1";
-pub const CONNECTED_VERBS: [Verb; 7] = [
+pub const CONNECTED_VERBS: [Verb; 8] = [
     Verb::Get,
     Verb::Related,
     Verb::Tail,
@@ -33,10 +40,12 @@ pub const CONNECTED_VERBS: [Verb; 7] = [
     Verb::Explain,
     Verb::WhyHeld,
     Verb::Next,
+    Verb::Replay,
 ];
 
 /// Explicit bounds on the immutable imported snapshot and every query.
-/// One admitted query spends one logical read unit, including an unknown result.
+/// One admitted read or uncached experiment spends one logical operation unit,
+/// including an unknown result. Exact cached experiments do not spend again.
 /// These units are not measurements of inference, elapsed time, or byte movement.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TowerLimits {
@@ -83,6 +92,8 @@ pub enum TowerInstallError {
     DuplicateObject,
     MissingSource,
     InvalidExplanation,
+    ReplayContextRequired,
+    InvalidReplaySource,
     LimitExceeded,
 }
 
@@ -134,9 +145,19 @@ impl TowerAccess {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ReadArguments {
     None,
-    Related { relation: Option<RelationKind> },
-    Tail { since_seq: u64, max_events: usize },
-    Next { max_cost: u64 },
+    Related {
+        relation: Option<RelationKind>,
+    },
+    Tail {
+        since_seq: u64,
+        max_events: usize,
+    },
+    Next {
+        max_cost: u64,
+    },
+    Replay {
+        interventions: Vec<crate::action::consequence::experiment::Intervention>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -169,7 +190,28 @@ pub enum TowerValue {
     Explain(PredicateTree),
     WhyHeld(WhyHeldReport),
     Next(Vec<Affordance>),
+    Replay(TowerRehearsalOutcome),
 }
+
+/// An actual paired policy experiment, never a receipt verifier or live approval.
+/// Source and branch histories have distinct bases and control-sequence domains.
+///
+/// ```compile_fail,E0308
+/// use fa_reference::{action::Permit, tower::TowerRehearsalOutcome};
+/// fn cannot_authorize(outcome: TowerRehearsalOutcome) -> Permit { outcome }
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TowerRehearsalOutcome {
+    pub rehearsal: bool,
+    pub branch_id: u64,
+    pub source_address: Address,
+    pub source_basis: Basis,
+    pub source: ObservedReplayReport,
+    _seal: RehearsalSeal,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct RehearsalSeal;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ResponseStatus {
@@ -213,8 +255,8 @@ struct Explanation {
     basis: Basis,
 }
 
-/// Provision a bounded immutable reference snapshot before serving requests.
-/// No dispatcher method can replace its journal, imported objects or explanations.
+/// Provision bounded reference evidence before serving requests. Imports remain
+/// fixed; an enabled paired replay may append only to the owned branch journal.
 pub struct TowerBuilder {
     resolver: AddressResolver,
     journal: DomainEventJournal,
@@ -226,6 +268,10 @@ pub struct TowerBuilder {
     objects: BTreeMap<Address, (u64, Basis)>,
     edge_count: usize,
     explanations: BTreeMap<Address, Explanation>,
+    replay_context: Option<ExperimentCx>,
+    replays: BTreeMap<Address, ReplayRegistration>,
+    replay_retained_bytes: usize,
+    replay_cache: BTreeMap<String, CachedReplay>,
 }
 
 impl TowerBuilder {
@@ -315,6 +361,10 @@ impl TowerBuilder {
             objects: BTreeMap::new(),
             edge_count: 0,
             explanations: BTreeMap::new(),
+            replay_context: None,
+            replays: BTreeMap::new(),
+            replay_retained_bytes: 0,
+            replay_cache: BTreeMap::new(),
         })
     }
 
@@ -428,8 +478,8 @@ impl ReferenceTower {
         self.snapshot.journal.last_control_seq()
     }
 
-    /// Execute only a connected bounded read. Unsupported mutations never reach
-    /// ProposalEngine or a native effect owner and are not presented as executed.
+    /// Execute a connected bounded read or isolated paired replay. Unsupported
+    /// mutations never reach ProposalEngine or a native effect owner.
     pub fn dispatch(&mut self, access: &TowerAccess, request: TowerRequest) -> TowerResponse {
         let address_valid = validate_address(&request.address).is_ok();
         if request.operation_id.is_empty()
@@ -460,6 +510,9 @@ impl ReferenceTower {
         }
         if !request.verb.is_connected() {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+        }
+        if request.verb == Verb::Replay {
+            return self.dispatch_replay(access, request);
         }
         let needs_domain = matches!(
             request.verb,
