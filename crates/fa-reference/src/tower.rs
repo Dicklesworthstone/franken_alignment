@@ -165,6 +165,10 @@ pub enum ReadArguments {
         request: u64,
         proposal: crate::action::consequence::oversight::actor::ActorProposal,
     },
+    Precheck {
+        query: u64,
+        proposal: crate::action::consequence::oversight::actor::ActorProposal,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

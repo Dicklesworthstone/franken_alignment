@@ -156,6 +156,13 @@ impl FileActorSupervisor<FileOversight> {
 }
 
 impl FileActorPrecheckPort {
+    /// Bind a host adapter to the same original gateway allocation. Identity
+    /// alone does not establish liveness, disclosure eligibility or freshness;
+    /// the original read boundary below continues to check those on every use.
+    pub(crate) fn belongs_to(&self, port: &super::FileActorPort<FileOversight>) -> bool {
+        Weak::ptr_eq(&self.owner, &port.owner)
+    }
+
     /// One bounded read, not a submission or an idempotent effect request.
     /// Labels are echoed as read provenance only; repeated labels still spend
     /// query work, including cache hits. Invalid proposals and evaluator failures

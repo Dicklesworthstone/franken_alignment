@@ -43,6 +43,11 @@ Pending, Unknown and terminal outcomes through the common envelope. The native
 supervisor performs all review and publication, and an exact retry after its
 original recovery reacquires only the retained request observation. This profile
 does not expose the prospective arbitrary-affordance or decision-card workflow.
+If the host installs a same-owner exact-policy disclosure, the same profile
+accepts `precheck` before submission. Its original source witness cache and
+finite grant are shared across clones, and its pass still requires fresh intake
+and review. Repeating a query label or envelope key does not create a free read
+or a request ticket; owner transitions invalidate the old disclosure.
 
 ## The first ten minutes on an unfamiliar deployment
 

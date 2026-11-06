@@ -57,6 +57,9 @@ and request-local `get` to the original file-backed actor gateway. Real native
 intake, exact retries across recovery and fresh outcome polling share the common
 response envelope without exposing supervisor roles or inventing global clocks.
 The original supervisor still performs independent review and publication.
+An explicitly installed, same-owner exact-policy disclosure also connects
+`precheck`, preserving native witness caching, source freshness, revocation and
+finite query accounting. A precheck pass still requires real intake and review.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

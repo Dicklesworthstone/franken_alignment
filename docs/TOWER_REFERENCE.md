@@ -20,6 +20,9 @@ The separate [durable publication profile](TOWER_PUBLICATION.md) shares the
 request vocabulary and generic sixteen-field response envelope. It connects
 native actor `propose` and request-local `get` using the original file owner,
 without projecting its mutations into this imported snapshot journal.
+That profile also supports `precheck` when the host installs an original
+same-owner exact-policy disclosure; native read grants and source eligibility
+remain authoritative.
 
 ## Connected operations
 

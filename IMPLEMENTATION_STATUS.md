@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: connect revocable exact-policy precheck to the publication Tower
+
+The live publication profile now connects `precheck` to an explicitly installed
+original FileActorPrecheckPort. Installation verifies the same original owner
+allocation; an equal numeric Scope is insufficient. Replacement first withdraws
+the facade's previous port, including a rejected replacement. The supervisor
+retains disclosure custody, and actor request bytes cannot issue or renew it.
+
+The adapter validates subject scope, route generation and bounded proposal/query
+shape before native evaluation. An installed disclosure needs neither an
+operator role nor a Permit purpose merely to inspect exact policy. The original
+source eligibility, revocation, revision, witness cache and finite query charge
+remain authoritative. Cache hits and repeated labels still spend the shared
+grant; no whole-outcome cache, request ticket, admission snapshot, event or
+permission is created. The structured native response preserves precheck and
+fresh-review markers plus its original disclosure/query/epoch/elapsed basis.
+
+Eight additional real-source integration functions exercise pass and denial,
+same-Scope foreign owners, invalid replacement withdrawal, shared cache/budget
+behavior, revoked/stale/expired/dropped owners, changed and withdrawn source
+observations, and subsequent original proposal admission. They remain pending
+execution. New Tower/test source passed qualified syntax formatting and received
+independent source review; both compiler-check attempts were killed by shared
+memory pressure before completing the library, even with compact allocator
+settings. The successful predecessor publication checks do not qualify this
+changed revision. The canonical gate again passes lock, inventory and compiler
+identity, then stops at the existing snapshot_binding_mismatch. The
+[receipt](artifacts/execution/2026-11-06-tower-precheck-receipt.json) retains exact
+source hashes and both attempts. Full compiler, runtime and deployment
+qualification remain open.
+
 ## 2026-11-06: connect native durable publication intake and current outcomes
 
 The Unix `PublicationTower` connects `propose` and request-local `get` to the

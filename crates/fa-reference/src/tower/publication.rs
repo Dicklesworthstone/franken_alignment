@@ -6,12 +6,16 @@
 //! This adapter has no second ledger or outcome cache. Native request-local
 //! provenance is preserved rather than converted into global Tower clocks.
 
+mod precheck;
+
 use super::{
     RESPONSE_SCHEMA, ReadArguments, ReasonCode, ResponseStatus, TowerAccess, TowerEncodingError,
     TowerEnvelope, TowerInstallError, TowerRequest, TowerResponse, Verb, validate_address,
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
-use crate::action::consequence::delivery::persistent::requests::actor::FileActorPort;
+use crate::action::consequence::delivery::persistent::requests::actor::{
+    FileActorPort, FileActorPrecheckPort, precheck_wire::PrecheckWireResponse,
+};
 use crate::action::consequence::oversight::actor::{
     Knowledge as ActorKnowledge, UnknownReason as ActorUnknownReason,
 };
@@ -23,7 +27,7 @@ use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 2] = [Verb::Propose, Verb::Get];
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 3] = [Verb::Propose, Verb::Get, Verb::Precheck];
 
 /// Response bound for this native profile. Ticket, proposal and durable owner
 /// limits remain the original native limits and cannot be enlarged here.
@@ -51,6 +55,7 @@ impl PublicationLimits {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PublicationResult {
     Request(WireResponse),
+    Precheck(PrecheckWireResponse),
     Refused(Knowledge<()>),
 }
 
@@ -75,6 +80,7 @@ pub struct PublicationTower {
     mount: Address,
     scope: Scope,
     wire: ActorWire<FileActorPort<FileOversight>>,
+    precheck: Option<FileActorPrecheckPort>,
     limits: PublicationLimits,
 }
 
@@ -104,6 +110,7 @@ impl PublicationTower {
             mount,
             scope,
             wire: ActorWire::new(port),
+            precheck: None,
             limits,
         })
     }
@@ -168,6 +175,10 @@ impl PublicationTower {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
             response.envelope.would_change_this = vec![self.mount.clone()];
             return response;
+        }
+
+        if request.verb == Verb::Precheck {
+            return self.dispatch_precheck(request);
         }
 
         let arguments = std::mem::replace(&mut request.arguments, ReadArguments::None);

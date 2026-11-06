@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-06: inspect exact policy through same-owner publication precheck
+
+- Connect precheck to the supervisor's original revocable exact-policy
+  disclosure, requiring original owner identity and withdrawing a prior
+  installation before accepting or rejecting a replacement.
+- Preserve native source eligibility, witness caching and finite query costs
+  across repeated labels and cloned ports; keep actual submission and review
+  separate from the precheck-only result.
+- Embed the complete native precheck response in the common envelope without
+  converting query labels or observed elapsed ticks into global Tower clocks.
+- Add eight real-source regression functions and retain source review and
+  targeted formatting. Compiler checks were killed under shared memory pressure;
+  execution qualification remains open with every attempt recorded.
+
 ## 2026-11-06: submit and observe original durable publication requests through Tower
 
 - Add a Unix PublicationTower backed by the original FileOversight actor port,

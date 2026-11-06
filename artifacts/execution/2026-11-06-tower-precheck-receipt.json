@@ -1,0 +1,76 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-06T00:28:45.820694+00:00",
+  "consumer": "Publication Tower exact-precheck integration review and subsequent compiler/runtime qualification",
+  "feature_gate": "Revocable same-owner exact-predicate inspection before real durable submission",
+  "observed_defect_class": "Missing exact-precheck dispatch; prevent cross-owner disclosure binding and stale or uncharged cached passes",
+  "retirement_condition": "Superseded as current qualification when source hashes change; retained as historical evidence",
+  "qualification": "source_review_and_targeted_syntax_formatting_only; compiler_execution_blocked",
+  "base_commit": "b8c982b60f041a37a435616c93bc4694ea9f9d3a",
+  "changed_source_sha256": {
+    "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck.rs": "2e0755fad04202309288ed6cd6cd9bebb2a99a77514ffc73b817b3e77bc0bb6f",
+    "crates/fa-reference/src/tower.rs": "9f5157e56700cb3ee20fe952d009743f1b70b7284555df7489a29977334c76e7",
+    "crates/fa-reference/src/tower/publication.rs": "40cc7f2603ffaa528885d7d1e6e91f158e0fc441dc9d768c6ecbc257637e4006",
+    "crates/fa-reference/src/tower/publication/precheck.rs": "15852b22d34d3fa9e797cbff6692840397dba4779d38000a3064248e18e81866",
+    "crates/fa-reference/src/tower/wire/publication.rs": "283a27d38d2b7f2bc06a0896139cc0044d8f4656ff5e1bcfd31f9af38edc8005",
+    "crates/fa-reference/tests/tower_publication_precheck.rs": "c1f01a234e00240ff2db0a7c1109e3f3f0f65966caf465ccb3be8436c8e0cb5a"
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "RUSTFLAGS": "-C codegen-units=512 -Z threads=1 -Z mir-opt-level=0",
+    "memory_limit_bytes": 8589934592,
+    "temporary_directory": "task-owned available tmpfs; forced-TMPDIR default overridden per command",
+    "observed_cgroup_memory_current_bytes": 8582963200
+  },
+  "new_integration_test_functions": 8,
+  "selected_check_command": "cargo --config env.TMPDIR.value=\"/dev/fa-publication-12a990c29243/tmp\" check --locked --offline -p fa-reference --test tower_publication_precheck --test tower_publication --test actor_typed_dispatch --test file_oversight_actor --test actor_wire --test tower_replay --test tower_dispatch --test address_resolver_boundaries --test agent_projection_boundaries --test knowledge_surface_wire --test event_journal_boundaries --test proposal_retry_boundaries",
+  "compiler_attempts": [
+    {
+      "log": "2026-11-06-tower-precheck-check-memory-limit.log",
+      "exit_code": 101,
+      "result": "rustc killed with SIGKILL while checking library, before test-target checking; source before final static precheck limit metadata addition"
+    },
+    {
+      "log": "2026-11-06-tower-precheck-check-compact-allocator.log",
+      "exit_code": 101,
+      "result": "rustc killed with SIGKILL while checking library, before test-target checking; final listed source",
+      "extra_environment": {
+        "MALLOC_CONF": "background_thread:false,dirty_decay_ms:0,muzzy_decay_ms:0,narenas:1",
+        "_RJEM_MALLOC_CONF": "background_thread:false,dirty_decay_ms:0,muzzy_decay_ms:0,narenas:1"
+      }
+    }
+  ],
+  "runtime_tests_executed": 0,
+  "canonical_gate": {
+    "command": "cargo --config env.TMPDIR.value=\"/dev/fa-publication-12a990c29243/tmp\" run --locked --offline -p xtask -- check",
+    "exit_code": 1,
+    "passed": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false
+  },
+  "logs": [
+    "2026-11-06-tower-precheck-check-memory-limit.log",
+    "2026-11-06-tower-precheck-check-compact-allocator.log",
+    "2026-11-06-tower-precheck-gate.log"
+  ],
+  "limits": [
+    "No successful compiler or runtime execution is claimed for this final changed source",
+    "Predecessor publication checks do not qualify this extension",
+    "No full-workspace, RCH, Clippy, deployment or authentication claim",
+    "No new admission snapshot, review, permit or journal event follows from precheck"
+  ]
+}

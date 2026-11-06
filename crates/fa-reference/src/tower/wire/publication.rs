@@ -5,6 +5,9 @@
 //! a global Tower generation, control sequence, or proof of effect admission.
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
+use crate::action::consequence::delivery::persistent::requests::actor::{
+    MAX_PRECHECK_QUERIES, precheck_wire::PrecheckResponseError,
+};
 use crate::action::consequence::oversight::actor::MAX_ACTOR_REQUESTS;
 use crate::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
 use crate::tower::publication::{PublicationLimits, PublicationResponse, PublicationResult};
@@ -44,6 +47,24 @@ impl PublicationResponse {
                         .map_err(|_| TowerEncodingError::InvalidKnowledge)?,
                 )?,
             ),
+            PublicationResult::Precheck(response) => {
+                // The original encoder validates correlation and allowed read
+                // states, retaining its disclosure basis and review-required
+                // marker. None of those fields becomes a request admission.
+                let bytes = response.encode().map_err(|error| match error {
+                    PrecheckResponseError::Capacity => TowerEncodingError::OutputLimit,
+                    PrecheckResponseError::Malformed
+                    | PrecheckResponseError::UnsupportedVersion
+                    | PrecheckResponseError::Binding => TowerEncodingError::InvalidKnowledge,
+                })?;
+                (
+                    "precheck",
+                    encoder.bounded(
+                        String::from_utf8(bytes)
+                            .map_err(|_| TowerEncodingError::InvalidKnowledge)?,
+                    )?,
+                )
+            }
             PublicationResult::Refused(refusal) => (
                 "refused",
                 encoder.knowledge::<_, PublicationRefusal>(refusal, |_| {
@@ -61,6 +82,7 @@ impl PublicationResponse {
 fn publication_limits_json(limits: PublicationLimits) -> String {
     object_json(&[
         ("max_actor_requests", MAX_ACTOR_REQUESTS.to_string()),
+        ("max_precheck_queries", MAX_PRECHECK_QUERIES.to_string()),
         ("max_frame_bytes", MAX_FRAME_BYTES.to_string()),
         ("max_response_bytes", limits.max_response_bytes.to_string()),
     ])
