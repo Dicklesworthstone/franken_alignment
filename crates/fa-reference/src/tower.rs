@@ -22,6 +22,8 @@ use crate::situation_rehearsal::{SituationReport, fold_situation_report};
 use crate::typestate_cx::{ExperimentCx, PurposeTag};
 
 mod dispatch_replay;
+#[cfg(unix)]
+pub mod publication;
 pub mod replay;
 pub mod vocabulary;
 mod wire;
@@ -159,6 +161,10 @@ pub enum ReadArguments {
     Replay {
         interventions: Vec<crate::action::consequence::experiment::Intervention>,
     },
+    Propose {
+        request: u64,
+        proposal: crate::action::consequence::oversight::actor::ActorProposal,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -236,7 +242,7 @@ pub enum ResponseStatus {
 /// Observed values and costs retain their Knowledge wrappers. Request identity,
 /// syntax, static resource limits and retry classification are L0 metadata.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TowerEnvelope {
+pub struct TowerEnvelope<L = TowerLimits> {
     pub schema_version: &'static str,
     pub operation_id: String,
     pub status: ResponseStatus,
@@ -246,7 +252,7 @@ pub struct TowerEnvelope {
     pub control_seq: Knowledge<u64>,
     pub source_frontiers: Knowledge<Vec<SourceFrontierEntry>>,
     pub missing: Vec<Address>,
-    pub limits: TowerLimits,
+    pub limits: L,
     pub budgets_remaining: Knowledge<u64>,
     pub realized_cost: Knowledge<u64>,
     pub affordances: Knowledge<Vec<Affordance>>,
@@ -257,9 +263,9 @@ pub struct TowerEnvelope {
 
 /// Wire form: {"envelope": {the sixteen fields}, "result": Knowledge<TowerValue>}.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TowerResponse {
-    pub envelope: TowerEnvelope,
-    pub result: Knowledge<TowerValue>,
+pub struct TowerResponse<R = Knowledge<TowerValue>, L = TowerLimits> {
+    pub envelope: TowerEnvelope<L>,
+    pub result: R,
 }
 
 #[derive(Clone, Debug)]
@@ -811,7 +817,9 @@ impl ReferenceTower {
 }
 
 fn validate_address(address: &Address) -> Result<(), TowerInstallError> {
-    if address.canonical_string().len() > 256
+    if address.tenant.len() > 256
+        || address.id.len() > 256
+        || address.canonical_string().len() > 256
         || Address::new(
             address.tenant.clone(),
             address.kind,

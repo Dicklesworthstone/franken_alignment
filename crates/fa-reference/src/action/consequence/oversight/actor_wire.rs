@@ -85,6 +85,21 @@ impl<P: ActorRequestPort> ActorWire<P> {
         self.exchange_with_admission(document, |_, _, _| Ok(()))
     }
 
+    /// Execute an already structured command through the same bounded session.
+    /// Typed input receives the wire's identifier and proposal checks before
+    /// ticket lookup or native work, without encoding or reparsing payload bytes.
+    /// This shares the original port and tickets with [`Self::exchange`]; a new
+    /// session still requires an exact submit retry to acquire its own ticket.
+    pub fn execute(&mut self, command: Command) -> WireResponse {
+        if let Err(error) = codec::validate_command(&command) {
+            return WireResponse {
+                request: None,
+                result: Err(error),
+            };
+        }
+        self.execute_admitted(command, |_, _, _| Ok(()))
+    }
+
     #[cfg(unix)]
     pub(crate) fn request_port(&self) -> &P {
         &self.port
@@ -110,6 +125,16 @@ impl<P: ActorRequestPort> ActorWire<P> {
                 };
             }
         };
+        self.execute_admitted(command, admission)
+    }
+
+    // Both callers validate the entire command before this boundary. The host
+    // admission hook remains after session capacity and before native submit.
+    // It is never invoked by poll/cancel, malformed input or a full session.
+    fn execute_admitted<A>(&mut self, command: Command, admission: A) -> WireResponse
+    where
+        A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         let request = command.request();
         let result = match command {
             Command::Submit { proposal, .. } => {

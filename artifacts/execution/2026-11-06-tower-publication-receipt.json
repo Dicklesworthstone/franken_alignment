@@ -1,0 +1,99 @@
+{
+  "schema": "fa.scoped_execution_receipt/1",
+  "recorded_at_utc": "2026-11-06T00:15:52.743563+00:00",
+  "consumer": "Native publication Tower integration review and subsequent execution qualification",
+  "feature_gate": "Original durable actor proposal admission and fresh request-local outcome polling",
+  "observed_defect_class": "Missing Tower path to actual durable request owners; preserve one owner, exact request binding, current outcomes and limited native provenance",
+  "retirement_condition": "Superseded as current qualification when listed source hashes change; retained as historical evidence",
+  "qualification": "qualified_library_and_selected_test_typechecking; runtime_execution_blocked",
+  "base_commit": "d051465624ce0339c86a995f3b800086f0f98df4",
+  "changed_source_sha256": {
+    "crates/fa-reference/src/tower.rs": "01a2f12e46f55fa908ee2b807a8558f99e2a330eb59296f2c8716275f0a1855c",
+    "crates/fa-reference/src/tower/publication.rs": "3f6266351f34ab1b3f72ea4ec99223c72abe0253a1e66186f05bf19a48fd74b3",
+    "crates/fa-reference/src/tower/wire.rs": "667444b5c2296542c2149a0ed152b82227a36356cbfb3abfc7bbc4505f12833c",
+    "crates/fa-reference/src/tower/wire/publication.rs": "67f483cea425c047cfabb0db4a8ba21ac61a49336fec80baefca8833f2a5e5ce",
+    "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs": "4ec9410df155d5933ffebc6da0bf736a1d31c71abe25102c54eac34132ef751a",
+    "crates/fa-reference/src/action/consequence/oversight/actor_wire.rs": "3743347a55910260d8c01aff775c70959cd671f6015cb241725c49479d39fd94",
+    "crates/fa-reference/src/action/consequence/oversight/actor_wire/codec.rs": "0a962581f6b7beabacdfafddea0c3f2554213b7f52f01e2566b4079102579dd7",
+    "crates/fa-reference/tests/tower_publication.rs": "f7a21240740fbbd5a8fba4fa28711fce399e4dd16d89d3e3b7bdca96b5a1e3a0",
+    "crates/fa-reference/tests/actor_typed_dispatch.rs": "4f31edc23b4fc43537d5fb9c57674965169cd2776b1ca1455d71ac0c378ad5ee"
+  },
+  "compiler": {
+    "toolchain": "nightly-2026-09-08",
+    "commit_hash": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+    "host": "x86_64-unknown-linux-gnu"
+  },
+  "environment": {
+    "CARGO_BUILD_JOBS": "1",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_TEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "temporary_directory": "task-owned available tmpfs; forced-TMPDIR default overridden per command",
+    "memory_limit_bytes": 8589934592,
+    "RUSTFLAGS": "-C codegen-units=512 -Z threads=1 -Z mir-opt-level=0"
+  },
+  "library_check": {
+    "command": "cargo --config env.TMPDIR.value=\"/dev/fa-publication-12a990c29243/tmp\" check --locked --offline -p fa-reference --lib",
+    "exit_code": 0
+  },
+  "selected_test_check": {
+    "command": "cargo --config env.TMPDIR.value=\"/dev/fa-publication-12a990c29243/tmp\" check --locked --offline -p fa-reference --test tower_publication --test actor_typed_dispatch --test file_oversight_actor --test actor_wire --test tower_replay --test tower_dispatch --test address_resolver_boundaries --test agent_projection_boundaries --test knowledge_surface_wire --test event_journal_boundaries --test proposal_retry_boundaries",
+    "exit_code": 0,
+    "integration_targets": 11,
+    "new_test_functions": 15
+  },
+  "runtime_attempts": [
+    {
+      "log": "2026-11-06-tower-publication-memory-limit.log",
+      "rustflags": "-C codegen-units=512 -Z threads=1 -Z mir-opt-level=0",
+      "exit_code": 101,
+      "result": "SIGKILL during library code generation; tests did not run"
+    },
+    {
+      "log": "2026-11-06-tower-publication-tests-low-memory.log",
+      "rustflags": "-C codegen-units=512 --jobs-backend=1 --jobs-frontend=1 -Z mir-opt-level=1 -Z fewer-names=yes",
+      "exit_code": 101,
+      "result": "compiler option discovery refused missing -Z unstable-options; no build or test executed"
+    },
+    {
+      "log": "2026-11-06-tower-publication-tests-serial-backend.log",
+      "rustflags": "-C codegen-units=512 -Z unstable-options --jobs-backend=1 --jobs-frontend=1 -Z mir-opt-level=1 -Z fewer-names=yes",
+      "exit_code": 101,
+      "result": "SIGKILL during library code generation; tests did not run"
+    },
+    {
+      "log": "2026-11-06-tower-publication-tests-deferred-codegen.log",
+      "rustflags": "-C codegen-units=512 -Z unstable-options --jobs-backend=1 --jobs-frontend=1 -Z mir-opt-level=0 -Z fewer-names=yes -Z hint-mostly-unused=yes",
+      "exit_code": 101,
+      "result": "SIGKILL during library code generation; tests did not run"
+    }
+  ],
+  "canonical_gate": {
+    "command": "cargo --config env.TMPDIR.value=\"/dev/fa-publication-12a990c29243/tmp\" run --locked --offline -p xtask -- check",
+    "exit_code": 1,
+    "passed": [
+      "reference_lock",
+      "source_inventory",
+      "qualified_rustc_identity"
+    ],
+    "failure": "snapshot_binding_mismatch",
+    "expected_manifest_sha256": "449c16bb95b5e6c08327d80e1f318ec7a739f5a56bbd68b7877b2f856b1b3c25",
+    "actual_manifest_sha256": "1d9df0644efbaa7f080b1251201f1f95df61ea79836ced650d14be8838de806a",
+    "later_stages_executed": false
+  },
+  "logs": [
+    "2026-11-06-tower-publication-library.log",
+    "2026-11-06-tower-publication-check-tests.log",
+    "2026-11-06-tower-publication-memory-limit.log",
+    "2026-11-06-tower-publication-tests-low-memory.log",
+    "2026-11-06-tower-publication-tests-serial-backend.log",
+    "2026-11-06-tower-publication-tests-deferred-codegen.log",
+    "2026-11-06-tower-publication-gate.log"
+  ],
+  "limits": [
+    "No runtime-test pass is claimed for this changed source",
+    "No full-workspace, RCH, Clippy or deployment qualification claim",
+    "One ordinary FileOversight actor session, not arbitrary affordance execution or supervisor dispatch",
+    "Native request-local basis is not a global Tower clock or authenticated receipt"
+  ]
+}

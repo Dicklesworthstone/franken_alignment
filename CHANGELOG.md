@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-06: submit and observe original durable publication requests through Tower
+
+- Add a Unix PublicationTower backed by the original FileOversight actor port,
+  sharing the sixteen-field envelope without a second journal or native clock
+  conversions. Supervisory review and publication roles remain with the owner.
+- Connect actual durable propose and current request-local get, including exact
+  keys, original policy epochs, mount/scope admission and reopen retry custody.
+- Reuse one validated typed/byte ActorWire execution path and bounded ticket map;
+  transfer proposal payloads directly and never cache changing outcome reports.
+- Add fifteen genuine-gateway controls. Qualified library and eleven integration
+  targets typecheck; runtime code generation is memory-blocked and the canonical
+  source-snapshot binding failure remains open. Retain all verification attempts.
+
 ## 2026-11-05: inspect actual replay registration through scoped plans
 
 - Connect replay-plan to immutable native registration metadata and complete

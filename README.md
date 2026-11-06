@@ -42,13 +42,21 @@ explicit experiment branch. It reconstructs original observed decisions and
 receipts, applies registered interventions, preserves historical evidence and
 requires fresh independent review after a policy repair. Exact request retries
 reuse their original result without another experiment charge or branch event.
-All 82 selected public regressions pass, including fourteen replay and planning tests;
-full source-snapshot and deployment qualification remain open.
+The November 5 replay/planning receipt records 82 passing public regressions,
+including fourteen replay and planning tests; newer source qualification is
+recorded separately in the implementation status. Full deployment qualification
+remains open.
 
 `replay-plan` lets an authorized reader inspect the actual intervention flags,
 registered keys, source lineage and execution requirements before replay. It
 does not run verification, claim readiness or consume an experiment cache slot;
 partial callers receive withheld native metadata.
+
+The [durable publication Tower](docs/TOWER_PUBLICATION.md) connects `propose`
+and request-local `get` to the original file-backed actor gateway. Real native
+intake, exact retries across recovery and fresh outcome polling share the common
+response envelope without exposing supervisor roles or inventing global clocks.
+The original supervisor still performs independent review and publication.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

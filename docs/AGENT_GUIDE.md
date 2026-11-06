@@ -35,6 +35,15 @@ native metadata is withheld from partial-domain callers. The generic closure
 lookup and durable retention planning shown in the prospective playbook remain
 outside this bounded profile.
 
+The [durable publication Tower](TOWER_PUBLICATION.md) mounts one original
+file-backed actor port. In this implemented profile, `propose` carries a complete
+native proposal, exact policy epoch and canonical numeric request key; `get`
+polls a request ticket acquired by that same session. Fresh polls preserve
+Pending, Unknown and terminal outcomes through the common envelope. The native
+supervisor performs all review and publication, and an exact retry after its
+original recovery reacquires only the retained request observation. This profile
+does not expose the prospective arbitrary-affordance or decision-card workflow.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

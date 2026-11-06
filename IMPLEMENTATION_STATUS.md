@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: connect native durable publication intake and current outcomes
+
+The Unix `PublicationTower` connects `propose` and request-local `get` to the
+original `FileActorPort<FileOversight>`. It shares the Tower request vocabulary
+and generic sixteen-field envelope while retaining the native actor Knowledge
+and request-local basis. The original file owner remains the sole durable
+request, effect and recovery owner. Global clocks, budgets and unobserved costs
+stay Unknown; there is no second event journal or cached live outcome.
+
+Admission validates the exact host mount, tenant/scope, allowed Permit purpose,
+explicit registration generation, canonical numeric key and original proposal
+shape before native work. Typed ActorWire execution shares byte-path validation
+and the original bounded ticket map, without a payload serialization round trip.
+Exact retries retain native content binding across reopen; every observation
+re-polls the current owner. A guessed request address cannot acquire a ticket,
+and the weak port cannot retain supervisory authority after its owner closes.
+This is ordinary durable actor intake, not arbitrary affordance execution, a
+planner decision card or an actor-accessible publication permit.
+
+Fifteen new integration functions cover genuine review and both publication keys,
+pending/unknown/reconciled outcomes, reopen and exact retry, storage failure,
+scope and generation denial, full-width identities and typed/byte admission
+parity. The qualified nightly library check and all eleven selected integration
+targets pass type checking. Runtime execution was attempted with three compiler
+configurations but each library code-generation process was killed under shared
+memory pressure before tests ran; no new runtime-test pass is claimed. The
+canonical gate passes lock, inventory and compiler identity, then reaches the
+same unchanged snapshot_binding_mismatch. See the exact source hashes and all
+attempts in the [receipt](artifacts/execution/2026-11-06-tower-publication-receipt.json)
+and the [native publication contract](docs/TOWER_PUBLICATION.md). Broad dispatcher
+and production qualification remain open.
+
 ## 2026-11-05: expose scoped replay plans without claiming verified history
 
 The registered read verb `replay-plan` now inspects an installed branch artifact

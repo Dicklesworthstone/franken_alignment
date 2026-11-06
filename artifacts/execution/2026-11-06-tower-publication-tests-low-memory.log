@@ -1,0 +1,7 @@
+error: failed to run `rustc` to learn about target-specific information
+
+Caused by:
+  process didn't exit successfully: `rustc - --crate-name ___ --print=file-names -C codegen-units=512 --jobs-backend=1 --jobs-frontend=1 -Z mir-opt-level=1 -Z fewer-names=yes --crate-type bin --crate-type rlib --crate-type dylib --crate-type cdylib --crate-type staticlib --crate-type proc-macro --print=sysroot --print=split-debuginfo --print=crate-name --print=cfg -Wwarnings` (exit status: 1)
+  --- stderr
+  error: the `-Z unstable-options` flag must also be passed to enable the flag `jobs-frontend`
+

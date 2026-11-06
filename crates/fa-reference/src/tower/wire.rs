@@ -4,6 +4,8 @@
 use std::fmt::Write as _;
 use std::marker::PhantomData;
 
+#[cfg(unix)]
+mod publication;
 mod replay;
 pub(super) use replay::replay_summary_digest;
 
@@ -32,7 +34,10 @@ impl TowerResponse {
         let encoder = Encoder {
             max_bytes: self.envelope.limits.max_response_bytes,
         };
-        let envelope = encoder.envelope(&self.envelope)?;
+        let envelope = encoder.envelope::<_, RemainingReadUnits, RealizedReadUnits>(
+            &self.envelope,
+            limits_json(self.envelope.limits),
+        )?;
         let result = encoder
             .knowledge::<_, TowerResult>(&self.result, |value| encoder.tower_value(value))?;
         encoder.bounded(object_json(&[("envelope", envelope), ("result", result)]))
@@ -176,7 +181,13 @@ impl Encoder {
         self.bounded(encoded)
     }
 
-    fn envelope(&self, envelope: &TowerEnvelope) -> Result<String, TowerEncodingError> {
+    /// Every facade profile uses these same sixteen fields. Limits describe
+    /// the actual owner supplied by that profile, not an unrelated snapshot.
+    fn envelope<L, B: KnowledgeKind, C: KnowledgeKind>(
+        &self,
+        envelope: &TowerEnvelope<L>,
+        limits: String,
+    ) -> Result<String, TowerEncodingError> {
         let status = match envelope.status {
             ResponseStatus::Ok => "ok",
             ResponseStatus::Error => "error",
@@ -211,18 +222,14 @@ impl Encoder {
                 })?,
             ),
             ("missing", addresses_json(&envelope.missing)),
-            ("limits", limits_json(envelope.limits)),
+            ("limits", limits),
             (
                 "budgets_remaining",
-                self.knowledge::<_, RemainingReadUnits>(&envelope.budgets_remaining, |value| {
-                    Ok(value.to_string())
-                })?,
+                self.knowledge::<_, B>(&envelope.budgets_remaining, |value| Ok(value.to_string()))?,
             ),
             (
                 "realized_cost",
-                self.knowledge::<_, RealizedReadUnits>(&envelope.realized_cost, |value| {
-                    Ok(value.to_string())
-                })?,
+                self.knowledge::<_, C>(&envelope.realized_cost, |value| Ok(value.to_string()))?,
             ),
             (
                 "affordances",

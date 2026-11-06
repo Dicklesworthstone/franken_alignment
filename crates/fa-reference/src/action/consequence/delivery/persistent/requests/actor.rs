@@ -2,15 +2,17 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
-mod recovery;
-pub mod receipt;
 #[cfg(target_os = "linux")]
 pub mod learned_intake;
+pub mod receipt;
+mod recovery;
 pub use recovery::FileActorRecoveryPort;
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
 pub use precheck::wire as precheck_wire;
-pub use precheck::{FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure,
-    FilePrecheckObservation, FilePrecheckOutcome, MAX_PRECHECK_QUERIES};
+pub use precheck::{
+    FileActorPrecheckPort, FilePrecheckBasis, FilePrecheckDisclosure, FilePrecheckObservation,
+    FilePrecheckOutcome, MAX_PRECHECK_QUERIES,
+};
 mod generated;
 mod learned_text;
 pub use generated::FileGeneratedTextActorPort;
@@ -187,6 +189,12 @@ impl<H: FileRequestHost> FileActorSupervisor<H> {
 }
 
 impl<H: FileRequestHost> FileActorPort<H> {
+    /// The original gateway's immutable native identity, for host adapters.
+    /// This does not upgrade the weak owner or disclose its current ledger.
+    pub(crate) fn native_scope(&self) -> Scope {
+        self.scope
+    }
+
     pub fn submit(
         &self,
         request: u64,

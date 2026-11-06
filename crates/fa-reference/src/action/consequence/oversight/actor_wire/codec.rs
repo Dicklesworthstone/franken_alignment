@@ -171,7 +171,6 @@ pub fn decode_command(bytes: &[u8]) -> Result<Command, WireError> {
                 deadline: ElapsedTick(decimal(root, "deadline", false)?),
                 expected_policy_epoch: decimal(root, "expected_policy_epoch", true)?,
             };
-            validate_proposal(&proposal)?;
             Command::Submit { request, proposal }
         }
         "poll" | "cancel" => {
@@ -184,17 +183,15 @@ pub fn decode_command(bytes: &[u8]) -> Result<Command, WireError> {
         }
         _ => return Err(WireError::MalformedRequest),
     };
+    validate_command(&command)?;
     Ok(command)
 }
 
 pub fn encode_command(command: &Command) -> Result<Vec<u8>, WireError> {
+    validate_command(command)?;
     let request = command.request();
-    if request == 0 {
-        return Err(WireError::MalformedRequest);
-    }
     let json = match command {
         Command::Submit { proposal, .. } => {
-            validate_proposal(proposal)?;
             let t = proposal.target;
             format!(
                 concat!(
@@ -225,22 +222,12 @@ pub fn encode_command(command: &Command) -> Result<Vec<u8>, WireError> {
     Ok(json.into_bytes())
 }
 
-fn validate_proposal(p: &ActorProposal) -> Result<(), WireError> {
-    if [
-        p.target.adapter,
-        p.target.object,
-        p.target.contract_version,
-        p.target.expected_version,
-        p.target.generation,
-        p.units,
-        p.deadline.0,
-    ]
-    .contains(&0)
-    {
+pub(super) fn validate_command(command: &Command) -> Result<(), WireError> {
+    if command.request() == 0 {
         return Err(WireError::MalformedRequest);
     }
-    if p.payload.len() > MAX_PAYLOAD_BYTES || p.payload.len() as u64 > p.units {
-        return Err(WireError::Capacity);
+    if let Command::Submit { proposal, .. } = command {
+        proposal.validate().map_err(WireError::from)?;
     }
     Ok(())
 }
