@@ -6,6 +6,9 @@
 #[path = "support/file_oversight.rs"]
 mod native_fixture;
 
+#[path = "tower_replay/request_exchange.rs"]
+mod request_exchange;
+
 use fa_reference::action::consequence::Consequence;
 use fa_reference::action::consequence::delivery::PublicationEndpoint;
 use fa_reference::action::consequence::experiment::{

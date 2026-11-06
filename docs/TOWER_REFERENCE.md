@@ -16,6 +16,11 @@ a `fa` command-line executable, a network service, request authentication,
 durable subscription, native mutations or deployment qualification. The larger
 FA-133/FA-134/FA-135/FA-136/FA-137/FA-138 contracts and dispatcher bead remain open.
 
+The [bounded request codec](TOWER_REQUEST.md) accepts the already connected
+operations as strict `fa.tower_request/1` JSON through `exchange`. Host-supplied
+grants remain separate from actor bytes, and complete syntax admission precedes
+lookup, work expenditure and branch execution.
+
 The separate [durable publication profile](TOWER_PUBLICATION.md) shares the
 request vocabulary and generic sixteen-field response envelope. It connects
 native actor `propose` and request-local `get` using the original file owner,

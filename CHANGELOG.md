@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-05: accept machine-readable Tower requests
+
+- Add a strict bounded `fa.tower_request/1` decoder and deterministic encoder,
+  preserving full-width numeric identities, binary proposals and replay edits.
+- Connect JSON exchange to the original snapshot and shared native router,
+  keeping host grants outside input and completing syntax admission before work.
+- Preserve original native/replay retries, uncertainty, query charges and owner
+  lifetime; reject malformed or forged requests without reflected private data.
+- Add twelve codec, five real-owner exchange and two genuine paired-replay
+  regression functions. Independent review and qualified syntax/format checks
+  passed; RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-05: unify reference and native publication routing
 
 - Add a fixed host-provisioned Tower router over the original snapshot and

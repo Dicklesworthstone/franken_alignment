@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: accept bounded JSON requests through original Tower routes
+
+The closed `fa.tower_request/1` codec now connects external request documents to
+the original reference and shared-router dispatchers. It preserves exact u64
+arguments as decimal strings, binary proposals and edits as canonical hex, and
+all existing snapshot, native publication/precheck and isolated replay paths.
+The host still supplies authenticated grants separately. Complete bounded
+syntax admission precedes route lookup, query expenditure and mutation; forged
+authority fields, duplicate keys, noncanonical identities and trailing documents
+produce normalized errors without reflecting partial input or spending work.
+
+Native proposal validation and replay resource bounds remain their original
+implementations. Decoding performs no policy evaluation or experiment: a valid
+unregistered intervention still reaches the original charged semantic refusal.
+Exact publication and replay retries retain their existing content binding and
+one-shot behavior, while repeated precheck labels spend the shared disclosure
+allowance. No new owner, journal, clock, response cache or dependency is added.
+
+Twelve codec regression functions, five real-owner byte-interface functions and
+two actual paired-replay functions are authored. They cover permitted reads,
+source-backed precheck, complete commit/reveal/two-key publication and original
+reconciliation, branch policy repair, failed/repeated experiments, full-width
+identities, input/resource boundaries and owner-loss refusal without stale
+snapshot fallback. Independent source review and the qualified
+nightly-2026-09-08 rustfmt syntax/format checks passed. RCH is absent (exit 127),
+so compilation, Clippy, runtime execution and the canonical gate remain pending.
+`br` is also unavailable; the CLI-managed beads export was not modified and the
+broad dispatcher bead remains open. See [the request contract](docs/TOWER_REQUEST.md).
+
 ## 2026-11-05: route shared Tower requests without stale native fallback
 
 The Unix `TowerRouter` consumes the existing reference facade and optionally

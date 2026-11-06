@@ -22,9 +22,11 @@ use crate::situation_rehearsal::{SituationReport, fold_situation_report};
 use crate::typestate_cx::{ExperimentCx, PurposeTag};
 
 mod dispatch_replay;
+mod intake;
 #[cfg(unix)]
 pub mod publication;
 pub mod replay;
+mod request;
 #[cfg(unix)]
 pub mod router;
 pub mod vocabulary;
@@ -32,6 +34,10 @@ mod wire;
 use dispatch_replay::{CachedReplay, ReplayRegistration};
 pub use dispatch_replay::{MAX_REPLAY_OPERATIONS, MAX_REPLAY_RECORDS, MAX_REPLAY_RETAINED_BYTES};
 pub use replay::{ObservedReplayRecord, ObservedReplayReport, ReplayPlanMetadata};
+pub use request::{
+    MAX_REQUEST_BYTES, MAX_REQUEST_DEPTH, MAX_REQUEST_ITEMS, MAX_REQUEST_STRING_BYTES,
+    REQUEST_SCHEMA, TowerDecodingError, decode_request, encode_request,
+};
 pub use vocabulary::{ENVELOPE_FIELDS, ReasonCode, UnknownVerb, Verb, VerbClass};
 pub use wire::TowerEncodingError;
 
@@ -170,6 +176,10 @@ pub enum ReadArguments {
     Precheck {
         query: u64,
         proposal: crate::action::consequence::oversight::actor::ActorProposal,
+    },
+    Capabilities {
+        query: u64,
+        expected_policy_epoch: u64,
     },
 }
 

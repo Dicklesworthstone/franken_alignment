@@ -13,6 +13,11 @@ case where a lost live owner could expose a stale imported object instead.
 It does not implement the entire registered vocabulary, a `fa` executable,
 network authentication, live global situation reconstruction or signed receipts.
 
+`exchange(access, document)` accepts the same requests through the strict,
+bounded [JSON request codec](TOWER_REQUEST.md). The whole document is validated
+before route lookup. A malformed request receives a normalized route-independent
+error without spending either facade's allowance or echoing partial input.
+
 ## Provision the original owners once
 
 ```rust

@@ -7,7 +7,7 @@
 use super::publication::{PublicationResponse, PublicationTower, valid_request_identity};
 use super::{
     ReasonCode, ReferenceTower, ResponseStatus, TowerAccess, TowerEncodingError, TowerInstallError,
-    TowerRequest, TowerResponse,
+    TowerRequest, TowerResponse, decode_request,
 };
 use crate::address_resolver::{Address, Noun};
 use crate::event_journal::JournalScope;
@@ -103,6 +103,16 @@ impl TowerRouter {
             .as_ref()
             .ok_or(TowerInstallError::MissingSource)?
             .request_address(request)
+    }
+
+    /// Accept one complete bounded request using the host's existing grants.
+    /// Malformed input is normalized before route lookup, so even a partially
+    /// decoded native address cannot select an owner or spend its allowance.
+    pub fn exchange(&mut self, access: &TowerAccess, document: &[u8]) -> RoutedResponse {
+        match decode_request(document) {
+            Ok(request) => self.dispatch(access, request),
+            Err(error) => RoutedResponse::Reference(self.reference.malformed_request(error)),
+        }
     }
 
     pub fn dispatch(&mut self, access: &TowerAccess, request: TowerRequest) -> RoutedResponse {
