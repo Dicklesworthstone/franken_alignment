@@ -28,6 +28,9 @@ without projecting its mutations into this imported snapshot journal.
 That profile also supports `precheck` when the host installs an original
 same-owner exact-policy disclosure; native read grants and source eligibility
 remain authoritative.
+Its `capabilities` route describes that same granted endpoint and remaining
+shared query allowance through the original informational native response.
+Discovery remains unavailable on the imported reference snapshot.
 
 An integrating Unix host can now consume these existing facades through the
 [shared Tower router](TOWER_ROUTER.md). Fixed native addresses take precedence

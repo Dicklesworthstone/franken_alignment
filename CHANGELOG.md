@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-05: expose native disclosure capabilities through Tower
+
+- Connect `capabilities` to the explicitly installed original exact-precheck
+  port, retaining its shared query allowance, owner eligibility and revocation.
+- Embed the original informational response, grant-local provenance and native
+  limitations without creating effect authority or a signed assurance claim.
+- Expose strict JSON exchange directly on PublicationTower and retain the
+  router's fixed native ownership after refusal or owner loss.
+- Add eight real-source regression functions and update existing exhaustive
+  route coverage. Independent review and qualified syntax/format checks passed;
+  RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-05: accept machine-readable Tower requests
 
 - Add a strict bounded `fa.tower_request/1` decoder and deterministic encoder,

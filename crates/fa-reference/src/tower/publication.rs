@@ -6,6 +6,7 @@
 //! This adapter has no second ledger or outcome cache. Native request-local
 //! provenance is preserved rather than converted into global Tower clocks.
 
+mod capabilities;
 mod precheck;
 
 use super::{
@@ -14,7 +15,8 @@ use super::{
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, precheck_wire::PrecheckWireResponse,
+    FileActorPort, FileActorPrecheckPort,
+    precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
     Knowledge as ActorKnowledge, UnknownReason as ActorUnknownReason,
@@ -27,7 +29,8 @@ use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 3] = [Verb::Propose, Verb::Get, Verb::Precheck];
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 4] =
+    [Verb::Propose, Verb::Get, Verb::Precheck, Verb::Capabilities];
 
 /// Response bound for this native profile. Ticket, proposal and durable owner
 /// limits remain the original native limits and cannot be enlarged here.
@@ -56,6 +59,7 @@ impl PublicationLimits {
 pub enum PublicationResult {
     Request(WireResponse),
     Precheck(PrecheckWireResponse),
+    Capabilities(PrecheckCapabilitiesResponse),
     Refused(Knowledge<()>),
 }
 
@@ -135,6 +139,24 @@ impl PublicationTower {
         .map_err(|_| TowerInstallError::InvalidAddress)
     }
 
+    /// Decode one complete bounded Tower document before consulting the native
+    /// owner or spending disclosure work. Host access remains a separate input;
+    /// malformed bytes never acquire an admission snapshot or query allowance.
+    pub fn exchange(&mut self, access: &TowerAccess, document: &[u8]) -> PublicationResponse {
+        match super::decode_request(document) {
+            Ok(request) => self.dispatch(access, request),
+            Err(error) => {
+                let mut response = self.refusal(
+                    &super::intake::invalid_request(),
+                    super::intake::error_reason(error),
+                    false,
+                );
+                response.envelope.retry_safe = false;
+                response
+            }
+        }
+    }
+
     /// Submit through native durable intake or observe a ticket already acquired
     /// by this session. Every accepted observation consults the original owner.
     /// A successful submission is not approval or a completed external effect.
@@ -175,6 +197,10 @@ impl PublicationTower {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
             response.envelope.would_change_this = vec![self.mount.clone()];
             return response;
+        }
+
+        if request.verb == Verb::Capabilities {
+            return self.dispatch_capabilities(request);
         }
 
         if request.verb == Verb::Precheck {

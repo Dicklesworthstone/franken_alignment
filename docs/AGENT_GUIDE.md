@@ -49,6 +49,13 @@ finite grant are shared across clones, and its pass still requires fresh intake
 and review. Repeating a query label or envelope key does not create a free read
 or a request ticket; owner transitions invalidate the old disclosure.
 
+At that mounted run, `capabilities` with a nonzero query and expected native
+policy epoch describes the explicitly granted precheck endpoint and its remaining
+shared query allowance after charging the read. It preserves the original
+informational response, cache selection and disclosure lifetime. It does not
+implement the broader signed deployment assurance profile in the prospective
+playbook below. Missing disclosure or owner eligibility remains explicit refusal.
+
 The integrating host can combine those original facades with the
 [shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence
 reads, precheck, native submission and acquired-request polling. A live mount
@@ -56,6 +63,14 @@ owns its address and native request namespace even after the owner closes; a
 native refusal never falls back to historical snapshot data. Keep snapshot-domain
 addresses distinct when their own `tail` or `situation` must remain accessible.
 Branch-only routers retain isolated replay and cannot mount a production port.
+
+These configured facades also accept the closed
+[`fa.tower_request/1` JSON interface](TOWER_REQUEST.md) through `exchange`.
+The host supplies authenticated grants separately; actor documents cannot
+choose them. Use canonical decimal strings for every numeric argument and
+lowercase hex for proposal/edit bytes. Complete syntax validation precedes
+native queries, snapshot reads or mutation; then the same original dispatch,
+retry, budget and disclosure rules apply.
 
 ## The first ten minutes on an unfamiliar deployment
 

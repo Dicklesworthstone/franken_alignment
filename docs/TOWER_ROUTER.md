@@ -95,6 +95,8 @@ The existing native checks still govern `propose`: allowed Permit purpose,
 exact explicit registration generation, original effect scope, canonical numeric
 idempotency key, fresh admission snapshot and complete proposal shape. A successful
 precheck creates no admission snapshot, request ticket or publication key.
+`capabilities` uses the same original disclosure and shared query allowance;
+its informational native response creates neither a grant nor a signed profile.
 Actual review, human approval, dispatch, publication and reconciliation stay with
 the separately retained original supervisor.
 

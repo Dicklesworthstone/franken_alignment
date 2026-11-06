@@ -59,6 +59,13 @@ Knowledge responses and clocks, and refuses live publication mounts on branch
 snapshots. Six real-owner integration tests are authored; execution qualification
 remains pending.
 
+The [bounded JSON request interface](docs/TOWER_REQUEST.md) exposes these
+configured Tower routes through `exchange`, with a closed versioned schema,
+exact decimal-string identities and binary payloads. Caller grants remain
+host-owned; full syntax admission precedes lookup or expenditure. The new codec,
+real publication and branch-replay regressions have qualified syntax/format and
+independent source review; compilation and execution remain pending.
+
 The [independent rights-journal verifier](docs/INDEPENDENT_RIGHTS_VERIFY.md)
 has an operator command: `xtask verify rights-journal --context EXPECTED_JSON
 --journal HISTORY --anchor RETAINED_PREFIX`. It checks actual FARJ files against
@@ -75,6 +82,11 @@ The original supervisor still performs independent review and publication.
 An explicitly installed, same-owner exact-policy disclosure also connects
 `precheck`, preserving native witness caching, source freshness, revocation and
 finite query accounting. A precheck pass still requires real intake and review.
+`capabilities` now discovers that same granted endpoint's original information
+limits, cache selection and remaining shared query allowance. It reports no
+signed deployment profile or effect authority, and retains the grant's original
+revocation and owner-lifetime checks. Its eight new regression functions are
+source-reviewed and formatted; RCH execution qualification remains pending.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

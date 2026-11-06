@@ -65,6 +65,24 @@ impl PublicationResponse {
                     )?,
                 )
             }
+            PublicationResult::Capabilities(response) => {
+                // Discovery retains the native grant-local basis, remaining
+                // shared work, and explicit absence of effect authority. It is
+                // never encoded as an exact-policy pass or a signed profile.
+                let bytes = response.encode().map_err(|error| match error {
+                    PrecheckResponseError::Capacity => TowerEncodingError::OutputLimit,
+                    PrecheckResponseError::Malformed
+                    | PrecheckResponseError::UnsupportedVersion
+                    | PrecheckResponseError::Binding => TowerEncodingError::InvalidKnowledge,
+                })?;
+                (
+                    "capabilities",
+                    encoder.bounded(
+                        String::from_utf8(bytes)
+                            .map_err(|_| TowerEncodingError::InvalidKnowledge)?,
+                    )?,
+                )
+            }
             PublicationResult::Refused(refusal) => (
                 "refused",
                 encoder.knowledge::<_, PublicationRefusal>(refusal, |_| {

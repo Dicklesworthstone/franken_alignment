@@ -1,7 +1,8 @@
 # Bounded JSON requests through the original Tower owners
 
 An integrating host can now accept one `fa.tower_request/1` JSON document through
-`ReferenceTower::exchange` or, on Unix, `TowerRouter::exchange`. The request codec
+`ReferenceTower::exchange` or, on Unix, `TowerRouter::exchange` and
+`PublicationTower::exchange`. The request codec
 also exposes `decode_request` and `encode_request` for integrations that need the
 existing typed interface. Responses use the original sixteen-field envelope and
 the selected backend's original result encoder.
@@ -46,7 +47,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `replay` | `null` or `{"interventions":[...]}`; requires a nonempty idempotency key |
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
-| `capabilities` | `{"query":"1","expected_policy_epoch":"0"}`; discovery support depends on the selected native profile |
+| `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -166,6 +167,7 @@ fn exchange(
 ```
 
 `TowerRouter::exchange` has the same arguments and returns `RoutedResponse`.
+`PublicationTower::exchange` directly returns the original `PublicationResponse`.
 Callers that already construct typed requests can continue using `dispatch`, or
 use `encode_request` to produce a bounded request for another integrating host.
 The typed and byte interfaces share the original dispatcher and native owners;

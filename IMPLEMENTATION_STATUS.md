@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: discover the original granted publication boundary through Tower
+
+The native publication profile now connects `capabilities` to the explicitly
+installed same-owner `FileActorPrecheckPort`. Requests bind the mounted run,
+caller scope, optional exact registration generation, nonzero query and expected
+native policy epoch before entering the original discovery operation. Known
+results retain the original informational schema, grant-local basis, witness
+cache selection and remaining shared allowance after charging this read.
+
+Discovery and exact precheck share their original finite grant across clones,
+repeated labels and new facades. Revocation, changed revision, unavailable source
+or owner loss never reuses a previous Known result. No grant, admission snapshot,
+request ticket, source read, cache evaluation, clock observation or journal event
+is created. Policy contents and helper/source values remain withheld; signed
+deployment assurance, effect authority and global budget claims remain absent.
+`PublicationTower::exchange` also exposes the strict request codec directly.
+
+Eight real-source regression functions cover positive discovery, native state
+preservation and later ordinary submission, shared spending, matching refusal
+cases, foreign same-Scope owners, revocation/recovery, full-width byte exchange
+and exact native response encoding. The exhaustive router regression now
+recognizes the connected verb. Independent review corrected two test custody
+uses after consuming revocation; qualified nightly-2026-09-08 syntax/format
+checks and whitespace checks pass. RCH remains unavailable, so compilation,
+Clippy, runtime execution and full qualification remain pending. No acceptance
+or bead is closed. See [the native Tower contract](docs/TOWER_PUBLICATION.md).
+
 ## 2026-11-05: accept bounded JSON requests through original Tower routes
 
 The closed `fa.tower_request/1` codec now connects external request documents to

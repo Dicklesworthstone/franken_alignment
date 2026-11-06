@@ -1,7 +1,7 @@
 # Durable publication through the Tower
 
 On Unix, `fa_reference::tower::publication::PublicationTower` connects the
-registered `propose`, `get` and `precheck` operations to an original
+registered `propose`, `get`, `precheck` and `capabilities` operations to an original
 `FileActorPort<FileOversight>`. It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -20,6 +20,11 @@ Each Tower instance belongs to one host-authenticated actor session. The host
 must provision `TowerAccess` and must not accept grants from actor request bytes
 or share the session's tickets with another principal. This Rust adapter checks
 those grants; it does not implement transport authentication.
+
+`exchange(access, document)` accepts the same operations through the closed
+[`fa.tower_request/1` codec](TOWER_REQUEST.md). It validates the complete bounded
+document before dispatch, so malformed input cannot consume an admission
+snapshot or disclosure query. `dispatch` remains available for typed callers.
 
 The supervisor remains outside the Tower. Only it supplies a fresh one-use
 admission snapshot, performs original helper commitment/reveal review, obtains
@@ -64,6 +69,40 @@ event or call an endpoint. Actual submission still requires its original fresh
 snapshot and review. A subsequent owner transition makes the old disclosure
 ineligible; it cannot reuse an earlier pass. The host may install a newly issued
 same-owner disclosure without discarding the session's existing request tickets.
+
+## Discover the actual disclosed boundary
+
+Use `Verb::Capabilities` at the mounted run with
+`ReadArguments::Capabilities { query, expected_policy_epoch }`. Discovery requires
+the same explicitly installed original precheck port. It neither grants that
+port nor requests broader disclosure. The query must be nonzero; epoch zero is
+valid syntax. Subject scope and an exact supplied route generation are checked
+before native work. An operator role or Permit purpose is not required.
+
+The adapter calls the original
+`FileActorPrecheckPort::capabilities(query, expected_policy_epoch)`. A Known
+result describes this granted exact-policy endpoint: whether its original
+witness cache is enabled, the remaining shared query allowance **after this
+read**, and the original endpoint's information and authority limitations.
+It explicitly retains `informational: true`, `signed_profile: false`,
+`effect_authority: false` and `review_required: true`. Policy contents, source
+values and helper feedback remain withheld; source refresh remains unavailable.
+
+Discovery, exact evaluation, cloned ports, repeated labels and newly constructed
+facades share the same finite allowance and custodian lifetime. The returned
+count is an observation, not a reservation for a later read. An admitted query
+with a stale expected policy epoch spends work and returns the native Stale
+result. Revoked custody remains Withheld; owner borrow, changed owner revision,
+ineligible source and owner loss preserve their original unavailable outcomes.
+No previously Known discovery is cached or reused after these changes.
+
+Discovery does not inspect an admission snapshot, evaluate a policy, populate
+the witness cache, read source files, observe a new clock or write a journal
+event. Ordinary proposal admission, independent review and both publication
+keys remain separate. The native
+[discovery contract](ACTOR_PRECHECK_DISCOVERY.md) defines the exact response.
+This grant-local observation does not implement the full signed deployment
+assurance profile or `doctor` contract.
 
 ## Submit an actual proposal
 
@@ -129,6 +168,12 @@ ID, query label, policy epoch and observed elapsed tick remain in the original
 Revoked disclosure stays Withheld, unavailable/stale source eligibility stays
 Unknown, and a mismatched policy epoch stays a native Stale observation.
 
+The `capabilities` body similarly embeds the unchanged original
+`PrecheckCapabilitiesResponse`, including its own schema and informational
+marker. It retains `FilePrecheckBasis` and the original remaining-query count;
+neither becomes a global Tower budget or control sequence. An inconsistent
+publicly reconstructed response fails its original encoder's correlation checks.
+
 The envelope keeps all sixteen common fields. Global generation, control
 sequence, source frontiers, budgets, realized cost and uncomputed affordances
 remain `Unknown`, or `Withheld` on an unauthorized request. Neither a native
@@ -145,8 +190,9 @@ permission to create a new key.
 ## Bounds and remaining scope
 
 The native session retains at most 128 tickets. Each native precheck disclosure
-allows at most 128 queries, potentially fewer when issued by the supervisor;
-its remaining allowance is not disclosed by this adapter. Native proposals retain their
+allows at most 128 shared evaluation/discovery queries, potentially fewer when
+issued by the supervisor. Only a successful explicitly granted discovery exposes
+the remaining native count. Native proposals retain their
 existing target, payload, unit and deadline checks, and the durable owner retains
 its own request/byte limits. Envelope operation IDs and keys are bounded to
 128 bytes and addresses to 256 bytes. Responses have a configurable 16 KiB to
@@ -159,10 +205,18 @@ generation, a CLI, network authentication, branch rehearsal or independent
 receipt verification. Unsupported verbs refuse before touching the native owner.
 The complete dispatcher and deployment qualification contracts remain open.
 
-Current qualification is recorded in the
+Earlier publication qualification is recorded in the
 [publication receipt](../artifacts/execution/2026-11-06-tower-publication-receipt.json)
 and subsequent [precheck receipt](../artifacts/execution/2026-11-06-tower-precheck-receipt.json).
 Publication's library and selected test targets passed type checking before the
 precheck extension. Runtime execution and the final extension's compiler check
 remain blocked by the recorded shared-memory limit; those earlier checks do not
 qualify the later source.
+
+The capabilities increment adds eight real-source regression functions for
+permitted discovery, shared allowances, unchanged source/journal state,
+generation/scope/refusal admission, owner identity/lifetime, revocation and exact
+native encoding. It updates the exhaustive router test to recognize the newly
+connected verb. Independent source review and qualified nightly syntax/format
+checks passed. RCH is unavailable in the current environment, so compilation,
+Clippy, test execution and the canonical gate remain pending for this revision.
