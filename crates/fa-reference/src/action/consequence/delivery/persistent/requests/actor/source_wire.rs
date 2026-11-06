@@ -4,6 +4,8 @@
 pub mod inbox;
 #[cfg(target_os = "linux")]
 mod scoped_peer;
+mod tower;
+pub use tower::FileTowerExchange;
 
 use super::{ActorError, Error, FileActorPort, FileActorSupervisor, JournalError, Rc, Weak};
 use crate::action::ElapsedTick;

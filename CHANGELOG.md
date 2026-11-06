@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-06: acquire original source evidence for live Tower proposals
+
+- Connect decoded and typed Tower intake to the original supervisor's bounded
+  source preparation, with exact owner binding and no actor-supplied clock or
+  admission callback.
+- Acquire source/time only after complete Tower/native checks for a new request;
+  retain read-free exact/conflicting retries and private preparation diagnostics.
+- Add selected-request and observation-only host/driver entry points so review
+  cannot admit another request or consume a leftover snapshot.
+- Add real-owner regressions for positive source-backed intake and matching
+  refusal/lifecycle cases. RCH is unavailable; compilation, Clippy, execution
+  and the canonical qualification gate remain pending.
+
 ## 2026-11-05: expose native disclosure capabilities through Tower
 
 - Connect `capabilities` to the explicitly installed original exact-precheck

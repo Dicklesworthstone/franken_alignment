@@ -19,7 +19,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
-    Knowledge as ActorKnowledge, UnknownReason as ActorUnknownReason,
+    ActorError, ActorProposal, Knowledge as ActorKnowledge, UnknownReason as ActorUnknownReason,
 };
 use crate::action::consequence::oversight::actor_wire::{
     ActorWire, Command, WireError, WireResponse,
@@ -143,8 +143,22 @@ impl PublicationTower {
     /// owner or spending disclosure work. Host access remains a separate input;
     /// malformed bytes never acquire an admission snapshot or query allowance.
     pub fn exchange(&mut self, access: &TowerAccess, document: &[u8]) -> PublicationResponse {
+        self.exchange_with_admission(access, document, |_, _, _| Ok(()))
+    }
+
+    /// Only original trusted host integrations can acquire source evidence at
+    /// the native admission boundary. Complete decoding precedes that handoff.
+    pub(crate) fn exchange_with_admission<A>(
+        &mut self,
+        access: &TowerAccess,
+        document: &[u8],
+        admission: A,
+    ) -> PublicationResponse
+    where
+        A: FnOnce(&FileActorPort<FileOversight>, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         match super::decode_request(document) {
-            Ok(request) => self.dispatch(access, request),
+            Ok(request) => self.dispatch_with_admission(access, request, admission),
             Err(error) => {
                 let mut response = self.refusal(
                     &super::intake::invalid_request(),
@@ -160,11 +174,26 @@ impl PublicationTower {
     /// Submit through native durable intake or observe a ticket already acquired
     /// by this session. Every accepted observation consults the original owner.
     /// A successful submission is not approval or a completed external effect.
-    pub fn dispatch(
+    pub fn dispatch(&mut self, access: &TowerAccess, request: TowerRequest) -> PublicationResponse {
+        self.dispatch_with_admission(access, request, |_, _, _| Ok(()))
+    }
+
+    pub(crate) fn request_port(&self) -> &FileActorPort<FileOversight> {
+        self.wire.request_port()
+    }
+
+    /// Keep source acquisition after every Tower admission check and the
+    /// original actor's complete proposal validation and ticket-capacity check.
+    /// This hook is never exposed to actors or invoked by a read operation.
+    pub(crate) fn dispatch_with_admission<A>(
         &mut self,
         access: &TowerAccess,
         mut request: TowerRequest,
-    ) -> PublicationResponse {
+        admission: A,
+    ) -> PublicationResponse
+    where
+        A: FnOnce(&FileActorPort<FileOversight>, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         if !valid_request_identity(&request) {
             let normalized = TowerRequest::new(
                 "<invalid-request>",
@@ -239,7 +268,7 @@ impl PublicationTower {
             }
             _ => return self.refusal(&request, ReasonCode::IntegrityFailure, false),
         };
-        let native = self.wire.execute(command);
+        let native = self.wire.execute_with_admission(command, admission);
         self.native_response(&request, native, true)
     }
 

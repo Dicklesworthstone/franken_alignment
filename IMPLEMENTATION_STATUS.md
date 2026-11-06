@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: source-aware live Tower admission through the original owner
+
+The original `FileActorSupervisor<FileOversight>` and `FileSupervisedDriver`
+now accept decoded or typed Tower requests with their registered evidence source
+and elapsed-clock function. The mount must refer to that exact original owner
+allocation. Complete Tower admission and native command/session validation run
+before acquiring source evidence. Only a new valid submission invokes original
+`prepare_wire_submission`, installs its one-use snapshot and then enters the
+same durable request path; exact/conflicting retries and reads remain source-free.
+
+Selected-request entry points refuse a different proposal before any source or
+snapshot consumption. Observation-only entry points accept no source/clock and
+cannot admit unrecorded work during review or recovery. Driver wrappers preserve
+existing helper maintenance on all outcomes. Source preparation diagnostics stay
+host-only beside the native response, and source/submission remain distinct
+durable transactions with their original failure and liability semantics.
+
+Real-owner regression sources exercise fresh intake, strict/typed refusal before
+source work, retry binding, selected-request restrictions, owner identity/loss
+and source failure. No new effect owner, journal, permit, dependency or runtime
+is introduced. RCH is absent in this environment; compilation, Clippy, runtime
+execution and the full canonical gate remain pending. No acceptance or bead is
+closed. See [the live Tower contract](docs/TOWER_PUBLICATION.md).
+
 ## 2026-11-05: discover the original granted publication boundary through Tower
 
 The native publication profile now connects `capabilities` to the explicitly

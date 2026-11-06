@@ -91,13 +91,27 @@ impl<P: ActorRequestPort> ActorWire<P> {
     /// This shares the original port and tickets with [`Self::exchange`]; a new
     /// session still requires an exact submit retry to acquire its own ticket.
     pub fn execute(&mut self, command: Command) -> WireResponse {
+        self.execute_with_admission(command, |_, _, _| Ok(()))
+    }
+
+    /// Typed counterpart of the private source-admission handoff. Complete
+    /// native validation and session capacity precede the trusted hook, so a
+    /// Tower adapter cannot refresh evidence for a malformed or unretained key.
+    pub(crate) fn execute_with_admission<A>(
+        &mut self,
+        command: Command,
+        admission: A,
+    ) -> WireResponse
+    where
+        A: FnOnce(&P, u64, &ActorProposal) -> Result<(), ActorError>,
+    {
         if let Err(error) = codec::validate_command(&command) {
             return WireResponse {
                 request: None,
                 result: Err(error),
             };
         }
-        self.execute_admitted(command, |_, _, _| Ok(()))
+        self.execute_admitted(command, admission)
     }
 
     #[cfg(unix)]

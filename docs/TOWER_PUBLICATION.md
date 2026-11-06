@@ -32,6 +32,45 @@ the original automatic and human keys, and invokes dispatch and publication.
 The Tower retains a weak actor port, so dropping the supervisor releases the
 original authority lock and makes further observations explicitly unavailable.
 
+## Acquire fresh evidence at native intake
+
+For a source-backed live owner, use
+`FileActorSupervisor<FileOversight>::exchange_tower_from_file` or
+`FileSupervisedDriver::exchange_tower_from_file`. The host supplies the existing
+Tower session, authenticated access, complete request document, registered
+`EvidenceFile` and its original elapsed-clock function. The typed counterpart
+is `dispatch_tower_from_file`. These calls bind the mounted port to the exact
+supervisor allocation before proceeding; equal numeric scopes are insufficient.
+
+Complete Tower decoding, caller grants, route generation, purpose, request key,
+native proposal validation and ticket capacity all precede source acquisition.
+Only a valid **new** submission enters the original
+`prepare_wire_submission` / `prepare_file_intake` path. That path records the
+original bounded source and clock observations and installs their one-use
+admission snapshot immediately before the original durable submission. It does
+not substitute caller declarations for source evidence or create another ledger.
+
+Polls, precheck, capabilities, malformed or unauthorized documents, full ticket
+sessions, and both exact and conflicting retries acquire no new source or time.
+Retries still compare the entire proposal in the original durable owner. A
+source acquisition failure preserves its original invalidation and accounting;
+the actor receives only the native redacted unavailable/capacity result.
+
+`FileTowerExchange` separates the actor-visible `PublicationResponse` from the
+host-only optional `FileEvidenceReport`. The latter describes source preparation,
+not successful request admission or execution. Preparation and submission remain
+distinct journal transactions. A source failure, lost reply or encoding refusal
+cannot roll back their committed records or refund work.
+
+An ordinary host selecting one request uses
+`exchange_tower_request_from_file`. A different proposal key is withheld before
+source acquisition or consumption of any previously installed snapshot. During
+review or recovery, `exchange_tower_request_observe` accepts no source or clock
+and admits only exact retries of an already recorded selected request, while
+retaining normal ticket-scoped reads. An unused snapshot cannot turn this
+observation phase into new admission. Driver wrappers always perform the
+original helper maintenance after the operation, including failures.
+
 ## Inspect exact policy before proposing
 
 Precheck defaults to unavailable. The supervisor explicitly issues an original
