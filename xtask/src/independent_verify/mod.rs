@@ -267,17 +267,36 @@ impl VerifyError {
     }
 
     fn at(kind: ErrorKind, location: Location, explanation: &'static str) -> Self {
-        Self { kind, location, io_kind: None, explanation }
+        Self {
+            kind,
+            location,
+            io_kind: None,
+            explanation,
+        }
     }
 
     fn context(kind: ErrorKind, explanation: &'static str) -> Self {
-        Self::at(kind, Location { input: Input::Context, offset: 0, sequence: None }, explanation)
+        Self::at(
+            kind,
+            Location {
+                input: Input::Context,
+                offset: 0,
+                sequence: None,
+            },
+            explanation,
+        )
     }
 }
 
 impl fmt::Display for VerifyError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} at {} byte {}", self.kind_name(), self.location.input.as_str(), self.location.offset)?;
+        write!(
+            f,
+            "{} at {} byte {}",
+            self.kind_name(),
+            self.location.input.as_str(),
+            self.location.offset
+        )?;
         if let Some(sequence) = self.location.sequence {
             write!(f, " (record {sequence})")?;
         }

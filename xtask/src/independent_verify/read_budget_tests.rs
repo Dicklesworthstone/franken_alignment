@@ -28,7 +28,10 @@ fn golden(v2: bool) -> (Vec<u8>, ExpectedContext) {
             max_total_bytes: if v2 { 1024 } else { bytes.len() as u64 },
         },
         recovery: if v2 {
-            Some(RecoveryReserve { records: 5, bytes: 160 })
+            Some(RecoveryReserve {
+                records: 5,
+                bytes: 160,
+            })
         } else {
             None
         },
@@ -62,7 +65,10 @@ impl<'a> Tracked<'a> {
 
 impl Read for Tracked<'_> {
     fn read(&mut self, out: &mut [u8]) -> io::Result<usize> {
-        assert!(!out.is_empty(), "verification must not use a zero-byte EOF probe");
+        assert!(
+            !out.is_empty(),
+            "verification must not use a zero-byte EOF probe"
+        );
         self.calls += 1;
         if self.interruptions != 0 {
             self.interruptions -= 1;
@@ -75,7 +81,10 @@ impl Read for Tracked<'_> {
                 None => Ok(0),
             };
         }
-        let count = out.len().min(self.chunk).min(self.bytes.len() - self.offset);
+        let count = out
+            .len()
+            .min(self.chunk)
+            .min(self.bytes.len() - self.offset);
         out[..count].copy_from_slice(&self.bytes[self.offset..self.offset + count]);
         self.offset += count;
         Ok(count)
@@ -104,7 +113,14 @@ impl Read for MustNotRead {
 fn assert_exhausted(error: &VerifyError, input: Input, offset: u64, sequence: Option<u64>) {
     assert_eq!(error.kind, ErrorKind::ReadBudgetExhausted);
     assert_eq!(error.kind_name(), "read_budget_exhausted");
-    assert_eq!(error.location, Location { input, offset, sequence });
+    assert_eq!(
+        error.location,
+        Location {
+            input,
+            offset,
+            sequence
+        }
+    );
     assert_eq!(error.io_kind, None);
 }
 
@@ -120,9 +136,12 @@ fn exact_allowance_accepts_native_formats_but_one_more_interruption_refuses() {
         journal.interruptions = interruptions;
         let mut anchor = Tracked::one_byte(&bytes);
         let mut budget = ReadBudget::new(calls);
-        let report = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-            .unwrap();
-        assert_eq!(report, verify(bytes.as_slice(), bytes.as_slice(), expected).unwrap());
+        let report =
+            verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap();
+        assert_eq!(
+            report,
+            verify(bytes.as_slice(), bytes.as_slice(), expected).unwrap()
+        );
         assert_eq!(report.final_bytes, bytes.len() as u64);
         assert_eq!(report.prefix_bytes, bytes.len() as u64);
         assert_eq!(budget.spent_calls(), calls);
@@ -135,8 +154,8 @@ fn exact_allowance_accepts_native_formats_but_one_more_interruption_refuses() {
         journal.interruptions = interruptions + 1;
         let mut anchor = Tracked::one_byte(&bytes);
         let mut budget = ReadBudget::new(calls);
-        let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-            .unwrap_err();
+        let error =
+            verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
         // All bytes have arrived, but the journal's final EOF remains unobserved.
         // A syntactically complete prefix cannot escape as a partial success.
         assert_exhausted(
@@ -182,8 +201,8 @@ fn finite_default_and_explicit_allowances_stop_infinite_interruptions() {
 
     let mut journal = InterruptedForever { calls: 0 };
     let mut budget = ReadBudget::new(7);
-    let error = verify_with_read_budget(&mut journal, MustNotRead, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(&mut journal, MustNotRead, expected, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Journal, 0, None);
     assert_eq!(journal.calls, 7);
     assert_eq!(budget.spent_calls(), 7);
@@ -194,8 +213,8 @@ fn finite_default_and_explicit_allowances_stop_infinite_interruptions() {
     journal.chunk = usize::MAX;
     let mut anchor = InterruptedForever { calls: 0 };
     let mut budget = ReadBudget::new(7);
-    let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Anchor, 0, None);
     assert_eq!(journal.offset, 84);
     assert_eq!(journal.calls + anchor.calls, 7);
@@ -212,8 +231,8 @@ fn journal_and_anchor_share_one_allowance_including_the_anchor_eof_probe() {
         let mut anchor = Tracked::one_byte(&bytes[..84]);
         let calls = 84 + anchor_calls;
         let mut budget = ReadBudget::new(calls);
-        let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-            .unwrap_err();
+        let error =
+            verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
         assert_exhausted(&error, Input::Anchor, anchor_calls, None);
         assert_eq!(journal.calls, 84);
         assert_eq!(anchor.calls, anchor_calls);
@@ -231,8 +250,8 @@ fn record_body_exhaustion_keeps_the_actual_journal_offset_and_sequence() {
     // Both headers, the retained-prefix EOF, then the four-byte frame length.
     let calls = 2 * 84 + 1 + 4;
     let mut budget = ReadBudget::new(calls);
-    let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Journal, 88, Some(1));
     assert_eq!(journal.offset, 88);
     assert_eq!(anchor.terminal_calls, 1);
@@ -253,15 +272,15 @@ fn successful_verification_and_failed_retries_never_refund_read_work() {
 
     let mut journal = Tracked::one_byte(&bytes);
     let mut anchor = Tracked::one_byte(&bytes);
-    let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Journal, bytes.len() as u64, Some(2));
     assert_eq!(journal.calls + anchor.calls, needed - 1);
     assert_eq!(budget.spent_calls(), 2 * needed - 1);
     assert_eq!(budget.remaining_calls(), 0);
 
-    let error = verify_with_read_budget(MustNotRead, MustNotRead, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(MustNotRead, MustNotRead, expected, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Journal, 0, None);
     assert_eq!(budget.spent_calls(), 2 * needed - 1);
     assert_eq!(budget.remaining_calls(), 0);
@@ -275,8 +294,8 @@ fn semantic_refusal_retains_its_spent_allowance_for_a_corrected_retry() {
     let mut journal = Tracked::one_byte(&bytes);
     let mut anchor = Tracked::one_byte(&changed);
     let mut budget = ReadBudget::new(1000);
-    let error = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap_err();
     assert_eq!(error.kind, ErrorKind::AnchorMismatch);
     assert_eq!(error.location.offset, 10);
     let spent_before_retry = journal.calls + anchor.calls;
@@ -285,8 +304,7 @@ fn semantic_refusal_retains_its_spent_allowance_for_a_corrected_retry() {
 
     let mut journal = Tracked::one_byte(&bytes);
     let mut anchor = Tracked::one_byte(&bytes);
-    let report = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget)
-        .unwrap();
+    let report = verify_with_read_budget(&mut journal, &mut anchor, expected, &mut budget).unwrap();
     assert_eq!(report.final_head.sequence, 1);
     let spent = spent_before_retry + journal.calls + anchor.calls;
     assert_eq!(budget.spent_calls(), spent);
@@ -301,8 +319,8 @@ fn io_errors_and_truncated_eof_are_charged_before_returning_failure() {
         let mut journal = Tracked::one_byte(&bytes[..7]);
         journal.terminal_error = terminal_error;
         let before = budget.spent_calls();
-        let error = verify_with_read_budget(&mut journal, MustNotRead, expected, &mut budget)
-            .unwrap_err();
+        let error =
+            verify_with_read_budget(&mut journal, MustNotRead, expected, &mut budget).unwrap_err();
         assert_eq!(
             error.kind,
             if terminal_error.is_some() {
@@ -313,7 +331,11 @@ fn io_errors_and_truncated_eof_are_charged_before_returning_failure() {
         );
         assert_eq!(
             error.location,
-            Location { input: Input::Journal, offset: 7, sequence: None },
+            Location {
+                input: Input::Journal,
+                offset: 7,
+                sequence: None
+            },
         );
         assert_eq!(error.io_kind, terminal_error);
         assert_eq!(journal.calls, 8);
@@ -343,15 +365,19 @@ fn invalid_context_spends_no_calls_and_precedes_exhaustion() {
             assert_eq!(error.kind, kind);
             assert_eq!(
                 error.location,
-                Location { input: Input::Context, offset: 0, sequence: None },
+                Location {
+                    input: Input::Context,
+                    offset: 0,
+                    sequence: None
+                },
             );
             assert_eq!(budget.spent_calls(), 0);
             assert_eq!(budget.remaining_calls(), calls);
         }
     }
     let mut budget = ReadBudget::new(0);
-    let error = verify_with_read_budget(MustNotRead, MustNotRead, original, &mut budget)
-        .unwrap_err();
+    let error =
+        verify_with_read_budget(MustNotRead, MustNotRead, original, &mut budget).unwrap_err();
     assert_exhausted(&error, Input::Journal, 0, None);
     assert_eq!(budget.spent_calls(), 0);
 }

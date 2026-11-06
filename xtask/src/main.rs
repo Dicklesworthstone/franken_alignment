@@ -34,6 +34,7 @@ mod system_map;
 mod system_map_tests;
 mod toolchain_identity;
 mod tracker_readiness;
+mod verify_command;
 #[cfg(test)]
 mod workspace_root_tests;
 
@@ -682,11 +683,20 @@ fn execute() -> Result<(), String> {
         [command] if command == "release-check" => {
             Err("Release blocked: no qualified production broker, frozen release toolchain, foundation closure, target matrix or signed proof closure exists yet.".into())
         }
-        _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | experiments-check | readiness-report | inventory | release-check".into()),
+        _ => Err("Usage: cargo xtask check | concordance-check | system-map-check | prose-check | experiments-check | readiness-report | inventory | release-check | verify rights-journal --context PATH --journal PATH --anchor PATH".into()),
     }
 }
 
 fn main() -> ExitCode {
+    // Verification consumes independently supplied files, not the source tree.
+    // Route it before workspace discovery and retain non-UTF-8 path arguments.
+    let arguments: Vec<_> = env::args_os().skip(1).collect();
+    if arguments
+        .first()
+        .is_some_and(|argument| argument == "verify")
+    {
+        return verify_command::run(&arguments[1..]);
+    }
     match execute() {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {

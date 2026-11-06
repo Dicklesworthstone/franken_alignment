@@ -256,9 +256,9 @@
       "class": "read",
       "authority": "any",
       "idempotency": "n/a",
-      "cost_class": "cheap",
+      "cost_class": "profile-bounded; rights-journal work scales with supplied bytes, records and attempted reads",
       "response": "VerificationReport",
-      "note": "receipts, bundles, profiles; independent verifier"
+      "note": "receipts, bundles, profiles; independent verifier. The implemented xtask verify rights-journal profile independently checks bounded FARJ files against explicit context and a distinct retained prefix; each read-only invocation spends new byte/record/read-attempt work and reports Known accounting separately from Unknown authentication, freshness, external occurrence and full permit law. It is not the complete Tower Verify or signed-receipt contract."
     },
     {
       "verb": "handoff",

@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: verify retained rights-journal files through the operator command
+
+`xtask verify rights-journal` now connects independently supplied regular files
+to the original standalone FARJ verifier. A strict 4 KiB context schema requires
+every identity, budget, lifetime limit and version-specific recovery reserve;
+the context is validated before either history input is opened. Argument paths
+retain operating-system bytes, and the command routes before workspace discovery
+so a built binary can inspect retained files from another working directory.
+
+The command rejects duplicate/unknown flags, malformed contexts, symbolic-link
+inputs and same-file anchor aliases (opened device/inode on Unix). It preserves
+streaming byte/read limits and emits one deterministic structured success or
+failure response. Complete accounting retains all fourteen native fields and
+separate prefix/final heads. Unknown authentication, independent custody,
+freshness, external occurrence, full permit law and global clocks stay explicit;
+there is no native writer, repair, effect retry or invented Tower basis.
+
+Thirteen binary integration regressions are authored for both existing native golden
+formats, genuine file I/O outside a checkout, explicit context binding, strict
+syntax, aliases, error coordinates and unchanged input bytes. Independent source
+review and whitespace checks completed. A rolling-nightly toolchain became
+available outside PATH later in the session; its rustfmt (commit 249c1e4e3,
+2026-11-05) parsed/formatted the changed Rust sources and passed their explicit
+`--check`, with child-module formatting disabled. The repository-qualified
+nightly-2026-09-08 and RCH remain unavailable. Compilation, Clippy, runtime tests
+and the qualified gate are pending. The existing
+qualification gate and source-snapshot binding are unchanged. The original
+FA-126 acceptance, signed receipt surface and Tower Verify remain open.
+
 ## 2026-11-05: bound independent verifier input attempts across retries
 
 The independent FARJ verifier now charges every underlying read attempt to one
@@ -18,7 +47,9 @@ vectors and previous test assertions are unchanged. Source and whitespace
 review completed. The required command
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` could not
 start in this session (`rch: command not found`, exit 127); this workspace also
-has no Rust toolchain. No formatting, compiler, Clippy or runtime pass is claimed.
+had no discoverable Rust toolchain at that initial attempt. No formatting,
+compiler, Clippy or runtime pass was claimed in the first commit. The later
+command-integration entry records subsequent rolling-nightly formatting only.
 The command `br ready --json` likewise returned exit 127, so the CLI-managed
 beads export was not edited. FA-126 remains incomplete; no acceptance is closed.
 One individual read can still block: this is a work bound, not a deadline.

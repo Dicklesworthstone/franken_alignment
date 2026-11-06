@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-05: expose independent journal verification to operators
+
+- Add `xtask verify rights-journal` over distinct read-only journal and retained
+  prefix files, with a strict independently supplied context document.
+- Dispatch outside workspace discovery, preserve native path arguments, reject
+  nonregular/symbolic-link inputs and detect opened same-file aliases on Unix.
+- Emit full typed accounting and separate assurance properties as deterministic
+  JSON, with structured failures and no successful partial result.
+- Add thirteen actual binary/file integration regressions and operator usage.
+  Independent source review and rolling-nightly syntax/format checks passed;
+  qualified compilation, Clippy and runtime qualification remain pending.
+
 ## 2026-11-05: bound independent journal-verification work
 
 - Charge every attempted journal and anchor read, including interruptions,

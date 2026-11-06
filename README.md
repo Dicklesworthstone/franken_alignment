@@ -52,6 +52,14 @@ registered keys, source lineage and execution requirements before replay. It
 does not run verification, claim readiness or consume an experiment cache slot;
 partial callers receive withheld native metadata.
 
+The [independent rights-journal verifier](docs/INDEPENDENT_RIGHTS_VERIFY.md)
+has an operator command: `xtask verify rights-journal --context EXPECTED_JSON
+--journal HISTORY --anchor RETAINED_PREFIX`. It checks actual FARJ files against
+explicit external context and retained bytes, reports every accounting bucket,
+and keeps authentication, unseen-history completeness and external outcomes
+Unknown. Both inputs and all read attempts are bounded. This source increment
+and its binary regression tests still require execution qualification.
+
 The [durable publication Tower](docs/TOWER_PUBLICATION.md) connects `propose`
 and request-local `get` to the original file-backed actor gateway. Real native
 intake, exact retries across recovery and fresh outcome polling share the common

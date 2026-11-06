@@ -115,6 +115,20 @@ separate contract and independently fresh source.
 
 The actor gets no channel into this playbook. Its statements, if any, enter only as `ActorStatement` evidence with the untrusted label.
 
+**Implemented independent accounting verification.** For a retained FARJ v1/v2
+rights journal, run `xtask verify rights-journal --context EXPECTED_JSON
+--journal HISTORY --anchor RETAINED_PREFIX`. The independently selected context
+and distinct retained-prefix file are mandatory. The command works outside the
+source checkout and reads both files without opening a live authority owner.
+Consume the complete structured report, including its `Unknown` properties:
+valid accounting does not establish authentication, latest-history completeness,
+external occurrence or the full permit law. Any failure exits nonzero without
+successful partial accounting. The
+[bounded verifier contract](INDEPENDENT_RIGHTS_VERIFY.md#operator-command)
+defines the context schema, file and work bounds, error coordinates and pending
+execution status. This profile is separate from the prospective signed-receipt
+step above and does not make the Tower's `verify` verb available.
+
 **Implemented predictive-stream containment mapping.** The trusted supervisor
 can select the original owned prompt-audit recipe and use
 `create-learned-generated --prepare-stream-checkpoint` to retain a complete

@@ -26,12 +26,86 @@ changes rights, issues a permit or admits a live owner. Repeating a read of the
 same inputs is valid. A failed read exports an error, not a successful partial
 accounting report.
 
+## Operator command
+
+The existing registered `verify` verb now has a standalone `rights-journal`
+profile in xtask. It reads real files through the independent verifier:
+
+```bash
+cargo run --locked -p xtask -- verify rights-journal \
+  --context expected.json --journal rights.farj --anchor retained-prefix.farj
+```
+
+A built `xtask` binary accepts the same arguments from any working directory.
+This read operation does not discover a source checkout, inspect its tracker,
+run the repository qualification gate, or open a live authority owner.
+Relative paths are relative to the caller's working directory. Build and
+qualification continue to follow the repository's separate RCH requirements.
+
+All three flags are mandatory and may appear in any order. Duplicate flags,
+unknown flags, missing values and extra positional arguments are errors.
+Paths retain their native operating-system representation. Inputs must be
+regular files; the command rejects symbolic-link inputs and detects identical
+journal/anchor paths and, on Unix, hard-link aliases using opened file identity.
+Two distinct files with equal bytes remain valid: the command cannot prove
+that their custody was actually independent. Supply frozen retained inputs;
+file metadata checks are not a concurrent-filesystem security boundary.
+
+The context file is strict JSON of at most 4 KiB. Every field shown here is
+required; duplicate or unknown fields, malformed identities and non-integer
+numbers are rejected. This example selects v1 and matches the existing
+one-revocation golden fixture's independent context:
+
+```json
+{
+  "schema_version": "fa.rights_verification_context/1",
+  "run": "0101010101010101010101010101010101010101010101010101010101010101",
+  "policy": "0202020202020202020202020202020202020202020202020202020202020202",
+  "total_units": 100,
+  "limits": {
+    "max_frame_bytes": 1048576,
+    "max_records": 100000,
+    "max_total_bytes": 134217728
+  },
+  "recovery": null
+}
+```
+
+The two identities are exactly 32 bytes encoded as 64 hexadecimal characters.
+`recovery: null` selects v1. A `recovery` object with exactly `records` and
+`bytes` selects v2; its limits and reserve must equal the independently selected
+native header configuration. No expected identity, budget, capacity or format
+is inferred from the journal. The complete context is validated before the
+journal and anchor are opened.
+
+The command writes one deterministic JSON response to stdout and uses a nonzero
+exit status on failure. Schema `fa.rights_verification_result/1` contains all fourteen accounting
+fields, separate prefix/final heads and byte lengths, the expected context and
+all ten existing assurance properties. Checked observations retain `Known`
+status under this bounded native profile; unestablished properties retain
+`Unknown`. Native journal coordinates are never promoted to global Tower
+generation, control sequence or source frontiers. This standalone report is
+not the complete Tower response or a signed control receipt.
+
+A failed verification includes its original error kind, input, byte offset and
+record sequence when available. It emits no successful partial accounting.
+Input acquisition and syntax failures have distinct structured errors. Neither
+success nor failure repairs, truncates, appends to, or retries an effect from
+either input. Repeating the command performs a new observational verification.
+
+The command and thirteen binary integration tests are implemented in source.
+Independent source review and available rolling-nightly syntax/format checks
+completed; compilation, Clippy, runtime tests and the qualified gate remain
+pending in the environment described in `IMPLEMENTATION_STATUS.md`.
+
 ## What the profile establishes
 
-The verifier has its own parser, CRC implementation and transition reducer.
-Production code imports neither fa-reference nor fa-journal, including through
-source inclusion. It does not reuse the producer's decision algorithms to
-make a differential agree. Keeping this first executable family in xtask does
+The FARJ verifier has its own parser, CRC implementation and transition reducer.
+That library imports neither fa-reference nor fa-journal, including through
+source inclusion. The command's context parser uses xtask's existing shared
+strict-JSON syntax layer, which contains no journal, decision, policy or
+authority algorithms. Neither path reuses the producer's decision algorithms
+to make a differential agree. Keeping this first executable family in xtask does
 not admit another package or dependency; plan §6.2 explicitly allows logical
 families to precede separate crates.
 
