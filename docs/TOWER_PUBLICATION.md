@@ -238,10 +238,13 @@ its own request/byte limits. Envelope operation IDs and keys are bounded to
 1 MiB bound, with 16 KiB by default. A post-mutation encoding refusal preserves
 the exact retry key and never implies that durable admission was rolled back.
 
-This is a concrete ordinary-publication profile. It does not expose supervisor
-mutations, arbitrary affordance execution, a planner's decision card, learned
-generation, a CLI, network authentication, branch rehearsal or independent
-receipt verification. Unsupported verbs refuse before touching the native owner.
+The Linux [live Tower peer and client](TOWER_PEER.md) now integrate this profile
+into the existing ordinary `supervise_publication` service. Fresh source
+admission, peer credentials, selected-request scheduling, independent Stop and
+the original review/publication path remain native. This profile does not expose
+supervisor mutations, arbitrary affordance execution, a planner's decision card,
+learned generation, branch rehearsal or independent receipt verification.
+Unsupported verbs refuse before touching the native owner.
 The complete dispatcher and deployment qualification contracts remain open.
 
 Earlier publication qualification is recorded in the

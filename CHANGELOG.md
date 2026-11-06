@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-06: serve live Tower publication through authenticated peers
+
+- Add a bounded Linux publication peer with original kernel-credential checks,
+  consumed-prefix framing, reply/flush backpressure and lifetime exchange limits
+  that survive reconnects alongside native tickets.
+- Integrate explicit Tower mode into the existing ordinary publication service,
+  preserving selected source intake, independent Stop, helper/human review,
+  both publication keys, recovery observations and cleanup.
+- Add the actor-only `tower-exchange` client with complete-input preparation,
+  authenticated bounded I/O, exact envelope correlation and original replies.
+- Add native socket, complete service lifecycle and client regressions. Source
+  review and syntax checks are separate from the pending RCH compile/runtime
+  qualification; no complete CLI or deployment acceptance is claimed.
+
 ## 2026-11-06: acquire original source evidence for live Tower proposals
 
 - Connect decoded and typed Tower intake to the original supervisor's bounded

@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: concrete live Tower publication service and actor client
+
+Linux `PublicationPeerSession` now authenticates bounded Tower input with the
+existing kernel-credential policy and retains one original publication session
+across reconnects. It preserves exact consumed prefixes, one-response flush
+backpressure, native ticket ownership and a finite lifetime exchange allowance.
+Existing socket byte/frame/I/O budgets remain the scheduling contract; no task
+runtime, authority owner, journal or alternative request identity is added.
+
+The ordinary `supervise_publication` service selects this ingress with an explicit
+nonzero `--tower-generation`. Its original selected-request source admission,
+independent Stop checkpoints, helper and human review, both keys, publication,
+recovery observation and cleanup remain the same workflow. Unsupported mode
+combinations refuse before opening their input files. Ordinary actor grants
+include no operator role, precheck disclosure or experiment authority.
+
+`tower-exchange` prepares a bounded complete request-file sequence before
+connecting, checks the original server credentials before sending, and emits
+each original bounded response after exact envelope/correlation checks. It does
+not infer execution, automatically poll, reconnect, resend or invent a new key.
+The actor client never opens a private supervisor configuration or source.
+
+New regression sources exercise actual authenticated sockets, original source
+intake, reconnect/flush/capacity boundaries, owner lifetime, complete native
+helper/human publication, recovery without source and independent Stop during
+partial Tower input. Client tests cover closed grammar, full correlation and
+bounded short-I/O/failure handling. Qualified syntax and independent source
+review do not substitute for the required execution gate: RCH is absent, so
+compilation, Clippy, runtime tests and complete dispatcher/deployment acceptance
+remain pending. See [the live service contract](docs/TOWER_PEER.md).
+
 ## 2026-11-06: source-aware live Tower admission through the original owner
 
 The original `FileActorSupervisor<FileOversight>` and `FileSupervisedDriver`

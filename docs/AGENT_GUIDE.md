@@ -72,6 +72,15 @@ lowercase hex for proposal/edit bytes. Complete syntax validation precedes
 native queries, snapshot reads or mutation; then the same original dispatch,
 retry, budget and disclosure rules apply.
 
+The [live publication service and client](TOWER_PEER.md) now consume these
+documents on Linux. Select an explicit `--tower-generation` for the ordinary
+`supervise_publication` serve modes and use `tower-exchange` for a bounded
+sequence of request files. The host supplies its original source/clock only
+for a new selected proposal; authenticated peers retain tickets across reconnects
+without replenishing their exchange allowance. The existing Stop service remains
+live during partial input. Complete response output is an observation, and the
+client performs no implicit polling, resubmission or effect-status promotion.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

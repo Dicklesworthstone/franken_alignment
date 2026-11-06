@@ -26,6 +26,8 @@ mod tokenizer;
 mod topology;
 #[path = "actor_service/precheck.rs"]
 mod precheck;
+#[path = "actor_service/tower.rs"]
+mod tower;
 use profile::Profile;
 use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
     ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
@@ -79,7 +81,16 @@ pub(crate) fn precheck_command(args: &[String], output: &mut impl std::io::Write
     precheck::client::command(args, output)
 }
 
+pub(crate) fn tower_exchange_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+    tower::client::command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    // The selected wire format owns its complete ordinary-service grammar.
+    // No other profile can consume this option and silently run actor JSON.
+    if args.iter().any(|arg| arg == "--tower-generation") {
+        return tower::command(args, credibility);
+    }
     // Learned services own their complete grammar. Ordinary precheck, topology
     // and receipt parsers cannot strip or reject a selected learned operation.
     match args.first().map(String::as_str) {
@@ -220,12 +231,26 @@ where F: FnMut() -> ElapsedTick {
         credibility, topology, None, time)
 }
 
-fn serve_selected_with_precheck<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+fn serve_selected_with_precheck<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
     topology: Option<super::continuation::creation::topology::Selection>,
-    precheck_settings: Option<&precheck::Settings>, mut time: F)
+    precheck_settings: Option<&precheck::Settings>, time: F)
     -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    serve_selected_ingress(config, actor, reviewer_profile, publication, open, credibility,
+        topology, precheck_settings, None, time)
+}
+
+fn serve_selected_ingress<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+    topology: Option<super::continuation::creation::topology::Selection>,
+    precheck_settings: Option<&precheck::Settings>, tower_generation: Option<u64>, mut time: F)
+    -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    if tower_generation.is_some_and(|generation| generation == 0)
+        || (tower_generation.is_some() && (topology.is_some() || precheck_settings.is_some())) {
+        return Err("Tower ingress requires an explicit nonzero generation and the ordinary single-request profile".into());
+    }
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
@@ -320,8 +345,7 @@ where F: FnMut() -> ElapsedTick {
         )?)
     };
     let mut precheck: Option<precheck::Service> = None;
-    let session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
-    let mut ingress = Intake { socket, session, selected: actor.request, attempted: 0, maximum: actor.candidates };
+    let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
     eprintln!("Live actor endpoint ready: {:?}; request={}", actor.socket, actor.request);
     let work = (|| {
         if recorded {
@@ -364,21 +388,7 @@ where F: FnMut() -> ElapsedTick {
                 pause(actor.poll_ms);
                 continue;
             }
-            ingress.accept()?;
-            if ingress.session.status().active.is_some() {
-                let report = driver
-                    .drive_peer_request_from_file(
-                        &mut ingress.session,
-                        actor.request,
-                        &mut config.source,
-                        &mut time,
-                        drive_budget(),
-                    )
-                    .map_err(debug)?;
-                if report.drive.status.closed() {
-                    ingress.session.disconnect();
-                }
-            }
+            ingress.admit(&mut driver, &mut config.source, &mut time)?;
             match driver
                 .supervisor()
                 .host()
@@ -466,7 +476,7 @@ where F: FnMut() -> ElapsedTick {
         }
         pause(actor.poll_ms);
     }
-    ingress.session.revoke();
+    ingress.revoke();
     // A retained topology checkpoint is evidence of a healthy acknowledged
     // owner. Never publish one after execution, stop/drain, or reply-grace has
     // already failed: doing so would let a failed live service mint a recovery

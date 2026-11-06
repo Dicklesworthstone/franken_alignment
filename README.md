@@ -66,6 +66,16 @@ host-owned; full syntax admission precedes lookup or expenditure. The new codec,
 real publication and branch-replay regressions have qualified syntax/format and
 independent source review; compilation and execution remain pending.
 
+The [live Tower publication service](docs/TOWER_PEER.md) connects this protocol
+to the original Linux `supervise_publication` workflow. Ordinary serve modes
+accept `--tower-generation`; `tower-exchange` sends bounded request-file
+sequences through authenticated sockets. New selected proposals acquire fresh
+native source evidence, while review, independent Stop, both publication keys,
+polling and durable recovery retain their original owners. Replies preserve
+uncertainty, and reconnects retain tickets and spent exchange limits. The new
+service, client and native socket regressions still require RCH execution
+qualification.
+
 The [independent rights-journal verifier](docs/INDEPENDENT_RIGHTS_VERIFY.md)
 has an operator command: `xtask verify rights-journal --context EXPECTED_JSON
 --journal HISTORY --anchor RETAINED_PREFIX`. It checks actual FARJ files against

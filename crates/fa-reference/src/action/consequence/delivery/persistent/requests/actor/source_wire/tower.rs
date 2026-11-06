@@ -2,6 +2,9 @@
 //! The supervisor owns source/time and receives private intake diagnostics; the
 //! actor receives only the original publication response and keeps its tickets.
 
+#[cfg(target_os = "linux")]
+mod peer;
+
 use super::{
     ActorError, ElapsedTick, Error, EvidenceFile, EvidenceIdentity, FileActorSupervisor,
     FileEvidenceReport, FileOversight, FileSupervisedDriver, JournalError,

@@ -587,3 +587,6 @@ mod sequential;
 
 #[path = "tests/precheck_service.rs"]
 mod precheck_service;
+
+#[path = "tests/tower_service.rs"]
+mod tower_service;

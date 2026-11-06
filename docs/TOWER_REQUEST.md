@@ -13,6 +13,11 @@ call. No request field can supply an operator role, purpose grant, disclosure,
 experiment context, owner or permission. This is a document interface; the host
 still owns transport framing, authentication, scheduling and elapsed deadlines.
 
+The [Linux live publication service](TOWER_PEER.md) supplies a concrete consumer:
+select `--tower-generation` on an ordinary `supervise_publication` serve mode,
+then send explicit request files with `tower-exchange`. It uses the same codec
+and native owner with bounded newline framing and kernel-credential admission.
+
 ## Request schema
 
 The root has exactly six required fields. `arguments` and `idempotency_key` use

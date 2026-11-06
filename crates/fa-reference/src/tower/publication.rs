@@ -7,6 +7,8 @@
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+#[cfg(target_os = "linux")]
+pub mod peer;
 mod precheck;
 
 use super::{
