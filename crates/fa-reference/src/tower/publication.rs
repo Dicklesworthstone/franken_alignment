@@ -224,6 +224,14 @@ impl PublicationTower {
         )
     }
 
+    /// Routing reserves the complete native namespace, including invalid key
+    /// spellings. Only request_key may interpret a suffix as an actual ticket.
+    pub(super) fn owns_request_namespace(&self, address: &Address) -> bool {
+        address.tenant == self.mount.tenant
+            && address.kind == Noun::Attempt
+            && address.id.starts_with(&self.request_prefix())
+    }
+
     fn request_key(&self, address: &Address) -> Option<u64> {
         if address.kind != Noun::Attempt || address.tenant != self.mount.tenant {
             return None;
@@ -341,7 +349,7 @@ impl PublicationTower {
     }
 }
 
-fn valid_request_identity(request: &TowerRequest) -> bool {
+pub(super) fn valid_request_identity(request: &TowerRequest) -> bool {
     !request.operation_id.is_empty()
         && request.operation_id.len() <= 128
         && request

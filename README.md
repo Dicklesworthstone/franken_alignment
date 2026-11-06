@@ -52,6 +52,13 @@ registered keys, source lineage and execution requirements before replay. It
 does not run verification, claim readiness or consume an experiment cache slot;
 partial callers receive withheld native metadata.
 
+The [shared Tower router](docs/TOWER_ROUTER.md) now composes the existing
+snapshot/replay and native publication facades behind one request API. It keeps
+native routes reserved after refusals or owner loss, preserves original
+Knowledge responses and clocks, and refuses live publication mounts on branch
+snapshots. Six real-owner integration tests are authored; execution qualification
+remains pending.
+
 The [independent rights-journal verifier](docs/INDEPENDENT_RIGHTS_VERIFY.md)
 has an operator command: `xtask verify rights-journal --context EXPECTED_JSON
 --journal HISTORY --anchor RETAINED_PREFIX`. It checks actual FARJ files against

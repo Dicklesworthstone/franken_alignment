@@ -24,6 +24,14 @@ That profile also supports `precheck` when the host installs an original
 same-owner exact-policy disclosure; native read grants and source eligibility
 remain authoritative.
 
+An integrating Unix host can now consume these existing facades through the
+[shared Tower router](TOWER_ROUTER.md). Fixed native addresses take precedence
+over snapshot content for every verb and generation, including owner loss and
+refusals. Early caller denials are route-independent, and branch snapshots cannot
+acquire a live publication mount. The router preserves the original response
+types and encoders; it does not turn historical snapshot reads into live global
+state or connect additional native mutations.
+
 ## Connected operations
 
 | Verb | Address and result | Required access |

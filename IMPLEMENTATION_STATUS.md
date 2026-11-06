@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: route shared Tower requests without stale native fallback
+
+The Unix `TowerRouter` consumes the existing reference facade and optionally
+one original `PublicationTower`. A host now routes evidence reads, precheck,
+submission and request polling through one typed entry point. Fixed native run
+and request namespaces win over imported content for every verb and generation;
+unmatched native request projections refuse instead of impersonating ordinary
+ledger attempts. Invalid/unauthorized calls are normalized and denied before
+route lookup, so their responses do not expose whether a live mount exists.
+
+Original native purpose, exact generation/key, snapshot, disclosure and ticket
+checks remain authoritative. Owner loss and native refusal never trigger a
+snapshot retry. The router creates no journal, effect owner, global clock or
+result cache; its response enum forwards each original encoder unchanged.
+Branch snapshots cannot acquire a production port, while a snapshot-only router
+retains the existing isolated replay path. Overlapping live run mounts shadow
+snapshot domain reads explicitly; the host must provision separate original
+domain addresses when both read surfaces are needed.
+
+Six regression functions exercise an actual source-backed precheck and complete
+commit/reveal/two-key publication lifecycle, changing native outcomes, known
+snapshot decoys, all registered verbs and generation forms, route-independent
+denials, preserved allowances, revoked/dropped owners and branch/tenant bounds.
+Independent source review and rolling-nightly syntax/format checks completed.
+No compiler, Clippy, runtime or qualified gate result is claimed: RCH and the
+qualified nightly remain unavailable. The broad dispatcher bead and all original
+deployment qualifications remain open. See `docs/TOWER_ROUTER.md` for the exact
+implemented surface and its boundaries.
+
 ## 2026-11-05: verify retained rights-journal files through the operator command
 
 `xtask verify rights-journal` now connects independently supplied regular files

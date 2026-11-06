@@ -49,6 +49,14 @@ finite grant are shared across clones, and its pass still requires fresh intake
 and review. Repeating a query label or envelope key does not create a free read
 or a request ticket; owner transitions invalidate the old disclosure.
 
+The integrating host can combine those original facades with the
+[shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence
+reads, precheck, native submission and acquired-request polling. A live mount
+owns its address and native request namespace even after the owner closes; a
+native refusal never falls back to historical snapshot data. Keep snapshot-domain
+addresses distinct when their own `tail` or `situation` must remain accessible.
+Branch-only routers retain isolated replay and cannot mount a production port.
+
 ## The first ten minutes on an unfamiliar deployment
 
 | Step | Command | What you learn | If it fails |

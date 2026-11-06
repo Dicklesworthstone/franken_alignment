@@ -25,6 +25,8 @@ mod dispatch_replay;
 #[cfg(unix)]
 pub mod publication;
 pub mod replay;
+#[cfg(unix)]
+pub mod router;
 pub mod vocabulary;
 mod wire;
 use dispatch_replay::{CachedReplay, ReplayRegistration};

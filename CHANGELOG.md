@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-05: unify reference and native publication routing
+
+- Add a fixed host-provisioned Tower router over the original snapshot and
+  publication facades, preserving their native ownership and response types.
+- Reserve live namespaces across every verb/generation and owner loss; refuse
+  foreign native-request projections without stale snapshot fallback.
+- Deny invalid/unauthorized calls before route lookup and prevent experimental
+  branch snapshots from acquiring a production publication route.
+- Add six real-owner integration functions, including source-bound review,
+  both publication keys and evolving current outcomes. Independent review and
+  syntax/format checks passed; compiler/runtime qualification remains pending.
+
 ## 2026-11-05: expose independent journal verification to operators
 
 - Add `xtask verify rights-journal` over distinct read-only journal and retained
