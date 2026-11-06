@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: privileged live Tower situations from the original native owner
+
+The original file supervisor now explicitly issues a weak inspection port and
+noncloneable custody grant with 1–1,024 shared query units. The publication Tower
+accepts that port only from the exact original owner allocation and withdraws a
+previous installation even when its replacement is rejected. Operator status,
+tenant/plane/Verify grants, exact optional registration generation, run address
+and empty arguments are checked before capturing native state. Ordinary live
+actor service grants remain unchanged and cannot acquire this capability.
+
+Every admitted read captures the healthy original owner's acknowledged native
+situation anew. The result retains its exact FileSituationBasis, whole-capture
+accounting summary, and first 16 native attempt rows with explicit enumeration
+completeness. No snapshot/disk fallback, source or clock acquisition, admission
+snapshot consumption, journal write, synthetic global basis or effect authority
+is introduced. Unknown and irrecoverably unknown outcomes retain the original
+unresolved classification and charged liabilities; inspection does not invent
+why-held explanations or alias the independent Stop control.
+
+Clones share query spending and custody revocation across facades/reconnects.
+Owner loss, borrow contention, faults, exhaustion and revoked custody cannot
+reuse a previous Known report or attach to a reopened owner. The canonical
+encoder verifies the sealed page's original basis and preserves native epistemic
+states. Shared routing and the bounded client carry the same native profile.
+
+Eight real-owner regression functions cover live two-key publication, preserved
+admission snapshots, unresolved/abandoned liabilities, cloned budgets, unspent
+revocation/drop, admission refusal, foreign replacement, borrow/fault/recovery,
+whole-capture accounting beyond the first page and reconstructed-provenance
+refusal. Independent source review and qualified syntax/format checks completed.
+RCH remains unavailable; compilation, Clippy, runtime tests and the complete
+dispatcher/deployment gate remain pending. No acceptance or bead is closed.
+See [the native situation contract](docs/TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
+
 ## 2026-11-06: concrete live Tower publication service and actor client
 
 Linux `PublicationPeerSession` now authenticates bounded Tower input with the

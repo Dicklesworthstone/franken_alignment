@@ -49,6 +49,11 @@ existing actor-intake purpose. It supplies no operator status, experiment
 context, precheck disclosure or supervisor capability. Unsupported operations
 return ordinary Tower refusals. A caller cannot add authority fields to JSON.
 
+An integrating host may provision a separate operator connection with an
+explicit [native inspection grant](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
+The generic peer/client can carry its `situation` observation. The ordinary
+service above does not issue that grant or enable the operator role.
+
 ## Exchange explicit request documents
 
 ```sh

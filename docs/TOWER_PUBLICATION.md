@@ -1,7 +1,8 @@
 # Durable publication through the Tower
 
 On Unix, `fa_reference::tower::publication::PublicationTower` connects the
-registered `propose`, `get`, `precheck` and `capabilities` operations to an original
+registered `propose`, `get`, `precheck`, `capabilities` and separately granted
+operator `situation` operations to an original
 `FileActorPort<FileOversight>`. It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -143,6 +144,74 @@ keys remain separate. The native
 This grant-local observation does not implement the full signed deployment
 assurance profile or `doctor` contract.
 
+## Inspect the original live owner's situation
+
+The host can separately grant a privileged read capability with
+`FileActorSupervisor<FileOversight>::inspection_port(queries)`, receiving a
+`FileSupervisorInspectionPort` and its `FileSupervisorInspectionGrant` custodian.
+The allowance must be between one and 1,024 queries. The host retains custody
+and installs the port with `PublicationTower::set_inspection(Some(port))`.
+Installation requires the exact original owner allocation. Every replacement
+withdraws the old installation first, including a rejected foreign port.
+
+`situation` uses the mounted run with no arguments. The request still requires
+tenant, ControlLedger/Verify authority and matching optional registration
+generation. It additionally requires the host-authenticated operator role.
+Neither ordinary actor intake nor a precheck disclosure grants that role or
+inspection port. Actor requests cannot mint, install or widen the capability.
+The [ordinary live actor service](TOWER_PEER.md) keeps operator access disabled.
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-1",
+  "address": "fa://1/run/3@41",
+  "verb": "situation",
+  "arguments": null,
+  "idempotency_key": null
+}
+```
+
+Each permitted query captures a fresh original `FileOversight::situation()`.
+It returns the original `FileSituationBasis`, whole-capture accounting summary,
+and at most the first 16 native attempt rows. Native ordering places unresolved
+outcomes before pending work and terminal outcomes. The summary retains counts
+and balances for **all** attempts, even when the selected rows are incomplete.
+`enumeration_complete: false` explicitly reports remaining rows. No live offset
+or caller-supplied continuation can be applied to a different capture; further
+pages remain available through the original supervisor situation API.
+
+The original native basis retains scope, journal revision, control sequence,
+recorded elapsed tick, origin and any prefix anchor. This port's origin is the
+healthy owner's acknowledged state. It does not read a potentially newer disk
+image or claim current source eligibility. The body retains
+`fa.publication-situation/1`, `historical: true` and
+`current_eligibility: "not_observed"`. The common envelope's global coordinates
+remain Unknown; no mount generation, elapsed tick or native revision is coerced
+into another coordinate. Sealed capture data rejects a reconstructed response
+whose public basis has been substituted.
+
+Inspection reads no source or clock, consumes no admission snapshot, writes no
+journal event, acquires no request ticket and provides no publication key.
+Native `Unknown` and `IrrecoverablyUnknown` attempts remain unresolved and
+charged according to the original ledger. The read does not infer nonexecution,
+refund liabilities or fabricate a `why-held` explanation from action stages.
+
+Cloned ports and newly constructed facades share the same finite allowance.
+Each entered capture spends one query, including repeated operation labels or
+envelope keys. An output or fallible capture failure does not refund it. Missing
+custody returns native Withheld; lost, mutably borrowed or faulted owners return
+native Unknown before capture. Neither unavailability nor exhausted work reuses
+a previously Known report. Dropping or consuming the noncloneable custodian
+revokes every weak port clone; reconnecting or reinstalling a clone cannot renew
+it. Neither the grant nor the port retains the authority lock after the original
+supervisor closes. A reopened owner requires its own separately issued grant.
+
+The result profile is `PublicationResult::Situation(FileInspectionResult)`.
+The same native result passes through the shared router and bounded peer without
+a response cache. `tower-exchange` can carry it for an independently provisioned
+operator connection while preserving its original observational meaning.
+
 ## Submit an actual proposal
 
 Use the mounted run address with its exact registration generation, `Verb::Propose`,
@@ -237,6 +306,10 @@ its own request/byte limits. Envelope operation IDs and keys are bounded to
 128 bytes and addresses to 256 bytes. Responses have a configurable 16 KiB to
 1 MiB bound, with 16 KiB by default. A post-mutation encoding refusal preserves
 the exact retry key and never implies that durable admission was rolled back.
+
+Supervisor inspection has its own maximum of 1,024 shared capture queries and
+16 returned attempt rows. The host chooses the actual grant allowance, which
+is distinct from native precheck work, request tickets and global Tower budgets.
 
 The Linux [live Tower peer and client](TOWER_PEER.md) now integrate this profile
 into the existing ordinary `supervise_publication` service. Fresh source

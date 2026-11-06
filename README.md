@@ -98,6 +98,14 @@ signed deployment profile or effect authority, and retains the grant's original
 revocation and owner-lifetime checks. Its eight new regression functions are
 source-reviewed and formatted; RCH execution qualification remains pending.
 
+Separately granted operator `situation` now reads the original live owner's
+acknowledged ledger through that same native profile. Its native basis and
+whole-ledger balances remain intact, its first 16 attempt rows explicitly mark
+incomplete enumeration, and unresolved liabilities stay charged. Shared finite
+query grants can be revoked without retaining the supervisor or its authority
+lock. Eight new real-owner regressions are source-reviewed and formatted;
+runtime qualification remains pending.
+
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
 complete monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision

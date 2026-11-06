@@ -44,9 +44,10 @@ fn request(
 The two facades must belong to the same tenant. A branch-scoped snapshot cannot
 acquire a live publication route. `TowerRouter::new(snapshot)` supports snapshot
 reads and the original isolated replay operations without a production port.
-For a native mount, configure any same-owner precheck disclosure on the original
-`PublicationTower` before construction. Its separate custodian can still revoke
-the grant, and the router's weak actor port cannot keep the supervisor alive.
+For a native mount, configure any same-owner precheck disclosure or separately
+granted supervisor inspection port on the original `PublicationTower` before
+construction. Their separate custodians can still revoke the grants, and the
+router's weak ports cannot keep the supervisor alive.
 
 Routes are fixed: there is no unmount, replacement or backend fallback API.
 The original scope, mount generation, finite native allowances and acquired
@@ -81,8 +82,10 @@ none cause a second attempt against the snapshot. `get` at the native run mount
 does not become a live run report: the native profile only polls acquired
 request addresses, so that request retains its original refusal.
 
-An overlapping snapshot domain address is shadowed as well: `tail`, `situation`
-or another unsupported native operation at that address refuses. Hosts needing
+An overlapping snapshot domain address is shadowed as well. Native `situation`
+requires its own installed supervisor inspection port and authenticated operator
+role; it never substitutes the imported snapshot's report. `tail` and other
+unsupported native operations at that address refuse. Hosts needing
 separately accessible snapshot-domain reads must provision a distinct original
 snapshot domain address. The router never renames an imported domain or presents
 its historical evidence as the live owner's current state. Related snapshot
@@ -99,6 +102,14 @@ precheck creates no admission snapshot, request ticket or publication key.
 its informational native response creates neither a grant nor a signed profile.
 Actual review, human approval, dispatch, publication and reconciliation stay with
 the separately retained original supervisor.
+
+With an explicitly installed same-owner inspection grant, native `situation`
+captures that owner's fresh acknowledged report. It preserves the original
+native basis, full-capture accounting and explicit first-page completeness.
+Query bounds and revocation remain shared by the original grant; caller scope
+and the separate operator role are checked before any capture. Owner loss,
+revocation or exhaustion never falls back to an imported situation. See the
+[native inspection contract](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
 
 Each admitted native `get` polls that owner. Pending, uncertain and confirmed
 outcomes can therefore change between queries without a router cache. A lost

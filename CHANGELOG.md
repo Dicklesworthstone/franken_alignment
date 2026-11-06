@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-06: inspect live native liabilities through a revocable Tower grant
+
+- Add a separately issued, weak supervisor inspection capability with shared
+  finite query work and explicit host custody revocation across all clones.
+- Connect operator `situation` to the original acknowledged owner, preserving
+  native provenance, complete accounting and a bounded first page with explicit
+  enumeration completeness. Unknown liabilities remain unresolved and charged.
+- Require exact owner binding and existing scope/generation checks before reads;
+  preserve unavailable/revoked results without report caching or disk fallback.
+- Add eight native lifecycle/provenance regressions and extend router/client
+  profiles. Independent review and qualified syntax checks pass; compilation,
+  Clippy and runtime qualification remain pending because RCH is unavailable.
+
 ## 2026-11-06: serve live Tower publication through authenticated peers
 
 - Add a bounded Linux publication peer with original kernel-credential checks,

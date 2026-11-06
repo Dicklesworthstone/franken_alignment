@@ -2,6 +2,12 @@
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
 mod host;
+mod inspection;
+pub use inspection::{
+    FileInspectionObservation, FileInspectionPage, FileInspectionResult,
+    FileSupervisorInspectionGrant, FileSupervisorInspectionPort, MAX_INSPECTION_ATTEMPTS,
+    MAX_INSPECTION_QUERIES,
+};
 #[cfg(target_os = "linux")]
 pub mod learned_intake;
 pub mod receipt;

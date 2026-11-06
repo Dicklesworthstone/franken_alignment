@@ -1,12 +1,13 @@
-//! Actor-scoped Tower dispatch into the original durable publication owner.
+//! Scope-bound Tower dispatch into the original durable publication owner.
 //!
-//! One instance belongs to one host-authenticated actor session. Its native
-//! port retains only weak ownership; the supervisor still owns snapshots,
+//! One instance belongs to one host-authenticated actor or operator session.
+//! Its native port retains only weak ownership; the supervisor still owns snapshots,
 //! congress, both publication keys, the endpoint and the canonical journal.
 //! This adapter has no second ledger or outcome cache. Native request-local
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+mod inspection;
 #[cfg(target_os = "linux")]
 pub mod peer;
 mod precheck;
@@ -17,7 +18,7 @@ use super::{
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort,
+    FileActorPort, FileActorPrecheckPort, FileInspectionResult, FileSupervisorInspectionPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -31,8 +32,13 @@ use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 4] =
-    [Verb::Propose, Verb::Get, Verb::Precheck, Verb::Capabilities];
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 5] = [
+    Verb::Propose,
+    Verb::Get,
+    Verb::Precheck,
+    Verb::Capabilities,
+    Verb::Situation,
+];
 
 /// Response bound for this native profile. Ticket, proposal and durable owner
 /// limits remain the original native limits and cannot be enlarged here.
@@ -55,18 +61,19 @@ impl PublicationLimits {
     }
 }
 
-/// The original observation-only response, including its original epistemic
-/// variant and request-local basis. A request generation is not a control cut.
+/// Original observation-only responses preserve each native epistemic variant
+/// and basis. A request generation is not a supervisor situation's control cut.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PublicationResult {
     Request(WireResponse),
     Precheck(PrecheckWireResponse),
     Capabilities(PrecheckCapabilitiesResponse),
+    Situation(FileInspectionResult),
     Refused(Knowledge<()>),
 }
 
 /// The same sixteen envelope fields with a native publication result profile.
-/// No synthetic `Basis` is constructed for the native actor's limited view.
+/// No synthetic global `Basis` is constructed for native observations.
 pub type PublicationResponse = TowerResponse<PublicationResult, PublicationLimits>;
 
 /// A live, session-local view of an original `FileOversight` actor gateway.
@@ -87,6 +94,7 @@ pub struct PublicationTower {
     scope: Scope,
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
+    inspection: Option<FileSupervisorInspectionPort>,
     limits: PublicationLimits,
 }
 
@@ -117,6 +125,7 @@ impl PublicationTower {
             scope,
             wire: ActorWire::new(port),
             precheck: None,
+            inspection: None,
             limits,
         })
     }
@@ -230,6 +239,10 @@ impl PublicationTower {
             return response;
         }
 
+        if request.verb == Verb::Situation {
+            return self.dispatch_situation(access, request);
+        }
+
         if request.verb == Verb::Capabilities {
             return self.dispatch_capabilities(request);
         }
@@ -332,8 +345,8 @@ impl PublicationTower {
                 },
                 reason_code: reason,
                 address: request.address.clone(),
-                // Native actor ports intentionally expose none of these global
-                // coordinates. Query/request labels cannot stand in for them.
+                // Any coordinates disclosed by a native result retain their
+                // own basis. None is promoted to a global Tower coordinate.
                 generation: Knowledge::unknown(UnknownReason::Unavailable),
                 control_seq: Knowledge::unknown(UnknownReason::Unavailable),
                 source_frontiers: Knowledge::unknown(UnknownReason::Unavailable),

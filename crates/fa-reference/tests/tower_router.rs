@@ -607,7 +607,15 @@ fn every_live_verb_and_generation_shadows_conflicting_snapshot_objects_without_f
                 );
                 let native = live(&result);
                 assert!(native.envelope.reason_code.is_some());
-                if ![Verb::Get, Verb::Propose, Verb::Precheck, Verb::Capabilities].contains(&verb) {
+                if ![
+                    Verb::Get,
+                    Verb::Propose,
+                    Verb::Precheck,
+                    Verb::Capabilities,
+                    Verb::Situation,
+                ]
+                .contains(&verb)
+                {
                     assert_eq!(
                         native.envelope.reason_code,
                         Some(ReasonCode::CapabilityUnsupported)

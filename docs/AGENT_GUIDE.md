@@ -56,6 +56,14 @@ informational response, cache selection and disclosure lifetime. It does not
 implement the broader signed deployment assurance profile in the prospective
 playbook below. Missing disclosure or owner eligibility remains explicit refusal.
 
+A separately installed supervisor inspection grant connects native `situation`
+for authenticated operators. It captures the original acknowledged owner with
+its native basis, complete ledger accounting and a bounded first page. Unlisted
+attempts are explicitly marked by `enumeration_complete: false`; Unknown and
+irrecoverably unknown liabilities remain unresolved and charged. Grant clones
+share finite work and revocation. Ordinary actors and precheck users cannot
+acquire this capability, and a lost owner never reuses a previous live report.
+
 The integrating host can combine those original facades with the
 [shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence
 reads, precheck, native submission and acquired-request polling. A live mount
