@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-05: bound independent verifier input attempts across retries
+
+The independent FARJ verifier now charges every underlying read attempt to one
+finite allowance shared by the journal and retained-prefix streams. Interrupted
+reads, errors and EOF probes all spend work. `verify_with_read_budget` accepts
+a caller-owned, non-cloneable `ReadBudget` that retains expenditure across
+successful and failed invocations. Existing `verify` uses a finite default
+large enough for one-byte reads of both maximum-sized inputs plus a fixed
+interruption allowance. Exhaustion identifies the unread input, offset and
+record without returning partial accounting; invalid context spends no calls.
+
+Nine new regression functions pair permitted native v1/v2 histories with exact
+allowance boundaries, unending interruptions, shared-input exhaustion, failed
+retries and I/O/EOF failures. The original parser, accounting reducer, golden
+vectors and previous test assertions are unchanged. Source and whitespace
+review completed. The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` could not
+start in this session (`rch: command not found`, exit 127); this workspace also
+has no Rust toolchain. No formatting, compiler, Clippy or runtime pass is claimed.
+The command `br ready --json` likewise returned exit 127, so the CLI-managed
+beads export was not edited. FA-126 remains incomplete; no acceptance is closed.
+One individual read can still block: this is a work bound, not a deadline.
+
 ## 2026-11-06: independent native rights-journal accounting verifier
 
 A new std-only library in the admitted xtask package independently decodes actual

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-05: bound independent journal-verification work
+
+- Charge every attempted journal and anchor read, including interruptions,
+  errors and EOF probes, to a shared finite allowance.
+- Expose a caller-owned read budget that preserves spent work across retries;
+  give the existing verifier a finite default without changing accounting law.
+- Refuse exhaustion before another read and preserve exact failure coordinates
+  without emitting partial successful accounting.
+- Add nine native-golden and causal boundary regression functions. Source review
+  completed; RCH is unavailable, so Rust execution remains pending.
+
 ## 2026-11-06: independently verify native rights-journal histories
 
 - Add a dependency-free streaming FARJ v1/v2 decoder and independent accounting

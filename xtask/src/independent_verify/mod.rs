@@ -6,8 +6,11 @@
 //! freshness, or prove that an external effect occurred.
 
 mod ledger;
+mod read_budget;
 mod stream;
 mod wire;
+
+pub use read_budget::{DEFAULT_INTERRUPTED_READ_ALLOWANCE, ReadBudget};
 
 use std::fmt;
 use std::io::Read;
@@ -37,6 +40,14 @@ pub struct ExpectedContext {
     pub total_units: u64,
     pub limits: Limits,
     pub recovery: Option<RecoveryReserve>,
+}
+
+impl ExpectedContext {
+    /// Validate the explicitly selected profile before opening either input.
+    /// This checks configuration only, not journal bytes or caller provenance.
+    pub fn validate(self) -> Result<(), VerifyError> {
+        wire::expected_header(self).map(|_| ())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -184,6 +195,7 @@ pub enum ErrorKind {
     InvalidContext,
     UnsupportedProfile,
     LimitExceeded,
+    ReadBudgetExhausted,
     TruncatedInput,
     InvalidMagic,
     ContextMismatch,
@@ -212,6 +224,7 @@ impl ErrorKind {
             Self::InvalidContext => "invalid_context",
             Self::UnsupportedProfile => "unsupported_profile",
             Self::LimitExceeded => "limit_exceeded",
+            Self::ReadBudgetExhausted => "read_budget_exhausted",
             Self::TruncatedInput => "truncated_input",
             Self::InvalidMagic => "invalid_magic",
             Self::ContextMismatch => "context_mismatch",
@@ -277,13 +290,42 @@ impl std::error::Error for VerifyError {}
 /// Verify a whole history against an independently supplied canonical prefix.
 /// No partial report is returned on failure. No input is written or executed.
 /// Repeated verification of the same inputs is intentionally idempotent.
+///
+/// Each invocation receives a finite read-attempt allowance of twice the
+/// configured maximum total bytes, plus two EOF probes and
+/// [`DEFAULT_INTERRUPTED_READ_ALLOWANCE`] additional calls. This supports
+/// one-byte reads of both maximum-length inputs while bounding interruptions.
+/// Use [`verify_with_read_budget`] to select a smaller allowance or conserve one
+/// across retries. Neither entry point can bound the duration of a single read.
 pub fn verify<J: Read, A: Read>(
     journal: J,
     anchor: A,
     expected: ExpectedContext,
 ) -> Result<VerificationReport, VerifyError> {
-    stream::verify(journal, anchor, expected)
+    // Preserve context-error precedence and validate the arithmetic's bound
+    // before deriving a default allowance or touching either input.
+    wire::expected_header(expected)?;
+    let calls = 2 * expected.limits.max_total_bytes + 2 + DEFAULT_INTERRUPTED_READ_ALLOWANCE;
+    let mut budget = ReadBudget::new(calls);
+    verify_with_read_budget(journal, anchor, expected, &mut budget)
 }
+
+/// Verify using one caller-owned read allowance for both inputs. Reusing this
+/// budget across invocations retains all spent calls, including work before a
+/// refusal, interruption, I/O failure, or successful report. Context validation
+/// precedes all reads and consumes no calls. Exhaustion refuses before the next
+/// read and identifies its input, byte offset, and record sequence if known.
+pub fn verify_with_read_budget<J: Read, A: Read>(
+    journal: J,
+    anchor: A,
+    expected: ExpectedContext,
+    budget: &mut ReadBudget,
+) -> Result<VerificationReport, VerifyError> {
+    stream::verify(journal, anchor, expected, budget)
+}
+
+#[cfg(test)]
+mod read_budget_tests;
 
 #[cfg(test)]
 mod tests;

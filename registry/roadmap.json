@@ -3154,7 +3154,7 @@
       "id": "FA-126",
       "gate": "G2",
       "title": "Control receipts and independent verifier",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-020",
         "FA-104",

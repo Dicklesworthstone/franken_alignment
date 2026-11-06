@@ -1,7 +1,7 @@
 //! Strict streaming I/O and exact-prefix comparison. Neither input is rewritten.
 use super::ledger::Ledger;
 use super::wire;
-use super::{ErrorKind, ExpectedContext, Head, Input, Location, VerificationReport, VerifyError};
+use super::{ErrorKind, ExpectedContext, Head, Input, Location, ReadBudget, VerificationReport, VerifyError};
 use std::io::{self, Read};
 
 struct Source<R> {
@@ -19,8 +19,14 @@ impl<R: Read> Source<R> {
         Location { input: self.input, offset: self.offset, sequence }
     }
 
-    fn read(&mut self, bytes: &mut [u8], sequence: Option<u64>) -> Result<usize, VerifyError> {
+    fn read(
+        &mut self,
+        bytes: &mut [u8],
+        sequence: Option<u64>,
+        budget: &mut ReadBudget,
+    ) -> Result<usize, VerifyError> {
         loop {
+            budget.spend(self.location(sequence))?;
             match self.reader.read(bytes) {
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                 Err(error) => {
@@ -41,9 +47,14 @@ impl<R: Read> Source<R> {
         }
     }
 
-    fn exact(&mut self, mut bytes: &mut [u8], sequence: Option<u64>) -> Result<(), VerifyError> {
+    fn exact(
+        &mut self,
+        mut bytes: &mut [u8],
+        sequence: Option<u64>,
+        budget: &mut ReadBudget,
+    ) -> Result<(), VerifyError> {
         while !bytes.is_empty() {
-            let count = self.read(bytes, sequence)?;
+            let count = self.read(bytes, sequence, budget)?;
             if count == 0 {
                 return Err(VerifyError::at(ErrorKind::TruncatedInput, self.location(sequence), "input ended inside a header or record"));
             }
@@ -82,7 +93,12 @@ impl<A: Read> Anchor<A> {
         )
     }
 
-    fn compare(&mut self, bytes: &[u8], sequence: Option<u64>) -> Result<(), VerifyError> {
+    fn compare(
+        &mut self,
+        bytes: &[u8],
+        sequence: Option<u64>,
+        budget: &mut ReadBudget,
+    ) -> Result<(), VerifyError> {
         if self.prefix.is_some() {
             return Ok(());
         }
@@ -97,7 +113,7 @@ impl<A: Read> Anchor<A> {
         let mut buffer = [0; 8192];
         while consumed < bytes.len() {
             let width = buffer.len().min(bytes.len() - consumed);
-            let count = self.source.read(&mut buffer[..width], sequence)?;
+            let count = self.source.read(&mut buffer[..width], sequence, budget)?;
             if count == 0 {
                 let (kind, message) = if self.matched < self.header_len {
                     (ErrorKind::AnchorTooShort, "retained prefix must include the complete selected header")
@@ -118,13 +134,13 @@ impl<A: Read> Anchor<A> {
         Ok(())
     }
 
-    fn boundary(&mut self, head: Head) -> Result<(), VerifyError> {
+    fn boundary(&mut self, head: Head, budget: &mut ReadBudget) -> Result<(), VerifyError> {
         if self.prefix.is_some() {
             return Ok(());
         }
         let mut byte = [0];
         let sequence = if head.sequence == 0 { None } else { Some(head.sequence) };
-        if self.source.read(&mut byte, sequence)? == 0 {
+        if self.source.read(&mut byte, sequence, budget)? == 0 {
             self.prefix = Some((head, self.matched));
         } else {
             self.pending = Some(byte[0]);
@@ -156,6 +172,7 @@ pub(super) fn verify<J: Read, A: Read>(
     journal: J,
     anchor: A,
     expected: ExpectedContext,
+    budget: &mut ReadBudget,
 ) -> Result<VerificationReport, VerifyError> {
     // Reject unsupported configuration before touching either reader.
     let wanted = wire::expected_header(expected)?;
@@ -163,7 +180,7 @@ pub(super) fn verify<J: Read, A: Read>(
     let mut source = Source::new(journal, Input::Journal);
     let mut prefix = Anchor::new(anchor, wanted.len() as u64);
     let mut header = vec![0; wanted.len()];
-    source.exact(&mut header[..8], None)?;
+    source.exact(&mut header[..8], None, budget)?;
     if &header[..7] != b"FARJ\0\0\0" {
         return Err(VerifyError::at(ErrorKind::InvalidMagic, Location {
             input: Input::Journal, offset: 0, sequence: None,
@@ -174,7 +191,7 @@ pub(super) fn verify<J: Read, A: Read>(
             input: Input::Journal, offset: 7, sequence: None,
         }, "journal version differs from the independently selected profile"));
     }
-    source.exact(&mut header[8..], None)?;
+    source.exact(&mut header[8..], None, budget)?;
     let header_checksum = u32_at(&header, header.len() - 4);
     if wire::crc32(&[&header[..header.len() - 4]]) != header_checksum {
         return Err(VerifyError::at(ErrorKind::ChecksumMismatch, Location {
@@ -187,8 +204,8 @@ pub(super) fn verify<J: Read, A: Read>(
         }, "header differs from the independently supplied identity or configuration"));
     }
     let mut head = Head { sequence: 0, checksum: header_checksum };
-    prefix.compare(&header, None)?;
-    prefix.boundary(head)?;
+    prefix.compare(&header, None, budget)?;
+    prefix.boundary(head, budget)?;
     let mut ledger = Ledger::new(expected.total_units);
     loop {
         let start = source.offset;
@@ -199,7 +216,7 @@ pub(super) fn verify<J: Read, A: Read>(
         ))?;
         let at = Location { input: Input::Journal, offset: start, sequence: Some(next_sequence) };
         let mut length = [0; 4];
-        if source.read(&mut length[..1], Some(next_sequence))? == 0 {
+        if source.read(&mut length[..1], Some(next_sequence), budget)? == 0 {
             break;
         }
         if head.sequence >= expected.limits.max_records
@@ -207,7 +224,7 @@ pub(super) fn verify<J: Read, A: Read>(
         {
             return Err(VerifyError::at(ErrorKind::LimitExceeded, at, "record exceeds the selected lifetime capacity"));
         }
-        source.exact(&mut length[1..], Some(next_sequence))?;
+        source.exact(&mut length[1..], Some(next_sequence), budget)?;
         let body_len = u32::from_le_bytes(length);
         if !(13..=expected.limits.max_frame_bytes).contains(&body_len) {
             return Err(VerifyError::at(ErrorKind::LimitExceeded, at, "frame length is outside the selected bounds"));
@@ -217,7 +234,7 @@ pub(super) fn verify<J: Read, A: Read>(
             .ok_or_else(|| VerifyError::at(ErrorKind::LimitExceeded, at, "record exceeds the selected lifetime byte capacity"))?;
         // Length and cumulative capacity were validated before allocating.
         let mut frame = vec![0; body_len as usize + 4];
-        source.exact(&mut frame, Some(next_sequence))?;
+        source.exact(&mut frame, Some(next_sequence), budget)?;
         let body = &frame[..body_len as usize];
         let checksum = u32_at(&frame, body_len as usize);
         if wire::crc32(&[&length, body]) != checksum {
@@ -229,8 +246,8 @@ pub(super) fn verify<J: Read, A: Read>(
         if u32_at(body, 8) != head.checksum {
             return Err(VerifyError::at(ErrorKind::InvalidPreviousChecksum, at, "record predecessor CRC does not match the preceding head"));
         }
-        prefix.compare(&length, Some(next_sequence))?;
-        prefix.compare(&frame, Some(next_sequence))?;
+        prefix.compare(&length, Some(next_sequence), budget)?;
+        prefix.compare(&frame, Some(next_sequence), budget)?;
         let event = wire::decode_event(&body[12..], start + 16, next_sequence)?;
         if let Some(reserve) = expected.recovery {
             if !event.recovery_eligible()
@@ -242,7 +259,7 @@ pub(super) fn verify<J: Read, A: Read>(
         }
         ledger.apply(event, Location { offset: start + 16, ..at })?;
         head = Head { sequence: next_sequence, checksum };
-        prefix.boundary(head)?;
+        prefix.boundary(head, budget)?;
     }
     let (prefix_head, prefix_bytes) = prefix.finish()?;
     Ok(VerificationReport {

@@ -122,8 +122,22 @@ the input keep set. This avoids repeated scans of all terminal history.
 
 The whole image and whole prefix are never retained in memory. Work and storage
 remain bounded by the selected record/byte profile, one bounded frame, the ID
-map and still-reserved effects. The two streams are read once. A caller-supplied Read may block; these are byte,
-allocation and transition-work bounds, not an elapsed-time guarantee. Errors identify
+map and still-reserved effects. The two streams are read once. Every underlying
+read attempt also spends a finite shared allowance, including interrupted
+reads, errors and end-of-file probes. The default `verify` allowance is
+`2 * max_total_bytes + 2 + 1024`: one-byte progress on both maximum-sized inputs,
+two EOF probes, and a finite additional interruption allowance. Repeated
+interruptions cannot spin forever without exhausting this work budget.
+
+An integrating host can use `verify_with_read_budget` and a caller-owned
+`ReadBudget` to choose a smaller allowance or conserve it across retries.
+`spent_calls()` and `remaining_calls()` expose actual attempted reads; no
+success, refusal or failed read refunds them. Exhaustion returns
+`read_budget_exhausted` before the next underlying call. Invalid expected
+context still fails before spending any read allowance. The budget does not
+measure physical storage I/O, and a single caller-supplied Read may block;
+these are byte, allocation, read-attempt and transition-work bounds, not an
+elapsed-time guarantee. Errors identify
 the input, byte offset and record sequence where available; no error repairs,
 truncates, retries a dispatch or refunds an unknown liability.
 
