@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-06: independent native rights-journal accounting verifier
+
+A new std-only library in the admitted xtask package independently decodes actual
+FARJ v1/v2 histories, compares a mandatory exact retained prefix, and validates
+the complete suffix with its own rights transition/accounting reducer. Supplied
+context remains external; v2 lifetime limits and recovery capacity bind exactly.
+Unknown and dispatched liabilities survive reset and revocation, one-shot
+dispatch compares the full original effect, and permanent IDs prevent reuse.
+
+The reducer maintains checked aggregate buckets and an active-reservation index,
+releasing effect bytes after dispatch/abort. It streams bounded inputs rather
+than retaining or rescanning complete history. Reports separate prefix/final
+heads and explicitly leave authentication, independent custody, unseen-history
+completeness, external outcomes and complete permit law Unknown. The full
+control-receipt verifier and Tower Verify integration remain open.
+
+Eight core test functions and six native integration test functions are authored;
+the native corpus defines 51 scenarios (12 accepted and 39 rejected). Native
+differential tests use mechanically extracted, unchanged production
+Rights/Journal code to generate canonical bytes and original outcomes; the
+verifier does not import those algorithms. Original crate roots and root test
+locations remain intact. This test source profile does not qualify FileJournal
+durability, endpoint execution or the rest of the monolithic library.
+
+The execution environment exhausted shared storage and then disconnected during
+implementation. Source review is available, but formatting, compilation, Clippy
+and runtime execution of this revision remain pending; no tests or gates are
+reported passed and no work packet is closed. The pre-existing source snapshot
+binding failure remains unresolved. See the
+[bounded profile contract](docs/INDEPENDENT_RIGHTS_VERIFY.md).
+
 ## 2026-11-06: connect revocable exact-policy precheck to the publication Tower
 
 The live publication profile now connects `precheck` to an explicitly installed

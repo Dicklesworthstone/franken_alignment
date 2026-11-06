@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-06: independently verify native rights-journal histories
+
+- Add a dependency-free streaming FARJ v1/v2 decoder and independent accounting
+  reducer, with mandatory external context and exact retained-prefix comparison.
+- Validate the full suffix, original effect binding, one-shot dispatch,
+  conservative unknown liabilities, checkpoint resets and v2 recovery capacity.
+- Maintain aggregate balances and active-reservation indexes without repeated
+  full-history scans; release effect payloads once dispatch is impossible.
+- Add native differential fixtures using unchanged production core source,
+  including equal-CRC history substitution and valid-CRC illegal transitions.
+- Preserve explicit Unknown authenticity, custody, latest-history, physical
+  outcome and full permit-law properties. Source-reviewed; all Rust execution
+  remains pending after the environment disconnected.
+
 ## 2026-11-06: inspect exact policy through same-owner publication precheck
 
 - Connect precheck to the supervisor's original revocable exact-policy
