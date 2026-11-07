@@ -7,6 +7,7 @@
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+mod explanation;
 mod inspection;
 #[cfg(target_os = "linux")]
 pub mod peer;
@@ -18,7 +19,8 @@ use super::{
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, FileInspectionResult, FileSupervisorInspectionPort,
+    FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionResult,
+    FileSupervisorExplanationPort, FileSupervisorInspectionPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -32,12 +34,13 @@ use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 5] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 6] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
     Verb::Capabilities,
     Verb::Situation,
+    Verb::Explain,
 ];
 
 /// Response bound for this native profile. Ticket, proposal and durable owner
@@ -64,11 +67,11 @@ impl PublicationLimits {
 /// Original observation-only responses preserve each native epistemic variant
 /// and basis. A request generation is not a supervisor situation's control cut.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PublicationResult {
-    Request(WireResponse),
+pub enum PublicationResult {    Request(WireResponse),
     Precheck(PrecheckWireResponse),
     Capabilities(PrecheckCapabilitiesResponse),
     Situation(FileInspectionResult),
+    Explanation(FileExplanationResult),
     Refused(Knowledge<()>),
 }
 
@@ -95,6 +98,7 @@ pub struct PublicationTower {
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
+    explanation: Option<FileSupervisorExplanationPort>,
     limits: PublicationLimits,
 }
 
@@ -126,6 +130,7 @@ impl PublicationTower {
             wire: ActorWire::new(port),
             precheck: None,
             inspection: None,
+            explanation: None,
             limits,
         })
     }
@@ -241,6 +246,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Situation {
             return self.dispatch_situation(access, request);
+        }
+
+        if request.verb == Verb::Explain {
+            return self.dispatch_explanation(access, request);
         }
 
         if request.verb == Verb::Capabilities {

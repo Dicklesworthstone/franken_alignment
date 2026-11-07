@@ -154,7 +154,7 @@ fn optional(value: Option<u64>) -> String {
     value.map_or_else(|| "null".to_owned(), number)
 }
 
-fn stage(value: ActionState) -> &'static str {
+pub(super) fn stage(value: ActionState) -> &'static str {
     match value {
         ActionState::Proposed => "proposed",
         ActionState::Prepared => "prepared",

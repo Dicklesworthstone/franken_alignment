@@ -2,7 +2,7 @@
 
 On Unix, `fa_reference::tower::publication::PublicationTower` connects the
 registered `propose`, `get`, `precheck`, `capabilities` and separately granted
-operator `situation` operations to an original
+operator `situation` and historical admission `explain` operations to an original
 `FileActorPort<FileOversight>`. It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -211,6 +211,77 @@ The result profile is `PublicationResult::Situation(FileInspectionResult)`.
 The same native result passes through the shared router and bounded peer without
 a response cache. `tower-exchange` can carry it for an independently provisioned
 operator connection while preserving its original observational meaning.
+
+## Explain the original exact-policy admission
+
+A distinct `FileSupervisorExplanationPort` discloses the original policy and its
+actual admission trace. It is issued only by the original supervisor through
+`explanation_port(queries)` or `explanation_port_with_budget(queries,
+max_replay_events)`. Retain the noncloneable `FileSupervisorExplanationGrant`
+custodian and install its weak port with `PublicationTower::set_explanation`.
+Existing actor, precheck and situation-inspection grants do not confer this
+stronger disclosure. Replacement withdraws the previous installation even when
+a foreign owner's replacement is rejected.
+
+Use `explain` with no arguments at the **request address** derived by the facade:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "explain-admission-701",
+  "address": "fa://1/attempt/request-3-2-4-5-701@41",
+  "verb": "explain",
+  "arguments": null,
+  "idempotency_key": null
+}
+```
+
+Common tenant/plane/Verify checks, the host-authenticated operator role, exact
+optional registration generation, canonical request identity and empty
+arguments precede disclosure work. The original request book resolves the
+external key to its admitted attempt. An equal numeric attempt ID is never a
+substitute, and this privileged read need not acquire an actor ticket.
+
+The original investigation reconstructs the complete acknowledged journal in
+memory. It returns the original admission policy, every predicate's original
+result and witness index, its semantic and policy coordinates, and separate
+admission and ending states. Both journal revisions, control sequences and
+recorded ticks retain their native meanings. A later cancellation, policy
+replacement, clock observation or completed publication cannot rewrite the
+original admission trace.
+
+The response is `PublicationResult::Explanation(FileExplanationResult)` with
+native schema `fa.publication-explanation/1`. Its scope is explicitly
+`historical_exact_policy_admission`; current eligibility is not observed and
+current hold reason remains Unknown. This explains an exact-policy denial even
+when no congress occurred. A satisfied original admission does not explain a
+later hold or establish permission to publish. `why-held` and `next` still need
+their own complete current predicates and are not inferred from these stages.
+
+The canonical body encodes the original predicate graph and retains full-width
+identities as decimal strings. It discloses policy literals, target and payload
+length, but does not serialize the action payload, helper inputs, a complete
+source snapshot or observed witness values. Witness references remain explicit
+alongside `witness_values_disclosed: false`. The privileged Rust result retains
+the policy's selected witnesses. The encoder checks the sealed native basis
+and matching request subject before serializing a Known report. Global Tower
+coordinates, costs and affordances remain Unknown.
+
+A grant allows 1–1,024 shared queries and a maximum of 1–4,096 retained events
+per query. The complete history must fit; no prefix explanation is returned.
+Decoder and learned-consistency histories return Unknown because this grant
+contains no numerical-replay budget. Missing or unadmitted requests,
+unreconstructable histories and exceeded replay bounds also remain Unknown,
+never proved absence. Clones, reconnects and repeated operation/idempotency
+labels spend the same finite allowance; output refusal does not refund it.
+
+Reads acquire no source or clock, consume no admission snapshot, write no
+journal event, run no counterfactual and issue no review or publication key.
+Revoked custody returns Withheld; unavailable, borrowed or faulted owners
+return Unknown without cached-result or disk fallback. A reopened owner needs
+its own separately issued capability. The ordinary actor service still grants
+no operator role or explanation port. An independently provisioned operator
+connection can carry this profile through the same bounded peer and client.
 
 ## Submit an actual proposal
 

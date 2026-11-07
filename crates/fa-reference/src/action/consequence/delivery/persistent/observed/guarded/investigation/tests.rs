@@ -576,3 +576,72 @@ fn absent_or_invalid_attempts_never_acquire_a_fictional_proposal() {
     complete(&mut read, 1);
     assert!(read.finish().is_ok());
 }
+
+#[test]
+fn admission_explanation_refuses_a_faulted_owner_despite_prior_known_and_newer_disk() {
+    use crate::action::consequence::delivery::persistent::JournalIo;
+    use crate::action::consequence::oversight::actor::{Knowledge, UnknownReason};
+
+    let root = Root::new();
+    let p = profile();
+    let (mut host, _reviewer) = FileOversight::create(root.store(), p.clone()).unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    host.submit_request(
+        host.revision(),
+        901,
+        ActionSpec {
+            version: VERSION,
+            scope: p.delivery.scope,
+            target: Some(p.delivery.target),
+            payload: b"ok".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: 0,
+            deadline: ElapsedTick(100),
+            units: 2,
+        },
+        Snapshot {
+            semantic_epoch: 1,
+            complete: true,
+            values: BTreeMap::new(),
+        },
+    )
+    .unwrap();
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.explanation_port(2).unwrap();
+    assert!(matches!(
+        port.explain_request(901),
+        Ok(Knowledge::Known { .. })
+    ));
+    assert_eq!(grant.remaining_queries(), 1);
+    let acknowledged = supervisor.host().unwrap().inspect();
+    {
+        let mut host = supervisor.host_mut().unwrap();
+        host.store.fail_once(JournalIo::DirectorySync);
+        let revision = host.revision();
+        assert!(matches!(
+            host.observe_time(revision, ElapsedTick(2)),
+            Err(JournalError::Io(failure))
+                if failure.operation == JournalIo::DirectorySync
+                    && failure.replacement_may_be_visible
+        ));
+        assert!(host.storage_failure().is_some());
+        assert_eq!(host.inspect(), acknowledged);
+    }
+    let disk = FileOversight::read_publication(root.store(), &p).unwrap();
+    assert!(disk.revision > acknowledged.revision);
+    assert_eq!(disk.control.ledger.elapsed, Some(ElapsedTick(2)));
+    let files = root.files();
+    assert_eq!(
+        port.explain_request(901),
+        Ok(Knowledge::Unknown {
+            reason: UnknownReason::ControllerUnavailable,
+        })
+    );
+    assert_eq!(grant.remaining_queries(), 1);
+    assert!(matches!(
+        supervisor.explanation_port(1),
+        Err(JournalError::Unavailable)
+    ));
+    assert_eq!(supervisor.host().unwrap().inspect(), acknowledged);
+    assert_eq!(root.files(), files);
+}

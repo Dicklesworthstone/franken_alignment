@@ -40,9 +40,13 @@ fn request() -> TowerRequest {
 }
 
 fn response(request: &TowerRequest) -> String {
+    original_response(request).to_json().unwrap()
+}
+
+fn original_response(request: &TowerRequest) -> PublicationResponse {
     // An explicitly unavailable fixture, encoded by the original public
     // encoder. This is protocol/correlation data, not evidence of an effect.
-    let response: PublicationResponse = TowerResponse {
+    TowerResponse {
         envelope: TowerEnvelope {
             schema_version: RESPONSE_SCHEMA,
             operation_id: request.operation_id.clone(),
@@ -62,8 +66,29 @@ fn response(request: &TowerRequest) -> String {
             would_change_this: vec![request.address.clone()],
         },
         result: PublicationResult::Refused(Knowledge::unknown(UnknownReason::Unavailable)),
+    }
+}
+
+#[test]
+fn native_explanation_profile_is_carried_only_for_the_correlated_explain_request() {
+    use fa_reference::action::consequence::oversight::actor::{
+        Knowledge as ActorKnowledge, UnknownReason as ActorUnknown,
     };
-    response.to_json().unwrap()
+    let mut query = request();
+    query.verb = Verb::Explain;
+    let mut original = original_response(&query);
+    original.result = PublicationResult::Explanation(Ok(ActorKnowledge::Unknown {
+        reason: ActorUnknown::ControllerUnavailable,
+    }));
+    let bytes = original.to_json().unwrap();
+    validate_response(bytes.as_bytes(), &query).unwrap();
+    for verb in [Verb::Get, Verb::Situation, Verb::WhyHeld, Verb::Next] {
+        let mut different = query.clone();
+        different.verb = verb;
+        assert!(validate_response(bytes.as_bytes(), &different).is_err());
+    }
+    query.operation_id = "a-different-observation".into();
+    assert!(validate_response(bytes.as_bytes(), &query).is_err());
 }
 
 #[test]

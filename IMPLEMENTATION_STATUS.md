@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-07: original native admission explanations through Tower
+
+A separately issued, weak explanation port now reconstructs exact-policy
+admission from the original acknowledged publication owner. External request
+identity is resolved through the original request book before selecting its
+allocated attempt. The sealed result retains original predicates, trace and
+selected witnesses, with distinct admission/ending revisions, control sequences,
+recorded times and action states. It supplies no live authority or current-hold
+inference, including after later cancellation, policy change or publication.
+
+Tower `explain` checks the original native namespace, caller grants, operator
+role and registration before entering the separate finite disclosure allowance.
+The native encoder binds the sealed basis and subject, preserves every predicate
+and full-width identity, and leaves current eligibility/hold reason Unknown.
+Existing actor, precheck and situation grants do not widen. Clones share query
+spending and revocation; full-history event limits and numerical-profile refusal
+prevent partial or unbudgeted replay. Fault, owner loss and output refusal cannot
+reuse a Known result, acquire authority or refund entered work.
+
+Eleven native, six public Tower and one client regression functions are authored,
+including original permitted/denied admissions, actual two-key publication,
+source loss, request/attempt collisions, later policy/cancellation, shared budgets,
+numerical refusal, real persistence failure, complete predicate serialization,
+forged provenance and output limits. Independent production/test source review, qualified nightly-2026-09-08
+syntax parsing and changed-range formatting completed. Required RCH compilation,
+Clippy, runtime tests
+and the complete gate remain unavailable and pending. No bead or broad dispatcher
+acceptance is closed. See [the contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
+
 ## 2026-11-07: restore the canonical current-source snapshot input
 
 The checked-in `fa.source_snapshot/1` manifest again uses the verifier's

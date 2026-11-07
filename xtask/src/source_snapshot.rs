@@ -1369,9 +1369,8 @@ mod tests {
     #[test]
     fn file_record_arrays_do_not_replace_the_canonical_path_digest_object() {
         let digest = "a".repeat(64);
-        let canonical = format!(
-            r#"{{"schema":"fa.source_snapshot/1","files":{{"Cargo.toml":"{digest}"}}}}"#
-        );
+        let canonical =
+            format!(r#"{{"schema":"fa.source_snapshot/1","files":{{"Cargo.toml":"{digest}"}}}}"#);
         let manifest = parse_manifest(canonical.as_bytes(), Limits::default())
             .expect("the canonical path-to-digest object is admitted");
         assert_eq!(manifest.digest("Cargo.toml"), Some(digest.as_str()));

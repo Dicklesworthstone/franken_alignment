@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-07: explain original native policy admissions through Tower
+
+- Add a separate revocable supervisor explanation capability with shared query
+  limits, bounded complete-history replay and explicit numerical exclusions.
+- Connect `explain` to the original request-to-attempt mapping and original
+  admission predicate graph, preserving separate historical admission/end cuts.
+- Keep current holds and eligibility unobserved, seal response provenance and
+  request identity, and preserve native read limits through the peer/client.
+- Add eighteen native, Tower and client regression functions with actual
+  publication, source/owner/fault failures and matching disclosure boundaries.
+  Independent source review and qualified syntax/format checks do not replace
+  pending RCH execution.
+
 ## 2026-11-07: repair the source snapshot gate's actual input
 
 - Restore the canonical path-to-digest manifest for the complete declared source

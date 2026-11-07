@@ -613,6 +613,7 @@ fn every_live_verb_and_generation_shadows_conflicting_snapshot_objects_without_f
                     Verb::Precheck,
                     Verb::Capabilities,
                     Verb::Situation,
+                    Verb::Explain,
                 ]
                 .contains(&verb)
                 {

@@ -176,6 +176,14 @@ impl FileProposalRepairSearch {
 }
 
 impl FileOversight {
+    /// Native scope for the separately granted actor explanation adapter. This
+    /// discloses no profile, source, snapshot or authority-bearing owner handle.
+    pub(in crate::action::consequence::delivery::persistent) fn actor_explanation_scope(
+        &self,
+    ) -> crate::action::Scope {
+        self.profile.delivery.scope
+    }
+
     /// Supervisor investigation of an ACKNOWLEDGED admission, including hard
     /// denials that never reached a congress. It can outlive a stopped owner.
     /// Refused requests with no frozen action do not acquire a fictional proposal.

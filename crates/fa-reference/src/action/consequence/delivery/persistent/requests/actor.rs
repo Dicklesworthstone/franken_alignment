@@ -1,6 +1,12 @@
 //! Actor-only access to one surviving/reopened durable identity domain.
 //! Only the supervisor owns the host or installs a fresh admission snapshot.
 
+mod explanation;
+pub use explanation::{
+    FileAdmissionExplanation, FileExplanationBasis, FileExplanationObservation,
+    FileExplanationResult, FileSupervisorExplanationGrant, FileSupervisorExplanationPort,
+    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
+};
 mod host;
 mod inspection;
 pub use inspection::{

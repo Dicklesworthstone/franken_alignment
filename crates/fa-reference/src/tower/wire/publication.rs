@@ -4,12 +4,13 @@
 //! request-local basis. Neither a request ID nor an intake generation becomes
 //! a global Tower generation, control sequence, or proof of effect admission.
 
+mod explanation;
 mod inspection;
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    MAX_INSPECTION_ATTEMPTS, MAX_INSPECTION_QUERIES, MAX_PRECHECK_QUERIES,
-    precheck_wire::PrecheckResponseError,
+    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_ATTEMPTS,
+    MAX_INSPECTION_QUERIES, MAX_PRECHECK_QUERIES, precheck_wire::PrecheckResponseError,
 };
 use crate::action::consequence::oversight::actor::MAX_ACTOR_REQUESTS;
 use crate::action::consequence::oversight::actor_wire::MAX_FRAME_BYTES;
@@ -89,6 +90,9 @@ impl PublicationResponse {
             PublicationResult::Situation(native) => {
                 ("situation", inspection::encode(native, &encoder)?)
             }
+            PublicationResult::Explanation(native) => {
+                ("explanation", explanation::encode(native, &self.envelope.address, &encoder)?)
+            }
             PublicationResult::Refused(refusal) => (
                 "refused",
                 encoder.knowledge::<_, PublicationRefusal>(refusal, |_| {
@@ -108,6 +112,8 @@ fn publication_limits_json(limits: PublicationLimits) -> String {
         ("max_actor_requests", MAX_ACTOR_REQUESTS.to_string()),
         ("max_precheck_queries", MAX_PRECHECK_QUERIES.to_string()),
         ("max_inspection_queries", MAX_INSPECTION_QUERIES.to_string()),
+        ("max_explanation_queries", MAX_EXPLANATION_QUERIES.to_string()),
+        ("max_explanation_events", MAX_EXPLANATION_EVENTS.to_string()),
         (
             "max_inspection_attempts",
             MAX_INSPECTION_ATTEMPTS.to_string(),

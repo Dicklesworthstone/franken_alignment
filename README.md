@@ -84,6 +84,15 @@ and keeps authentication, unseen-history completeness and external outcomes
 Unknown. Both inputs and all read attempts are bounded. This source increment
 and its binary regression tests still require execution qualification.
 
+A separately granted operator `explain` now reconstructs an original native
+request's exact-policy admission. It returns the original predicate graph and
+trace with separate admission and ending cuts, including denials that never
+reached helper review. Later holds and current eligibility remain Unknown;
+queries share bounded revocable custody and numerical histories require a
+separate replay budget. Existing actor and situation grants cannot obtain this
+policy disclosure. See the [native explanation contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
+Source review and syntax checks remain separate from pending RCH execution.
+
 The [durable publication Tower](docs/TOWER_PUBLICATION.md) connects `propose`
 and request-local `get` to the original file-backed actor gateway. Real native
 intake, exact retries across recovery and fresh outcome polling share the common

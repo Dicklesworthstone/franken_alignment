@@ -290,6 +290,7 @@ fn validate_response(bytes: &[u8], request: &TowerRequest) -> Result<(), String>
         (Some("precheck"), Verb::Precheck) => {}
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
+        (Some("explanation"), Verb::Explain) => {}
         _ => return Err(invalid()),
     }
     Ok(())
