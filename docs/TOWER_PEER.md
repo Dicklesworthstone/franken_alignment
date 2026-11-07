@@ -38,8 +38,8 @@ The proposal's numeric request and `idempotency_key` must both be `"7"` in this
 example. The complete target, payload, units, policy epoch and native deadline
 still undergo original validation and review.
 
-Tower selection is accepted only by the four ordinary single-request service
-modes above. Unsupported combinations with request sequences, multiple peers,
+The four ordinary service modes above also accept an explicit bounded request
+schedule, described below. Unsupported combinations with multiple peers,
 precheck sidecars, receipt-only services, topology, native text or learned
 generation refuse before opening their files. The grammar never silently selects
 a different protocol. Existing native actor commands retain their current mode.
@@ -53,6 +53,49 @@ An integrating host may provision a separate operator connection with an
 explicit [native inspection grant](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
 The generic peer/client can carry its `situation` observation. The ordinary
 service above does not issue that grant or enable the operator role.
+
+## Publish an explicit request sequence
+
+Add `--requests` to any of the four Tower service modes:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --requests 7,8
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --requests 7,8 --tower-generation 41
+```
+
+Both options follow all positional arguments and may appear in either order.
+The schedule contains one to 64 distinct nonzero canonical decimal u64 keys in
+execution order. Its first key must equal the actor profile's `request`.
+Malformed schedules refuse before configuration reads; all scheduled actor,
+reviewer and Stop socket bindings are checked before creating the actor socket
+or publication store.
+
+The service uses the original [sequential actor lifecycle](SEQUENTIAL_ACTOR_SERVICE.md)
+with one authority owner and one Tower session. Tickets and cumulative candidate,
+connection and exchange allowances survive every handoff. Rights, journal
+capacity, recovery reserves and service deadlines retain their original limits.
+Only the currently selected new request can acquire fresh source evidence.
+Earlier requests remain available for exact retries and ticket-scoped reads;
+conflicting retries still compare the complete retained proposal. Future or
+unlisted proposals cannot acquire a snapshot or enter a speculative queue.
+
+Each admitted publication still requires the original helper review, independent
+human approval, both publication keys and receipt settlement. Checked modes also
+retain their original witness guard. Before advancing, the driver verifies the
+prior request's terminal disposition and confirms direct helper children were
+reaped. Pending review, dispatching, Unknown and irrecoverably Unknown liabilities
+cannot be supplied as a completed prefix. An unfunded proposal is retained as
+`NotAdmitted(Limit)` by original admission and does not launch review or refund
+earlier spending.
+
+Send the next proposal after the current result is terminal and use its actual
+current target version and policy epoch. Independent Stop remains available while
+waiting for each request and through the original execution checkpoints; the
+service handles at most one complete actor frame per turn. Source failure on a
+later request cannot reuse earlier evidence. Opening a recorded schedule follows
+the original recovery fence: historical retries do not acquire source evidence,
+launch helpers, repeat human approval or open an activation capsule. Every newly
+selected request must still satisfy current admission and qualification.
 
 ## Exchange explicit request documents
 
@@ -103,6 +146,12 @@ source/time only for a new valid selected proposal; the latter accepts neither
 source nor clock and cannot admit unrecorded work. Both retain original helper
 maintenance and keep source preparation diagnostics outside actor response bytes.
 
+For a bounded schedule, use `drive_tower_sequence_from_file` and
+`drive_tower_sequence_observe` with the current key and completed prefix. Both
+check the exact original owner and the original journal's terminal dispositions
+before socket I/O. They share the native sequence's predecessor validation and
+the same peer session; the completed list is routing data, not settlement evidence.
+
 The socket follows the existing `DriveBudget` / `DriveReport` scheduling contract.
 It holds one bounded input frame, one reply and an 8 KiB unread socket buffer.
 Input stops at the first LF. A buffered next frame cannot execute until the prior
@@ -136,6 +185,13 @@ buffered-frame backpressure, lost replies, reconnect limits, foreign owners,
 owner loss, actual helper/human publication, observation after recovery without
 source, and independent Stop while a client holds a partial frame. Client tests
 cover correlation, strict grammar, short I/O and bounded failure handling.
+
+The sequential increment adds thirteen regression functions: five native socket,
+six complete service and two option-grammar cases. They cover two real
+publications, original cumulative rights, missing later source, historical
+recovery, partial-frame Stop, unretired liabilities, foreign owners and schedule
+preflight. One existing native budget regression is corrected to match original
+pre-review admission. These new and corrected cases have not executed.
 
 Qualified syntax/format and source review are separate from execution evidence.
 RCH is unavailable in the current workspace; compilation, Clippy, runtime tests

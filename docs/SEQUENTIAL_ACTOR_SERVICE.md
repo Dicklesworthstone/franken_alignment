@@ -122,16 +122,35 @@ kernel peer and audience. The test-only wait retries only `NotFound` and
 `ConnectionRefused`; it neither retries credential failures nor removes sockets.
 A stale-socket timeout preserves the original inode beside a permitted peer.
 
-Plan §7.3 reserves effect rights at **Authorize**, after review, rather than at
-proposal admission. The cumulative-budget test therefore completes both reviews:
-totals ten and thirteen permit only the first seven-unit effect and cancel the
-second before dispatch; total fourteen permits both. The original ten-unit case
-retains its exact seven charged, three available and zero reserved assertions.
-The test checks the actual authorization error and terminal journal disposition;
-its former `NotAdmitted` expectation was incorrect and has been replaced.
-No production reservation rule, bound, wire format or deadline changed.
+The October 24 report attributed the cumulative-budget outcome to authorization
+after two reviews. That interpretation does not describe the current ordinary
+admission path. Source review on November 7 confirms that
+`Machine::apply_request` checks requested units against available rights before
+creating an attempt. After the first seven-unit publication, totals ten and
+thirteen therefore retain the second key as `NotAdmitted(Limit)` without another
+review; total fourteen admits both. The native regression is corrected to check
+that disposition, absence of a second attempt and unchanged earlier spending.
+This corrected test source has not executed; the older receipt remains historical
+evidence for its own revision. Plan §8.3's reservation boundary remains
+**Authorize**, after review: the earlier availability check does not reserve
+rights. No production admission, reservation, bound, wire or deadline rule changed.
 
 This is bounded integration-test repair, not a new runtime feature or full
 qualification. The canonical driver still refuses the initial dependency guard;
 complete operator, dependency and Clippy qualification remain open. See
 `IMPLEMENTATION_STATUS.md` for the current execution inventory.
+
+## Tower ingress (2026-11-07)
+
+The four ordinary service modes also accept `--tower-generation GENERATION`
+together with `--requests KEYS`, in either option order after the positional
+arguments. They reuse this same lifecycle with an authenticated Tower peer and
+the shared original predecessor validator. Only the current new key can acquire
+source evidence; tickets and all cumulative transport and authority limits
+survive handoff. Historical retries, both publication keys, independent Stop,
+settlement and confirmed helper reaping retain their original paths.
+
+See the [Tower sequence contract](TOWER_PEER.md#publish-an-explicit-request-sequence)
+for CLI examples and the thirteen new source-reviewed regressions. Qualified
+nightly syntax/format checks completed; RCH compilation, Clippy and execution of
+this increment remain pending.

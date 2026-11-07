@@ -317,3 +317,6 @@ fn independent_stop_remains_live_while_tower_actor_holds_an_incomplete_frame() {
     assert!(!actor.socket.exists());
     assert!(!reviewer.socket(7).exists());
 }
+
+#[path = "tower_service/series.rs"]
+mod series;

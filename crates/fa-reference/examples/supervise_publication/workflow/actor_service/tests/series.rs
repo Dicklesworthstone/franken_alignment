@@ -230,7 +230,8 @@ fn cancellation_during_first_human_wait_does_not_prevent_second_publication() {
 #[test]
 fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
     // Keep the original ten-unit case beside the exact one-short/equal pair.
-    // Plan 7.3 reserves effect rights at Authorize, not proposal admission.
+    // Rights are reserved at Authorize, but ordinary intake first refuses a
+    // proposal whose full cost already exceeds the original available balance.
     for total in [10, 13, 14] {
         let funded = total == 14;
         let root = Directory::new();
@@ -243,17 +244,21 @@ fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
         let p = actor.clone();
         let profile = c.profile.clone();
         let path = c.store.clone();
+        let next_control = crate::workflow::control::socket_path(&reviewer, 8);
         let peer = std::thread::spawn(move || {
             let mut budget = ClientIoBudget::new(ClientIoLimits::default()).unwrap();
             let (stream, response) = finish(connect(&p), first, &mut budget);
             assert!(executed(&response));
+            wait(&next_control);
             let (_, response) = finish(stream, second, &mut budget);
             assert!(matches!(response.result, Ok(Knowledge::Known { value, .. })
-                if value == if funded { ActorOutcome::Executed } else { ActorOutcome::CancelledBeforeDispatch }));
+                if value == if funded { ActorOutcome::Executed } else { ActorOutcome::NotAdmitted }));
         });
         let first_human = human_for(reviewer.clone(), 7);
-        let second_human = human_for(reviewer.clone(), 8);
-        let result = series::serve(
+        // An unfunded ordinary request creates no helper round or human
+        // endpoint. Its recorded refusal is terminal for this same schedule.
+        let second_human = funded.then(|| human_for(reviewer.clone(), 8));
+        series::serve(
             c,
             &actor,
             &reviewer,
@@ -264,15 +269,13 @@ fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
                 credibility: None,
             },
             || ElapsedTick(1000),
-        );
-        if funded {
-            result.unwrap();
-        } else {
-            assert!(result.unwrap_err().contains("Contract(Limit)"));
-        }
+        )
+        .unwrap();
         peer.join().unwrap();
         first_human.join().unwrap();
-        second_human.join().unwrap();
+        if let Some(human) = second_human {
+            human.join().unwrap();
+        }
         let disk = FileOversight::read_publication(&path, &profile).unwrap();
         let charged = if funded { 14 } else { 7 };
         assert_eq!(disk.executions, if funded { 2 } else { 1 });
@@ -287,11 +290,20 @@ fn later_requests_cannot_refill_the_original_cumulative_spending_budget() {
         assert_eq!(disk.control.ledger.charged, charged);
         assert_eq!(disk.control.ledger.available, total - charged);
         assert_eq!(disk.control.ledger.reserved, 0);
+        assert_eq!(disk.control.ledger.stages.len(), if funded { 2 } else { 1 });
+        assert!(disk.stop.is_none());
         assert!(!reviewer.socket(8).exists());
         let (host, _) = FileOversight::open(&path, profile).unwrap();
-        assert!(matches!(host.request_status(8).unwrap().disposition,
-            FileRequestDisposition::Admitted { stage, .. }
-                if stage == if funded { ActionState::Confirmed } else { ActionState::Cancelled }));
+        assert_eq!(host.retained_requests(), 2);
+        if funded {
+            assert!(matches!(host.request_status(8).unwrap().disposition,
+                FileRequestDisposition::Admitted { stage: ActionState::Confirmed, .. }));
+        } else {
+            assert!(matches!(host.request_status(8).unwrap().disposition,
+                FileRequestDisposition::NotAdmitted(Error::Limit)));
+            assert!(matches!(host.request_action(8),
+                Err(JournalError::Contract(Error::WrongState))));
+        }
     }
 }
 

@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-07: sequential publication through the original live Tower service
+
+All four ordinary Tower service modes now accept an explicit `--requests`
+schedule of one to 64 distinct nonzero keys. The first key binds the actor profile;
+grammar and all scheduled socket bindings refuse before persistent setup. The
+existing sequential lifecycle retains one locked owner and Tower session,
+original source admission, fresh helper review, independent human approval, both
+publication keys, witness checks, settlement and confirmed helper reaping.
+
+The new native Tower sequence bridges share the original predecessor validation
+with native actor ingress. Only the current new key acquires source evidence;
+completed keys retain full-proposal retry checks. Pending, dispatching and
+unresolved outcomes cannot advance the schedule. Tickets, exchange/connection/
+candidate allowances, rights and deadlines remain cumulative. Historical recovery
+acquires no new source, helpers, approval or activation capsule. Independent Stop
+keeps its original checkpoints, including a partial next actor frame.
+
+Thirteen new regression functions cover native socket scheduling, two real
+publications, cumulative-budget refusal, historical recovery, later source loss,
+partial-frame Stop and grammar/preflight boundaries. One existing native budget
+test is corrected to match current original admission: an unfunded proposal is
+retained as `NotAdmitted(Limit)` before review; authorization remains the later
+reservation boundary. Production admission and accounting rules are unchanged.
+
+Independent source review, qualified nightly-2026-09-08 syntax parsing and
+changed-range formatting completed. RCH remains unavailable, so compilation,
+Clippy, these new/corrected runtime regressions and the complete gate remain
+pending. This increment does not close the broad dispatcher or execution beads.
+See [the service contract](docs/TOWER_PEER.md#publish-an-explicit-request-sequence).
+
 ## 2026-11-07: original native admission explanations through Tower
 
 A separately issued, weak explanation port now reconstructs exact-policy

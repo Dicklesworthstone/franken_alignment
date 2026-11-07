@@ -38,7 +38,12 @@ pub(super) fn take_option(args: &[String]) -> Result<(&[String], Option<Vec<u64>
             "use a final --requests comma-separated-keys option after all positionals".into(),
         );
     }
-    let text = &args[index + 1];
+    Ok((&args[..index], Some(parse_requests(&args[index + 1])?)))
+}
+
+/// One closed schedule grammar shared by native and Tower service selection.
+/// This parses bounded operator data only and performs no file or owner work.
+pub(super) fn parse_requests(text: &str) -> Result<Vec<u64>, String> {
     if text.len() > FileSupervisedDriver::MAX_REQUEST_SEQUENCE * 21 {
         return Err("request schedule is too large".into());
     }
@@ -60,7 +65,7 @@ pub(super) fn take_option(args: &[String]) -> Result<(&[String], Option<Vec<u64>
         }
         requests.push(key);
     }
-    Ok((&args[..index], Some(requests)))
+    Ok(requests)
 }
 
 fn validate(requests: &[u64], actor: &Profile, reviewer: &PeerProfile) -> Result<(), String> {
@@ -89,11 +94,63 @@ fn validate(requests: &[u64], actor: &Profile, reviewer: &PeerProfile) -> Result
 }
 
 pub(super) fn serve<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_ingress(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        None,
+        time,
+    )
+}
+
+/// The common Tower transport changes only the original schedule's ingress.
+/// Every selected request still passes the same source, review, human approval,
+/// publication, settlement and confirmed-child-reaping boundaries below.
+pub(super) fn serve_tower<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    generation: u64,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    if generation == 0 {
+        return Err("Tower registration generation must be nonzero".into());
+    }
+    serve_ingress(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        Some(generation),
+        time,
+    )
+}
+
+fn serve_ingress<F>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
     options: Options<'_>,
+    tower_generation: Option<u64>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -122,20 +179,7 @@ where
     actor.secure_socket()?;
     let (host, reviewer) = prepare_host(&config, publication, open)?;
     let (port, mut driver) = host.into_supervised_driver();
-    let session = PeerSession::new(
-        actor.actor,
-        ActorWire::new(port),
-        actor.channels(),
-        actor.connections,
-    )
-    .map_err(debug)?;
-    let mut ingress = Intake {
-        socket,
-        session,
-        selected: requests[0],
-        attempted: 0,
-        maximum: actor.candidates,
-    };
+    let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
     // Copy only immutable, bounded launch recipes per NEW review. Never duplicate
     // a child, socket, captured input, vote, approval or effect capability.
     let programs = std::mem::take(&mut config.programs);
@@ -149,7 +193,7 @@ where
     );
     let work: Result<(), String> = (|| {
         for (index, &request) in requests.iter().enumerate() {
-            ingress.selected = request;
+            ingress.select(request);
             deadline.check(time())?;
             let recorded = {
                 let host = driver.supervisor().host().map_err(debug)?;
@@ -196,23 +240,9 @@ where
                     if early_control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                         return Ok(());
                     }
-                    ingress.accept()?;
-                    if ingress.session.status().active.is_some() {
-                        let report = driver
-                            .drive_peer_sequence_from_file(
-                                &mut ingress.session,
-                                request,
-                                &completed,
-                                &mut config.source,
-                                &mut time,
-                                drive_budget(),
-                            )
-                            .map_err(debug)?;
-                        frames_seen = frames_seen.saturating_add(report.drive.progress.frames);
-                        if report.drive.status.closed() {
-                            ingress.session.disconnect();
-                        }
-                    }
+                    frames_seen = frames_seen.saturating_add(ingress.admit_sequence(
+                        &mut driver, &completed, &mut config.source, &mut time,
+                    )?);
                     match driver
                         .supervisor()
                         .host()
@@ -334,7 +364,7 @@ where
     })();
     let mut failure =
         work.err().map(
-            |error| match stop(&mut driver, ingress.selected, &mut time) {
+            |error| match stop(&mut driver, ingress.selected(), &mut time) {
                 Ok(()) => error,
                 Err(stopping) => format!("{error}; stop/drain: {stopping}"),
             },
@@ -349,7 +379,7 @@ where
         }
         pause(actor.poll_ms);
     }
-    ingress.session.revoke();
+    ingress.revoke();
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     if let Some(error) = failure {
         return Err(format!("{error}; helper cleanup pending={pending}"));
@@ -360,32 +390,6 @@ where
         ));
     }
     Ok(())
-}
-
-impl Intake {
-    fn observe_sequence(
-        &mut self,
-        driver: &mut FileSupervisedDriver,
-        completed: &[u64],
-    ) -> Result<usize, String> {
-        self.accept()?;
-        if self.session.status().active.is_some() {
-            let report = driver
-                .drive_peer_sequence_observe(
-                    &mut self.session,
-                    self.selected,
-                    completed,
-                    drive_budget(),
-                )
-                .map_err(debug)?;
-            if report.status.closed() {
-                self.session.disconnect();
-            }
-            Ok(report.progress.frames)
-        } else {
-            Ok(0)
-        }
-    }
 }
 
 #[cfg(test)]

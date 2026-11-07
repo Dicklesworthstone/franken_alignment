@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS]";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -31,6 +31,7 @@ struct Arguments<'a> {
     publication: Option<&'a Path>,
     open: bool,
     generation: u64,
+    requests: Option<Vec<u64>>,
 }
 
 impl<'a> Arguments<'a> {
@@ -43,27 +44,42 @@ impl<'a> Arguments<'a> {
             _ => return Err(USAGE.into()),
         };
         let positional = if checked { 5 } else { 4 };
-        if args.len() != positional + 2
-            || args[positional] != FLAG
+        if (args.len() != positional + 2 && args.len() != positional + 4)
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
         {
             return Err(USAGE.into());
         }
-        let value = &args[positional + 1];
-        if value.is_empty()
-            || value.len() > 20
-            || value.starts_with('0')
-            || !value.bytes().all(|byte| byte.is_ascii_digit())
-        {
-            return Err(
-                "Tower registration generation must be a nonzero canonical decimal u64".into(),
-            );
+        let mut generation = None;
+        let mut requests = None;
+        for pair in args[positional..].chunks_exact(2) {
+            match pair[0].as_str() {
+                FLAG if generation.is_none() => {
+                    let value = &pair[1];
+                    if value.is_empty()
+                        || value.len() > 20
+                        || value.starts_with('0')
+                        || !value.bytes().all(|byte| byte.is_ascii_digit())
+                    {
+                        return Err(
+                            "Tower registration generation must be a nonzero canonical decimal u64"
+                                .into(),
+                        );
+                    }
+                    generation = Some(
+                        value
+                            .parse()
+                            .map_err(|_| "Tower registration generation exceeds u64".to_owned())?,
+                    );
+                }
+                "--requests" if requests.is_none() => {
+                    requests = Some(super::series::parse_requests(&pair[1])?);
+                }
+                _ => return Err(USAGE.into()),
+            }
         }
-        let generation = value
-            .parse()
-            .map_err(|_| "Tower registration generation exceeds u64".to_owned())?;
+        let generation = generation.ok_or(USAGE)?;
         Ok(Self {
             config: Path::new(&args[1]),
             actor: Path::new(&args[2]),
@@ -71,6 +87,7 @@ impl<'a> Arguments<'a> {
             publication: checked.then(|| Path::new(&args[4])),
             open,
             generation,
+            requests,
         })
     }
 }
@@ -89,6 +106,21 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         .publication
         .map(PublicationProfile::read)
         .transpose()?;
+    if let Some(requests) = selected.requests.as_deref() {
+        return super::series::serve_tower(
+            config,
+            &actor,
+            &reviewer,
+            publication.as_ref(),
+            super::series::Options {
+                requests,
+                open: selected.open,
+                credibility,
+            },
+            selected.generation,
+            super::super::clock,
+        );
+    }
     serve_selected_ingress(
         config,
         &actor,
@@ -247,6 +279,125 @@ impl SelectedIngress {
                     .drive_tower_request_observe(
                         &mut intake.session,
                         intake.selected,
+                        drive_budget(),
+                    )
+                    .map_err(debug)?;
+                if report.status.closed() {
+                    intake.session.disconnect();
+                }
+                Ok(report.progress.frames)
+            }
+        }
+    }
+
+    /// Advance only the operator's validated schedule selection. Neither arm
+    /// replaces its original session, tickets, credentials or lifetime quotas.
+    pub(super) fn select(&mut self, request: u64) {
+        match &mut self.kind {
+            Kind::Native(intake) => intake.selected = request,
+            Kind::Tower(intake) => intake.selected = request,
+        }
+    }
+
+    pub(super) fn selected(&self) -> u64 {
+        match &self.kind {
+            Kind::Native(intake) => intake.selected,
+            Kind::Tower(intake) => intake.selected,
+        }
+    }
+
+    pub(super) fn admit_sequence<S, F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        completed: &[u64],
+        source: &mut S,
+        time: &mut F,
+    ) -> Result<usize, String>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        match &mut self.kind {
+            Kind::Native(intake) => {
+                intake.accept()?;
+                if intake.session.status().active.is_none() {
+                    return Ok(0);
+                }
+                let report = driver
+                    .drive_peer_sequence_from_file(
+                        &mut intake.session,
+                        intake.selected,
+                        completed,
+                        source,
+                        time,
+                        drive_budget(),
+                    )
+                    .map_err(debug)?;
+                if report.drive.status.closed() {
+                    intake.session.disconnect();
+                }
+                Ok(report.drive.progress.frames)
+            }
+            Kind::Tower(intake) => {
+                intake.accept()?;
+                if intake.session.status().active.is_none() {
+                    return Ok(0);
+                }
+                let report = driver
+                    .drive_tower_sequence_from_file(
+                        &mut intake.session,
+                        intake.selected,
+                        completed,
+                        source,
+                        time,
+                        drive_budget(),
+                    )
+                    .map_err(debug)?;
+                if report.drive.status.closed() {
+                    intake.session.disconnect();
+                }
+                Ok(report.drive.progress.frames)
+            }
+        }
+    }
+
+    /// The original observation path remains source-free during review,
+    /// recovery and final grace. Complete predecessors are rechecked by the
+    /// same native owner before entering either transport.
+    pub(super) fn observe_sequence(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        completed: &[u64],
+    ) -> Result<usize, String> {
+        match &mut self.kind {
+            Kind::Native(intake) => {
+                intake.accept()?;
+                if intake.session.status().active.is_none() {
+                    return Ok(0);
+                }
+                let report = driver
+                    .drive_peer_sequence_observe(
+                        &mut intake.session,
+                        intake.selected,
+                        completed,
+                        drive_budget(),
+                    )
+                    .map_err(debug)?;
+                if report.status.closed() {
+                    intake.session.disconnect();
+                }
+                Ok(report.progress.frames)
+            }
+            Kind::Tower(intake) => {
+                intake.accept()?;
+                if intake.session.status().active.is_none() {
+                    return Ok(0);
+                }
+                let report = driver
+                    .drive_tower_sequence_observe(
+                        &mut intake.session,
+                        intake.selected,
+                        completed,
                         drive_budget(),
                     )
                     .map_err(debug)?;

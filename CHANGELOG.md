@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-07: serve bounded sequential publications through Tower
+
+- Accept explicit `--requests` schedules in all four ordinary Tower service
+  modes, sharing the original sequential service lifecycle and authority owner.
+- Admit fresh source evidence only for the selected current key; verify prior
+  terminal dispositions and helper reaping before advancing. Preserve tickets,
+  cumulative transport/rights limits, both publication keys and independent Stop.
+- Add thirteen socket, service and grammar regression functions covering actual
+  publications, historical recovery, budget refusal, source failure and unresolved
+  liabilities. Correct one existing native admission-budget expectation without
+  changing production admission or accounting rules.
+- Complete independent source review and qualified syntax/format checks; required
+  RCH compilation, Clippy, runtime tests and the full gate remain pending.
+
 ## 2026-11-07: explain original native policy admissions through Tower
 
 - Add a separate revocable supervisor explanation capability with shared query

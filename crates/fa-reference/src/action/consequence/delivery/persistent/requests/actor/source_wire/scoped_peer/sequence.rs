@@ -55,6 +55,21 @@ impl FileActorSupervisor<FileOversight> {
         completed: &[u64],
     ) -> Result<(), JournalError> {
         self.check_selected_peer(session, request)?;
+        self.check_request_sequence(request, completed)
+    }
+
+    /// Shared predecessor law for native and Tower transports. A caller's
+    /// completed list is routing data, never evidence that an outcome settled.
+    /// Each predecessor must be terminal in this original healthy owner before
+    /// either transport consumes bytes or acquires a fresh source observation.
+    pub(crate) fn check_request_sequence(
+        &self,
+        request: u64,
+        completed: &[u64],
+    ) -> Result<(), JournalError> {
+        if request == 0 {
+            return Err(Error::InvalidInput.into());
+        }
         if completed.len() >= FileSupervisedDriver::MAX_REQUEST_SEQUENCE {
             return Err(Error::Limit.into());
         }

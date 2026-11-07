@@ -16,6 +16,7 @@ fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
         assert_eq!(parsed.generation, u64::MAX);
         assert_eq!(parsed.config, Path::new("path-1"));
         assert_eq!(parsed.publication.is_some(), count == 5);
+        assert!(parsed.requests.is_none());
     }
 }
 
@@ -32,16 +33,6 @@ fn tower_selection_cannot_be_silently_consumed_by_another_service_grammar() {
             "1",
             FLAG,
             "2",
-        ],
-        vec![
-            "serve-create",
-            "config",
-            "actor",
-            "reviewer",
-            "--requests",
-            "7,8",
-            FLAG,
-            "1",
         ],
         vec![
             "serve-open",
@@ -159,5 +150,123 @@ fn tower_selection_cannot_be_silently_consumed_by_another_service_grammar() {
         .map(str::to_owned)
         .collect();
         assert!(Arguments::parse(&args).is_err());
+    }
+}
+
+#[test]
+fn explicit_tower_schedule_uses_the_original_bounded_key_grammar() {
+    for mode in [
+        "serve-create",
+        "serve-open",
+        "serve-create-checked",
+        "serve-open-checked",
+    ] {
+        for generation_first in [false, true] {
+            let mut args: Vec<String> = [mode, "config", "actor", "reviewer"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect();
+            if mode.ends_with("-checked") {
+                args.push("witness".into());
+            }
+            let options = if generation_first {
+                [FLAG, "41", "--requests", "7,8,18446744073709551615"]
+            } else {
+                ["--requests", "7,8,18446744073709551615", FLAG, "41"]
+            };
+            args.extend(options.into_iter().map(str::to_owned));
+            let selected = Arguments::parse(&args).unwrap();
+            assert_eq!(selected.generation, 41);
+            assert_eq!(selected.requests, Some(vec![7, 8, u64::MAX]));
+        }
+    }
+    let mut args: Vec<String> = [
+        "serve-create",
+        "config",
+        "actor",
+        "reviewer",
+        FLAG,
+        "41",
+        "--requests",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect();
+    args.push(
+        (1..=64)
+            .map(|key| key.to_string())
+            .collect::<Vec<_>>()
+            .join(","),
+    );
+    assert_eq!(Arguments::parse(&args).unwrap().requests.unwrap().len(), 64);
+    args.last_mut().unwrap().push_str(",65");
+    assert!(Arguments::parse(&args).is_err());
+}
+
+#[test]
+fn malformed_tower_schedules_and_mixed_profiles_refuse_before_reading_files() {
+    for keys in [
+        "",
+        "0",
+        "7,0",
+        "07,8",
+        "7,7",
+        "7,",
+        "7,,8",
+        "+7",
+        "7, 8",
+        "18446744073709551616",
+    ] {
+        let args: Vec<_> = [
+            "serve-create",
+            "unread-config",
+            "unread-actor",
+            "unread-reviewer",
+            FLAG,
+            "41",
+            "--requests",
+            keys,
+        ]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+        let expected = Arguments::parse(&args).err().unwrap();
+        assert_eq!(super::super::command(&args, None).unwrap_err(), expected);
+    }
+    for suffix in [
+        vec![FLAG, "41", "--requests"],
+        vec![FLAG, "41", "--requests", "7,8", "--requests", "9"],
+        vec![FLAG, "41", "--requests", "7,8", FLAG, "42"],
+        vec![
+            FLAG,
+            "41",
+            "--requests",
+            "7,8",
+            "--precheck-profile",
+            "unread",
+        ],
+        vec![FLAG, "41", "--requests", "7,8", "--peers", "unread"],
+        vec![
+            FLAG,
+            "41",
+            "--requests",
+            "7,8",
+            "--topology-profile",
+            "unread",
+        ],
+        vec![FLAG, "41", "--requests", "7,8", "--receipts-only"],
+    ] {
+        let args: Vec<_> = [
+            "serve-open",
+            "unread-config",
+            "unread-actor",
+            "unread-reviewer",
+        ]
+        .into_iter()
+        .chain(suffix)
+        .map(str::to_owned)
+        .collect();
+        let expected = Arguments::parse(&args).err().unwrap();
+        assert_eq!(super::super::command(&args, None).unwrap_err(), expected);
     }
 }

@@ -43,7 +43,7 @@ use super::CLOCK_DOMAIN;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; all serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary single-request serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS in either option order after all positionals; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read

@@ -60,6 +60,69 @@ impl FileActorSupervisor<FileOversight> {
         })?)
     }
 
+    /// Advance an explicit bounded schedule on the same Tower session. Only
+    /// the current selected key can acquire fresh source evidence. Completed
+    /// predecessors must be terminal in the original owner and remain exact
+    /// retries; future or unlisted keys cannot consume an admission snapshot.
+    pub fn drive_tower_sequence_from_file<S, F>(
+        &mut self,
+        session: &mut PublicationPeerSession,
+        request: u64,
+        completed: &[u64],
+        source: &mut S,
+        mut clock: F,
+        budget: DriveBudget,
+    ) -> Result<FileActorPeerDrive, FileActorPeerDriveError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        self.check_selected_tower_peer(session, request)?;
+        self.check_request_sequence(request, completed)?;
+        let mut intakes = Vec::new();
+        let drive = session.drive_with_admission(budget, |_, selected, _| {
+            if selected != request {
+                // The original journal checked this prefix before socket I/O.
+                // Native submit still compares the complete retained proposal.
+                return if completed.contains(&selected) {
+                    Ok(())
+                } else {
+                    Err(ActorError::Withheld)
+                };
+            }
+            let mut intake = None;
+            let result = self.prepare_wire_submission(selected, source, &mut clock, &mut intake);
+            if let Some(report) = intake {
+                intakes.push(report);
+            }
+            result
+        })?;
+        Ok(FileActorPeerDrive { drive, intakes })
+    }
+
+    /// Observe current and completed selected requests without source or time.
+    /// No snapshot, exact prior response or reconnect can admit an unrecorded
+    /// request through this path or replenish the original session allowance.
+    pub fn drive_tower_sequence_observe(
+        &mut self,
+        session: &mut PublicationPeerSession,
+        request: u64,
+        completed: &[u64],
+        budget: DriveBudget,
+    ) -> Result<DriveReport, FileActorPeerDriveError> {
+        self.check_selected_tower_peer(session, request)?;
+        self.check_request_sequence(request, completed)?;
+        Ok(session.drive_with_admission(budget, |_, selected, _| {
+            if selected != request && !completed.contains(&selected) {
+                return Err(ActorError::Withheld);
+            }
+            match self.host().and_then(|host| host.request_status(selected)) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(ActorError::Unavailable),
+            }
+        })?)
+    }
+
     fn check_selected_tower_peer(
         &self,
         session: &PublicationPeerSession,
@@ -101,6 +164,40 @@ impl FileSupervisedDriver {
         let result = self
             .supervisor_mut()
             .drive_tower_request_observe(session, request, budget);
+        self.reap_helpers();
+        result
+    }
+
+    pub fn drive_tower_sequence_from_file<S, F>(
+        &mut self,
+        session: &mut PublicationPeerSession,
+        request: u64,
+        completed: &[u64],
+        source: &mut S,
+        clock: F,
+        budget: DriveBudget,
+    ) -> Result<FileActorPeerDrive, FileActorPeerDriveError>
+    where
+        S: EvidenceFile + ?Sized,
+        F: FnMut() -> ElapsedTick,
+    {
+        let result = self
+            .supervisor_mut()
+            .drive_tower_sequence_from_file(session, request, completed, source, clock, budget);
+        self.reap_helpers();
+        result
+    }
+
+    pub fn drive_tower_sequence_observe(
+        &mut self,
+        session: &mut PublicationPeerSession,
+        request: u64,
+        completed: &[u64],
+        budget: DriveBudget,
+    ) -> Result<DriveReport, FileActorPeerDriveError> {
+        let result = self
+            .supervisor_mut()
+            .drive_tower_sequence_observe(session, request, completed, budget);
         self.reap_helpers();
         result
     }

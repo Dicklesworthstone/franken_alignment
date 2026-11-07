@@ -68,8 +68,11 @@ independent source review; compilation and execution remain pending.
 
 The [live Tower publication service](docs/TOWER_PEER.md) connects this protocol
 to the original Linux `supervise_publication` workflow. Ordinary serve modes
-accept `--tower-generation`; `tower-exchange` sends bounded request-file
-sequences through authenticated sockets. New selected proposals acquire fresh
+accept `--tower-generation` and an optional bounded `--requests 7,8` schedule;
+`tower-exchange` sends explicit request-file sequences through authenticated
+sockets. Sequential publications share the original owner, tickets and cumulative
+budgets, with terminal settlement and confirmed helper reaping before handoff.
+New selected proposals acquire fresh
 native source evidence, while review, independent Stop, both publication keys,
 polling and durable recovery retain their original owners. Replies preserve
 uncertainty, and reconnects retain tickets and spent exchange limits. The new

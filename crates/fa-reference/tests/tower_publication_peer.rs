@@ -504,3 +504,6 @@ fn retained_peer_ticket_reports_original_owner_loss_after_journal_reopen() {
     // Keep the extra original port through recovery and observation as well.
     drop(retained_port);
 }
+
+#[path = "tower_publication_peer/sequence.rs"]
+mod sequence;

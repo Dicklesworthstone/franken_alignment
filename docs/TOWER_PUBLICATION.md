@@ -72,6 +72,13 @@ retaining normal ticket-scoped reads. An unused snapshot cannot turn this
 observation phase into new admission. Driver wrappers always perform the
 original helper maintenance after the operation, including failures.
 
+The authenticated peer also supports `drive_tower_sequence_from_file` and
+`drive_tower_sequence_observe` for an explicit schedule of at most 64 distinct
+keys. Only the current new key can acquire evidence; completed predecessors must
+be terminal in the original journal before socket I/O. Tickets and all finite
+session allowances survive the handoff. The [live Tower service](TOWER_PEER.md#publish-an-explicit-request-sequence)
+connects this ingress to the original sequential review/publication lifecycle.
+
 ## Inspect exact policy before proposing
 
 Precheck defaults to unavailable. The supervisor explicitly issues an original
