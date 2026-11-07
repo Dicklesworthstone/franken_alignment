@@ -285,6 +285,17 @@ fn real_operator_hashes_verify_exact_baseline_source_bytes() {
 }
 
 #[test]
+fn checked_in_snapshot_binds_the_complete_current_workspace() {
+    // Read the checked-in operator inputs at run time: embedding either file
+    // would introduce a self-referential snapshot. Do not regenerate a manifest
+    // here; the regression must catch stale bindings, the wrong files schema,
+    // omitted source inputs and limits that no longer cover the real checkout.
+    let root = crate::workspace_root().expect("actual invocation workspace");
+    crate::check_source_snapshot(&root)
+        .expect("the checked-in reviewed snapshot and policy must verify the frozen source tree");
+}
+
+#[test]
 fn changed_source_bytes_are_a_digest_mismatch() {
     let sandbox = Sandbox::new();
     let manifest = sandbox.manifest_bytes();

@@ -1,5 +1,27 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-07: restore the canonical current-source snapshot input
+
+The checked-in `fa.source_snapshot/1` manifest again uses the verifier's
+path-to-digest object schema and exactly the selected source/build-input set.
+Its dependency-policy digest binds these bytes. The old record array omitted
+current inputs, included unrelated paths and retained stale hashes; converting
+its shape alone would not have repaired the gate. No package, donor, feature,
+runtime effect or target is newly admitted by this source-identity repair.
+
+The default file bound now uses the existing 4,096-file ceiling because the
+selected closure exceeds 2,048 files. The 2 MiB manifest default, depth-sixteen
+bound, traversal ceiling and all hard limits remain unchanged. New regression
+sources cover the exact schema, exact/one-over file bounds, tighter caller
+bounds, and the checked-in manifest through the original complete snapshot gate.
+Existing equal-set, changed-byte, path and nonregular-file checks are preserved.
+
+Independent inventory/digest checks and source review are separate from Rust
+execution. The required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p
+xtask -- check` cannot start because RCH is absent. Compilation, Clippy, runtime
+regressions and complete dependency/deployment qualification remain pending;
+neither the P0 bridge nor a broader admission packet is closed.
+
 ## 2026-11-06: privileged live Tower situations from the original native owner
 
 The original file supervisor now explicitly issues a weak inspection port and

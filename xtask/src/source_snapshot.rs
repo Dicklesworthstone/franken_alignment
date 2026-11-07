@@ -105,7 +105,9 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Limits {
-            max_files: 2048,
+            // The reviewed closure now exceeds 2,048 files. Use the existing
+            // finite file ceiling; byte, depth and traversal bounds are unchanged.
+            max_files: MAX_FILES_CEILING,
             max_depth: 16,
             max_manifest_bytes: 2 * 1024 * 1024,
         }
@@ -1305,7 +1307,7 @@ mod tests {
         assert_eq!(
             Limits::default(),
             Limits {
-                max_files: 2048,
+                max_files: 4096,
                 max_depth: 16,
                 max_manifest_bytes: 2 * 1024 * 1024,
             },
@@ -1362,6 +1364,85 @@ mod tests {
         let manifest = br#"{"schema":"fa.source_snapshot/9","files":{"a.rs":"aa"}}"#;
         let error = parse_manifest(manifest, Limits::default()).expect_err("must fail");
         assert!(error.contains("schema"), "{error}");
+    }
+
+    #[test]
+    fn file_record_arrays_do_not_replace_the_canonical_path_digest_object() {
+        let digest = "a".repeat(64);
+        let canonical = format!(
+            r#"{{"schema":"fa.source_snapshot/1","files":{{"Cargo.toml":"{digest}"}}}}"#
+        );
+        let manifest = parse_manifest(canonical.as_bytes(), Limits::default())
+            .expect("the canonical path-to-digest object is admitted");
+        assert_eq!(manifest.digest("Cargo.toml"), Some(digest.as_str()));
+
+        let records = format!(
+            r#"{{"schema":"fa.source_snapshot/1","files":[{{"path":"Cargo.toml","bytes":1,"sha256":"{digest}"}}]}}"#
+        );
+        let error = parse_manifest(records.as_bytes(), Limits::default())
+            .expect_err("record arrays are not fa.source_snapshot/1 manifests");
+        assert_eq!(error, "manifest `files` is not an object");
+    }
+
+    fn counted_manifest(file_count: usize) -> Vec<u8> {
+        let digest = "a".repeat(64);
+        let files = (0..file_count)
+            .map(|index| format!("\"source-{index}.rs\":\"{digest}\""))
+            .collect::<Vec<_>>()
+            .join(",");
+        format!(r#"{{"schema":"fa.source_snapshot/1","files":{{{files}}}}}"#).into_bytes()
+    }
+
+    #[test]
+    fn manifest_file_count_accepts_the_finite_ceiling_and_refuses_one_more() {
+        let admitted = counted_manifest(MAX_FILES_CEILING);
+        let manifest = parse_manifest(&admitted, Limits::default())
+            .expect("the current workspace-scale default admits the exact finite ceiling");
+        assert_eq!(manifest.entries.len(), MAX_FILES_CEILING);
+
+        let excess = counted_manifest(MAX_FILES_CEILING + 1);
+        for limits in [
+            Limits::default(),
+            Limits {
+                max_files: usize::MAX,
+                ..Limits::default()
+            },
+        ] {
+            let error = parse_manifest(&excess, limits)
+                .expect_err("neither the default nor an oversized caller bound may exceed the cap");
+            assert_eq!(error, "manifest names 4097 files, over the limit of 4096");
+        }
+    }
+
+    #[test]
+    fn a_caller_can_still_tighten_the_manifest_file_and_byte_limits() {
+        let manifest = counted_manifest(2);
+        let limits = Limits {
+            max_files: 2,
+            max_manifest_bytes: manifest.len(),
+            ..Limits::default()
+        };
+        assert!(parse_manifest(&manifest, limits).is_ok());
+
+        let file_error = parse_manifest(
+            &manifest,
+            Limits {
+                max_files: 1,
+                ..limits
+            },
+        )
+        .expect_err("one less file than the unchanged document must refuse");
+        assert_eq!(file_error, "manifest names 2 files, over the limit of 1");
+
+        let byte_error = parse_manifest(
+            &manifest,
+            Limits {
+                max_manifest_bytes: manifest.len() - 1,
+                ..limits
+            },
+        )
+        .expect_err("one less byte than the unchanged document must refuse");
+        assert!(byte_error.contains("byte limit"), "{byte_error}");
     }
 
     #[test]
@@ -1529,7 +1610,9 @@ mod tests {
         let limits = Limits::default();
         assert_eq!(limits.max_files, MAX_FILES_CEILING);
         assert_eq!(limits.max_depth, MAX_DEPTH_CEILING);
-        assert_eq!(limits.max_manifest_bytes, MAX_MANIFEST_BYTES_CEILING);
+        // A default is allowed to be tighter than its hard ceiling. Only the
+        // file-count default needed expansion for the actual reviewed closure.
+        assert_eq!(limits.max_manifest_bytes, 2 * 1024 * 1024);
         let depth_16 = "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/text/intake/wire_tests/policy_tests/pipeline.rs";
         assert_eq!(depth_16.split('/').count(), 16);
         assert!(check_relative_path(depth_16, limits).is_ok());

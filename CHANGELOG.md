@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-07: repair the source snapshot gate's actual input
+
+- Restore the canonical path-to-digest manifest for the complete declared source
+  and build-input set, with a matching dependency-policy digest.
+- Raise only the default file count to its existing finite ceiling; preserve
+  byte, depth, traversal, path and equal-set refusal boundaries.
+- Add schema/boundary regressions and a live-checkout regression through the
+  original snapshot gate. Source/digest review does not replace the pending
+  RCH compiler, Clippy and runtime gate; no dependency admission is broadened.
+
 ## 2026-11-06: inspect live native liabilities through a revocable Tower grant
 
 - Add a separately issued, weak supervisor inspection capability with shared
