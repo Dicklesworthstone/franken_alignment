@@ -73,3 +73,13 @@ canonical changes during the final clock, and all five storage barriers with
 post-failure recovery. Fourteen regression functions and two compile-fail examples
 are now authored in total, NOT executed. The second targeted and full RCH launches
 also stop before compilation with exit 127 because `rch` is absent.
+
+For independently retained topology-source work, use
+`finish_reconciled_with_checkpoint(&saved, clock)`. The same complete cursor
+checks the exact saved source/history cut and prepares bounded copies before
+the original clock or replacement. It returns the original reconciled owner
+alongside a checkpoint sealed by that same acknowledgment. Spent work, source
+documents and last operation remain unchanged; floors advance and the native
+fence withdraws availability. No current source read or second replay occurs.
+See [ordinary reconciled checkpoint successors](TOPOLOGY_WORK_CHECKPOINT.md#ordinary-reconciled-checkpoint-successors)
+for exact-cut refusal, custody and verification limits.

@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: retain native source custody through ordinary mediated recovery
+
+`FileMediatedRecovery::finish_reconciled_with_checkpoint` now returns the
+original acknowledged owner, separate mediated roles and reconciliation outcomes
+alongside an exact successor topology checkpoint. It consumes the same complete
+locked cursor and original atomic Fence/Time/Sweep engine. The checkpoint's
+owner/profile/history, topology, availability and native floors are checked
+before the clock, with bounded source copies prepared before mutation.
+
+The original acknowledgment supplies the successor's exact history anchor.
+Source documents, limits, spent work and last source operation remain unchanged;
+the native fence withdraws availability and advances owner floors. No source
+read, helper invocation, additional replay or effect resend is introduced.
+Repeated receipt-only recovery can retain exact custody even when live source
+files are absent. Fresh publication still needs the original newer topology
+and inventory, fresh checks and independent review. Unknown liabilities remain
+explicit outcomes, and durable archive retention remains separate.
+
+Four new native regression functions cover zero/spent work and repeated archive
+round trips, stale ordinary/source cuts, foreign owner and mismatched graph,
+availability, floors and work, stale/unwinding clocks, and canonical races.
+Independent source review and Rust 2024 syntax/format checking use the
+unqualified rustfmt 1.10.0-nightly (9085017724, 2026-08-30). Required remote
+compilation, Clippy, runtime tests and the complete RCH gate remain pending;
+no bead or packet is closed. See the [checkpoint contract](docs/TOPOLOGY_WORK_CHECKPOINT.md#ordinary-reconciled-checkpoint-successors).
+
 ## 2026-11-08: preserve enforced topology through live Tower creation
 
 `serve-create` and `serve-create-checked` now compose an explicit Tower

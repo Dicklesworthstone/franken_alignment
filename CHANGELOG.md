@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-08: retain topology checkpoints through ordinary reconciled recovery
+
+- Add a native mediated recovery finalizer returning the original owner and an
+  exact source checkpoint from the same acknowledged Fence/Time/Sweep.
+- Validate the complete independent source/history cut before the clock or
+  mutation; preserve original spent work and source documents without reading
+  current files, rerunning helpers, replaying history twice or resending effects.
+- Keep old liabilities, separate roles, native capacity/persistence barriers
+  and independent archive acknowledgment explicit. Stale source cuts refuse.
+- Add four native regression functions and independent source review. Syntax
+  and formatting checks do not substitute for pending remote compilation and
+  runtime execution.
+
 ## 2026-11-08: compose live Tower creation with enforced topology
 
 - Select the original topology lifecycle from both Tower create modes, including

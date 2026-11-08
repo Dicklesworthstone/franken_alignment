@@ -88,6 +88,26 @@ impl FileGuardedRecovery {
     where
         F: FnOnce() -> ElapsedTick,
     {
+        let recovered =
+            self.finish_reconciled_history_checked(clock, |run| check(run).map_err(Into::into))?;
+        let roles = FileOversightRoles::provision(&recovered.owner, recovered.human);
+        Ok(ReconciledGuardedOwner {
+            owner: recovered.owner,
+            roles,
+            outcomes: recovered.outcomes,
+        })
+    }
+
+    // The original locked cursor seals the acknowledged history for closed
+    // checkpoint composition. No snapshot/anchor constructor is made public.
+    pub(super) fn finish_reconciled_history_checked<F>(
+        self,
+        clock: F,
+        check: impl FnOnce(&Self) -> Result<(), JournalError>,
+    ) -> Result<ReconciledHistory, JournalError>
+    where
+        F: FnOnce() -> ElapsedTick,
+    {
         match self.status {
             FileGuardedRecoveryStatus::Ready => {}
             FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
@@ -96,10 +116,7 @@ impl FileGuardedRecovery {
         }
         check(&self)?;
         let Self { profile, store, canonical, events, machine, .. } = self;
-        let recovered = FileOversight::finish_reconciled_history(
-            profile, store, events, machine, canonical, clock)?;
-        let roles = FileOversightRoles::provision(&recovered.owner, recovered.human);
-        Ok(ReconciledGuardedOwner { owner: recovered.owner, roles, outcomes: recovered.outcomes })
+        FileOversight::finish_reconciled_history(profile, store, events, machine, canonical, clock)
     }
 }
 

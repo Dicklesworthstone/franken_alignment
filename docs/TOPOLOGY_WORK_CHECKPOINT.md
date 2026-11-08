@@ -73,6 +73,45 @@ A failed source read preserves native withdrawal and expenditure; an old cut or
 effect key is never restored. Capture a successor only from the healthy original
 owner. This adds library integration, not automatic CLI checkpoint export/import.
 
+## Ordinary reconciled checkpoint successors
+
+`FileMediatedRecovery::finish_reconciled_with_checkpoint(&saved, clock)` carries
+an independently retained source checkpoint through the original atomic
+`Fence -> Time -> Sweep`. It returns the same `ReconciledMediatedOwner` and a
+successor `TopologyCheckpoint`, preserving separately held roles and every
+native reconciliation outcome. Callers must inspect those outcomes before
+starting new work; a checkpoint does not resolve an unknown effect.
+
+The complete original recovery cursor checks its mediated requirements and the
+checkpoint's exact pre-recovery cut before calling the trusted clock. Original
+owner/profile/prefix, topology, availability and floors must agree. A checkpoint
+that predates even an ordinary time observation refuses, as does one preceding
+additional source work. Source-document copies are prepared before mutation.
+The successor receives the exact encoded history anchor from the acknowledged
+native replacement while the same exclusive owner is retained. There is no
+public constructor accepting an arbitrary owner snapshot and history pair.
+
+The original source documents, limits, spent checks/read bytes and last source
+operation remain unchanged. The native fence withdraws availability, and the
+new owner's control and authority floors advance the checkpoint. This adds no
+source access, helper invocation, replay, source operation or effect resend.
+Missing live source files therefore do not prevent this receipt-only step.
+Fresh admission still requires newer graph and inventory generations, restored
+spent work and the original initial/final source checks.
+
+The existing three-event capacity, canonical-image comparisons and persistence
+barriers apply. A failed or ambiguous replacement yields neither an owner nor a
+checkpoint. Independent durable export remains a separate operation: retain
+the prior archive until the successor is acknowledged by its custodian. An
+exactly retained successor can feed another original recovery without resetting
+source spending. This API does not repair an unretained ordinary history suffix.
+
+Four authored regression functions exercise zero/spent work, repeated recovery
+and archive round trips with missing source files, stale ordinary/source cuts,
+owner/graph/availability/floor/work mismatches, stale or unwinding clocks, and a
+competing canonical image. Independent source review and syntax/format checking
+are separate from the pending remote compilation and runtime gate.
+
 ## Terminal checkpoint successors
 
 `TopologyCheckpoint::after_admission_stop(profile, identity, history)` accepts a

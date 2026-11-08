@@ -10,7 +10,36 @@ use crate::action::consequence::delivery::persistent::{
 };
 use std::path::Path;
 
+// Constructible only after the original exact-cut check below. This is private
+// pending data, not independently exportable or an acknowledged checkpoint.
+pub(in crate::action::consequence::delivery::persistent::observed) struct PreparedReconciledCheckpoint(
+    TopologyCheckpoint,
+);
+
 impl TopologyCheckpoint {
+    // Only the complete original cursor can prepare this token. All fallible
+    // bounded input copying occurs before its clock or canonical replacement.
+    pub(in crate::action::consequence::delivery::persistent::observed) fn prepare_reconciled_start(
+        &self,
+        profile: &FileOversightProfile,
+        identity: &Path,
+        events: &[Event],
+        snapshot: &FileDeliverySnapshot,
+    ) -> Result<PreparedReconciledCheckpoint, JournalError> {
+        self.check_reconciled_start(profile, identity, events, snapshot)?;
+        Ok(PreparedReconciledCheckpoint(Self {
+            history: self.history.clone(),
+            topology: copy(&self.topology)?,
+            inventory: copy(&self.inventory)?,
+            expected: self.expected.clone(),
+            work: self.work,
+            last_operation: self.last_operation,
+            available: false,
+            control_sequence: self.control_sequence,
+            authority_epoch: self.authority_epoch,
+        }))
+    }
+
     // Restricted source-cut repair, before the original numerical replay. A
     // sweep has no triggering-request identity, so this proves only the source
     // cut and expenditure. Full replay and request selection remain mandatory.
@@ -132,5 +161,22 @@ impl TopologyCheckpoint {
             control_sequence: snapshot.control.sequence,
             authority_epoch: snapshot.control.ledger.epoch,
         })
+    }
+}
+
+impl PreparedReconciledCheckpoint {
+    // Private native completion, never a public arbitrary snapshot/history pair.
+    // The caller holds the SAME cursor's acknowledged Fence/Time/Sweep owner;
+    // it supplies the anchor moved from that original replacement, not a replay.
+    pub(in crate::action::consequence::delivery::persistent::observed) fn acknowledge_reconciled(
+        mut self,
+        history: crate::action::consequence::delivery::persistent::observed::guarded::anchored::FileHistoryAnchor,
+        owner: &super::FileOversight,
+    ) -> TopologyCheckpoint {
+        let snapshot = owner.inspect();
+        self.0.history = history;
+        self.0.control_sequence = snapshot.control.sequence;
+        self.0.authority_epoch = snapshot.control.ledger.epoch;
+        self.0
     }
 }
