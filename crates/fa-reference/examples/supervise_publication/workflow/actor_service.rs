@@ -45,7 +45,7 @@ use super::CLOCK_DOMAIN;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; create-only single-request Tower services alternatively accept --topology-profile TOPOLOGY_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -285,7 +285,6 @@ where
     F: FnMut() -> ElapsedTick,
 {
     if tower_generation.is_some_and(|generation| generation == 0)
-        || (tower_generation.is_some() && topology.is_some())
         || (operator_settings.is_some() && tower_generation.is_none()) {
         return Err("Tower ingress requires an explicit nonzero generation and the ordinary single-request profile".into());
     }
@@ -317,6 +316,19 @@ where
             .map(|settings| settings.socket_path())
             .collect();
         settings.check_host(&config, actor, reviewer_profile, &additional)?;
+        if let Some(path) = topology.as_ref().and_then(|selection| selection.acknowledged_output()) {
+            // Retiring the read sidecar unlinks its endpoint before checkpoint
+            // retention. The original create-new archive admission must not
+            // turn that endpoint into a file, including through a parent alias.
+            let output = super::continuation::checkpoint::AcknowledgedOutput::admit(&config, path)?;
+            let parent = std::fs::canonicalize(settings.socket.parent()
+                .ok_or("missing operator socket directory")?).map_err(debug)?;
+            let socket = parent.join(settings.socket.file_name()
+                .ok_or("missing operator socket filename")?);
+            if output.path() == socket.as_path() {
+                return Err("topology checkpoint and operator socket must be distinct".into());
+            }
+        }
     }
     if actor.socket == reviewer_profile.socket(actor.request)
         || actor.socket == super::control::socket_path(reviewer_profile, actor.request)

@@ -24,15 +24,26 @@ final publication clock.
 
 Version 2 creation profiles retain their existing `retain_checkpoint` path.
 The live service exports that checkpoint only from the actual driver-owned
-source after the service has completed without an execution, stop/drain, or
-reply-grace failure. A failed service therefore cannot mint a recovery anchor
-that is indistinguishable from a clean handoff. Successful retention still
-preserves real spent checks, operation floor, source expectation and exact
-history. Export failure does not undo acknowledged work and does not trigger an
-effect retry.
+source after execution, stop/drain and reply-grace processing complete without
+error and native checkpoint validation succeeds. Helper cleanup runs afterward
+and can still make the command fail. The retained checkpoint acknowledges
+source/history custody; it does not attest that all direct children were reaped.
+Successful retention preserves real spent checks, operation floor, source
+expectation and exact history. Export failure does not undo acknowledged work
+and does not trigger an effect retry.
 
-This increment intentionally refuses topology-supervised `serve-open`, checked
-publication profiles and credibility activation. Reopening must consume the
+The existing checked form is described in
+[live topology and publication witnesses](LIVE_CHECKED_TOPOLOGY_SERVICE.md).
+On Linux, both create forms also accept `--tower-generation GENERATION` to use
+the common Tower request schema, with an optional separate `--operator-profile`.
+The [Tower composition](TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission)
+uses this same native bootstrap, source custodian and final publication refresh.
+It accepts the option pairs in any order after all positional files. Operator
+read custody does not replace topology certification, and its socket cannot
+alias a retained checkpoint destination.
+
+The service still refuses topology-supervised ordinary `serve-open`, request
+schedules, precheck disclosure and credibility activation. Reopening must consume the
 independently retained source/history checkpoint through the complete mediated
 recovery path; silently using ordinary `serve-open` would weaken the selected
 contract. No continuous watcher, OS-containment proof, new authority, journal

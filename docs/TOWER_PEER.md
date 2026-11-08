@@ -39,11 +39,12 @@ example. The complete target, payload, units, policy epoch and native deadline
 still undergo original validation and review.
 
 The four ordinary service modes above also accept an explicit bounded request
-schedule, an operator read endpoint, or a single-request precheck sidecar,
-described below. Unsupported
-combinations with multiple peers, receipt-only services, topology, native text or learned
-generation refuse before opening their files. The grammar never silently selects
-a different protocol. Existing native actor commands retain their current mode.
+schedule, an operator read endpoint, or a single-request precheck sidecar.
+The two create modes additionally accept the existing topology-enforced
+publication profile, as described below. Unsupported combinations with multiple
+peers, receipt-only services, native text or learned generation refuse before
+opening their files. The grammar never silently selects a different protocol.
+Existing native actor commands retain their current mode.
 
 The selected host grants only its configured tenant's control-ledger reads and
 existing actor-intake purpose. It supplies no operator status, experiment
@@ -54,7 +55,7 @@ An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
 service now provisions a separate authenticated read endpoint. It installs
 only the selected native inspection and optional admission-explanation grants;
 the actor session stays unchanged. The operator profile can compose with a
-precheck sidecar or a finite request schedule, with distinct sockets and
+precheck sidecar, a finite request schedule or create-only topology, with distinct sockets and
 independent budgets. A schedule retains the same operator session, native
 custodians and spent allowances across every handoff. Use
 `tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
@@ -63,6 +64,53 @@ situation capture with bounded automatic continuation and explicit incomplete
 output; every page is validated before its cursor is followed.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.
+
+## Preserve topology enforcement through Tower admission
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --topology-profile TOPOLOGY_PROFILE
+supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --topology-profile TOPOLOGY_PROFILE --operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+The topology, generation and optional operator pairs may follow the positional
+files in any order. This selects the original
+[topology-supervised creation workflow](LIVE_TOPOLOGY_SERVICE.md) and, for the
+checked form, its [plain publication-witness contract](LIVE_CHECKED_TOPOLOGY_SERVICE.md).
+The actor still uses `tower-exchange` with the printed registered run address.
+
+The same mediated bootstrap installs the policy-source guard, topology,
+publication guard, terminal reserve and selected witness limits in the first
+canonical image. Before admitting an actor request, the original bounded source
+refresh must certify the modeled cut. Changing the request encoding does not
+change helper review, independent human approval, either publication key, source
+freshness or the native effect gate.
+
+The driver's final publication path refreshes topology again after policy
+capture. A bypass, changed or missing topology input, exhausted source allowance
+or failed required witness can still prevent the effect after human approval
+and dispatch. Original unresolved-outcome and charged-rights rules apply; a
+failed observation does not refund an unknown effect. Unrelated witness changes
+can pass only through the existing semantic witness checks.
+
+Version 2 topology profiles retain their original checkpoint output from the
+driver's actual custody after execution, Stop and reply processing complete
+without error and native checkpoint validation succeeds. Helper cleanup runs
+after retention and can still make the command fail. A retained checkpoint is
+acknowledged source/history evidence, not proof that all direct children were
+reaped. Operator sockets
+and checkpoint destinations must be distinct, including canonical parent-path
+aliases; conflicts refuse before clock or persistent setup. Operator reads have
+only their existing historical inspection/explanation grants and cannot certify
+a cut or advance publication.
+
+This composition is limited to `serve-create` and `serve-create-checked` with
+plain witness profiles. Topology cannot be combined with `--requests`,
+`--precheck-profile`, ordinary open/recovery, credibility activation, multiple
+peers, native text or generated/learned modes. Feed, wait, snapshot and joint
+witness profiles are refused before clock, source, socket or store setup.
+Recovery requires the existing independently retained mediated history and
+source-work contract. Certification remains conditional on the supplied graph
+and inventory; this integration does not establish complete host containment.
 
 ## Check exact policy before a Tower proposal
 

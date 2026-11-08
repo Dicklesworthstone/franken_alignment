@@ -3,6 +3,9 @@ use super::*;
 #[path = "tests/operator.rs"]
 mod operator;
 
+#[path = "tests/topology.rs"]
+mod topology;
+
 #[test]
 fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
     for (mode, count, open) in [
@@ -68,7 +71,7 @@ fn tower_selection_cannot_be_silently_consumed_by_another_service_grammar() {
             "1",
         ],
         vec![
-            "serve-create",
+            "serve-open",
             "config",
             "actor",
             "reviewer",

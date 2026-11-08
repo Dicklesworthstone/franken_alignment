@@ -13,13 +13,24 @@ The checked form requires a distinct positional witness profile before the
 credentials, helper processes, independent human-review channel and original
 publication driver; there is no alternate effect executor or outcome reducer.
 
+Both create forms can alternatively select Tower ingress by adding an explicit
+`--tower-generation GENERATION`, optionally with `--operator-profile` on its
+separate authenticated endpoint. See the
+[Tower topology composition](TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission).
+The same atomic guard installation, topology refreshes, independent human/helper
+keys and final witness checks apply. The new wire selection grants no additional
+effect or topology authority. An operator socket and retained checkpoint output
+must remain distinct even when their parent paths alias.
+
 ## Two independent controls on the same publication
 
 The topology profile is the original `fa.mediated-create/1` or
 `fa.mediated-create/2` document. Its graph, inventory, external input custody,
 source budget, initial certification and final automatic refresh retain their
 existing semantics. Selecting version 2 retains a topology-source checkpoint
-under the existing healthy-service-only output rule.
+after execution, Stop and reply processing finish without error and native
+checkpoint validation succeeds. Helper cleanup follows and can still fail;
+the checkpoint does not attest child reaping.
 
 The witness profile for this composition is `fa.supervised-witnesses/1`. It
 names the original and current capture files, a bounded nonempty witness recipe,

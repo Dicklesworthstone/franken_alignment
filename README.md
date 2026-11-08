@@ -140,10 +140,15 @@ in an explicit finite request schedule. Use
 `tower-operator-exchange` to exchange explicit request documents, or
 `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages 64` to follow one
 original capture with bounded, validated pagination and explicit incomplete
-output. Operator
-traffic has no Permit purpose or source admission path, and its transport
+output. Operator traffic has no Permit purpose or source admission path, and its transport
 failure retires only the sidecar. Compilation and runtime qualification remain
 pending the required remote gate.
+
+Tower create modes also compose with the existing
+[topology-enforced publication workflow](docs/TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission),
+including plain checked publication and an optional operator endpoint. The
+original mediated bootstrap, initial certification and final topology refresh
+remain on the publication path alongside source freshness and both approval keys.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

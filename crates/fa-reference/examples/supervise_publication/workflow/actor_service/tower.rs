@@ -5,6 +5,7 @@
 #[path = "tower/client.rs"]
 pub(super) mod client;
 
+use super::super::continuation::creation::topology::Selection as TopologySelection;
 use super::{
     ActorWire, BoundSocket, Config, ElapsedTick, FileSupervisedDriver, Intake, PeerProfile,
     PeerRefusal, PeerSession, Port, Profile, PublicationProfile, debug, drive_budget, io,
@@ -22,7 +23,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE instead of --requests or --precheck-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -34,6 +35,7 @@ struct Arguments<'a> {
     requests: Option<Vec<u64>>,
     precheck: Option<&'a Path>,
     operator: Option<&'a Path>,
+    topology: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -57,6 +59,7 @@ impl<'a> Arguments<'a> {
         let mut requests = None;
         let mut precheck = None;
         let mut operator = None;
+        let mut topology = None;
         // Each opt-in owns one complete pair. Operator read custody is separate
         // from admission-time precheck disclosure and cannot widen actor grants.
         for pair in args[positional..].chunks_exact(2) {
@@ -94,10 +97,18 @@ impl<'a> Arguments<'a> {
                     }
                     operator = Some(Path::new(&pair[1]));
                 }
+                "--topology-profile" if topology.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    topology = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
         }
-        if requests.is_some() && precheck.is_some() {
+        if (requests.is_some() && precheck.is_some())
+            || (topology.is_some() && (open || requests.is_some() || precheck.is_some()))
+        {
             return Err(USAGE.into());
         }
         let generation = generation.ok_or(USAGE)?;
@@ -111,11 +122,23 @@ impl<'a> Arguments<'a> {
             requests,
             precheck,
             operator,
+            topology,
         })
     }
 }
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    command_with_clock(args, credibility, super::super::clock)
+}
+
+pub(super) fn command_with_clock<F>(
+    args: &[String],
+    credibility: Option<&Path>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     // Own all options before opening files or allowing another service mode to
     // consume an unsupported Tower selection. No transport/profile fallback.
     let selected = Arguments::parse(args)?;
@@ -129,6 +152,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         .publication
         .map(PublicationProfile::read)
         .transpose()?;
+    let topology = selected.topology.map(TopologySelection::read).transpose()?;
     let precheck = selected
         .precheck
         .map(super::precheck::Settings::read)
@@ -150,7 +174,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             },
             selected.generation,
             operator.as_ref(),
-            super::super::clock,
+            time,
         );
     }
     serve_selected_ingress(
@@ -160,11 +184,11 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         publication.as_ref(),
         selected.open,
         credibility,
-        None,
+        topology,
         precheck.as_ref(),
         Some(selected.generation),
         operator.as_ref(),
-        super::super::clock,
+        time,
     )
 }
 

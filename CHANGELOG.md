@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-08: compose live Tower creation with enforced topology
+
+- Select the original topology lifecycle from both Tower create modes, including
+  plain checked publication and an optional separate operator read endpoint.
+- Preserve atomic mediated guard installation, initial native certification,
+  fresh source and independent helper/human approval, both publication keys,
+  final topology/witness checks and original checkpoint custody.
+- Reject unsupported recovery, schedules, precheck and stronger witness
+  compositions before their existing setup boundaries. Reject checkpoint paths
+  that alias the operator socket before clock or persistent setup.
+- Add eleven native publication, post-dispatch failure, human rejection, Stop,
+  custody and grammar regression functions. Independent source review and syntax/format checks
+  do not substitute for the pending remote compilation and runtime gate.
+
 ## 2026-11-08: enumerate native situations with bounded automatic continuation
 
 - Add `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` through the

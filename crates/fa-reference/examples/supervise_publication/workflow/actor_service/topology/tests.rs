@@ -1,5 +1,8 @@
 //! Actual live actor and independent human sockets, native publication and
 //! synthetic helper processes. These are enforcement controls, not model scores.
+#[path = "tests/tower.rs"]
+mod tower;
+
 use super::super::{FileOversight, RecoveryReserve, check_deployment};
 use super::*;
 use crate::workflow::{Duration, Instant, pause};

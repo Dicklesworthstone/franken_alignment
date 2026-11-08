@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: preserve enforced topology through live Tower creation
+
+`serve-create` and `serve-create-checked` now compose an explicit Tower
+generation with the original topology profile and optional separate operator
+endpoint. The complete grammar rejects open/recovery, request schedules,
+precheck and other unsupported modes before reading configuration. Plain
+publication witnesses retain their original contract; feed, wait, snapshot and
+joint profiles are not reduced to plain limits.
+
+The wire selection enters the same mediated bootstrap and native supervised
+driver. Policy-source, topology, publication guard, terminal reserve and any
+selected plain witness limits are installed in the first canonical image.
+Initial native certification precedes admission. Fresh policy evidence,
+helper/human review, both publication keys and the driver's final topology
+refresh still determine whether an effect can occur. Changed or missing
+topology and failed required witnesses cannot be replaced by earlier approval.
+Operator reads retain only their original historical grants.
+
+Version 2 topology output retains the original source-work/history custody
+contract. Startup now also refuses a checkpoint destination that aliases the
+operator socket, including parent-directory aliases, before clock or persistent
+setup. This prevents sidecar retirement from turning its endpoint into a
+checkpoint file. The check reuses native create-new archive admission and makes
+no output write.
+
+Eleven new grammar and real-service regression functions cover supported option orders,
+certified publication, held human approval and operator observation, final
+topology/witness changes after charged dispatch, human rejection, initial
+bypass, independent Stop, stronger-profile refusal and checkpoint path custody.
+Independent source review and Rust 2024 syntax/format checks use the unqualified
+rustfmt 1.10.0-nightly (9085017724, 2026-08-30). Compilation, Clippy, runtime tests
+and the complete remote RCH gate remain pending; no bead or packet is closed.
+See the [Tower topology contract](docs/TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission).
+
 ## 2026-11-08: enumerate one native situation through the authenticated client
 
 `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` now follows native

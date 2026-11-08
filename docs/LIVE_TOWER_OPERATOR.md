@@ -18,8 +18,9 @@ supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE W
 All four ordinary Tower serve modes support the option for one request or an
 explicit finite request schedule. The generation, operator and selected
 schedule/precheck pairs may appear in any order after the positional files.
-An operator profile requires an explicit Tower generation. Multi-peer, topology,
-native-text and learned service modes do not consume it. Unsupported combinations
+The two create modes can instead select the existing topology profile alongside
+the operator endpoint. An operator profile requires an explicit Tower generation.
+Multi-peer, native-text and learned service modes do not consume it. Unsupported combinations
 fail before reading configuration.
 
 An optional `--precheck-profile PRECHECK_PROFILE` retains its separate actor
@@ -27,6 +28,14 @@ disclosure and socket. The operator, actor, precheck, human-review and Stop
 paths must be distinct. Directory ownership, the selected audience and socket
 collisions are checked before a clock read, source acquisition or store creation.
 Existing socket paths are never unlinked to make setup succeed.
+
+Create-only `--topology-profile TOPOLOGY_PROFILE` keeps the original mediated
+bootstrap and final topology refresh, including plain checked publication.
+Operator reads cannot certify the cut or replace either publication key. A
+version 2 topology checkpoint destination must not alias the operator socket;
+this is checked before clock, source or persistent setup. Topology cannot select
+precheck, a request schedule or ordinary open/recovery. See the
+[Tower topology contract](TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission).
 
 ## Observe a finite publication sequence
 

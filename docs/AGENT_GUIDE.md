@@ -88,6 +88,13 @@ native diagnostic, valid earlier JSON lines remain output and the command fails;
 check its exit status before treating the enumeration as complete. It never
 recaptures automatically, and the result remains historical observation.
 
+For a new topology-enforced publication, the two Tower create modes accept
+`--topology-profile TOPOLOGY_PROFILE`, optionally with the separate operator
+endpoint. The original initial cut certification and final topology refresh
+remain mandatory alongside helper/human approval and any plain final witnesses.
+This does not enable ordinary topology recovery, request schedules or precheck;
+use the [exact supported composition](TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission).
+
 The integrating host can combine those original facades with the
 [shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence
 reads, precheck, native submission and acquired-request polling. A live mount
