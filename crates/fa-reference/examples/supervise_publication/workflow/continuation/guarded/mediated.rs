@@ -1,21 +1,34 @@
 //! Continue the ORIGINAL mediated domain; never reopen through a weaker profile.
 //! Historical requests stay query-only and never consume the next live source.
 #[path = "mediated/profile.rs"] pub(crate) mod profile;
-use profile::Selection;
-use super::{Config, Submission, SubmitProfile, PeerProfile, FileOversight, FileGuardSet,
-    FileRecoveryRequirements, FileGuardedRecoveryStatus, RecoveryReserve, JournalError,
-    Reconciliation, ActionState, ElapsedTick, Deadline, RunResult, Continuation,
-    combine_failure, retain, acknowledged, unconfirmed, debug, plus};
-use super::super::{checkpoint as source_checkpoint, from_recovered_with_topology_retaining};
 #[cfg(test)]
 use super::super::from_recovered_with_topology;
+use super::super::{checkpoint as source_checkpoint, from_recovered_with_topology_retaining};
+use super::{
+    ActionState, Config, Continuation, Deadline, ElapsedTick, FileGuardSet,
+    FileGuardedRecoveryStatus, FileOversight, FileRecoveryRequirements, JournalError, PeerProfile,
+    Reconciliation, RecoveryReserve, RunResult, Submission, SubmitProfile, acknowledged,
+    combine_failure, debug, plus, retain, unconfirmed,
+};
 use crate::publication::PublicationProfile;
+use crate::recover_stop::guarded::Custody;
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FilePublicationRecoveryRequirements;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
-    mediated::FileMediatedRequirements, recovery::mediated::ReconciledMediatedOwner};
-use fa_reference::action::consequence::oversight::actor_wire::{Command, decode_command, MAX_FRAME_BYTES};
-use std::{io::Write, path::Path, time::{Duration, Instant}};
+    mediated::FileMediatedRequirements, recovery::mediated::ReconciledMediatedOwner,
+};
+use fa_reference::action::consequence::delivery::persistent::{
+    observed::driver::topology::checkpoint::TopologyCheckpoint, requests::PendingReconciliations,
+};
+use fa_reference::action::consequence::oversight::actor_wire::{
+    Command, MAX_FRAME_BYTES, decode_command,
+};
+use profile::Selection;
+use std::{
+    io::Write,
+    path::Path,
+    time::{Duration, Instant},
+};
 
 #[cfg(test)]
 fn submit<F>(config: Config, submission: Submission<'_>, topology: &Selection, time: F)
@@ -40,10 +53,18 @@ where F: FnMut() -> ElapsedTick {
     submit_selected_with_elapsed(config, submission, topology, None, time, started, elapsed)
 }
 
-fn submit_selected_with_elapsed<F>(config: Config, submission: Submission<'_>, topology: &Selection,
-    publication: Option<&PublicationProfile>, mut time: F, started: Instant,
-    elapsed: &mut impl FnMut() -> Duration) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
+fn submit_selected_with_elapsed<F>(
+    config: Config,
+    submission: Submission<'_>,
+    topology: &Selection,
+    publication: Option<&PublicationProfile>,
+    mut time: F,
+    started: Instant,
+    elapsed: &mut impl FnMut() -> Duration,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     // Checked mode is independently selected, never inferred from the journal.
     // A richer profile cannot be reduced to just its numerical witness limits.
     // This preflight reads no capture, clock, topology source or canonical store.
@@ -68,40 +89,32 @@ where F: FnMut() -> ElapsedTick {
     let runtime_deadline = plus(time(), config.timing.runtime_ms)?;
     let custody = profile.admit(&config)?;
     checkpoint()?;
-    // Only independent historical contracts are loaded before recovery. A known
-    // request never needs the next live files, source read, helper or human key.
-    let history = topology.history(&config, &mut checkpoint)?;
-    let expected = FileMediatedRequirements {
-        oversight: FileRecoveryRequirements {
-            guards: FileGuardSet { stream: None, decoder: None, decoder_stop: None,
-                source: Some(config.source_policy), identity: None, campaigns: None, credential: None },
-            effective_policy: config.profile.delivery.policy.clone(), credential_epoch: None,
-            minimum: history.minimum(custody.anchor(), profile.minimum())?,
+    let Recovered {
+        native:
+            ReconciledMediatedOwner {
+                mut owner,
+                roles,
+                outcomes,
+            },
+        history,
+        ..
+    } = recover(
+        &config,
+        profile,
+        &custody,
+        topology,
+        publication_requirements,
+        &Deadline {
+            logical: runtime_deadline,
+            started,
+            wall,
         },
-        topology: history.requirement.clone(), prediction: None, evaluation: None,
-    };
-    let mut recovery = FileOversight::begin_open_mediated_guarded_anchored(
-        &config.store, config.profile.clone(), &expected, custody.anchor())
-        .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
-        .and_then(|run| run.require_publication_profile(publication_requirements)).map_err(unconfirmed)?;
-    history.check_extent(recovery.progress().total_events)?;
-    loop {
-        checkpoint()?;
-        let progress = recovery.progress();
-        if progress.status == FileGuardedRecoveryStatus::Ready { break; }
-        recovery.advance(progress.replayed_events, 1).map_err(unconfirmed)?;
-    }
-    let now = time();
-    Deadline { logical: runtime_deadline, started, wall }.check(now)?;
-    let ReconciledMediatedOwner { mut owner, roles, outcomes } =
-        recovery.finish_reconciled(|| now).map_err(unconfirmed)?;
+        &mut checkpoint,
+        &mut time,
+    )?;
     let revision = owner.revision();
     let prepared = (|| {
-        let outstanding = owner.inspect().control.ledger.stages.values().any(|stage|
-            matches!(stage, ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown));
-        if outstanding || outcomes.values().any(|result| !matches!(result, Ok(Reconciliation::Resolved(_)))) {
-            return Err("unresolved prior deliveries; no new work admitted; charges remain in the original ledger".into());
-        }
+        require_settled(&owner, &outcomes)?;
         if owner.publication_validation_profile().map_err(debug)? != publication_limits {
             return Err("mediated submit requires its matching explicit publication profile".into());
         }
@@ -151,6 +164,109 @@ where F: FnMut() -> ElapsedTick {
             Ok(result)
         }
         Err(error) => Err(acknowledged(revision, &error)),
+    }
+}
+
+/// One original replay/finalization shared by finite submission and live Tower
+/// intake. The saved successor is source-free custody for receipt-only recovery
+/// and failures before new-source rebind; it grants no fresh certification.
+pub(crate) struct Recovered {
+    pub native: ReconciledMediatedOwner,
+    pub history: profile::History,
+    pub checkpoint: Option<TopologyCheckpoint>,
+}
+
+pub(crate) fn recover<F>(
+    config: &Config,
+    profile: &SubmitProfile,
+    custody: &Custody,
+    topology: &Selection,
+    publication_requirements: FilePublicationRecoveryRequirements,
+    deadline: &Deadline,
+    checkpoint: &mut impl FnMut() -> Result<(), String>,
+    time: &mut F,
+) -> Result<Recovered, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    // Only independent historical contracts are loaded before recovery. A known
+    // request never needs the next live files, source read, helper or human key.
+    let history = topology.history(config, checkpoint)?;
+    let expected = FileMediatedRequirements {
+        oversight: FileRecoveryRequirements {
+            guards: FileGuardSet {
+                stream: None,
+                decoder: None,
+                decoder_stop: None,
+                source: Some(config.source_policy),
+                identity: None,
+                campaigns: None,
+                credential: None,
+            },
+            effective_policy: config.profile.delivery.policy.clone(),
+            credential_epoch: None,
+            minimum: history.minimum(custody.anchor(), profile.minimum())?,
+        },
+        topology: history.requirement.clone(),
+        prediction: None,
+        evaluation: None,
+    };
+    let mut recovery = FileOversight::begin_open_mediated_guarded_anchored(
+        &config.store,
+        config.profile.clone(),
+        &expected,
+        custody.anchor(),
+    )
+    .and_then(|run| run.require_recovery_reserve(RecoveryReserve::terminal()))
+    .and_then(|run| run.require_publication_profile(publication_requirements))
+    .map_err(unconfirmed)?;
+    history.check_extent(recovery.progress().total_events)?;
+    loop {
+        checkpoint()?;
+        let progress = recovery.progress();
+        if progress.status == FileGuardedRecoveryStatus::Ready {
+            break;
+        }
+        recovery
+            .advance(progress.replayed_events, 1)
+            .map_err(unconfirmed)?;
+    }
+    let now = time();
+    deadline.check(now)?;
+    let (native, saved) = match history.checkpoint() {
+        Some(saved) => recovery
+            .finish_reconciled_with_checkpoint(saved, || now)
+            .map(|(owner, checkpoint)| (owner, Some(checkpoint))),
+        None => recovery
+            .finish_reconciled(|| now)
+            .map(|owner| (owner, None)),
+    }
+    .map_err(unconfirmed)?;
+    Ok(Recovered {
+        native,
+        history,
+        checkpoint: saved,
+    })
+}
+
+pub(crate) fn require_settled(
+    owner: &FileOversight,
+    outcomes: &PendingReconciliations,
+) -> Result<(), String> {
+    let outstanding = owner.inspect().control.ledger.stages.values().any(|stage| {
+        matches!(
+            stage,
+            ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown
+        )
+    });
+    if outstanding
+        || outcomes
+            .values()
+            .any(|result| !matches!(result, Ok(Reconciliation::Resolved(_))))
+    {
+        Err("unresolved prior deliveries; no new work admitted; charges remain in the original ledger".into())
+    } else {
+        Ok(())
     }
 }
 

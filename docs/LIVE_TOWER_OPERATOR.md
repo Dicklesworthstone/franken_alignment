@@ -19,7 +19,9 @@ All four ordinary Tower serve modes support the option for one request or an
 explicit finite request schedule. The generation, operator and selected
 schedule/precheck pairs may appear in any order after the positional files.
 The two create modes can instead select the existing topology profile alongside
-the operator endpoint. An operator profile requires an explicit Tower generation.
+the operator endpoint. Both open modes can compose explicit guarded mediated
+recovery with an exact v2 source checkpoint and the operator endpoint. An operator
+profile requires an explicit Tower generation.
 Multi-peer, native-text and learned service modes do not consume it. Unsupported combinations
 fail before reading configuration.
 
@@ -36,6 +38,13 @@ version 2 topology checkpoint destination must not alias the operator socket;
 this is checked before clock, source or persistent setup. Topology cannot select
 precheck, a request schedule or ordinary open/recovery. See the
 [Tower topology contract](TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission).
+
+Explicit `--guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE`
+on the Tower open modes preserves the original owner and source-work custody
+before installing operator grants. It supports fresh checked publication and
+recorded observations without letting operator traffic refresh source evidence
+or start a new request. See [live mediated recovery](LIVE_TOWER_RECOVERY.md) for
+exact paired custody, independent Stop and failure-retention boundaries.
 
 ## Observe a finite publication sequence
 

@@ -176,7 +176,7 @@ where
     }
 }
 
-fn retain(custody: &Custody, host: &FileOversight) -> Result<(), String> {
+pub(crate) fn retain(custody: &Custody, host: &FileOversight) -> Result<(), String> {
     if !custody.retention_requested() {
         return Ok(());
     }
@@ -184,13 +184,13 @@ fn retain(custody: &Custody, host: &FileOversight) -> Result<(), String> {
         .and_then(|anchor| custody.retain(&anchor))
         .map_err(|error| format!("history anchor retention failed: {error}; keep the previous archive and select a new output path; no effect retry was sent"))
 }
-fn unconfirmed(error: JournalError) -> String {
+pub(crate) fn unconfirmed(error: JournalError) -> String {
     format!(
         "guarded submission recovery is unconfirmed: {}; no new actor submission was forwarded",
         debug(error)
     )
 }
-fn acknowledged(revision: u64, error: &str) -> String {
+pub(crate) fn acknowledged(revision: u64, error: &str) -> String {
     format!("guarded submission recovery acknowledged at revision {revision}; {error}")
 }
 

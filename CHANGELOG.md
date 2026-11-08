@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-08: reopen live Tower publication through exact mediated recovery
+
+- Add explicit guarded v2 source-checkpoint recovery to both single-request
+  Tower open modes, with plain checked publication and separate operator reads.
+- Reuse original anchored replay and atomic reconciliation, reject unresolved
+  old effects, preserve source spending and require newer graph/inventory plus
+  original fresh evidence, review, keys and final topology/witness checks.
+- Keep recorded requests observational with repeatable sealed checkpoint
+  successors and no live asset reads. Preserve independent Stop, acknowledge
+  failed-work custody before cleanup and refuse obsolete source exports.
+- Reject canonical archive/endpoint collisions before setup in recovery and
+  creation. Add ten grammar and real-service regression functions, independent
+  source review and syntax/format checking; remote execution remains pending.
+
 ## 2026-11-08: link native situation attempts to original requests
 
 - Capture admitted external request identities once with the original immutable

@@ -41,7 +41,9 @@ still undergo original validation and review.
 The four ordinary service modes above also accept an explicit bounded request
 schedule, an operator read endpoint, or a single-request precheck sidecar.
 The two create modes additionally accept the existing topology-enforced
-publication profile, as described below. Unsupported combinations with multiple
+publication profile. The two open modes support explicit independently anchored
+mediated recovery with a retained source checkpoint, as described below.
+Unsupported combinations with multiple
 peers, receipt-only services, native text or learned generation refuse before
 opening their files. The grammar never silently selects a different protocol.
 Existing native actor commands retain their current mode.
@@ -55,7 +57,8 @@ An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
 service now provisions a separate authenticated read endpoint. It installs
 only the selected native inspection and optional admission-explanation grants;
 the actor session stays unchanged. The operator profile can compose with a
-precheck sidecar, a finite request schedule or create-only topology, with distinct sockets and
+precheck sidecar, a finite request schedule, topology creation or explicit guarded
+topology recovery, with distinct sockets and
 independent budgets. A schedule retains the same operator session, native
 custodians and spent allowances across every handoff. Use
 `tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
@@ -97,13 +100,13 @@ driver's actual custody after execution, Stop and reply processing complete
 without error and native checkpoint validation succeeds. Helper cleanup runs
 after retention and can still make the command fail. A retained checkpoint is
 acknowledged source/history evidence, not proof that all direct children were
-reaped. Operator sockets
+reaped. Actor, human-review, Stop and operator sockets
 and checkpoint destinations must be distinct, including canonical parent-path
 aliases; conflicts refuse before clock or persistent setup. Operator reads have
 only their existing historical inspection/explanation grants and cannot certify
 a cut or advance publication.
 
-This composition is limited to `serve-create` and `serve-create-checked` with
+This creation composition uses `serve-create` and `serve-create-checked` with
 plain witness profiles. Topology cannot be combined with `--requests`,
 `--precheck-profile`, ordinary open/recovery, credibility activation, multiple
 peers, native text or generated/learned modes. Feed, wait, snapshot and joint
@@ -111,6 +114,26 @@ witness profiles are refused before clock, source, socket or store setup.
 Recovery requires the existing independently retained mediated history and
 source-work contract. Certification remains conditional on the supplied graph
 and inventory; this integration does not establish complete host containment.
+
+## Reopen with exact mediated recovery custody
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE
+```
+
+`serve-open-checked` accepts the same options after its plain witness profile;
+both support the separate operator endpoint. The explicit `fa.guarded-submit/1`
+history/floors and `fa.mediated-submit/2` source checkpoint must describe the same
+complete original cut. Recovery reuses the original native Fence/Time/Sweep,
+keeps source spending, refuses unresolved old effects and requires newer graph
+and inventory generations before fresh work. The same source, helper, human,
+two-key and final topology/witness checks determine publication.
+
+Recorded requests remain observational and can retain a new paired checkpoint
+without live source files or helper programs. Authenticated Stop stays available;
+later Stop mutation cannot be represented by an obsolete source checkpoint.
+See [the live recovery contract](LIVE_TOWER_RECOVERY.md) for grammar, custody,
+elapsed boundaries, failure retention and verification limits.
 
 ## Check exact policy before a Tower proposal
 

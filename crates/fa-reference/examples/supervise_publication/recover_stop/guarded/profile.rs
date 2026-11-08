@@ -215,6 +215,10 @@ impl Custody {
     pub(crate) fn anchor(&self) -> &FileHistoryAnchor {
         &self.anchor
     }
+    #[cfg(target_os = "linux")]
+    pub(crate) fn output_path(&self) -> Option<&Path> {
+        self.output.as_deref()
+    }
 
     pub(crate) fn retain(&self, anchor: &FileHistoryAnchor) -> Result<(), String> {
         let Some(path) = self.output.as_deref() else {

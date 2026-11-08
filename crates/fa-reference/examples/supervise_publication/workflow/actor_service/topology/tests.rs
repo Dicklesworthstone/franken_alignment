@@ -1,5 +1,7 @@
 //! Actual live actor and independent human sockets, native publication and
 //! synthetic helper processes. These are enforcement controls, not model scores.
+#[path = "tests/recovery.rs"]
+mod recovery;
 #[path = "tests/tower.rs"]
 mod tower;
 

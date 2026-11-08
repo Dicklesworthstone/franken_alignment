@@ -108,6 +108,24 @@ Because recovery advances the journal, an older source checkpoint cannot be
 reused indefinitely through that strict operator path. The learned explicit
 receipt-settlement command has the separate paired-custody path below.
 
+## Live Tower recovery
+
+The explicit single-request Tower open modes consume the same version-2 profile
+with `--guarded RECOVERY_PROFILE --topology-profile TOPOLOGY_PROFILE`. They require
+the exact independent history/source pair, reuse original mediated replay and
+Fence/Time/Sweep, preserve spent source work and require newer graph/inventory
+before fresh admission. Plain checked publication and a separate operator read
+endpoint are supported.
+
+For a recorded request, the native sealed recovery checkpoint can be retained
+with `retain_checkpoint` without opening next live inputs or creating a new
+source. Paired history/source outputs then support another exact recovery.
+Acknowledged failures also attempt selected custody retention before releasing
+the original driver. An explicit Stop that changes a recorded cut retains the
+new history and refuses export of the obsolete source checkpoint. These live
+semantics do not change the finite submit command's restriction above. See the
+[complete live recovery contract](LIVE_TOWER_RECOVERY.md).
+
 ## Learned terminal recovery
 
 The learned operator can retain a source checkpoint after offline

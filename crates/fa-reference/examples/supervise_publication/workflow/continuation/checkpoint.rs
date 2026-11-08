@@ -125,7 +125,10 @@ pub(super) fn read_with_reader(config: &Config, path: &Path, store: Option<&Path
 
 // Attempt both independent outputs and preserve both errors. Neither successful
 // archive is permission to report the other as retained or to repeat publication.
-pub(super) fn combine(history: Result<(), String>, source: Result<(), String>) -> Result<(), String> {
+pub(crate) fn combine(
+    history: Result<(), String>,
+    source: Result<(), String>,
+) -> Result<(), String> {
     match (history, source) {
         (Ok(()), Ok(())) => Ok(()),
         (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),

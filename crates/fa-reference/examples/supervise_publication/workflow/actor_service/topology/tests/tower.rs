@@ -734,3 +734,56 @@ fn topology_checkpoint_aliasing_operator_socket_refuses_before_time_or_store() {
         assert!(!reviewer.socket(7).exists());
     }
 }
+
+#[test]
+fn topology_checkpoint_cannot_replace_retired_actor_human_or_stop_endpoints() {
+    for endpoint in ["actor", "human", "stop"] {
+        for aliased_parent in [false, true] {
+            let root = Root::new();
+            let config = configuration(&root);
+            let (actor, reviewer) = profiles(&root, &config);
+            let selected_socket = match endpoint {
+                "actor" => actor.socket.clone(),
+                "human" => reviewer.socket(7),
+                "stop" => crate::workflow::control::socket_path(&reviewer, 7),
+                _ => unreachable!(),
+            };
+            let output = if aliased_parent {
+                let alias = root.path("aliased-endpoints");
+                std::os::unix::fs::symlink(selected_socket.parent().unwrap(), &alias).unwrap();
+                alias.join(selected_socket.file_name().unwrap())
+            } else {
+                selected_socket
+            };
+            let selected = retained_selection(&root, &output);
+            fs::remove_file(root.path("topology.json")).unwrap();
+            fs::remove_file(root.path("inventory.json")).unwrap();
+            let store = config.store.clone();
+            let error = serve_selected_ingress(
+                config,
+                &actor,
+                &reviewer,
+                None,
+                false,
+                None,
+                Some(selected),
+                None,
+                Some(GENERATION),
+                None,
+                || panic!("checkpoint/socket alias entered the clock or source boundary"),
+            )
+            .unwrap_err();
+            assert_eq!(
+                error,
+                "topology checkpoint and actor, human-review or Stop sockets must be distinct",
+                "{endpoint}, aliased_parent={aliased_parent}",
+            );
+            assert!(!store.exists());
+            assert!(!actor.socket.exists());
+            assert!(!reviewer.socket(7).exists());
+            assert!(!crate::workflow::control::socket_path(&reviewer, 7).exists());
+            assert!(!output.exists());
+            assert!(!root.path("evidence.json").exists());
+        }
+    }
+}

@@ -6,11 +6,13 @@
 pub(super) mod client;
 
 use super::super::continuation::creation::topology::Selection as TopologySelection;
+use super::super::continuation::guarded::mediated::profile::Selection as RecoveryTopologySelection;
 use super::{
     ActorWire, BoundSocket, Config, ElapsedTick, FileSupervisedDriver, Intake, PeerProfile,
     PeerRefusal, PeerSession, Port, Profile, PublicationProfile, debug, drive_budget, io,
     serve_selected_ingress,
 };
+use crate::recover_stop::guarded::SubmitProfile;
 use fa_reference::action::consequence::oversight::actor_wire::ChannelLimits;
 use fa_reference::action::consequence::oversight::evidence_source::EvidenceFile;
 use fa_reference::address_resolver::{Address, CallerScope, Noun, ResolverPlane};
@@ -23,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE instead of --requests or --precheck-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; single-request create modes also accept --topology-profile TOPOLOGY_PROFILE; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -36,6 +38,7 @@ struct Arguments<'a> {
     precheck: Option<&'a Path>,
     operator: Option<&'a Path>,
     topology: Option<&'a Path>,
+    guarded: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -48,7 +51,7 @@ impl<'a> Arguments<'a> {
             _ => return Err(USAGE.into()),
         };
         let positional = if checked { 5 } else { 4 };
-        if ![positional + 2, positional + 4, positional + 6].contains(&args.len())
+        if ![positional + 2, positional + 4, positional + 6, positional + 8].contains(&args.len())
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
@@ -60,6 +63,7 @@ impl<'a> Arguments<'a> {
         let mut precheck = None;
         let mut operator = None;
         let mut topology = None;
+        let mut guarded = None;
         // Each opt-in owns one complete pair. Operator read custody is separate
         // from admission-time precheck disclosure and cannot widen actor grants.
         for pair in args[positional..].chunks_exact(2) {
@@ -103,11 +107,19 @@ impl<'a> Arguments<'a> {
                     }
                     topology = Some(Path::new(&pair[1]));
                 }
+                "--guarded" if guarded.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    guarded = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
         }
         if (requests.is_some() && precheck.is_some())
-            || (topology.is_some() && (open || requests.is_some() || precheck.is_some()))
+            || (topology.is_some() && (requests.is_some() || precheck.is_some()))
+            || (guarded.is_some() && (!open || topology.is_none()))
+            || (open && topology.is_some() && guarded.is_none())
         {
             return Err(USAGE.into());
         }
@@ -123,6 +135,7 @@ impl<'a> Arguments<'a> {
             precheck,
             operator,
             topology,
+            guarded,
         })
     }
 }
@@ -152,7 +165,6 @@ where
         .publication
         .map(PublicationProfile::read)
         .transpose()?;
-    let topology = selected.topology.map(TopologySelection::read).transpose()?;
     let precheck = selected
         .precheck
         .map(super::precheck::Settings::read)
@@ -161,6 +173,27 @@ where
         .operator
         .map(super::operator::Settings::read)
         .transpose()?;
+    if let Some(path) = selected.guarded {
+        let recovery = SubmitProfile::read(path)?;
+        let topology = RecoveryTopologySelection::read(
+            selected
+                .topology
+                .expect("guarded topology pair checked before reads"),
+        )?;
+        return super::topology::recovery::serve(
+            config,
+            &actor,
+            &reviewer,
+            publication.as_ref(),
+            credibility,
+            &recovery,
+            &topology,
+            selected.generation,
+            operator.as_ref(),
+            time,
+        );
+    }
+    let topology = selected.topology.map(TopologySelection::read).transpose()?;
     if let Some(requests) = selected.requests.as_deref() {
         return super::series::serve_tower(
             config,

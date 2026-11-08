@@ -42,9 +42,13 @@ It accepts the option pairs in any order after all positional files. Operator
 read custody does not replace topology certification, and its socket cannot
 alias a retained checkpoint destination.
 
-The service still refuses topology-supervised ordinary `serve-open`, request
-schedules, precheck disclosure and credibility activation. Reopening must consume the
-independently retained source/history checkpoint through the complete mediated
-recovery path; silently using ordinary `serve-open` would weaken the selected
-contract. No continuous watcher, OS-containment proof, new authority, journal
-format, effect adapter or executor is added.
+Topology-supervised reopening uses the explicit
+[guarded Tower recovery path](LIVE_TOWER_RECOVERY.md): select a Tower generation,
+`--guarded` history/floors and a `fa.mediated-submit/2` topology profile in either
+open mode. It consumes the independently retained source/history checkpoint and
+preserves cumulative work through the original recovery and source rebind.
+Ordinary unguarded open, request schedules and precheck disclosure remain outside
+this topology composition. Creation continues to refuse credibility activation;
+guarded reopening applies the original option only to new work. No continuous
+watcher, OS-containment proof, new authority, journal format, effect adapter or
+executor is added.

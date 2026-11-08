@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: recover topology-enforced live Tower publication
+
+Both single-request Tower open modes now accept paired `--guarded` recovery
+and `fa.mediated-submit/2` topology profiles, with optional plain publication
+witnesses and a separate operator endpoint. The original mediated helper performs
+exact independent history/source checks, bounded replay and one acknowledged
+Fence/Time/Sweep. Unresolved prior deliveries refuse new admission and retain
+their charges. New work requires newer graph and inventory generations,
+unchanged limits, retained spending, current source evidence, fresh helper/human
+review, both publication keys and the driver's original final topology/witness cut.
+
+The original ready-owner lifecycle is shared with creation. Recorded requests
+remain observational without next source inputs, helper programs, witness
+captures or credibility files. Their native checkpoint successor supports
+repeatable paired custody without resetting work. Authenticated Stop remains
+available against partial frames and during reply grace. If Stop advances a
+recorded cut, new history is retained and the obsolete source export refuses.
+
+Acknowledged recovery failures attempt selected history and source retention
+before original driver cleanup. Exact pre-bind custody and actual post-bind
+source spending remain distinct. All output and actor/reviewer/Stop/operator
+endpoint aliases refuse before clock/setup, including canonical parent aliases;
+creation has the matching guard. Retention does not attest later helper reaping.
+
+Ten new grammar and real-service regression functions cover plain/checked second
+effects, source-work conservation, stale/exhausted custody, observational reads,
+final witness refusal, missing live assets, genuine Unknown charged dispatch,
+independent Stop and endpoint/archive collisions. Independent source review and
+Rust 2024 syntax/format checks use the unqualified rustfmt 1.10.0-nightly
+(9085017724, 2026-08-30). Required remote compilation, Clippy, runtime tests and
+the full RCH gate remain pending; no bead or packet is closed. See the
+[live recovery contract](docs/LIVE_TOWER_RECOVERY.md).
+
 ## 2026-11-08: navigate native situations to original request explanations
 
 Native situation captures now retain the original admitted external request

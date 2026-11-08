@@ -6,6 +6,9 @@ mod operator;
 #[path = "tests/topology.rs"]
 mod topology;
 
+#[path = "tests/recovery.rs"]
+mod recovery;
+
 #[test]
 fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
     for (mode, count, open) in [

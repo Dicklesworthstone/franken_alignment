@@ -30,22 +30,24 @@ mod tokenizer;
 mod topology;
 #[path = "actor_service/tower.rs"]
 mod tower;
-use profile::Profile;
-use super::{ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick,
-    ExecuteServices, FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant,
-    PeerProfile, PublicationProfile, RecoveryReserve, cleanup, debug, execute_serviced, io, pause,
-    plus, resume_existing, stop,
+use super::CLOCK_DOMAIN;
+use super::{
+    ActionState, ActorWire, BoundSocket, Config, Deadline, Duration, ElapsedTick, ExecuteServices,
+    FileOversight, FileRequestDisposition, FileSupervisedDriver, Instant, PeerProfile,
+    PublicationProfile, RecoveryReserve, cleanup, debug, execute_serviced, io, pause, plus,
+    resume_existing, stop,
 };
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::JournalError;
+use fa_reference::action::consequence::delivery::persistent::observed::driver::topology::FileDriverTopology;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorPort;
 use fa_reference::action::consequence::oversight::actor_peer::{PeerRefusal, PeerSession};
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
-use super::CLOCK_DOMAIN;
+use profile::Profile;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; create-only single-request Tower services alternatively accept --topology-profile TOPOLOGY_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; single-request Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE; single-request Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -269,7 +271,7 @@ where
 }
 
 fn serve_selected_ingress<F>(
-    mut config: Config,
+    config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
@@ -335,6 +337,32 @@ where
     {
         return Err("actor, human-review and stop sockets must be distinct".into());
     }
+    if let Some(path) = topology
+        .as_ref()
+        .and_then(|selection| selection.acknowledged_output())
+    {
+        let output = super::continuation::checkpoint::AcknowledgedOutput::admit(&config, path)?;
+        for socket in [
+            &actor.socket,
+            &reviewer_profile.socket(actor.request),
+            &super::control::socket_path(reviewer_profile, actor.request),
+        ] {
+            let parent =
+                std::fs::canonicalize(socket.parent().ok_or("missing service socket directory")?)
+                    .map_err(debug)?;
+            let socket = parent.join(
+                socket
+                    .file_name()
+                    .ok_or("missing service socket filename")?,
+            );
+            if output.path() == socket.as_path() {
+                return Err(
+                    "topology checkpoint and actor, human-review or Stop sockets must be distinct"
+                        .into(),
+                );
+            }
+        }
+    }
     let start = time();
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline { logical: plus(start, runtime)?, started: Instant::now(), wall: Duration::from_millis(runtime) };
@@ -346,7 +374,7 @@ where
     // untrusted frame can run before the native owner and all guards are ready.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (mut host, reviewer, topology, topology_output) = match prepared_topology.as_mut() {
+    let (host, reviewer, topology, topology_output) = match prepared_topology.as_mut() {
         Some(prepared) => {
             let output = prepared.take_output();
             let prepared = prepared_topology.take().expect("selected topology");
@@ -361,224 +389,356 @@ where
             (host, reviewer, None, None)
         }
     };
-    let recorded = match host.request_status(actor.request) {
-        Ok(_) => true,
-        Err(JournalError::Contract(Error::Missing)) => false,
-        Err(error) => return Err(debug(error)),
-    };
-    if recorded && precheck_settings.is_some() {
-        return Err("recorded requests are observation-only and cannot acquire a new precheck disclosure".into());
-    }
-    if !recorded {
-        if let Some(path) = credibility {
-            deadline.check(time())?;
-            qualification::activate(&mut host, &config, path)?;
-            deadline.check(time())?;
+    serve_ready_ingress(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        credibility,
+        precheck_settings,
+        tower_generation,
+        operator_settings,
+        socket,
+        host,
+        reviewer,
+        topology,
+        OwnerStart::Ordinary,
+        deadline,
+        time,
+        |host, topology, succeeded| {
+            // Creation preserves its existing success-only export boundary.
+            if succeeded {
+                topology_output
+                    .as_ref()
+                    .map_or(Ok(()), |output| output.retain(host, topology))
+            } else {
+                Ok(())
+            }
+        },
+    )
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum OwnerStart {
+    Ordinary,
+    // Original native Fence/Time/Sweep has completed and every liability was
+    // checked settled. Historical actor traffic may observe only; an explicit
+    // independently authenticated Stop still reaches the same original owner.
+    Reconciled,
+}
+
+/// Continue an ORIGINAL admitted owner through the common source, actor,
+/// helper, human, publication, Stop and cleanup lifecycle. Recovery supplies a
+/// separate retention callback so acknowledged failed work cannot lose custody.
+fn serve_ready_ingress<F, R>(
+    mut config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    precheck_settings: Option<&precheck::Settings>,
+    tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
+    socket: BoundSocket,
+    mut host: FileOversight,
+    reviewer: super::FileHumanReviewer,
+    topology: Option<FileDriverTopology>,
+    owner_start: OwnerStart,
+    deadline: Deadline,
+    mut time: F,
+    retain: R,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
+{
+    let prepare = (|| {
+        let recorded = match host.request_status(actor.request) {
+            Ok(_) => true,
+            Err(JournalError::Contract(Error::Missing)) => false,
+            Err(error) => return Err(debug(error)),
+        };
+        if recorded && precheck_settings.is_some() {
+            return Err("recorded requests are observation-only and cannot acquire a new precheck disclosure".into());
         }
-        // Never fall back to unqualified weights after recovery. This check is
-        // read-only, and a never-qualified legacy journal retains its semantics.
-        host.check_credibility().map_err(debug)?;
-    }
+        if !recorded {
+            if let Some(path) = credibility {
+                deadline.check(time())?;
+                qualification::activate(&mut host, &config, path)?;
+                deadline.check(time())?;
+            }
+            // Never fall back to unqualified weights after recovery. This check is
+            // read-only, and a never-qualified legacy journal retains its semantics.
+            host.check_credibility().map_err(debug)?;
+        }
+        Ok::<_, String>(recorded)
+    })();
+    let recorded = match prepare {
+        Ok(recorded) => recorded,
+        Err(error) => {
+            let retained = retain(&host, topology.as_ref(), false);
+            return Err(match retained {
+                Ok(()) => error,
+                Err(retention) => format!("{error}; {retention}"),
+            });
+        }
+    };
     let (port, mut driver) = host.into_supervised_driver();
-    if let Some(topology) = topology {
-        let revision = driver.supervisor().host().map_err(debug)?.revision();
-        driver.require_topology(revision, topology).map_err(debug)?;
-        deadline.check(time())?;
-        let revision = driver.supervisor().host().map_err(debug)?.revision();
-        let refreshed = driver.refresh_topology(revision).map_err(debug)?;
-        if refreshed.refusal.is_some()
-            || !matches!(refreshed.checked, Some(Ok(fa_reference::action::consequence::mediation::CutCheck::Verified(_)))) {
-            return Err("initial live-service topology was not certified by the native checker".into());
-        }
-        let now = time(); deadline.check(now)?;
-        let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-        let revision = host.revision(); host.observe_time(revision, now).map_err(debug)?;
-    }
-    // The operator can stop while the actor is absent or holds an incomplete
-    // frame. Recorded keys stay receipt-only; they open no new control listener.
-    let mut early_control = if recorded {
-        None
-    } else {
-        Some(super::control::Control::new(
-            &config,
-            actor.request,
-            Some(reviewer_profile),
-        )?)
-    };
-    let mut precheck: Option<precheck::Service> = None;
-    // This separate session owns only explicit supervisor read grants. It uses
-    // the same original owner, remains alive through review and reply grace,
-    // and never supplies an admission source, Permit purpose or review key.
-    let mut operator = operator_settings
-        .map(|settings| {
-            operator::Service::start(
-                settings,
-                actor,
-                port.clone(),
-                &driver,
-                tower_generation.expect("operator selection checked above"),
-                &deadline,
-            )
-        })
-        .transpose()?;
-    let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
-    eprintln!("Live actor endpoint ready: {:?}; request={}", actor.socket, actor.request);
-    let work = (|| {
-        if recorded {
-            // Opening fenced any old keys. Receipt reconciliation never launches
-            // helpers or treats the old request as a new admission.
-            resume_existing(&mut driver, actor.request, &mut time)?;
-        }
-        if let Some(settings) = precheck_settings {
-            // Independent stop wins before the one supervisor-owned bootstrap,
-            // just as it does before ordinary actor-triggered source acquisition.
+    // Keep the same original owner available to retention even if initial
+    // topology certification, sidecar setup or actor framing refuses early.
+    let result = (|| {
+        if let Some(topology) = topology {
+            let revision = driver.supervisor().host().map_err(debug)?.revision();
+            driver.require_topology(revision, topology).map_err(debug)?;
             deadline.check(time())?;
-            if let Some(control) = &mut early_control {
-                if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
-                    return Ok(());
-                }
+            let revision = driver.supervisor().host().map_err(debug)?.revision();
+            let refreshed = driver.refresh_topology(revision).map_err(debug)?;
+            if refreshed.refusal.is_some()
+                || !matches!(
+                    refreshed.checked,
+                    Some(Ok(
+                        fa_reference::action::consequence::mediation::CutCheck::Verified(_)
+                    ))
+                )
+            {
+                return Err(
+                    "initial live-service topology was not certified by the native checker".into(),
+                );
             }
-            precheck = Some(precheck::Service::start(settings, actor, reviewer_profile,
-                &mut config, &mut driver, &deadline, &mut time)?);
+            let now = time();
+            deadline.check(now)?;
+            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
+            let revision = host.revision();
+            host.observe_time(revision, now).map_err(debug)?;
         }
-        loop {
-            deadline.check(time())?;
-            if let Some(control) = &mut early_control {
-                // Independent stop wins before source acquisition or actor I/O.
-                if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
-                    return Ok(());
+        // The operator can stop while the actor is absent or holds an incomplete
+        // frame. Recovery keeps this independent Stop even for a recorded query;
+        // actor receipt traffic itself cannot mutate or refresh the sealed cut.
+        let mut early_control = if recorded && owner_start == OwnerStart::Ordinary {
+            None
+        } else {
+            Some(super::control::Control::new(
+                &config,
+                actor.request,
+                Some(reviewer_profile),
+            )?)
+        };
+        let mut precheck: Option<precheck::Service> = None;
+        // This separate session owns only explicit supervisor read grants. It uses
+        // the same original owner, remains alive through review and reply grace,
+        // and never supplies an admission source, Permit purpose or review key.
+        let mut operator = operator_settings
+            .map(|settings| {
+                operator::Service::start(
+                    settings,
+                    actor,
+                    port.clone(),
+                    &driver,
+                    tower_generation.expect("operator selection checked above"),
+                    &deadline,
+                )
+            })
+            .transpose()?;
+        let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
+        eprintln!(
+            "Live actor endpoint ready: {:?}; request={}",
+            actor.socket, actor.request
+        );
+        let work = (|| {
+            if recorded && owner_start == OwnerStart::Ordinary {
+                // Opening fenced any old keys. Receipt reconciliation never launches
+                // helpers or treats the old request as a new admission.
+                resume_existing(&mut driver, actor.request, &mut time)?;
+            }
+            if let Some(settings) = precheck_settings {
+                // Independent stop wins before the one supervisor-owned bootstrap,
+                // just as it does before ordinary actor-triggered source acquisition.
+                deadline.check(time())?;
+                if let Some(control) = &mut early_control {
+                    if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                        return Ok(());
+                    }
                 }
+                precheck = Some(precheck::Service::start(
+                    settings,
+                    actor,
+                    reviewer_profile,
+                    &mut config,
+                    &mut driver,
+                    &deadline,
+                    &mut time,
+                )?);
             }
-            if let Some(service) = &mut operator {
-                service.checkpoint();
-            }
-            if let Some(service) = &mut precheck {
-                // Precheck transport faults retire this sidecar only. They must
-                // not enter stop(), mutate the journal or cancel ordinary work.
-                service.checkpoint(&driver, time());
-            }
-            if recorded {
-                // Do not spend the reply grace before an actor has connected.
-                // Even malformed first frames remain subject to the original
-                // codec/ticket checks; no canonical data is pushed unsolicited.
-                if ingress.observe(&mut driver)? != 0 {
-                    return Ok(());
+            loop {
+                deadline.check(time())?;
+                if let Some(control) = &mut early_control {
+                    // Independent stop wins before source acquisition or actor I/O.
+                    if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                        return Ok(());
+                    }
+                }
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
+                if let Some(service) = &mut precheck {
+                    // Precheck transport faults retire this sidecar only. They must
+                    // not enter stop(), mutate the journal or cancel ordinary work.
+                    service.checkpoint(&driver, time());
+                }
+                if recorded {
+                    // Do not spend the reply grace before an actor has connected.
+                    // Even malformed first frames remain subject to the original
+                    // codec/ticket checks; no canonical data is pushed unsolicited.
+                    if ingress.observe(&mut driver)? != 0 {
+                        return Ok(());
+                    }
+                    pause(actor.poll_ms);
+                    continue;
+                }
+                ingress.admit(&mut driver, &mut config.source, &mut time)?;
+                match driver
+                    .supervisor()
+                    .host()
+                    .map_err(debug)?
+                    .request_status(actor.request)
+                {
+                    Ok(_) => break,
+                    Err(JournalError::Contract(Error::Missing)) => {}
+                    Err(error) => return Err(debug(error)),
                 }
                 pause(actor.poll_ms);
-                continue;
             }
-            ingress.admit(&mut driver, &mut config.source, &mut time)?;
-            match driver
-                .supervisor()
-                .host()
-                .map_err(debug)?
-                .request_status(actor.request)
-            {
-                Ok(_) => break,
-                Err(JournalError::Contract(Error::Missing)) => {}
-                Err(error) => return Err(debug(error)),
+            if let Some(service) = &mut precheck {
+                service.retire();
             }
-            pause(actor.poll_ms);
-        }
-        if let Some(service) = &mut precheck { service.retire(); }
-        let status = driver.supervisor().host().map_err(debug)?.request_status(actor.request).map_err(debug)?;
-        if !matches!(status.disposition, FileRequestDisposition::Admitted { stage: ActionState::Reviewing, .. }) {
-            return Ok(());
-        }
-        let expires = driver
-            .supervisor()
-            .host()
-            .map_err(debug)?
-            .request_action(actor.request)
-            .map_err(debug)?
-            .spec()
-            .deadline;
-        let active = Deadline {
-            logical: expires.min(deadline.logical),
-            started: deadline.started,
-            wall: deadline.wall,
-        };
-        let mut pump = |driver: &mut FileSupervisedDriver| {
-            // LiveControl has already serviced independent Stop before this
-            // cooperative ingress checkpoint. Read-side faults retire only it.
-            if let Some(service) = &mut operator {
-                service.checkpoint();
-            }
-            ingress.observe(driver)?;
             let status = driver
                 .supervisor()
                 .host()
                 .map_err(debug)?
                 .request_status(actor.request)
                 .map_err(debug)?;
-            Ok(matches!(
+            if !matches!(
                 status.disposition,
                 FileRequestDisposition::Admitted {
-                    stage: ActionState::Cancelled
-                        | ActionState::Denied
-                        | ActionState::Confirmed
-                        | ActionState::ConfirmedNotExecuted,
+                    stage: ActionState::Reviewing,
                     ..
                 }
-            ))
-        };
-        execute_serviced(
-            &mut driver,
-            &reviewer,
-            &mut config,
-            actor.request,
-            &active,
-            ExecuteServices {
-                peers: Some(reviewer_profile),
-                publication,
-                ingress: &mut pump,
-                stop: early_control.take(),
-            },
-            &mut time,
-        )
-    })();
-    // Neither helper execution nor terminal reply grace can keep the original
-    // admission-time disclosure alive. Every early/failed exit closes it too.
-    if let Some(service) = &mut precheck { service.retire(); }
-    let mut failure = match work {
-        Ok(()) => None,
-        Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {
-            Ok(()) => error,
-            Err(stopping) => format!("{error}; stop/drain: {stopping}"),
-        }),
-    };
-    // Read-free grace for terminal polls and same-session reconnects. The only
-    // replies are original ActorWire responses to actual actor commands. Neither
-    // disconnection nor a failed output proves nonexecution or requests a resend.
-    let started = Instant::now();
-    while started.elapsed() < Duration::from_millis(actor.reply_ms) {
-        if let Some(service) = &mut operator { service.checkpoint(); }
-        if let Err(error) = ingress.observe(&mut driver) {
-            if failure.is_none() {
-                failure = Some(error);
+            ) {
+                return Ok(());
             }
-            break;
-        }
-        pause(actor.poll_ms);
-    }
-    if let Some(service) = &mut operator {
-        service.retire();
-    }
-    ingress.revoke();
-    // A retained topology checkpoint is evidence of a healthy acknowledged
-    // owner. Never publish one after execution, stop/drain, or reply-grace has
-    // already failed: doing so would let a failed live service mint a recovery
-    // anchor that looks equivalent to a clean handoff.
-    if failure.is_none() {
-        if let Some(output) = topology_output {
-            let retained = match driver.supervisor().host() {
-                Ok(host) => output.retain(&host, driver.topology()),
-                Err(error) => Err(debug(error)),
+            let expires = driver
+                .supervisor()
+                .host()
+                .map_err(debug)?
+                .request_action(actor.request)
+                .map_err(debug)?
+                .spec()
+                .deadline;
+            let active = Deadline {
+                logical: expires.min(deadline.logical),
+                started: deadline.started,
+                wall: deadline.wall,
             };
-            if let Err(error) = retained {
-                failure = Some(error);
-            }
+            let mut pump = |driver: &mut FileSupervisedDriver| {
+                // LiveControl has already serviced independent Stop before this
+                // cooperative ingress checkpoint. Read-side faults retire only it.
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
+                ingress.observe(driver)?;
+                let status = driver
+                    .supervisor()
+                    .host()
+                    .map_err(debug)?
+                    .request_status(actor.request)
+                    .map_err(debug)?;
+                Ok(matches!(
+                    status.disposition,
+                    FileRequestDisposition::Admitted {
+                        stage: ActionState::Cancelled
+                            | ActionState::Denied
+                            | ActionState::Confirmed
+                            | ActionState::ConfirmedNotExecuted,
+                        ..
+                    }
+                ))
+            };
+            execute_serviced(
+                &mut driver,
+                &reviewer,
+                &mut config,
+                actor.request,
+                &active,
+                ExecuteServices {
+                    peers: Some(reviewer_profile),
+                    publication,
+                    ingress: &mut pump,
+                    stop: early_control.take(),
+                },
+                &mut time,
+            )
+        })();
+        // Neither helper execution nor terminal reply grace can keep the original
+        // admission-time disclosure alive. Every early/failed exit closes it too.
+        if let Some(service) = &mut precheck {
+            service.retire();
         }
+        let mut failure = match work {
+            Ok(()) => None,
+            // A settled recorded query has no live admission to withdraw. Preserve
+            // its exact sealed recovery cut even after a disconnect or deadline;
+            // legacy open paths keep their original reconciliation/stop behavior.
+            Err(error) if recorded && owner_start == OwnerStart::Reconciled => Some(error),
+            Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {
+                Ok(()) => error,
+                Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+            }),
+        };
+        // Read-free grace for terminal polls and same-session reconnects. The only
+        // replies are original ActorWire responses to actual actor commands. Neither
+        // disconnection nor a failed output proves nonexecution or requests a resend.
+        let started = Instant::now();
+        while started.elapsed() < Duration::from_millis(actor.reply_ms) {
+            if owner_start == OwnerStart::Reconciled {
+                if let Some(control) = &mut early_control {
+                    if let Err(error) =
+                        control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                    {
+                        failure = Some(match failure {
+                            Some(failure) => format!("{failure}; stop control: {error}"),
+                            None => error,
+                        });
+                        break;
+                    }
+                }
+            }
+            if let Some(service) = &mut operator {
+                service.checkpoint();
+            }
+            if let Err(error) = ingress.observe(&mut driver) {
+                if failure.is_none() {
+                    failure = Some(error);
+                }
+                break;
+            }
+            pause(actor.poll_ms);
+        }
+        if let Some(service) = &mut operator {
+            service.retire();
+        }
+        ingress.revoke();
+        failure.map_or(Ok(()), Err)
+    })();
+    let mut failure = result.err();
+    let retained = match driver.supervisor().host() {
+        Ok(host) => retain(&host, driver.topology(), failure.is_none()),
+        Err(error) => Err(debug(error)),
+    };
+    if let Err(error) = retained {
+        failure = Some(match failure {
+            Some(failure) => format!("{failure}; {error}"),
+            None => error,
+        });
     }
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     if let Some(error) = failure {

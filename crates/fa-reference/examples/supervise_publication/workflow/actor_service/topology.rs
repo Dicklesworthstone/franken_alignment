@@ -4,6 +4,9 @@ use super::{Config, ElapsedTick, PeerProfile, Profile, PublicationProfile, serve
 use super::super::continuation::creation::topology::Selection;
 use std::path::Path;
 
+#[path = "topology/recovery.rs"]
+pub(super) mod recovery;
+
 const USAGE: &str = "usage: supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --topology-profile TOPOLOGY_PROFILE | serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --topology-profile TOPOLOGY_PROFILE";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
