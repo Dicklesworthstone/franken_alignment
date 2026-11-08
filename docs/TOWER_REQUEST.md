@@ -46,7 +46,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | Verb | `arguments` |
 |---|---|
 | `get`, `explain`, `why-held`, `replay-plan` | `null` |
-| `situation` | `null` for a fresh capture; native publication inspection also accepts `{"cursor":"17"}` with the exact returned continuation |
+| `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | `null` or `{"since_seq":"0","max_events":"64"}` |
 | `next` | `null` or `{"max_cost":"8"}` |
@@ -67,7 +67,7 @@ typed defaults. An unknown or retired verb is not silently treated as a read.
 A separately granted operator inspection can continue beyond the first 16
 attempts by copying the native result's `knowledge.value.continuation` into
 `{"cursor":"N"}`. The cursor is a nonzero canonical `u64` string, is the sole
-argument, and is accepted only by the original native publication facade that
+argument in the default profile, and is accepted only by the original native publication facade that
 retains the issued cursor. It cannot supply an offset, grant inspection, cross
 owners or select an imported reference snapshot. The typed equivalent is
 `ReadArguments::SituationPage { cursor }`.
@@ -80,6 +80,18 @@ grant. Check `enumeration_complete` independently of continuation: the final
 allowed query returns no cursor even if rows remain. These process/service-local
 values do not resume across restarts. See the
 [native inspection contract](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
+
+Request navigation is an explicit opt-in: use `{"request_links":true}` for the
+first page and `{"request_links":true,"cursor":"N"}` for its continuation.
+The typed form is `ReadArguments::SituationLinks { cursor: Option<u64> }`.
+`request_links` must be the boolean `true`; false, null, string values and extra
+fields refuse. The response uses `fa.publication-situation/2` and adds the
+original external request key and canonical request address, both nullable,
+to each captured attempt. Default requests retain the exact v1 row shape.
+The same original page, cursor custody and query allowance apply; changing the
+projection does not recapture or grant another read. Imported reference
+snapshots reject this native projection without charging their read allowance.
+See [captured request links](TOWER_PUBLICATION.md#follow-captured-attempts-to-original-requests).
 
 ### Native proposals
 

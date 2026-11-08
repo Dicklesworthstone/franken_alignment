@@ -8,6 +8,34 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileInspectionResult, FileSupervisorInspectionPort,
 };
 use crate::action::consequence::oversight::actor::ActorError;
+use crate::address_resolver::Address;
+
+/// An original native observation paired with the registration that issued it.
+/// Its sealed registration prevents mutable envelope fields from moving the
+/// captured request links to a different generation or run. It carries data,
+/// not a ticket, explanation grant, source custodian or publication authority.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LinkedSituation {
+    native: FileInspectionResult,
+    registration: Address,
+    query_address: Address,
+}
+
+impl LinkedSituation {
+    pub fn native(&self) -> &FileInspectionResult {
+        &self.native
+    }
+
+    pub fn registration(&self) -> &Address {
+        &self.registration
+    }
+
+    /// The exact original query address, including an omitted generation.
+    /// Returned links always use the separately sealed registered generation.
+    pub fn query_address(&self) -> &Address {
+        &self.query_address
+    }
+}
 
 impl PublicationTower {
     /// Host-only installation of a supervisor read capability. Actor/precheck
@@ -44,18 +72,20 @@ impl PublicationTower {
         if request.address.without_generation() != self.mount.without_generation() {
             return self.refusal(&request, ReasonCode::MissingRequiredObservation, true);
         }
-        if !matches!(
-            request.arguments,
-            ReadArguments::None | ReadArguments::SituationPage { cursor: 1.. }
-        ) {
-            return self.refusal(&request, ReasonCode::IntegrityFailure, true);
-        }
+        let cursor = match request.arguments {
+            ReadArguments::None | ReadArguments::SituationLinks { cursor: None } => None,
+            ReadArguments::SituationPage { cursor }
+            | ReadArguments::SituationLinks {
+                cursor: Some(cursor),
+            } if cursor != 0 => Some(cursor),
+            _ => return self.refusal(&request, ReasonCode::IntegrityFailure, true),
+        };
         let Some(port) = &self.inspection else {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, true);
         };
-        let native = match request.arguments {
-            ReadArguments::None => port.situation(),
-            ReadArguments::SituationPage { cursor } => {
+        let native = match cursor {
+            None => port.situation(),
+            Some(cursor) => {
                 let Some(original) = self
                     .inspection_cursor
                     .as_ref()
@@ -68,14 +98,18 @@ impl PublicationTower {
                 };
                 port.situation_page(Some(original))
             }
-            _ => unreachable!("inspection arguments admitted above"),
         };
         let response = self.inspection_response(&request, native);
         // Retain at most one exact native continuation from an encodable
         // response. Reconnects keep this original facade; replacements, output
         // refusals and completed enumeration cannot rebind an old handle.
-        self.inspection_cursor = match &response.result {
-            PublicationResult::Situation(Ok(ActorKnowledge::Known { value, .. })) => {
+        let retained = match &response.result {
+            PublicationResult::Situation(native) => Some(native),
+            PublicationResult::SituationLinks(linked) => Some(linked.native()),
+            _ => None,
+        };
+        self.inspection_cursor = match retained {
+            Some(Ok(ActorKnowledge::Known { value, .. })) => {
                 value.continuation().cloned()
             }
             _ => None,
@@ -89,12 +123,21 @@ impl PublicationTower {
         native: FileInspectionResult,
     ) -> PublicationResponse {
         let reason = inspection_reason(&native);
+        let result = if matches!(request.arguments, ReadArguments::SituationLinks { .. }) {
+            PublicationResult::SituationLinks(LinkedSituation {
+                native,
+                registration: self.mount.clone(),
+                query_address: request.address.clone(),
+            })
+        } else {
+            PublicationResult::Situation(native)
+        };
         // The native basis remains inside the original result profile. Mount
         // generation, journal revision, control sequence and recorded time are
         // different coordinates and cannot replace one another in the envelope.
         self.bounded_response(self.response(
             request,
-            PublicationResult::Situation(native),
+            result,
             reason,
             true,
         ))

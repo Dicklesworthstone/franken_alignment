@@ -69,6 +69,31 @@ impl RequestBook {
     pub(super) fn status(&self, request: u64) -> Result<FileRequestStatus, Error> {
         Ok(self.records.get(&request).ok_or(Error::Missing)?.status)
     }
+
+    /// One bounded reverse projection of the ORIGINAL admitted identities.
+    /// A refused request's allocated ID is not an admitted attempt. This map
+    /// carries no ticket, action, approval key or inferred effect outcome.
+    pub(super) fn admitted_request_index(&self) -> Result<BTreeMap<u64, u64>, Error> {
+        if self.records.len() > MAX_FILE_REQUESTS {
+            return Err(Error::Limit);
+        }
+        let mut requests = BTreeMap::new();
+        for (&request, record) in &self.records {
+            if request == 0 || record.status.request != request {
+                return Err(Error::Binding);
+            }
+            if let FileRequestDisposition::Admitted { attempt, .. } = record.status.disposition {
+                if attempt == 0
+                    || attempt != record.allocated_attempt
+                    || requests.insert(attempt, request).is_some()
+                {
+                    return Err(Error::Binding);
+                }
+            }
+        }
+        Ok(requests)
+    }
+
     pub(super) fn retry(
         &self,
         request: u64,
@@ -573,6 +598,7 @@ fn projection_class(stage: ActionState) -> u8 {
 
 #[cfg(test)]
 mod completion_tests {
+    mod inspection_links;
     mod terminal;
 
     use super::super::{

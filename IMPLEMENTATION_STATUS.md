@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: navigate native situations to original request explanations
+
+Native situation captures now retain the original admitted external request
+identity for each linked attempt. One bounded reverse projection of the original
+request book supplies the immutable mapping; direct attempts and refused
+allocations remain unlinked. Ambiguous, rebound and orphaned admitted records
+fail closed. Continued pages never consult a newer request book.
+
+An explicit `request_links: true` Tower argument selects
+`fa.publication-situation/2`, adding paired nullable external request keys and
+canonical request addresses while preserving numeric attempt identities. Links
+bind the original complete request scope and registered generation, even when
+the original read omitted its generation. Sealed registration/query identities
+prevent public response fields from moving links to a different route. Default
+v1 bytes, native capture/cursor custody, query and output limits remain intact.
+
+The address can be followed to the original policy-admission explanation through
+its separately installed grant. A link supplies no actor ticket, source evidence,
+current eligibility or publication authority. Imported reference snapshots reject
+this native projection without spending their logical read allowance.
+
+Thirteen new regression functions cover native identity capture/reopen, strict
+wire opt-in, full-width/nonmatching keys, direct/refused allocations, immutable
+pagination, actual separate-grant explanation navigation, generationless queries,
+envelope rebinding and output bounds. Independent source review and Rust 2024
+syntax/format checks use the unqualified rustfmt 1.10.0-nightly (9085017724,
+2026-08-30). Required remote compilation, Clippy, runtime tests and the full RCH
+gate remain pending; no bead or packet is closed. See [the navigation contract](docs/TOWER_PUBLICATION.md#follow-captured-attempts-to-original-requests).
+
 ## 2026-11-08: retain native source custody through ordinary mediated recovery
 
 `FileMediatedRecovery::finish_reconciled_with_checkpoint` now returns the

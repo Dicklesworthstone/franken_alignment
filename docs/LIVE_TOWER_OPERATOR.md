@@ -143,6 +143,15 @@ the actor service, for example `fa://1/attempt/request-3-2-4-5-7@41`, with
 `arguments: null`. It describes the original policy admission and its distinct
 ending cut; it does not establish current eligibility or explain a later hold.
 
+To obtain those original request addresses from the situation itself, explicitly
+select `{"request_links":true}` and use the same flag alongside each returned
+cursor. The resulting `fa.publication-situation/2` rows include paired nullable
+`external_request` and `request_address` fields. They are frozen with the original
+capture and preserve full request scope and registration generation. Default
+situation requests keep their existing v1 shape. A link can be supplied in a
+separate explanation request only when that endpoint already has the independent
+explanation grant. See [the request-link contract](TOWER_PUBLICATION.md#follow-captured-attempts-to-original-requests).
+
 ## Enumerate one original situation capture
 
 ```sh

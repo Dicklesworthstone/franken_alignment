@@ -55,12 +55,16 @@ pub struct FileSituationSummary {
 }
 
 /// Exact original stage and proposal metadata, with no payload, witnesses,
-/// helper inputs/votes, keys, empirical review or inferred nonexecution receipt.
+/// helper inputs/votes, approval keys, empirical review or inferred nonexecution receipt.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileSituationAttempt {
     /// Canonical registered identity for this attempt within its authority tenant.
     pub address: Address,
     pub attempt: u64,
+    /// Original external key admitted for this attempt at the captured cut.
+    /// Direct native attempts have no such link. The scalar is distinct from
+    /// `attempt` and carries no request ticket, approval or current eligibility.
+    pub external_request: Option<u64>,
     pub stage: ActionState,
     pub target: ResolvedTarget,
     pub units: u64,
@@ -131,15 +135,29 @@ impl FileSituation {
         }, basis: self.basis })
     }
 
-    fn capture(profile: &FileOversightProfile, machine: &Machine, revision: usize,
-        origin: FileSituationOrigin, anchored_through: Option<u64>) -> Result<Self, JournalError>
-    {
+    fn capture(
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        revision: usize,
+        origin: FileSituationOrigin,
+        anchored_through: Option<u64>,
+    ) -> Result<Self, JournalError> {
         let snapshot = machine.snapshot(revision);
         let control = &snapshot.control;
         let ledger = &control.ledger;
         let total = ledger.available.checked_add(ledger.reserved)
             .and_then(|sum| sum.checked_add(ledger.charged)).ok_or(Error::Overflow)?;
         if total != profile.delivery.total { return Err(Error::Binding.into()); }
+        // Build once from this same immutable machine. Looking up each row in
+        // the live request book later would mix cuts; scanning it per row would
+        // multiply work by the number of retained requests.
+        let requests = machine.requests.admitted_request_index()?;
+        if requests
+            .keys()
+            .any(|attempt| !ledger.stages.contains_key(attempt))
+        {
+            return Err(Error::Binding.into());
+        }
         let mut summary = FileSituationSummary {
             total_units: total, available_units: ledger.available, reserved_units: ledger.reserved,
             charged_units: ledger.charged, policy_epoch: ledger.epoch,
@@ -160,7 +178,8 @@ impl FileSituation {
                 summary.irrecoverably_unknown_attempts += 1;
             }
             let address = Address::new(profile.delivery.scope.tenant, AddressKind::Attempt, attempt, None)?;
-            attempts.push(FileSituationAttempt { address, attempt, stage,
+            attempts.push(FileSituationAttempt { address, attempt,
+                external_request: requests.get(&attempt).copied(), stage,
                 target: action.target.ok_or(Error::Incomplete)?, units: action.units,
                 payload_bytes: action.payload.len(), proposal_policy_epoch: action.policy_epoch,
                 deadline: action.deadline });

@@ -261,6 +261,68 @@ fn every_object_level_is_closed_and_duplicate_names_are_not_aliases() {
 }
 
 #[test]
+fn linked_situations_require_explicit_true_and_keep_original_cursor_identity() {
+    for cursor in [None, Some(1), Some(u64::MAX)] {
+        let query = request(Verb::Situation, ReadArguments::SituationLinks { cursor });
+        round_trip(&query);
+        let encoded = encode_request(&query).unwrap();
+        assert!(encoded.contains("\"request_links\":true"));
+        assert_eq!(encoded.contains("\"cursor\":"), cursor.is_some());
+    }
+    for arguments in [
+        "{\"request_links\":false}",
+        "{\"request_links\":null}",
+        "{\"request_links\":\"true\"}",
+        "{\"request_links\":1}",
+        "{\"request_links\":true,\"cursor\":null}",
+        "{\"request_links\":true,\"cursor\":\"0\"}",
+        "{\"request_links\":true,\"cursor\":\"01\"}",
+        "{\"request_links\":true,\"cursor\":\"-1\"}",
+        "{\"request_links\":true,\"cursor\":\"1.0\"}",
+        "{\"request_links\":true,\"cursor\":\"18446744073709551616\"}",
+        "{\"request_links\":true,\"cursor\":1}",
+        "{\"request_links\":true,\"offset\":\"16\"}",
+        "{\"request_links\":true,\"schema\":\"fa.publication-situation/2\"}",
+        "{\"request_links\":true,\"request_links\":true}",
+        "{\"request_links\":true,\"cursor\":\"1\",\"cursor\":\"2\"}",
+    ] {
+        assert_eq!(
+            decode_request(document("situation", arguments).as_bytes()),
+            Err(TowerDecodingError::MalformedRequest),
+            "{arguments}"
+        );
+    }
+    assert_eq!(
+        encode_request(&request(
+            Verb::Situation,
+            ReadArguments::SituationLinks { cursor: Some(0) }
+        )),
+        Err(TowerDecodingError::MalformedRequest)
+    );
+}
+
+#[test]
+fn situation_request_links_cannot_be_selected_for_any_other_verb() {
+    for verb in Verb::ALL
+        .into_iter()
+        .filter(|verb| *verb != Verb::Situation)
+    {
+        for cursor in [None, Some(17)] {
+            assert_eq!(
+                encode_request(&request(verb, ReadArguments::SituationLinks { cursor })),
+                Err(TowerDecodingError::MalformedRequest),
+                "{verb:?}"
+            );
+        }
+        assert_eq!(
+            decode_request(document(verb.as_str(), "{\"request_links\":true}").as_bytes()),
+            Err(TowerDecodingError::MalformedRequest),
+            "{verb:?}"
+        );
+    }
+}
+
+#[test]
 fn root_and_argument_types_cannot_select_another_operation() {
     for invalid in [
         READ.replace("\"operation_id\":\"read-1\"", "\"operation_id\":1"),

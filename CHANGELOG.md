@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-08: link native situation attempts to original requests
+
+- Capture admitted external request identities once with the original immutable
+  situation, preserving direct/refused allocation distinctions and exact scope.
+- Add explicit `request_links: true` arguments and a v2 situation projection
+  with paired nullable request keys/addresses. Preserve default v1 bytes and
+  original query, cursor, revocation and output bounds.
+- Connect inspection navigation to separately granted original admission
+  explanations without minting request tickets or publication authority. Seal
+  route identity against public envelope rebinding, including generationless reads.
+- Add thirteen native, Tower and codec regression functions and expand the
+  imported snapshot refusal test. Independent source review and syntax/format
+  checks are complete; remote compilation and runtime execution remain pending.
+
 ## 2026-11-08: retain topology checkpoints through ordinary reconciled recovery
 
 - Add a native mediated recovery finalizer returning the original owner and an

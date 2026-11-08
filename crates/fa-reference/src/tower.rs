@@ -168,6 +168,11 @@ pub enum ReadArguments {
     SituationPage {
         cursor: u64,
     },
+    /// Opt in to original request links without changing the legacy situation
+    /// profile. None captures once; Some continues the same native capture.
+    SituationLinks {
+        cursor: Option<u64>,
+    },
     Next {
         max_cost: u64,
     },
@@ -572,7 +577,10 @@ impl ReferenceTower {
         }
         if matches!(
             (&request.verb, &request.arguments),
-            (Verb::Situation, ReadArguments::SituationPage { .. })
+            (
+                Verb::Situation,
+                ReadArguments::SituationPage { .. } | ReadArguments::SituationLinks { .. }
+            )
         ) {
             // Native capture cursors cannot select a page of an imported
             // snapshot or consume its unrelated logical read allowance.

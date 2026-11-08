@@ -90,6 +90,14 @@ impl PublicationResponse {
             PublicationResult::Situation(native) => {
                 ("situation", inspection::encode(native, &encoder)?)
             }
+            PublicationResult::SituationLinks(linked) => (
+                "situation",
+                inspection::encode_linked(
+                    linked,
+                    &self.envelope.address,
+                    &encoder,
+                )?,
+            ),
             PublicationResult::Explanation(native) => {
                 ("explanation", explanation::encode(native, &self.envelope.address, &encoder)?)
             }

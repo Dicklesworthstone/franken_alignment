@@ -9,6 +9,7 @@
 mod capabilities;
 mod explanation;
 mod inspection;
+pub use inspection::LinkedSituation;
 #[cfg(target_os = "linux")]
 pub mod peer;
 mod precheck;
@@ -67,10 +68,12 @@ impl PublicationLimits {
 /// Original observation-only responses preserve each native epistemic variant
 /// and basis. A request generation is not a supervisor situation's control cut.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum PublicationResult {    Request(WireResponse),
+pub enum PublicationResult {
+    Request(WireResponse),
     Precheck(PrecheckWireResponse),
     Capabilities(PrecheckCapabilitiesResponse),
     Situation(FileInspectionResult),
+    SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
     Refused(Knowledge<()>),
 }
@@ -145,16 +148,7 @@ impl PublicationTower {
     /// namespace prevents a native request key from impersonating a ledger
     /// attempt number. Possessing this address does not acquire its ticket.
     pub fn request_address(&self, request: u64) -> Result<Address, TowerInstallError> {
-        if request == 0 {
-            return Err(TowerInstallError::InvalidAddress);
-        }
-        Address::new(
-            self.mount.tenant.clone(),
-            Noun::Attempt,
-            format!("{}{request}", self.request_prefix()),
-            self.mount.generation,
-        )
-        .map_err(|_| TowerInstallError::InvalidAddress)
+        request_address_for(self.scope, &self.mount, request)
     }
 
     /// Decode one complete bounded Tower document before consulting the native
@@ -299,10 +293,7 @@ impl PublicationTower {
     }
 
     fn request_prefix(&self) -> String {
-        format!(
-            "request-{}-{}-{}-{}-",
-            self.scope.run, self.scope.principal, self.scope.branch, self.scope.authority
-        )
+        request_prefix(self.scope)
     }
 
     /// Routing reserves the complete native namespace, including invalid key
@@ -428,6 +419,50 @@ impl PublicationTower {
         }
         response
     }
+}
+
+/// Canonical navigation address for an external request in one publication
+/// scope and registration. This pure spelling helper supplies no ticket, read
+/// grant, native owner or evidence that the named request exists.
+pub fn request_address_for(
+    scope: Scope,
+    registration: &Address,
+    request: u64,
+) -> Result<Address, TowerInstallError> {
+    if request == 0
+        || [
+            scope.tenant,
+            scope.principal,
+            scope.run,
+            scope.branch,
+            scope.authority,
+        ]
+        .contains(&0)
+        || scope.purpose != Purpose::Effect
+        || validate_address(registration).is_err()
+        || registration.kind != Noun::Run
+        || registration
+            .generation
+            .is_none_or(|generation| generation == 0)
+        || registration.tenant != scope.tenant.to_string()
+        || registration.id != scope.run.to_string()
+    {
+        return Err(TowerInstallError::InvalidAddress);
+    }
+    Address::new(
+        registration.tenant.clone(),
+        Noun::Attempt,
+        format!("{}{request}", request_prefix(scope)),
+        registration.generation,
+    )
+    .map_err(|_| TowerInstallError::InvalidAddress)
+}
+
+fn request_prefix(scope: Scope) -> String {
+    format!(
+        "request-{}-{}-{}-{}-",
+        scope.run, scope.principal, scope.branch, scope.authority
+    )
 }
 
 pub(super) fn valid_request_identity(request: &TowerRequest) -> bool {

@@ -265,6 +265,57 @@ The same native result passes through the shared router and bounded peer without
 a response cache. `tower-exchange` can carry it for an independently provisioned
 operator connection while preserving its original observational meaning.
 
+## Follow captured attempts to original requests
+
+Use `ReadArguments::SituationLinks { cursor: None }`, or JSON arguments
+`{"request_links":true}`, to receive `fa.publication-situation/2`. Continue the
+same capture with `{"request_links":true,"cursor":"N"}`. The default null and
+cursor-only requests retain the exact eight-field v1 row shape and field order.
+The common envelope and outer result kind `situation` are unchanged.
+
+Each v2 attempt retains its original numeric `address` and adds:
+
+```json
+{
+  "external_request": "7001",
+  "request_address": "fa://1/attempt/request-3-2-4-5-7001@41"
+}
+```
+
+These two fields are both null for a direct native attempt without an admitted
+external request. The original request book supplies the mapping, captured once
+alongside the ledger and copied into immutable rows. External keys can differ
+from attempt IDs and retain all 64 bits. Refused allocations never become links
+to a later direct attempt that happens to reuse the allocation. Ambiguous,
+rebound or orphaned admitted mappings fail closed. The reverse projection is
+bounded by the original request-book limit and built once per capture; subsequent
+pages do not scan a newer live request book.
+
+The request address contains the original run, principal, branch, authority and
+external key, plus the mounted registration generation. An original query may
+omit its generation; the returned links still name the registered generation.
+`PublicationResult::SituationLinks(LinkedSituation)` seals both that registration
+and the original query address, so later edits to public envelope fields cannot
+rebind the result. `request_address_for(scope, registration, key)` exposes only
+the validated canonical spelling for consumers; it proves neither existence nor
+authority.
+
+An operator can use a non-null link in a separately authorized `explain` query
+to inspect the original exact-policy admission. Inspection and link possession
+do not confer explanation disclosure, an actor request ticket, Permit authority
+or either publication key. `get` retains its original ticket requirements. Links
+describe the captured request identity, not current eligibility, later holds or
+fresh source evidence. Native cursor, revocation, owner health, query and output
+limits apply equally to both projections, with no refund on encoding refusal.
+
+Thirteen authored native, Tower integration and codec regression functions cover
+original mapping and reopen, full-width/nonmatching keys, direct and refused
+allocations, immutable pagination, separate explanation custody, generationless
+queries, envelope rebinding, strict opt-in syntax and bounded output. An existing
+reference-Tower test now also checks no-charge refusal of this native profile.
+Independent source review and syntax/format checks do not replace the pending
+remote compilation and runtime gate.
+
 ## Explain the original exact-policy admission
 
 A distinct `FileSupervisorExplanationPort` discloses the original policy and its

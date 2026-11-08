@@ -98,7 +98,10 @@ fn closed_stage_rendering_and_full_width_bounds_do_not_truncate_metadata() {
         run: u64::MAX, branch: u64::MAX, authority: u64::MAX, purpose: Purpose::Effect },
         journal_revision: u64::MAX, control_sequence: u64::MAX, recorded_at: Some(ElapsedTick(u64::MAX)),
         origin: FileSituationOrigin::CanonicalImage, anchored_through: Some(u64::MAX) };
-    let row = FileSituationAttempt { attempt: u64::MAX, stage: ActionState::IrrecoverablyUnknown,
+    let row = FileSituationAttempt {
+        address: fa_reference::address::Address::new(u64::MAX,
+            fa_reference::address::AddressKind::Attempt, u64::MAX, None).unwrap(),
+        attempt: u64::MAX, external_request: None, stage: ActionState::IrrecoverablyUnknown,
         target: ResolvedTarget { adapter: u64::MAX, object: u64::MAX, contract_version: u64::MAX,
             expected_version: u64::MAX, generation: u64::MAX }, units: u64::MAX, payload_bytes: usize::MAX,
         proposal_policy_epoch: u64::MAX, deadline: ElapsedTick(u64::MAX) };

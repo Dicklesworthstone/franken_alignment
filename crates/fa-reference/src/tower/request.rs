@@ -167,6 +167,19 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             })
         }
         Verb::Situation => {
+            if args.contains_key("request_links") {
+                if field(args, "request_links")?.as_bool() != Some(true) {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                let cursor = if args.contains_key("cursor") {
+                    fields(args, &["request_links", "cursor"])?;
+                    Some(decimal(args, "cursor")?)
+                } else {
+                    fields(args, &["request_links"])?;
+                    None
+                };
+                return Ok(ReadArguments::SituationLinks { cursor });
+            }
             fields(args, &["cursor"])?;
             Ok(ReadArguments::SituationPage {
                 cursor: decimal(args, "cursor")?,
@@ -256,6 +269,11 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         }
         (Verb::Situation, ReadArguments::SituationPage { cursor }) => {
             if *cursor == 0 {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        (Verb::Situation, ReadArguments::SituationLinks { cursor }) => {
+            if cursor.is_some_and(|value| value == 0) {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
@@ -487,6 +505,13 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         ReadArguments::SituationPage { cursor } => {
             object_json(&[("cursor", quote(&cursor.to_string()))])
         }
+        ReadArguments::SituationLinks { cursor } => match cursor {
+            Some(cursor) => object_json(&[
+                ("request_links", "true".to_owned()),
+                ("cursor", quote(&cursor.to_string())),
+            ]),
+            None => object_json(&[("request_links", "true".to_owned())]),
+        },
         ReadArguments::Next { max_cost } => {
             object_json(&[("max_cost", quote(&max_cost.to_string()))])
         }

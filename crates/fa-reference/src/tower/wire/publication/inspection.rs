@@ -9,13 +9,36 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
 };
 use crate::action::consequence::oversight::actor::{ActorError, Knowledge, UnknownReason};
 use crate::action::{ActionState, Purpose};
+use crate::address_resolver::Address;
+use crate::tower::publication::{LinkedSituation, request_address_for};
 
 pub(super) fn encode(
     result: &FileInspectionResult,
     encoder: &Encoder,
 ) -> Result<String, TowerEncodingError> {
+    encode_selected(result, None, encoder)
+}
+
+pub(super) fn encode_linked(
+    linked: &LinkedSituation,
+    address: &Address,
+    encoder: &Encoder,
+) -> Result<String, TowerEncodingError> {
+    if address != linked.query_address() {
+        return Err(TowerEncodingError::InvalidKnowledge);
+    }
+    encode_selected(linked.native(), Some(linked.registration()), encoder)
+}
+
+fn encode_selected(
+    result: &FileInspectionResult,
+    registration: Option<&Address>,
+    encoder: &Encoder,
+) -> Result<String, TowerEncodingError> {
     let (field, value) = match result {
-        Ok(Knowledge::Known { value, basis }) => ("knowledge", known(value, *basis, encoder)?),
+        Ok(Knowledge::Known { value, basis }) => (
+            "knowledge", known(value, *basis, registration, encoder)?
+        ),
         Ok(Knowledge::Unknown {
             reason: UnknownReason::ControllerUnavailable,
         }) => (
@@ -43,7 +66,11 @@ pub(super) fn encode(
         Ok(_) | Err(_) => return Err(TowerEncodingError::InvalidKnowledge),
     };
     encoder.bounded(object_json(&[
-        ("schema", quote("fa.publication-situation/1")),
+        ("schema", quote(if registration.is_some() {
+            "fa.publication-situation/2"
+        } else {
+            "fa.publication-situation/1"
+        })),
         ("operation", quote("situation")),
         ("historical", "true".to_owned()),
         ("current_eligibility", quote("not_observed")),
@@ -54,6 +81,7 @@ pub(super) fn encode(
 fn known(
     page: &FileInspectionPage,
     basis: FileSituationBasis,
+    registration: Option<&Address>,
     encoder: &Encoder,
 ) -> Result<String, TowerEncodingError> {
     // Public response fields cannot replace this sealed capture's origin,
@@ -130,7 +158,8 @@ fn known(
             ("expected_version", number(target.expected_version)),
             ("generation", number(target.generation)),
         ]);
-        attempts.push(encoder.bounded(object_json(&[
+        let mut fields = Vec::with_capacity(if registration.is_some() { 10 } else { 8 });
+        fields.extend([
             ("address", quote(&row.address.to_string())),
             ("attempt", number(row.attempt)),
             ("stage", quote(stage(row.stage))),
@@ -139,7 +168,17 @@ fn known(
             ("payload_bytes", number(row.payload_bytes)),
             ("proposal_policy_epoch", number(row.proposal_policy_epoch)),
             ("deadline", number(row.deadline.0)),
-        ]))?);
+        ]);
+        if let Some(registration) = registration {
+            let address = row.external_request.map(|request|
+                request_address_for(basis.scope, registration, request)
+                    .map(|address| quote(&address.canonical_string()))
+                    .map_err(|_| TowerEncodingError::InvalidKnowledge)
+            ).transpose()?.unwrap_or_else(|| "null".to_owned());
+            fields.push(("external_request", optional(row.external_request)));
+            fields.push(("request_address", address));
+        }
+        attempts.push(encoder.bounded(object_json(&fields))?);
     }
     let value = encoder.bounded(object_json(&[
         ("summary", summary),
