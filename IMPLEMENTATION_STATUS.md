@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: exact precheck beside the original Tower publication service
+
+All four ordinary single-request Tower serve modes now accept an explicit
+`--precheck-profile` alongside `--tower-generation`, in either option order.
+The existing uncached, cached and full-policy profiles retain their separate
+authenticated native socket, original source bootstrap/lease, shared query
+allowance and custody. No Tower actor or operator grant is widened. Request
+schedules and incompatible service modes refuse before configuration reads.
+
+The actor can run the existing `actor-precheck` command and then submit through
+`tower-exchange`. Tower admission reacquires current evidence; helper/human
+review, both publication keys, checked final-input validation and independent
+Stop keep their original owners. Disclosure retires before review and on every
+service exit. Sidecar transport failure does not cancel ordinary publication,
+and recorded recovery cannot acquire a fresh disclosure.
+
+Nine new regression functions cover option admission, all three disclosure
+profiles, repeated queries across reconnects, actual two-key publication,
+changed source/final witness, partial-frame Stop, socket preflight and retained
+request recovery. Source review and changed-range Rust 2024 formatting/syntax
+checks use rustfmt 1.10.0-nightly (9085017724, 2026-08-30); this is not the
+qualified compiler identity. The required `RCH_REQUIRE_REMOTE=1 rch exec --
+cargo +nightly-2026-09-08 run --locked -p xtask -- check` was attempted: RCH first
+refused the absent default canonical root, then, with this checkout's actual
+root supplied, refused local fallback because its daemon is unavailable. Worker
+discovery returns zero configured workers. Compilation, Clippy, runtime tests
+and the complete gate remain pending; no bead or packet is closed. See
+[the service contract](docs/TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
+
 ## 2026-11-07: sequential publication through the original live Tower service
 
 All four ordinary Tower service modes now accept an explicit `--requests`

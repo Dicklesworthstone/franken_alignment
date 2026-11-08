@@ -79,6 +79,14 @@ uncertainty, and reconnects retain tickets and spent exchange limits. The new
 service, client and native socket regressions still require RCH execution
 qualification.
 
+Ordinary single-request Tower services can also select
+`--precheck-profile PRECHECK_PROFILE`. Actors check exact policy through the
+existing authenticated `actor-precheck` sidecar before using `tower-exchange`.
+Queries share the original disclosure budget; actual submission reacquires
+source evidence and still requires independent review and both publication keys.
+See [the combined workflow](docs/TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
+Its new source and regression cases remain pending RCH execution qualification.
+
 The [independent rights-journal verifier](docs/INDEPENDENT_RIGHTS_VERIFY.md)
 has an operator command: `xtask verify rights-journal --context EXPECTED_JSON
 --journal HISTORY --anchor RETAINED_PREFIX`. It checks actual FARJ files against

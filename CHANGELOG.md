@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-08: compose exact prechecks with live Tower publication
+
+- Accept an explicit native precheck sidecar in all four ordinary single-request
+  Tower service modes, with either option order and closed grammar before reads.
+- Preserve the original authenticated disclosure, shared budgets and lease,
+  fresh submission evidence, independent Stop, both publication keys and checked
+  final-input validation through the existing supervisor lifecycle.
+- Add nine regression functions for the three disclosure profiles, real
+  publication, changed evidence, exhaustion/reconnects, malformed/partial input,
+  socket collisions and historical recovery. Source review and syntax/format
+  checks are separate from pending RCH compilation and execution; no worker is
+  configured and the required remote gate refuses its unavailable daemon.
+
 ## 2026-11-07: serve bounded sequential publications through Tower
 
 - Accept explicit `--requests` schedules in all four ordinary Tower service

@@ -33,6 +33,15 @@ The single learned actor command has a separate release-specific integration,
 described below. It never enables the ordinary raw-proposal disclosure on a
 learned owner.
 
+The four ordinary single-request modes also accept an explicit
+`--tower-generation GENERATION` alongside `--precheck-profile`, in either option
+order after the positional arguments. This changes the actor submission socket
+to Tower while keeping the precheck socket, profile, original grant and lifecycle
+described here. Run `actor-precheck` before an explicit `tower-exchange` proposal;
+the Tower submission still reacquires source evidence and performs both reviews.
+The request-sequence option remains incompatible with precheck disclosure.
+See [the Tower composition](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
+
 The actor and precheck profiles are public connection context. The private
 supervisor Config, evidence, journal and independent reviewer roles must not be
 provisioned to the actor. Identity, scope and polling interval come only from the

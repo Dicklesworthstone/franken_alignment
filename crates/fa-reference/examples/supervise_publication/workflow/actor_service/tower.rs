@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS]";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE]";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -32,6 +32,7 @@ struct Arguments<'a> {
     open: bool,
     generation: u64,
     requests: Option<Vec<u64>>,
+    precheck: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -53,6 +54,10 @@ impl<'a> Arguments<'a> {
         }
         let mut generation = None;
         let mut requests = None;
+        let mut precheck = None;
+        // The registration pair leaves room for one optional profile only.
+        // Precheck custody belongs to a single selected admission, so a request
+        // schedule cannot silently renew it at each handoff.
         for pair in args[positional..].chunks_exact(2) {
             match pair[0].as_str() {
                 FLAG if generation.is_none() => {
@@ -76,6 +81,12 @@ impl<'a> Arguments<'a> {
                 "--requests" if requests.is_none() => {
                     requests = Some(super::series::parse_requests(&pair[1])?);
                 }
+                "--precheck-profile" if precheck.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    precheck = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
         }
@@ -88,6 +99,7 @@ impl<'a> Arguments<'a> {
             open,
             generation,
             requests,
+            precheck,
         })
     }
 }
@@ -105,6 +117,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let publication = selected
         .publication
         .map(PublicationProfile::read)
+        .transpose()?;
+    let precheck = selected
+        .precheck
+        .map(super::precheck::Settings::read)
         .transpose()?;
     if let Some(requests) = selected.requests.as_deref() {
         return super::series::serve_tower(
@@ -129,7 +145,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         selected.open,
         credibility,
         None,
-        None,
+        precheck.as_ref(),
         Some(selected.generation),
         super::super::clock,
     )

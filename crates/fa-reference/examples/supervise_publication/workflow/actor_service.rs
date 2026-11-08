@@ -43,7 +43,7 @@ use super::CLOCK_DOMAIN;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS in either option order after all positionals; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -241,16 +241,29 @@ where F: FnMut() -> ElapsedTick {
         topology, precheck_settings, None, time)
 }
 
-fn serve_selected_ingress<F>(mut config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+fn serve_selected_ingress<F>(
+    mut config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    open: bool,
+    credibility: Option<&Path>,
     topology: Option<super::continuation::creation::topology::Selection>,
-    precheck_settings: Option<&precheck::Settings>, tower_generation: Option<u64>, mut time: F)
-    -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
+    precheck_settings: Option<&precheck::Settings>,
+    tower_generation: Option<u64>,
+    mut time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     if tower_generation.is_some_and(|generation| generation == 0)
-        || (tower_generation.is_some() && (topology.is_some() || precheck_settings.is_some())) {
+        || (tower_generation.is_some() && topology.is_some()) {
         return Err("Tower ingress requires an explicit nonzero generation and the ordinary single-request profile".into());
     }
+    // A selected precheck service keeps its independent native listener,
+    // original disclosure custody and existing Stop-first lifecycle below.
+    // Switching actor ingress to Tower does not install disclosure in that
+    // actor session or let a request renew its source lease or query allowance.
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }

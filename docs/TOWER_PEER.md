@@ -39,8 +39,8 @@ example. The complete target, payload, units, policy epoch and native deadline
 still undergo original validation and review.
 
 The four ordinary service modes above also accept an explicit bounded request
-schedule, described below. Unsupported combinations with multiple peers,
-precheck sidecars, receipt-only services, topology, native text or learned
+schedule or a single-request precheck sidecar, described below. Unsupported
+combinations with multiple peers, receipt-only services, topology, native text or learned
 generation refuse before opening their files. The grammar never silently selects
 a different protocol. Existing native actor commands retain their current mode.
 
@@ -53,6 +53,42 @@ An integrating host may provision a separate operator connection with an
 explicit [native inspection grant](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
 The generic peer/client can carry its `situation` observation. The ordinary
 service above does not issue that grant or enable the operator role.
+
+## Check exact policy before a Tower proposal
+
+The single-request forms can explicitly select the existing authenticated
+[native precheck service](LIVE_ACTOR_PRECHECK.md):
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --precheck-profile PRECHECK_PROFILE --tower-generation 41
+```
+
+Both options follow the positional arguments and may appear in either order.
+The same composition is available for `serve-open` and `serve-create-checked`.
+Select one of the existing uncached, cached or full-policy precheck profiles;
+its original disclosure, socket, policy epoch, query and lifetime limits apply.
+`--requests` cannot be combined with this option: disclosure belongs to the
+single selected admission and is never renewed at a sequence handoff.
+
+The actor calls `actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`
+through the separate native socket, then sends its actual proposal with
+`tower-exchange ACTOR_PROFILE PROPOSE_JSON`. Tower actor grants stay unchanged;
+the option does not install an operator or disclosure capability in that Tower
+session. Both connections authenticate against their original peer policy.
+
+The original supervisor bootstraps the source once before exposing precheck.
+Queries and reconnects share the same finite allowance and source lease. A
+passing precheck still requires fresh source acquisition at Tower submission,
+independent helper/human review and both publication keys. Checked service modes
+also keep their final-publication witness checks. A changed source or witness
+can therefore prevent publication after an earlier precheck pass.
+
+Independent Stop is checked before either ingress. Malformed precheck traffic
+retires that sidecar without cancelling ordinary Tower work; review and every
+service exit retire its disclosure. A recorded request cannot acquire a new
+precheck grant during recovery. Socket collisions and invalid combinations
+refuse before source acquisition or store creation.
 
 ## Publish an explicit request sequence
 
@@ -198,3 +234,11 @@ RCH is unavailable in the current workspace; compilation, Clippy, runtime tests
 and the full canonical gate remain pending for this increment. This service
 does not claim the complete prospective `fa` CLI, all Tower verbs, learned
 publication transport or signed receipt verification.
+
+The precheck composition adds nine authored regression functions, including
+the three disclosure profiles, shared work across reconnects, real two-key
+publication, changed source/final witness, partial-frame Stop, socket preflight
+and recorded-request refusal. Source review and a Rust 2024 syntax/format pass
+do not establish execution: RCH has no configured workers and the required
+remote command refuses with an unavailable daemon. Compilation and runtime
+qualification remain open.

@@ -17,6 +17,7 @@ fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
         assert_eq!(parsed.config, Path::new("path-1"));
         assert_eq!(parsed.publication.is_some(), count == 5);
         assert!(parsed.requests.is_none());
+        assert!(parsed.precheck.is_none());
     }
 }
 
@@ -50,7 +51,7 @@ fn tower_selection_cannot_be_silently_consumed_by_another_service_grammar() {
             "actor",
             "reviewer",
             "--precheck-profile",
-            "p",
+            "",
             FLAG,
             "1",
         ],
@@ -150,6 +151,94 @@ fn tower_selection_cannot_be_silently_consumed_by_another_service_grammar() {
         .map(str::to_owned)
         .collect();
         assert!(Arguments::parse(&args).is_err());
+    }
+}
+
+#[test]
+fn explicit_tower_precheck_selects_the_original_sidecar_in_either_option_order() {
+    for mode in [
+        "serve-create",
+        "serve-open",
+        "serve-create-checked",
+        "serve-open-checked",
+    ] {
+        for generation_first in [false, true] {
+            let mut args: Vec<String> = [mode, "config", "actor", "reviewer"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect();
+            if mode.ends_with("-checked") {
+                args.push("witness".into());
+            }
+            let options = if generation_first {
+                [FLAG, "41", "--precheck-profile", "precheck.json"]
+            } else {
+                ["--precheck-profile", "precheck.json", FLAG, "41"]
+            };
+            args.extend(options.into_iter().map(str::to_owned));
+            let selected = Arguments::parse(&args).unwrap();
+            assert_eq!(selected.generation, 41);
+            assert_eq!(selected.precheck, Some(Path::new("precheck.json")));
+            assert!(selected.requests.is_none());
+            assert_eq!(selected.open, mode.starts_with("serve-open"));
+            assert_eq!(selected.publication.is_some(), mode.ends_with("-checked"));
+        }
+    }
+}
+
+#[test]
+fn tower_precheck_rejects_incomplete_duplicate_and_scheduled_options_before_reads() {
+    for suffix in [
+        vec![FLAG, "41", "--precheck-profile"],
+        vec![FLAG, "41", "--precheck-profile", ""],
+        vec![FLAG, "41", "--precheck-profile", "--requests"],
+        vec![
+            "--precheck-profile",
+            "first",
+            "--precheck-profile",
+            "second",
+            FLAG,
+            "41",
+        ],
+        vec![FLAG, "41", "--precheck-profile", "first", FLAG, "42"],
+        vec![FLAG, "41", "--precheck-profile", "first", "--requests", "7"],
+        vec![
+            "--requests",
+            "7,8",
+            FLAG,
+            "41",
+            "--precheck-profile",
+            "first",
+        ],
+        vec![FLAG, "41", "--precheck-profile", "first", "--peers", "peer"],
+        vec![
+            FLAG,
+            "41",
+            "--precheck-profile",
+            "first",
+            "--topology-profile",
+            "topology",
+        ],
+        vec![FLAG, "41", "--precheck-profile", "first", "--receipts-only"],
+    ] {
+        let args: Vec<_> = [
+            "serve-open",
+            "unread-config",
+            "unread-actor",
+            "unread-reviewer",
+        ]
+        .into_iter()
+        .chain(suffix)
+        .map(str::to_owned)
+        .collect();
+        let expected = Arguments::parse(&args).err().unwrap();
+        assert_eq!(super::super::command(&args, None).unwrap_err(), expected);
+        let mut output = Vec::new();
+        assert_eq!(
+            crate::command_with_output(args, &mut output).unwrap_err(),
+            expected
+        );
+        assert!(output.is_empty());
     }
 }
 
