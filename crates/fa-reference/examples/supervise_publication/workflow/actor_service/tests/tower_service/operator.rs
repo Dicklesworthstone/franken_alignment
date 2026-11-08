@@ -6,7 +6,7 @@ use crate::workflow::actor_service::operator::Settings;
 use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use std::sync::mpsc;
 
-fn settings_document(
+pub(super) fn settings_document(
     root: &Directory,
     config: &Config,
     inspection: usize,
@@ -35,7 +35,7 @@ fn settings(root: &Directory, config: &Config) -> Settings {
     Settings::decode(settings_document(root, config, 8, 8).as_bytes()).unwrap()
 }
 
-fn situation_document(config: &Config) -> String {
+pub(super) fn situation_document(config: &Config) -> String {
     let scope = config.profile.delivery.scope;
     format!(
         r#"{{"schema_version":"fa.tower_request/1","operation_id":"operator-situation","address":"fa://{}/run/{}@{GENERATION}","verb":"situation","arguments":null,"idempotency_key":null}}"#,
@@ -43,7 +43,7 @@ fn situation_document(config: &Config) -> String {
     )
 }
 
-fn explain_document(config: &Config) -> String {
+pub(super) fn explain_document(config: &Config) -> String {
     get_document(config)
         .replace("\"verb\":\"get\"", "\"verb\":\"explain\"")
         .replace("tower-read", "operator-explain")
@@ -62,7 +62,7 @@ fn native_operator<'a>(reply: &'a Json, kind: &str) -> &'a Json {
     field(result, "value")
 }
 
-fn known_operator<'a>(reply: &'a Json, kind: &str) -> &'a Json {
+pub(super) fn known_operator<'a>(reply: &'a Json, kind: &str) -> &'a Json {
     let observed = field(native_operator(reply, kind), "knowledge");
     assert_eq!(field(observed, "state").as_str(), Some("known"));
     assert_eq!(
@@ -72,21 +72,21 @@ fn known_operator<'a>(reply: &'a Json, kind: &str) -> &'a Json {
     observed
 }
 
-fn situation_summary(reply: &Json) -> &Json {
+pub(super) fn situation_summary(reply: &Json) -> &Json {
     field(
         field(known_operator(reply, "situation"), "value"),
         "summary",
     )
 }
 
-fn reason(reply: &Json, expected: &str) {
+pub(super) fn reason(reply: &Json, expected: &str) {
     assert_eq!(
         field(field(reply, "envelope"), "reason_code").as_str(),
         Some(expected)
     );
 }
 
-fn store_files(store: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
+pub(super) fn store_files(store: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     fs::read_dir(store)
         .unwrap()
         .map(|entry| entry.unwrap().path())

@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: retain operator observation across publication schedules
+
+All four ordinary Tower service modes now compose `--operator-profile` with a
+finite `--requests` schedule. One native operator service spans the original
+supervisor lifetime, preserving its exact custodians, pending situation cursor,
+query grants, transport limits and elapsed allowance across every publication
+handoff. A later request cannot renew observation authority or reset spending.
+Every scheduled review and Stop socket is checked for conflicts before clock,
+source, store or listener setup.
+
+Operator reads run at the existing Stop-first intake and execution checkpoints,
+and continue through historical replay and terminal reply grace. The original
+source refresh, human/helper decisions, two publication keys and confirmed child
+reaping still determine when the next request can run. Read-only traffic cannot
+advance the schedule or start actor reply grace. Recorded schedules can expose
+their original admissions with no source or helper program and no further effect.
+
+Four new real-service regression functions cover two actual publications with
+the second human decision held, conserved read grants through handoff and
+reconnect, Stop during partial actor/operator frames, later socket collisions,
+and source-free historical observation. A fifth covers every legal option order
+in all four modes. Independent source review and changed-range Rust 2024
+syntax/format checks use the unqualified rustfmt 1.10.0-nightly (9085017724,
+2026-08-30). Compilation, Clippy, runtime tests and the complete required RCH
+gate remain pending because no worker or daemon is available; no bead or packet
+is closed. See the [live operator contract](docs/LIVE_TOWER_OPERATOR.md).
+
 ## 2026-11-08: authenticated operator reads beside live Tower publication
 
 All four ordinary single-request Tower service modes now accept an explicit

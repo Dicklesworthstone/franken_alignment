@@ -3,7 +3,7 @@
 use super::*;
 use crate::workflow::actor_service::series::{self as service, Options};
 
-fn document(config: &Config, request: u64, version: u64, payload_hex: &str) -> String {
+pub(super) fn document(config: &Config, request: u64, version: u64, payload_hex: &str) -> String {
     proposal_document(config, request)
         .replace(
             &format!(
@@ -15,11 +15,11 @@ fn document(config: &Config, request: u64, version: u64, payload_hex: &str) -> S
         .replace("6e6574776f726b", payload_hex)
 }
 
-fn poll(config: &Config, request: u64) -> String {
+pub(super) fn poll(config: &Config, request: u64) -> String {
     get_document(config).replace("-7@", &format!("-{request}@"))
 }
 
-fn finish(socket: &mut UnixStream, proposal: &str, poll: &str) -> Json {
+pub(super) fn finish(socket: &mut UnixStream, proposal: &str, poll: &str) -> Json {
     let mut reply = raw_exchange(socket, proposal);
     let started = Instant::now();
     loop {
@@ -36,13 +36,13 @@ fn finish(socket: &mut UnixStream, proposal: &str, poll: &str) -> Json {
     }
 }
 
-fn executed(reply: &Json) -> bool {
+pub(super) fn executed(reply: &Json) -> bool {
     let observed = knowledge(reply);
     field(observed, "state").as_str() == Some("known")
         && field(observed, "value").as_str() == Some("executed")
 }
 
-fn human_for(profile: PeerProfile, request: u64) -> std::thread::JoinHandle<()> {
+pub(super) fn human_for(profile: PeerProfile, request: u64) -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         let mut client = profile
             .connect_client_waiting(request, Duration::from_secs(10))
@@ -61,7 +61,7 @@ fn human_for(profile: PeerProfile, request: u64) -> std::thread::JoinHandle<()> 
     })
 }
 
-fn stop_request(profile: &PeerProfile, request: u64) {
+pub(super) fn stop_request(profile: &PeerProfile, request: u64) {
     wait(&crate::workflow::control::socket_path(profile, request));
     let mut output = Vec::new();
     crate::peers::stop::request(profile, request, &mut output).unwrap();
@@ -69,7 +69,7 @@ fn stop_request(profile: &PeerProfile, request: u64) {
     assert_eq!(field(&receipt, "status").as_str(), Some("stopped_drained"));
 }
 
-fn run_pair(root: &Directory) {
+pub(super) fn run_pair(root: &Directory) {
     let config = configured(root);
     evidence(root, &config);
     let source = root.0.join("evidence.json");
@@ -121,6 +121,7 @@ fn run_pair(root: &Directory) {
             credibility: None,
         },
         GENERATION,
+        None,
         || ElapsedTick(1000),
     )
     .unwrap();
@@ -201,6 +202,7 @@ fn tower_cli_recovers_a_complete_schedule_without_source_helpers_or_new_effects(
             credibility: Some(&missing),
         },
         GENERATION,
+        None,
         || ElapsedTick(200000),
     )
     .unwrap();
@@ -260,6 +262,7 @@ fn tower_second_source_failure_preserves_first_effect_and_does_not_reuse_capture
             credibility: None,
         },
         GENERATION,
+        None,
         || ElapsedTick(1000),
     )
     .unwrap();
@@ -307,6 +310,7 @@ fn independent_stop_drains_while_the_second_tower_frame_is_incomplete() {
             credibility: None,
         },
         GENERATION,
+        None,
         || ElapsedTick(1000),
     )
     .unwrap();
@@ -366,6 +370,7 @@ fn tower_schedule_cannot_replenish_cumulative_effect_rights_at_handoff() {
                 credibility: None,
             },
             GENERATION,
+            None,
             || ElapsedTick(1000),
         )
         .unwrap();
@@ -426,6 +431,7 @@ fn tower_schedule_checks_all_keys_and_socket_bindings_before_source_or_store() {
                     credibility: None
                 },
                 GENERATION,
+                None,
                 || panic!("invalid schedule observed time"),
             )
             .is_err()
@@ -451,6 +457,7 @@ fn tower_schedule_checks_all_keys_and_socket_bindings_before_source_or_store() {
                     credibility: None
                 },
                 if zero_generation { 0 } else { GENERATION },
+                None,
                 || panic!("invalid registration or future socket observed time"),
             )
             .is_err()

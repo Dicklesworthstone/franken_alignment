@@ -327,3 +327,6 @@ mod precheck;
 
 #[path = "tower_service/operator.rs"]
 mod operator;
+
+#[path = "tower_service/operator_sequence.rs"]
+mod operator_sequence;

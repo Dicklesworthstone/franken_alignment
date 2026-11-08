@@ -73,14 +73,6 @@ fn operator_selection_owns_its_entire_grammar_before_configuration_reads() {
             "41",
             "--operator-profile",
             "operator",
-            "--requests",
-            "7,8",
-        ],
-        vec![
-            FLAG,
-            "41",
-            "--operator-profile",
-            "operator",
             "--precheck-profile",
             "precheck",
             "--requests",
@@ -147,5 +139,47 @@ fn operator_selection_owns_its_entire_grammar_before_configuration_reads() {
             super::super::super::command(&args, None).unwrap_err(),
             expected
         );
+    }
+}
+
+#[test]
+fn operator_request_sequences_preserve_the_original_schedule_in_every_option_order() {
+    for mode in [
+        "serve-create",
+        "serve-open",
+        "serve-create-checked",
+        "serve-open-checked",
+    ] {
+        for order in [
+            [0, 1, 2],
+            [0, 2, 1],
+            [1, 0, 2],
+            [1, 2, 0],
+            [2, 0, 1],
+            [2, 1, 0],
+        ] {
+            let mut args: Vec<_> = [mode, "config", "actor", "reviewer"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect();
+            if mode.ends_with("-checked") {
+                args.push("witness".into());
+            }
+            let pairs = [
+                [FLAG, "41"],
+                ["--requests", "7,8"],
+                ["--operator-profile", "operator.json"],
+            ];
+            for index in order {
+                args.extend(pairs[index].into_iter().map(str::to_owned));
+            }
+            let selected = Arguments::parse(&args).unwrap();
+            assert_eq!(selected.generation, 41);
+            assert_eq!(selected.requests.as_deref(), Some([7, 8].as_slice()));
+            assert_eq!(selected.operator, Some(Path::new("operator.json")));
+            assert!(selected.precheck.is_none());
+            assert_eq!(selected.publication.is_some(), mode.ends_with("-checked"));
+            assert_eq!(selected.open, mode.starts_with("serve-open"));
+        }
     }
 }

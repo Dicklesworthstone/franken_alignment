@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-08: retain operator reads across publication schedules
+
+- Compose the separate authenticated operator endpoint with all four ordinary
+  Tower request-schedule modes. Keep the original owner, custodians, pending
+  cursor and cumulative read/transport allowances through every handoff.
+- Preflight every scheduled review and Stop socket before setup. Preserve
+  Stop-first observation checkpoints, original source refresh, both publication
+  keys and confirmed helper reaping; operator traffic cannot advance a request.
+- Serve recorded schedule history without source acquisition, helper execution
+  or another effect, retaining the original actor-triggered reply grace.
+- Add four real-service regressions and an all-mode/all-order grammar case.
+  Independent source review and syntax/format checks are separate from pending
+  compilation and runtime execution through the unavailable remote RCH gate.
+
 ## 2026-11-08: expose authenticated operator reads during live publication
 
 - Add an explicitly configured operator socket to all four ordinary single-request

@@ -1,6 +1,6 @@
 # Live operator inspection through the original Tower owner
 
-On Linux, ordinary single-request Tower publication services can expose a
+On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
 `situation` and historical admission `explain` capabilities to the running
 supervisor. The service keeps its original journal lock, source admission,
@@ -15,17 +15,44 @@ supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower
 supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --operator-profile OPERATOR_PROFILE --tower-generation 41
 ```
 
-All four ordinary single-request Tower serve modes support the option. The
-generation, operator and optional precheck pairs may appear in any order after
-the positional files. An operator profile requires an explicit Tower generation;
-request schedules, multi-peer, topology, native-text and learned service modes
-do not consume it. Unsupported combinations fail before reading configuration.
+All four ordinary Tower serve modes support the option for one request or an
+explicit finite request schedule. The generation, operator and selected
+schedule/precheck pairs may appear in any order after the positional files.
+An operator profile requires an explicit Tower generation. Multi-peer, topology,
+native-text and learned service modes do not consume it. Unsupported combinations
+fail before reading configuration.
 
 An optional `--precheck-profile PRECHECK_PROFILE` retains its separate actor
 disclosure and socket. The operator, actor, precheck, human-review and Stop
 paths must be distinct. Directory ownership, the selected audience and socket
 collisions are checked before a clock read, source acquisition or store creation.
 Existing socket paths are never unlinked to make setup succeed.
+
+## Observe a finite publication sequence
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --requests 7,8 --operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+The original bounded schedule retains one operator session and its native grant
+custodians for the entire owner lifetime. Selecting the next request does not
+reissue inspection or explanation work, clear a pending continuation, reset
+transport allowances or extend elapsed deadlines. The operator can inspect an
+earlier confirmed request while a later request waits for its independent human
+approval. A continued situation still reads its original immutable capture;
+an explicit fresh situation captures the advanced owner.
+
+Preflight checks the operator listener against **every scheduled** human-review
+and Stop path before the first clock read or store/socket creation. A late key
+cannot collide with a listener that was valid only for the initial request.
+All original source, review, publication, settlement and confirmed helper-reaping
+conditions still govern handoff. Operator reads cannot advance the schedule.
+
+Read limits spent on an earlier request remain spent during later requests,
+reconnects and final reply grace. A fully recorded schedule can expose its
+historical observations without source files or helper programs, using the
+original recovery path. Request schedules still cannot select the single-request
+precheck sidecar; it has a different admission-time disclosure lifetime.
 
 ## Public operator profile
 
@@ -116,8 +143,9 @@ and reply grace cannot replenish query, candidate, connection or exchange work.
 The operator's elapsed lifetime is bounded by its profile, actor lifetime and
 the remaining wall lifetime of the original supervisor deadline.
 
-The host pumps at most one complete operator frame per cooperative checkpoint,
-after independent Stop. It continues during helper/human review and terminal
+The host pumps at most one complete operator frame per cooperative checkpoint.
+Independent Stop runs first at active intake and execution checkpoints. Reads
+continue during helper/human review and the original observation-only terminal
 reply grace. Truncated, oversized or failed operator transport retires that
 sidecar without entering the publication workflow's mutation or Stop path.
 Every exit retires the sidecar before helper cleanup. The native read grants

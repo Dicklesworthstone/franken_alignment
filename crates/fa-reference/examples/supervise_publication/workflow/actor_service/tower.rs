@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE] (operator profile requires a single-request service)";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -97,7 +97,7 @@ impl<'a> Arguments<'a> {
                 _ => return Err(USAGE.into()),
             }
         }
-        if requests.is_some() && (precheck.is_some() || operator.is_some()) {
+        if requests.is_some() && precheck.is_some() {
             return Err(USAGE.into());
         }
         let generation = generation.ok_or(USAGE)?;
@@ -149,6 +149,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
                 credibility,
             },
             selected.generation,
+            operator.as_ref(),
             super::super::clock,
         );
     }

@@ -39,7 +39,8 @@ example. The complete target, payload, units, policy epoch and native deadline
 still undergo original validation and review.
 
 The four ordinary service modes above also accept an explicit bounded request
-schedule or single-request precheck and operator sidecars, described below. Unsupported
+schedule, an operator read endpoint, or a single-request precheck sidecar,
+described below. Unsupported
 combinations with multiple peers, receipt-only services, topology, native text or learned
 generation refuse before opening their files. The grammar never silently selects
 a different protocol. Existing native actor commands retain their current mode.
@@ -49,11 +50,13 @@ existing actor-intake purpose. It supplies no operator status, experiment
 context, precheck disclosure or supervisor capability. Unsupported operations
 return ordinary Tower refusals. A caller cannot add authority fields to JSON.
 
-An explicit `--operator-profile OPERATOR_PROFILE` on a single-request Tower
+An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
 service now provisions a separate authenticated read endpoint. It installs
 only the selected native inspection and optional admission-explanation grants;
 the actor session stays unchanged. The operator profile can compose with a
-precheck sidecar, with distinct sockets and independent budgets. Use
+precheck sidecar or a finite request schedule, with distinct sockets and
+independent budgets. A schedule retains the same operator session, native
+custodians and spent allowances across every handoff. Use
 `tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.

@@ -111,6 +111,7 @@ where
         publication,
         options,
         None,
+        None,
         time,
     )
 }
@@ -125,6 +126,7 @@ pub(super) fn serve_tower<F>(
     publication: Option<&PublicationProfile>,
     options: Options<'_>,
     generation: u64,
+    operator_settings: Option<&operator::Settings>,
     time: F,
 ) -> Result<(), String>
 where
@@ -140,6 +142,7 @@ where
         publication,
         options,
         Some(generation),
+        operator_settings,
         time,
     )
 }
@@ -151,6 +154,7 @@ fn serve_ingress<F>(
     publication: Option<&PublicationProfile>,
     options: Options<'_>,
     tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -162,11 +166,29 @@ where
         credibility,
     } = options;
     validate(requests, actor, reviewer_profile)?;
+    if operator_settings.is_some() && tower_generation.is_none() {
+        return Err("operator request schedules require an explicit Tower generation".into());
+    }
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
     actor.check_host(&config)?;
     reviewer_profile.check_host(&config)?;
+    if let Some(settings) = operator_settings {
+        // Check every future review/Stop path before the first socket or store
+        // exists. A later handoff must never collide with this listener.
+        let additional: Vec<_> = requests
+            .iter()
+            .flat_map(|&request| {
+                [
+                    reviewer_profile.socket(request),
+                    super::super::control::socket_path(reviewer_profile, request),
+                ]
+            })
+            .collect();
+        let paths: Vec<_> = additional.iter().map(|path| path.as_path()).collect();
+        settings.check_host(&config, actor, reviewer_profile, &paths)?;
+    }
     let start = time();
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
@@ -179,6 +201,21 @@ where
     actor.secure_socket()?;
     let (host, reviewer) = prepare_host(&config, publication, open)?;
     let (port, mut driver) = host.into_supervised_driver();
+    // One independent read session spans this original owner lifetime. A new
+    // selected request never reissues custody, clears a pending native cursor
+    // or resets transport, query, candidate or elapsed allowances.
+    let mut operator = operator_settings
+        .map(|settings| {
+            operator::Service::start(
+                settings,
+                actor,
+                port.clone(),
+                &driver,
+                tower_generation.expect("operator generation checked above"),
+                &deadline,
+            )
+        })
+        .transpose()?;
     let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
     // Copy only immutable, bounded launch recipes per NEW review. Never duplicate
     // a child, socket, captured input, vote, approval or effect capability.
@@ -240,6 +277,7 @@ where
                     if early_control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                         return Ok(());
                     }
+                    if let Some(service) = &mut operator { service.checkpoint(); }
                     frames_seen = frames_seen.saturating_add(ingress.admit_sequence(
                         &mut driver, &completed, &mut config.source, &mut time,
                     )?);
@@ -283,6 +321,8 @@ where
                     };
                     config.programs = programs.clone();
                     let mut pump = |driver: &mut FileSupervisedDriver| {
+                        // LiveControl services independent Stop before this pump.
+                        if let Some(service) = &mut operator { service.checkpoint(); }
                         frames_seen = frames_seen
                             .saturating_add(ingress.observe_sequence(driver, &completed)?);
                         let status = driver
@@ -355,6 +395,7 @@ where
                 .is_none()
         {
             deadline.check(time())?;
+            if let Some(service) = &mut operator { service.checkpoint(); }
             frames_seen = ingress.observe_sequence(&mut driver, &completed)?;
             if frames_seen == 0 {
                 pause(actor.poll_ms);
@@ -371,6 +412,7 @@ where
         );
     let started = Instant::now();
     while started.elapsed() < Duration::from_millis(actor.reply_ms) {
+        if let Some(service) = &mut operator { service.checkpoint(); }
         if let Err(error) = ingress.observe_sequence(&mut driver, &completed) {
             if failure.is_none() {
                 failure = Some(error);
@@ -378,6 +420,9 @@ where
             break;
         }
         pause(actor.poll_ms);
+    }
+    if let Some(service) = &mut operator {
+        service.retire();
     }
     ingress.revoke();
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);

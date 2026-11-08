@@ -67,12 +67,14 @@ irrecoverably unknown liabilities remain unresolved and charged. Grant clones
 share finite work and revocation. Ordinary actors and precheck users cannot
 acquire this capability, and a lost owner never reuses a previous live report.
 
-For the ordinary running single-request Tower service, select an explicit
+For the ordinary running Tower service, select an explicit
 `--operator-profile OPERATOR_PROFILE` alongside `--tower-generation` and use
 `supervise_publication tower-operator-exchange OPERATOR_PROFILE REQUEST_JSON`.
 This [separate operator endpoint](LIVE_TOWER_OPERATOR.md) authenticates its own
 peer and installs only the selected inspection and admission-explanation grants.
 It keeps the original owner live through intake, review and terminal reply grace.
+An explicit request schedule retains the same read session, cursors and finite
+allowances across handoffs; a later request never renews spent operator work.
 Explanation additionally requires explicit policy/selected-witness disclosure;
 it remains historical admission evidence, not current `why-held` or permission.
 
