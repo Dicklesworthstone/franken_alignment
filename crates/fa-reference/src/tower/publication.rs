@@ -19,8 +19,8 @@ use super::{
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionResult,
-    FileSupervisorExplanationPort, FileSupervisorInspectionPort,
+    FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
+    FileInspectionResult, FileSupervisorExplanationPort, FileSupervisorInspectionPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -98,6 +98,7 @@ pub struct PublicationTower {
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
+    inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
     limits: PublicationLimits,
 }
@@ -130,6 +131,7 @@ impl PublicationTower {
             wire: ActorWire::new(port),
             precheck: None,
             inspection: None,
+            inspection_cursor: None,
             explanation: None,
             limits,
         })

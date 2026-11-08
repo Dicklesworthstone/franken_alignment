@@ -32,6 +32,9 @@ use support::{Directory, Port, create, observe, oversight, profile, ready};
 
 const REGISTRATION: u64 = 41;
 
+#[path = "tower_inspection/pagination.rs"]
+mod pagination;
+
 fn tower(port: Port) -> PublicationTower {
     let scope = profile().delivery.scope;
     PublicationTower::new(

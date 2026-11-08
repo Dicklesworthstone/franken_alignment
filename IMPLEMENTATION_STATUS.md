@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: continue native Tower situations through the original capture
+
+Operator `situation` now enumerates beyond the first 16 attempts through one
+retained original `FileSituation` and its branded native page token. Every page
+preserves the capture's ordering, exact basis and whole-ledger accounting even
+after the healthy live owner advances. The typed and JSON Tower interfaces
+accept the returned single-use cursor; neither interface recaptures by offset
+or imports native continuation into a reference snapshot.
+
+All clones share one capture and the original finite query allowance. Fresh
+capture replaces earlier progress; foreign, consumed and replaced cursors fail
+without charge or displacement of a valid continuation. Accepted pages spend
+before fallible work. The final permitted page releases its capture and returns
+no cursor even if enumeration is incomplete. Every read checks the original
+owner and custodian; loss, borrowing, faults and revocation cannot expose a
+retained Known report. Cursors are weak, opaque and ephemeral within the original
+process/service lifetime. Tower retains a next cursor only from an encodable
+native response. Inspection adds no source read, publication key or authority.
+
+Twenty-two new regression functions cover 33 real attempts across three pages,
+live state changes during a frozen capture, shared/replaced grants, stale and
+malformed cursor refusal, final-query truncation, owner loss/fault/reopen, typed
+and JSON dispatch, and reference-snapshot isolation. A compile-fail example
+also rejects scalar construction of a native cursor. Independent source review
+and changed-range Rust 2024 syntax/format checks use rustfmt 1.10.0-nightly
+(9085017724, 2026-08-30), not the qualified compiler identity. The required RCH
+gate remains unavailable: worker discovery finds zero workers and remote-only
+execution refuses the unavailable daemon. Compilation, Clippy, runtime tests
+and the complete gate remain pending; no bead or packet is closed. See
+[the native inspection contract](docs/TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
+
 ## 2026-11-08: exact precheck beside the original Tower publication service
 
 All four ordinary single-request Tower serve modes now accept an explicit

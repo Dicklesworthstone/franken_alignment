@@ -20,6 +20,7 @@ impl PublicationTower {
         port: Option<FileSupervisorInspectionPort>,
     ) -> Result<(), TowerInstallError> {
         self.inspection = None;
+        self.inspection_cursor = None;
         if let Some(port) = port {
             if !port.belongs_to(self.wire.request_port()) {
                 return Err(TowerInstallError::SnapshotMismatch);
@@ -30,7 +31,7 @@ impl PublicationTower {
     }
 
     pub(super) fn dispatch_situation(
-        &self,
+        &mut self,
         access: &TowerAccess,
         request: TowerRequest,
     ) -> PublicationResponse {
@@ -43,19 +44,56 @@ impl PublicationTower {
         if request.address.without_generation() != self.mount.without_generation() {
             return self.refusal(&request, ReasonCode::MissingRequiredObservation, true);
         }
-        if request.arguments != ReadArguments::None {
+        if !matches!(
+            request.arguments,
+            ReadArguments::None | ReadArguments::SituationPage { cursor: 1.. }
+        ) {
             return self.refusal(&request, ReasonCode::IntegrityFailure, true);
         }
         let Some(port) = &self.inspection else {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, true);
         };
-        let native = port.situation();
+        let native = match request.arguments {
+            ReadArguments::None => port.situation(),
+            ReadArguments::SituationPage { cursor } => {
+                let Some(original) = self
+                    .inspection_cursor
+                    .as_ref()
+                    .filter(|original| original.id() == cursor)
+                else {
+                    // An unissued or retired scalar cannot address native data.
+                    // Preserve a different valid cursor and its unspent budget.
+                    return self
+                        .inspection_response(&request, Err(ActorError::IdempotencyConflict));
+                };
+                port.situation_page(Some(original))
+            }
+            _ => unreachable!("inspection arguments admitted above"),
+        };
+        let response = self.inspection_response(&request, native);
+        // Retain at most one exact native continuation from an encodable
+        // response. Reconnects keep this original facade; replacements, output
+        // refusals and completed enumeration cannot rebind an old handle.
+        self.inspection_cursor = match &response.result {
+            PublicationResult::Situation(Ok(ActorKnowledge::Known { value, .. })) => {
+                value.continuation().cloned()
+            }
+            _ => None,
+        };
+        response
+    }
+
+    fn inspection_response(
+        &self,
+        request: &TowerRequest,
+        native: FileInspectionResult,
+    ) -> PublicationResponse {
         let reason = inspection_reason(&native);
         // The native basis remains inside the original result profile. Mount
         // generation, journal revision, control sequence and recorded time are
         // different coordinates and cannot replace one another in the envelope.
         self.bounded_response(self.response(
-            &request,
+            request,
             PublicationResult::Situation(native),
             reason,
             true,
@@ -74,6 +112,7 @@ fn inspection_reason(result: &FileInspectionResult) -> Option<ReasonCode> {
         }) => Some(ReasonCode::DeniedByPolicy),
         Err(ActorError::Capacity) => Some(ReasonCode::BudgetExhausted),
         Err(ActorError::Unavailable) => Some(ReasonCode::LowerLayerUnverified),
+        Err(ActorError::IdempotencyConflict) => Some(ReasonCode::IntegrityFailure),
         // Native inspection cannot yield a pending action, invented absence,
         // stale grant snapshot, or effect/idempotency result.
         Ok(_) | Err(_) => Some(ReasonCode::IntegrityFailure),

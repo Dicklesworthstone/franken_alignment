@@ -166,6 +166,12 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                     .map_err(|_| TowerDecodingError::Capacity)?,
             })
         }
+        Verb::Situation => {
+            fields(args, &["cursor"])?;
+            Ok(ReadArguments::SituationPage {
+                cursor: decimal(args, "cursor")?,
+            })
+        }
         Verb::Next => {
             fields(args, &["max_cost"])?;
             Ok(ReadArguments::Next {
@@ -245,6 +251,11 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         }
         (Verb::Capabilities, ReadArguments::Capabilities { query, .. }) => {
             if *query == 0 {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        (Verb::Situation, ReadArguments::SituationPage { cursor }) => {
+            if *cursor == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
@@ -473,6 +484,9 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("since_seq", quote(&since_seq.to_string())),
             ("max_events", quote(&max_events.to_string())),
         ]),
+        ReadArguments::SituationPage { cursor } => {
+            object_json(&[("cursor", quote(&cursor.to_string()))])
+        }
         ReadArguments::Next { max_cost } => {
             object_json(&[("max_cost", quote(&max_cost.to_string()))])
         }

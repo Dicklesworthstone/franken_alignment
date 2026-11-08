@@ -163,6 +163,11 @@ pub enum ReadArguments {
         since_seq: u64,
         max_events: usize,
     },
+    /// Continue the original native inspection capture using its returned,
+    /// session-scoped cursor. This is never an offset into a fresh situation.
+    SituationPage {
+        cursor: u64,
+    },
     Next {
         max_cost: u64,
     },
@@ -564,6 +569,18 @@ impl ReferenceTower {
             || (needs_operator && !access.operator)
         {
             return self.withheld(&request);
+        }
+        if matches!(
+            (&request.verb, &request.arguments),
+            (Verb::Situation, ReadArguments::SituationPage { .. })
+        ) {
+            // Native capture cursors cannot select a page of an imported
+            // snapshot or consume its unrelated logical read allowance.
+            return self.refusal(
+                &request,
+                ReasonCode::CapabilityUnsupported,
+                disclose_accounting,
+            );
         }
         let args_ok = match (&request.verb, &request.arguments) {
             (_, ReadArguments::None) => true,

@@ -276,7 +276,7 @@
       "id": "initial-reviewed-workspace",
       "schema": "fa.source_snapshot/1",
       "manifest_path": "registry/source_snapshot.json",
-      "sha256": "b0f8621d9212f20f8532eda13d64d9005d11470e0280fe3a62c5e7d720b8c02c",
+      "sha256": "a6894a6c674870dca4b8568868cbb76b0ffe3bed477b41e9326a7834a2e1b58d",
       "source_url": "https://github.com/Dicklesworthstone/franken_alignment.git",
       "identity_scope": "reviewed_snapshot_bytes"
     },

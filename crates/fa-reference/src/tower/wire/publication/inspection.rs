@@ -36,6 +36,10 @@ pub(super) fn encode(
         ),
         Err(ActorError::Capacity) => ("error", object_json(&[("code", quote("capacity"))])),
         Err(ActorError::Unavailable) => ("error", object_json(&[("code", quote("unavailable"))])),
+        Err(ActorError::IdempotencyConflict) => (
+            "error",
+            object_json(&[("code", quote("idempotency_conflict"))]),
+        ),
         Ok(_) | Err(_) => return Err(TowerEncodingError::InvalidKnowledge),
     };
     encoder.bounded(object_json(&[
@@ -54,9 +58,17 @@ fn known(
 ) -> Result<String, TowerEncodingError> {
     // Public response fields cannot replace this sealed capture's origin,
     // scope or clocks. The value contains no policy, payload or helper input.
+    let summary = page.summary();
+    let end = page
+        .offset()
+        .checked_add(page.attempts().len())
+        .ok_or(TowerEncodingError::InvalidKnowledge)?;
     if basis != page.basis()
-        || page.offset() != 0
         || page.attempts().len() > MAX_INSPECTION_ATTEMPTS
+        || end > summary.attempts
+        || page.enumeration_complete() != (end == summary.attempts)
+        || (page.enumeration_complete() && page.continuation().is_some())
+        || (!page.enumeration_complete() && page.attempts().len() != MAX_INSPECTION_ATTEMPTS)
     {
         return Err(TowerEncodingError::InvalidKnowledge);
     }
@@ -88,7 +100,6 @@ fn known(
         ("origin", quote(origin)),
         ("anchored_through", optional(basis.anchored_through)),
     ]);
-    let summary = page.summary();
     let summary = object_json(&[
         ("total_units", number(summary.total_units)),
         ("available_units", number(summary.available_units)),
@@ -133,6 +144,10 @@ fn known(
     let value = encoder.bounded(object_json(&[
         ("summary", summary),
         ("offset", number(page.offset())),
+        (
+            "continuation",
+            optional(page.continuation().map(|cursor| cursor.id())),
+        ),
         (
             "enumeration_complete",
             page.enumeration_complete().to_string(),

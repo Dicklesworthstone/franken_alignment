@@ -10,7 +10,7 @@ pub use explanation::{
 mod host;
 mod inspection;
 pub use inspection::{
-    FileInspectionObservation, FileInspectionPage, FileInspectionResult,
+    FileInspectionCursor, FileInspectionObservation, FileInspectionPage, FileInspectionResult,
     FileSupervisorInspectionGrant, FileSupervisorInspectionPort, MAX_INSPECTION_ATTEMPTS,
     MAX_INSPECTION_QUERIES,
 };

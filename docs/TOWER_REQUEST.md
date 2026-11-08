@@ -45,7 +45,8 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 
 | Verb | `arguments` |
 |---|---|
-| `get`, `situation`, `explain`, `why-held`, `replay-plan` | `null` |
+| `get`, `explain`, `why-held`, `replay-plan` | `null` |
+| `situation` | `null` for a fresh capture; native publication inspection also accepts `{"cursor":"17"}` with the exact returned continuation |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | `null` or `{"since_seq":"0","max_events":"64"}` |
 | `next` | `null` or `{"max_cost":"8"}` |
@@ -60,6 +61,25 @@ The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
 `tail` accepts 1 through 128 events at the syntax boundary; the host's actual
 page limit can be smaller. Omitted optional read arguments retain their original
 typed defaults. An unknown or retired verb is not silently treated as a read.
+
+### Native situation pages
+
+A separately granted operator inspection can continue beyond the first 16
+attempts by copying the native result's `knowledge.value.continuation` into
+`{"cursor":"N"}`. The cursor is a nonzero canonical `u64` string, is the sole
+argument, and is accepted only by the original native publication facade that
+retains the issued cursor. It cannot supply an offset, grant inspection, cross
+owners or select an imported reference snapshot. The typed equivalent is
+`ReadArguments::SituationPage { cursor }`.
+
+Continued pages retain the original capture's basis, ordering and whole-ledger
+summary. Each accepted page spends the original grant's shared query allowance
+and consumes its cursor; the returned continuation selects the next page.
+`arguments: null` starts a new capture and invalidates prior progress for that
+grant. Check `enumeration_complete` independently of continuation: the final
+allowed query returns no cursor even if rows remain. These process/service-local
+values do not resume across restarts. See the
+[native inspection contract](TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
 
 ### Native proposals
 

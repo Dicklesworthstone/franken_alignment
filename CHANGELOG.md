@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-08: paginate original native Tower situations
+
+- Continue operator inspection beyond 16 attempts using the original immutable
+  native capture, preserving ordering, basis and whole-ledger accounting through
+  later live changes.
+- Connect opaque single-use continuations through typed and JSON Tower requests,
+  with one capture and finite query allowance shared across clones. Preserve
+  native owner, custody, fault and revocation checks on every page; reject stale
+  or foreign cursors without consuming a valid pending page.
+- Keep incomplete enumeration explicit when the final query has no continuation;
+  prevent reference snapshots, facade replacement or output refusal from rebinding
+  a native cursor. Cursor values remain ephemeral within the service lifetime.
+- Add 22 native, public Tower and codec regression functions plus a compile-fail
+  opaque-cursor example. Independent source review and syntax/format checks are
+  complete; compilation, Clippy, runtime tests and the remote gate remain pending
+  because RCH has no configured workers and its daemon is unavailable.
+
 ## 2026-11-08: compose exact prechecks with live Tower publication
 
 - Accept an explicit native precheck sidecar in all four ordinary single-request

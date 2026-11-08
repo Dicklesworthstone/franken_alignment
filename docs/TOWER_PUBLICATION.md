@@ -161,7 +161,7 @@ and installs the port with `PublicationTower::set_inspection(Some(port))`.
 Installation requires the exact original owner allocation. Every replacement
 withdraws the old installation first, including a rejected foreign port.
 
-`situation` uses the mounted run with no arguments. The request still requires
+An initial `situation` uses the mounted run with no arguments. The request requires
 tenant, ControlLedger/Verify authority and matching optional registration
 generation. It additionally requires the host-authenticated operator role.
 Neither ordinary actor intake nor a precheck disclosure grants that role or
@@ -179,14 +179,55 @@ The [ordinary live actor service](TOWER_PEER.md) keeps operator access disabled.
 }
 ```
 
-Each permitted query captures a fresh original `FileOversight::situation()`.
-It returns the original `FileSituationBasis`, whole-capture accounting summary,
+The initial query captures a fresh original `FileOversight::situation()`. It
+returns the original `FileSituationBasis`, whole-capture accounting summary,
 and at most the first 16 native attempt rows. Native ordering places unresolved
 outcomes before pending work and terminal outcomes. The summary retains counts
 and balances for **all** attempts, even when the selected rows are incomplete.
-`enumeration_complete: false` explicitly reports remaining rows. No live offset
-or caller-supplied continuation can be applied to a different capture; further
-pages remain available through the original supervisor situation API.
+`enumeration_complete: false` explicitly reports remaining rows.
+
+When more rows and query allowance remain, `knowledge.value.continuation` in
+the native result body contains an opaque nonzero decimal string. Copy that
+value into the next request's sole argument. For example, if the returned value
+is `"17"`:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-2",
+  "address": "fa://1/run/3@41",
+  "verb": "situation",
+  "arguments": {"cursor": "17"},
+  "idempotency_key": null
+}
+```
+
+The typed equivalent is `ReadArguments::SituationPage { cursor: 17 }`.
+The facade matches this transport value to its retained original
+`FileInspectionCursor`; a scalar cannot construct a native cursor or grant
+inspection. Each continued page uses the same immutable native capture, exact
+basis, ordering and whole-capture summary even if the healthy live owner has
+advanced. It never applies an offset to a new live report. Direct native callers
+can use `FileSupervisorInspectionPort::situation_page(Some(cursor))` with the
+cursor returned by `FileInspectionPage::continuation()`.
+
+Each accepted continuation consumes its page identity and returns the next one
+when possible. Read the returned value after every page. A fresh `arguments:
+null` query replaces the shared capture and invalidates earlier progress, also
+when issued through another clone of the same port. Foreign, replaced, consumed
+or otherwise unissued cursors fail without spending a query or displacing a
+different valid continuation. Cursor IDs are ephemeral within this
+process/service lifetime; they are not persisted resume credentials and must
+not be reused after a service restart.
+
+The final available query returns no continuation and releases the capture,
+even when more rows exist. Always inspect `enumeration_complete`: a null
+continuation alone does not prove complete enumeration. An encodable response
+is required before the facade retains its next cursor; an output refusal does
+not refund the query.
+
+The continuation field is an additive Tower extension to the existing native
+result body; the standalone situation CLI keeps its existing output shape.
 
 The original native basis retains scope, journal revision, control sequence,
 recorded elapsed tick, origin and any prefix anchor. This port's origin is the
@@ -204,15 +245,17 @@ Native `Unknown` and `IrrecoverablyUnknown` attempts remain unresolved and
 charged according to the original ledger. The read does not infer nonexecution,
 refund liabilities or fabricate a `why-held` explanation from action stages.
 
-Cloned ports and newly constructed facades share the same finite allowance.
-Each entered capture spends one query, including repeated operation labels or
-envelope keys. An output or fallible capture failure does not refund it. Missing
-custody returns native Withheld; lost, mutably borrowed or faulted owners return
-native Unknown before capture. Neither unavailability nor exhausted work reuses
-a previously Known report. Dropping or consuming the noncloneable custodian
-revokes every weak port clone; reconnecting or reinstalling a clone cannot renew
-it. Neither the grant nor the port retains the authority lock after the original
-supervisor closes. A reopened owner requires its own separately issued grant.
+Cloned ports and newly constructed facades share the same finite allowance and
+at most one retained native capture. Each entered capture or accepted page
+spends one query, including repeated operation labels or envelope keys. An
+output or fallible native failure does not refund it. Missing custody returns
+native Withheld; lost, mutably borrowed or faulted owners return native Unknown
+and discard retained capture data. Every page checks the original owner again.
+Neither unavailability nor exhausted work reuses a previously Known report.
+Dropping or consuming the noncloneable custodian revokes every weak port clone;
+reconnecting or reinstalling a clone cannot renew it. Neither the grant, the port
+nor a cursor retains the authority lock after the original supervisor closes.
+A reopened owner requires its own separately issued grant.
 
 The result profile is `PublicationResult::Situation(FileInspectionResult)`.
 The same native result passes through the shared router and bounded peer without
@@ -385,9 +428,10 @@ its own request/byte limits. Envelope operation IDs and keys are bounded to
 1 MiB bound, with 16 KiB by default. A post-mutation encoding refusal preserves
 the exact retry key and never implies that durable admission was rolled back.
 
-Supervisor inspection has its own maximum of 1,024 shared capture queries and
-16 returned attempt rows. The host chooses the actual grant allowance, which
-is distinct from native precheck work, request tickets and global Tower budgets.
+Supervisor inspection has its own maximum of 1,024 shared capture/page queries,
+one retained native capture per grant and 16 returned attempt rows per page.
+The host chooses the actual grant allowance, which is distinct from native
+precheck work, request tickets and global Tower budgets.
 
 The Linux [live Tower peer and client](TOWER_PEER.md) now integrate this profile
 into the existing ordinary `supervise_publication` service. Fresh source

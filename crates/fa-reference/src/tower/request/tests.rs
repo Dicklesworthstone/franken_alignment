@@ -172,6 +172,57 @@ fn exact_u64_and_arbitrary_payload_bits_survive_both_tower_and_native_codecs() {
             expected_policy_epoch: maximum,
         },
     ));
+    round_trip(&request(
+        Verb::Situation,
+        ReadArguments::SituationPage { cursor: maximum },
+    ));
+}
+
+#[test]
+fn native_situation_cursor_is_nonzero_canonical_data_and_never_an_offset() {
+    let query = request(Verb::Situation, ReadArguments::SituationPage { cursor: 17 });
+    round_trip(&query);
+    assert!(
+        encode_request(&query)
+            .unwrap()
+            .contains("\"cursor\":\"17\"")
+    );
+    for arguments in [
+        "{\"cursor\":\"0\"}",
+        "{\"cursor\":\"01\"}",
+        "{\"cursor\":\"-1\"}",
+        "{\"cursor\":\"1.0\"}",
+        "{\"cursor\":\"18446744073709551616\"}",
+        "{\"cursor\":1}",
+        "{\"cursor\":null}",
+        "{\"offset\":\"16\"}",
+        "{\"cursor\":\"1\",\"offset\":\"16\"}",
+        "{\"cursor\":\"1\",\"cursor\":\"2\"}",
+    ] {
+        assert_eq!(
+            decode_request(document("situation", arguments).as_bytes()),
+            Err(TowerDecodingError::MalformedRequest),
+            "{arguments}"
+        );
+    }
+    assert_eq!(
+        encode_request(&request(
+            Verb::Situation,
+            ReadArguments::SituationPage { cursor: 0 }
+        )),
+        Err(TowerDecodingError::MalformedRequest)
+    );
+    for verb in [Verb::Get, Verb::Tail, Verb::WhyHeld, Verb::Explain] {
+        assert_eq!(
+            encode_request(&request(verb, ReadArguments::SituationPage { cursor: 17 })),
+            Err(TowerDecodingError::MalformedRequest)
+        );
+        assert_eq!(
+            decode_request(document(verb.as_str(), "{\"cursor\":\"17\"}").as_bytes()),
+            Err(TowerDecodingError::MalformedRequest)
+        );
+    }
+    round_trip(&request(Verb::Situation, ReadArguments::None));
 }
 
 #[test]

@@ -279,6 +279,31 @@ fn request(tower: &ReferenceTower, verb: Verb) -> TowerRequest {
     TowerRequest::new("fixture-operation", target, verb)
 }
 
+#[test]
+fn native_situation_cursors_cannot_select_or_charge_an_imported_snapshot() {
+    let mut tower = fixture();
+    let mut call = request(&tower, Verb::Situation);
+    call.arguments = ReadArguments::SituationPage { cursor: u64::MAX };
+    let document = fa_reference::tower::encode_request(&call).unwrap();
+    for response in [
+        tower.dispatch(&access(), call),
+        tower.exchange(&access(), document.as_bytes()),
+    ] {
+        assert_eq!(response.envelope.status, ResponseStatus::Error);
+        assert_eq!(
+            response.envelope.reason_code,
+            Some(ReasonCode::CapabilityUnsupported)
+        );
+    }
+    assert_eq!(tower.remaining_read_units(), READ_UNITS);
+    let ordinary = request(&tower, Verb::Situation);
+    assert_eq!(
+        tower.dispatch(&access(), ordinary).envelope.status,
+        ResponseStatus::Ok
+    );
+    assert_eq!(tower.remaining_read_units(), READ_UNITS - 1);
+}
+
 fn known<T>(value: &Knowledge<T>) -> (&T, Basis) {
     match value {
         Knowledge::Known { value, basis } => (value, *basis),
