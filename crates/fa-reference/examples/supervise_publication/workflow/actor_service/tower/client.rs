@@ -1,9 +1,11 @@
-//! A finite actor-only Tower document exchange over the original peer domain.
+//! Finite actor and separately configured operator Tower document exchanges.
 //! Replies remain observations. This client does not infer execution, rewrite
 //! proposals, select another key, reconnect, resend or grant a capability.
 
+use super::super::operator::Settings as OperatorSettings;
 use super::super::{Duration, Instant, Profile, debug, pause};
 use crate::config::read_regular;
+use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     CLIENT_IO_CHUNK, MAX_CLIENT_IO_BYTES, MAX_CLIENT_IO_CALLS,
 };
@@ -19,27 +21,86 @@ use std::path::Path;
 const MAX_DOCUMENTS: usize = 64;
 const MAX_REPLY_BYTES: usize = 1_048_576;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
+const OPERATOR_USAGE: &str = "tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic page following or resend)";
 
 struct Prepared {
     request: TowerRequest,
     frame: Vec<u8>,
 }
 
-pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+fn request_paths<'a>(
+    args: &'a [String],
+    command: &str,
+    usage: &str,
+) -> Result<Vec<&'a Path>, String> {
     if !(3..=MAX_DOCUMENTS + 2).contains(&args.len())
-        || args[0] != "tower-exchange"
+        || args[0] != command
         || args[1..]
             .iter()
             .any(|value| value.is_empty() || value.starts_with("--"))
     {
-        return Err(USAGE.into());
+        return Err(usage.into());
     }
+    Ok(args[2..].iter().map(Path::new).collect())
+}
+
+pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    let paths = request_paths(args, "tower-exchange", USAGE)?;
     let started = Instant::now();
     // This public connection profile is the only configuration read here. No
     // supervisor, evidence source, journal, helper or reviewer file is opened.
     let profile = Profile::read(Path::new(&args[1]))?;
-    let paths: Vec<_> = args[2..].iter().map(Path::new).collect();
     exchange(&profile, &paths, output, started)
+}
+
+/// The operator connection profile supplies only endpoint identity and bounds.
+/// Neither its disclosure declarations nor this command create a server grant.
+/// Each explicit document is forwarded unchanged in meaning, with no automatic
+/// continuation, policy query, proposal, retry or interpretation of permission.
+pub(crate) fn operator_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    let paths = request_paths(args, "tower-operator-exchange", OPERATOR_USAGE)?;
+    let started = Instant::now();
+    let settings = OperatorSettings::read(Path::new(&args[1]))?;
+    exchange_endpoint(
+        Endpoint::operator(&settings),
+        &paths,
+        output,
+        started,
+        || settings.check_directory(),
+    )
+}
+
+/// Only shared transport parameters. An operator profile is never converted
+/// into an actor profile, given an invented request key or used as TowerAccess.
+#[derive(Clone, Copy)]
+struct Endpoint<'a> {
+    socket: &'a Path,
+    supervisor: PeerPolicy,
+    exchanges: u64,
+    runtime_ms: u64,
+    poll_ms: u64,
+}
+
+impl<'a> Endpoint<'a> {
+    fn actor(profile: &'a Profile) -> Self {
+        Self {
+            socket: &profile.socket,
+            supervisor: profile.supervisor,
+            exchanges: profile.exchanges,
+            runtime_ms: profile.runtime_ms,
+            poll_ms: profile.poll_ms,
+        }
+    }
+
+    fn operator(settings: &'a OperatorSettings) -> Self {
+        Self {
+            socket: &settings.socket,
+            supervisor: settings.supervisor,
+            exchanges: settings.exchange_limit,
+            runtime_ms: settings.runtime_ms,
+            poll_ms: settings.poll_ms,
+        }
+    }
 }
 
 fn exchange(
@@ -48,10 +109,22 @@ fn exchange(
     output: &mut impl Write,
     started: Instant,
 ) -> Result<(), String> {
-    if paths.is_empty() || paths.len() > MAX_DOCUMENTS || paths.len() as u64 > profile.exchanges {
+    exchange_endpoint(Endpoint::actor(profile), paths, output, started, || {
+        profile.check_directory()
+    })
+}
+
+fn exchange_endpoint(
+    endpoint: Endpoint<'_>,
+    paths: &[&Path],
+    output: &mut impl Write,
+    started: Instant,
+    check_directory: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    if paths.is_empty() || paths.len() > MAX_DOCUMENTS || paths.len() as u64 > endpoint.exchanges {
         return Err("Tower document sequence exceeds its original exchange allowance".into());
     }
-    let mut budget = Budget::new(profile, started);
+    let mut budget = Budget::new(&endpoint, started);
     let mut documents = Vec::with_capacity(paths.len());
     // Validate and freeze the WHOLE sequence before connecting. A malformed
     // later file cannot follow a successfully submitted earlier effect.
@@ -68,11 +141,11 @@ fn exchange(
         documents.push(Prepared { request, frame });
     }
     budget.check()?;
-    profile.check_directory()?;
-    let mut socket = UnixStream::connect(&profile.socket)
+    check_directory()?;
+    let mut socket = UnixStream::connect(endpoint.socket)
         .map_err(|error| format!("Tower connection failed: {error}; no request was sent"))?;
     // Check this connected server before writing or reading ANY protocol data.
-    profile.supervisor.verify(&socket).map_err(debug)?;
+    endpoint.supervisor.verify(&socket).map_err(debug)?;
     socket.set_nonblocking(true).map_err(debug)?;
     budget.check()?;
     for document in documents {
@@ -104,11 +177,11 @@ struct Budget {
 }
 
 impl Budget {
-    fn new(profile: &Profile, started: Instant) -> Self {
+    fn new(endpoint: &Endpoint<'_>, started: Instant) -> Self {
         Self {
             started,
-            wall: Duration::from_millis(profile.runtime_ms),
-            poll_ms: profile.poll_ms,
+            wall: Duration::from_millis(endpoint.runtime_ms),
+            poll_ms: endpoint.poll_ms,
             calls: 0,
             written: 0,
             read: 0,

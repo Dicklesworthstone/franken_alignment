@@ -135,7 +135,7 @@ fn short_io_and_flush_barrier_spend_one_finite_budget_without_duplicating_bytes(
             }
         }
     }
-    let mut budget = Budget::new(&profile(), Instant::now());
+    let mut budget = Budget::new(&Endpoint::actor(&profile()), Instant::now());
     let mut writer = ShortWriter {
         bytes: Vec::new(),
         flushes: 0,
@@ -167,12 +167,12 @@ fn truncated_oversized_and_unsolicited_frames_never_become_complete_output() {
         b"one\ntwo\n".to_vec(),
         vec![b'x'; MAX_REPLY_BYTES + 1],
     ] {
-        let mut budget = Budget::new(&profile(), Instant::now());
+        let mut budget = Budget::new(&Endpoint::actor(&profile()), Instant::now());
         assert!(budget.read_frame(&mut io::Cursor::new(bytes)).is_err());
     }
     let mut profile = profile();
     profile.runtime_ms = 0;
-    let mut budget = Budget::new(&profile, Instant::now());
+    let mut budget = Budget::new(&Endpoint::actor(&profile), Instant::now());
     let mut untouched = io::Cursor::new(Vec::new());
     assert!(budget.write_frame(&mut untouched, b"private").is_err());
     assert!(untouched.into_inner().is_empty());
@@ -220,3 +220,6 @@ fn actor_only_cli_owns_all_options_before_profile_or_supervisor_reads() {
         assert!(output.is_empty());
     }
 }
+
+#[path = "tests/operator.rs"]
+mod operator;

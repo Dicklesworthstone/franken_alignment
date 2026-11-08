@@ -1,0 +1,282 @@
+//! Explicit operator identity and disclosure; never selected by actor bytes.
+use super::super::{Config, PeerProfile, Profile};
+use crate::config::{debug, read_regular};
+use fa_reference::action::consequence::delivery::persistent::requests::actor::{
+    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_QUERIES,
+};
+use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
+use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
+use fa_reference::action::{Purpose, Scope};
+use fa_reference::strict_json::{self, Json, Limits};
+use std::collections::BTreeMap;
+use std::fs;
+use std::io;
+use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
+use std::path::{Component, Path, PathBuf};
+
+#[derive(Clone, Debug)]
+pub(crate) struct Settings {
+    pub(crate) scope: Scope,
+    pub(crate) socket: PathBuf,
+    pub(crate) supervisor: PeerPolicy,
+    pub(crate) operator: PeerPolicy,
+    pub(crate) candidate_limit: u64,
+    pub(crate) connection_limit: u64,
+    pub(crate) exchange_limit: u64,
+    pub(crate) runtime_ms: u64,
+    pub(crate) poll_ms: u64,
+    pub(crate) inspection_queries: usize,
+    pub(crate) explanation_queries: usize,
+    pub(crate) explanation_replay_events: usize,
+    pub(crate) explanation_disclosure: String,
+}
+
+impl Settings {
+    pub(crate) fn read(path: &Path) -> Result<Self, String> {
+        Self::decode(&read_regular(path, 16_384)?)
+    }
+
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
+        let mut fields = Fields::new(
+            strict_json::parse(
+                bytes,
+                Limits {
+                    max_bytes: 16_384,
+                    max_depth: 4,
+                    max_items: 128,
+                    max_string_bytes: 4_096,
+                },
+            )
+            .map_err(debug)?,
+        )?;
+        if fields.text("schema")? != "fa.tower-operator-service/1" {
+            return Err("unsupported Tower operator service schema".into());
+        }
+        let mut audience = Fields::new(fields.take("scope")?)?;
+        let scope = Scope {
+            tenant: audience.number("tenant")?,
+            principal: audience.number("principal")?,
+            run: audience.number("run")?,
+            branch: audience.number("branch")?,
+            authority: audience.number("authority")?,
+            purpose: Purpose::Effect,
+        };
+        audience.end()?;
+        let settings = Self {
+            scope,
+            socket: PathBuf::from(fields.text("socket")?),
+            supervisor: identity(fields.take("supervisor")?)?,
+            operator: identity(fields.take("operator")?)?,
+            candidate_limit: fields.number("candidate_limit")?,
+            connection_limit: fields.number("connection_limit")?,
+            exchange_limit: fields.number("exchange_limit")?,
+            runtime_ms: fields.number("runtime_ms")?,
+            poll_ms: fields.number("poll_ms")?,
+            inspection_queries: usize::try_from(fields.number("inspection_queries")?)
+                .map_err(debug)?,
+            explanation_queries: usize::try_from(fields.number("explanation_queries")?)
+                .map_err(debug)?,
+            explanation_replay_events: usize::try_from(fields.number("explanation_replay_events")?)
+                .map_err(debug)?,
+            explanation_disclosure: fields.text("explanation_disclosure")?,
+        };
+        fields.end()?;
+        settings.validate()?;
+        Ok(settings)
+    }
+
+    pub(super) fn validate(&self) -> Result<(), String> {
+        if self.scope.purpose != Purpose::Effect
+            || [
+                self.scope.tenant,
+                self.scope.principal,
+                self.scope.run,
+                self.scope.branch,
+                self.scope.authority,
+            ]
+            .contains(&0)
+        {
+            return Err("operator audience identifiers must be nonzero in the effect scope".into());
+        }
+        let normalized: PathBuf = self.socket.components().collect();
+        if !self.socket.is_absolute()
+            || self.socket.file_name().is_none()
+            || normalized.as_os_str() != self.socket.as_os_str()
+            || self
+                .socket
+                .components()
+                .any(|part| !matches!(part, Component::RootDir | Component::Normal(_)))
+            || self.socket.as_os_str().as_encoded_bytes().contains(&0)
+            || self.socket.as_os_str().as_encoded_bytes().len() > 100
+        {
+            return Err(
+                "operator socket must be an absolute normalized path of at most 100 bytes".into(),
+            );
+        }
+        if self.candidate_limit == 0
+            || self.candidate_limit > MAX_PEER_CONNECTIONS
+            || self.connection_limit == 0
+            || self.connection_limit > self.candidate_limit
+            || self.exchange_limit == 0
+            || self.exchange_limit > MAX_CHANNEL_EXCHANGES
+            || self.runtime_ms == 0
+            || self.runtime_ms > 3_600_000
+            || self.poll_ms == 0
+            || self.poll_ms > 1_000
+            || self.poll_ms > self.runtime_ms
+            || self.inspection_queries > MAX_INSPECTION_QUERIES
+            || self.explanation_queries > MAX_EXPLANATION_QUERIES
+            || (self.inspection_queries == 0 && self.explanation_queries == 0)
+        {
+            return Err("operator service work or lifetime limit is out of range".into());
+        }
+        if self.explanation_queries == 0 {
+            if self.explanation_replay_events != 0 || self.explanation_disclosure != "none" {
+                return Err(
+                    "disabled explanation requires no replay work and disclosure none".into(),
+                );
+            }
+        } else if self.explanation_replay_events == 0
+            || self.explanation_replay_events > MAX_EXPLANATION_EVENTS
+            || self.explanation_disclosure != "policy_and_selected_witnesses"
+        {
+            return Err("explanation requires explicit policy-and-selected-witness disclosure and bounded replay".into());
+        }
+        Ok(())
+    }
+
+    /// Audience and declared server identity must match the original service.
+    /// The operator identity is independently selected, never inherited from
+    /// the actor or reviewer and never widened by connecting to another socket.
+    pub(super) fn check_actor(&self, actor: &Profile) -> Result<(), String> {
+        self.validate()?;
+        if self.scope != actor.scope || self.supervisor != actor.supervisor {
+            return Err(
+                "operator audience/server identity does not match the original actor service"
+                    .into(),
+            );
+        }
+        if self.socket == actor.socket {
+            return Err("operator and actor sockets must be distinct".into());
+        }
+        self.check_directory()
+    }
+
+    /// Preflight before source, time or persistent setup. Existing files,
+    /// sockets and symlinks are never replaced to make the sidecar start.
+    pub(crate) fn check_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        additional_sockets: &[&Path],
+    ) -> Result<(), String> {
+        actor.check_host(config)?;
+        reviewer.check_host(config)?;
+        self.check_actor(actor)?;
+        if self.scope != config.profile.delivery.scope
+            || self.socket == reviewer.socket(actor.request)
+            || self.socket == super::super::super::control::socket_path(reviewer, actor.request)
+            || additional_sockets
+                .iter()
+                .any(|path| self.socket.as_path() == *path)
+        {
+            return Err("operator audience or socket conflicts with the original service".into());
+        }
+        self.check_unbound()
+    }
+
+    pub(super) fn check_unbound(&self) -> Result<(), String> {
+        match fs::symlink_metadata(&self.socket) {
+            Ok(_) => Err("operator socket path already exists; no replacement is permitted".into()),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(debug(error)),
+        }
+    }
+
+    /// Public client-side check: no private Config, source or journal is read.
+    pub(crate) fn check_directory(&self) -> Result<(), String> {
+        self.validate()?;
+        let metadata = fs::symlink_metadata(
+            self.socket
+                .parent()
+                .ok_or("missing operator socket directory")?,
+        )
+        .map_err(debug)?;
+        if !metadata.is_dir()
+            || metadata.file_type().is_symlink()
+            || metadata.mode() & 0o022 != 0
+            || metadata.uid() != self.supervisor.uid()
+            || metadata.gid() != self.supervisor.gid()
+        {
+            return Err(
+                "operator socket directory must be supervisor-owned and not group/other writable"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+
+    pub(crate) fn secure_socket(&self) -> Result<(), String> {
+        let metadata = fs::symlink_metadata(&self.socket).map_err(debug)?;
+        if !metadata.file_type().is_socket()
+            || metadata.uid() != self.supervisor.uid()
+            || metadata.gid() != self.supervisor.gid()
+        {
+            return Err("operator socket has unexpected ownership or type".into());
+        }
+        fs::set_permissions(&self.socket, fs::Permissions::from_mode(0o660)).map_err(debug)
+    }
+}
+
+fn identity(value: Json) -> Result<PeerPolicy, String> {
+    let mut fields = Fields::new(value)?;
+    let uid = u32::try_from(fields.number("uid")?).map_err(debug)?;
+    let gid = u32::try_from(fields.number("gid")?).map_err(debug)?;
+    let pid = match fields.take("pid")? {
+        Json::Null => None,
+        value => Some(
+            u32::try_from(
+                value
+                    .as_u64()
+                    .ok_or("pid must be null or an unsigned integer")?,
+            )
+            .map_err(debug)?,
+        ),
+    };
+    fields.end()?;
+    PeerPolicy::new(uid, gid, pid).map_err(debug)
+}
+
+struct Fields(BTreeMap<String, Json>);
+impl Fields {
+    fn new(value: Json) -> Result<Self, String> {
+        match value {
+            Json::Object(fields) => Ok(Self(fields)),
+            _ => Err("expected operator profile object".into()),
+        }
+    }
+    fn take(&mut self, name: &str) -> Result<Json, String> {
+        self.0
+            .remove(name)
+            .ok_or_else(|| format!("missing operator field {name}"))
+    }
+    fn text(&mut self, name: &str) -> Result<String, String> {
+        self.take(name)?
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| format!("{name} must be text"))
+    }
+    fn number(&mut self, name: &str) -> Result<u64, String> {
+        self.take(name)?
+            .as_u64()
+            .ok_or_else(|| format!("{name} must be an unsigned integer"))
+    }
+    fn end(self) -> Result<(), String> {
+        if self.0.is_empty() {
+            Ok(())
+        } else {
+            Err("unknown operator service field".into())
+        }
+    }
+}

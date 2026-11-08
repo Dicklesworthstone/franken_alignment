@@ -1,0 +1,280 @@
+//! Separately authenticated native inspection beside the original live owner.
+//! Read grants never admit requests, renew evidence or enter the control path.
+#[path = "operator/profile.rs"]
+mod profile;
+pub(crate) use profile::Settings;
+
+use super::{
+    BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
+};
+use fa_reference::action::consequence::delivery::persistent::requests::actor::{
+    FileSupervisorExplanationGrant, FileSupervisorInspectionGrant,
+};
+use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
+use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+use fa_reference::action::consequence::oversight::actor_wire::{
+    ChannelLimits, ChannelState, CloseReason,
+};
+use fa_reference::address_resolver::{Address, CallerScope, Noun, ResolverPlane};
+use fa_reference::observation_algebra::AuthorityKind;
+use fa_reference::tower::publication::peer::PublicationPeerSession;
+use fa_reference::tower::publication::{PublicationLimits, PublicationTower};
+use fa_reference::tower::{MAX_REQUEST_BYTES, TowerAccess};
+use std::collections::BTreeSet;
+
+struct Active {
+    socket: BoundSocket,
+    session: PublicationPeerSession,
+    inspection: Option<FileSupervisorInspectionGrant>,
+    explanation: Option<FileSupervisorExplanationGrant>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Retirement {
+    SupervisorEnded,
+    Expired,
+    CandidateLimit,
+    ConnectionLimit,
+    ExchangeLimit,
+    TransportFailure,
+}
+
+pub(super) struct Service {
+    active: Option<Active>,
+    started: Instant,
+    wall: Duration,
+    candidates: u64,
+    candidate_limit: u64,
+    frames: usize,
+    retirement: Option<Retirement>,
+}
+
+impl Service {
+    /// Issue only selected original read grants. No source, clock, snapshot,
+    /// helper input or journal mutation is needed to expose this endpoint.
+    pub(super) fn start(
+        settings: &Settings,
+        actor: &Profile,
+        port: Port,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
+        settings.check_actor(actor)?;
+        settings.check_unbound()?;
+        if generation == 0 {
+            return Err("operator Tower registration generation must be nonzero".into());
+        }
+        let started = Instant::now();
+        let wall = Duration::from_millis(settings.runtime_ms.min(actor.runtime_ms))
+            .min(deadline.wall.saturating_sub(deadline.started.elapsed()));
+        if wall.is_zero() {
+            return Err("operator listener exceeded the original service lifetime".into());
+        }
+        let mount = Address::new(
+            settings.scope.tenant.to_string(),
+            Noun::Run,
+            settings.scope.run.to_string(),
+            Some(generation),
+        )
+        .map_err(debug)?;
+        let mut tower =
+            PublicationTower::new(mount, port, PublicationLimits::default()).map_err(debug)?;
+        let inspection = if settings.inspection_queries != 0 {
+            let (port, custodian) = driver
+                .supervisor()
+                .inspection_port(settings.inspection_queries)
+                .map_err(debug)?;
+            tower.set_inspection(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        let explanation = if settings.explanation_queries != 0 {
+            let (port, custodian) = driver
+                .supervisor()
+                .explanation_port_with_budget(
+                    settings.explanation_queries,
+                    settings.explanation_replay_events,
+                )
+                .map_err(debug)?;
+            tower.set_explanation(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        // Operator status admits only the installed supervisor READ ports.
+        // No Permit purpose, precheck disclosure or experiment context exists.
+        let access = TowerAccess::new(
+            CallerScope {
+                caller_tenant: settings.scope.tenant.to_string(),
+                allowed_planes: BTreeSet::from([ResolverPlane::ControlLedger]),
+                granted_authorities: BTreeSet::from([AuthorityKind::Verify]),
+            },
+            true,
+            Vec::new(),
+            0,
+        );
+        let session = PublicationPeerSession::new(
+            settings.operator,
+            tower,
+            access,
+            ChannelLimits {
+                frame_bytes: MAX_REQUEST_BYTES,
+                exchanges: settings.exchange_limit,
+            },
+            settings.connection_limit,
+        )
+        .map_err(debug)?;
+        if started.elapsed() >= wall {
+            return Err("operator listener setup exceeded its original lifetime".into());
+        }
+        let socket = BoundSocket::bind(&settings.socket, None)?;
+        settings.secure_socket()?;
+        let mut service = Self {
+            active: Some(Active {
+                socket,
+                session,
+                inspection,
+                explanation,
+            }),
+            started,
+            wall,
+            candidates: 0,
+            candidate_limit: settings.candidate_limit,
+            frames: 0,
+            retirement: None,
+        };
+        if service.started.elapsed() >= service.wall {
+            service.retire_with(Retirement::Expired);
+            return Err("operator listener setup exceeded its original lifetime".into());
+        }
+        eprintln!(
+            "Tower operator endpoint ready: {:?}; registration={generation}",
+            settings.socket
+        );
+        Ok(service)
+    }
+
+    /// One bounded read turn. Call only AFTER the original independent Stop
+    /// checkpoint. A transport fault retires this sidecar, never publication.
+    pub(super) fn checkpoint(&mut self) {
+        if self.retirement.is_some() {
+            return;
+        }
+        if self.started.elapsed() >= self.wall {
+            self.retire_with(Retirement::Expired);
+            return;
+        }
+        let active = self.active.as_mut().expect("active operator service");
+        if active.session.status().active.is_none() {
+            if self.candidates == self.candidate_limit {
+                self.retire_with(Retirement::CandidateLimit);
+                return;
+            }
+            let status = active.session.status();
+            if status.connections_admitted == status.connection_limit {
+                self.retire_with(Retirement::ConnectionLimit);
+                return;
+            }
+            if active.session.remaining_exchanges() == 0 {
+                self.retire_with(Retirement::ExchangeLimit);
+                return;
+            }
+            let socket = match active.socket.listener.accept() {
+                Ok((socket, _)) => socket,
+                Err(error)
+                    if matches!(
+                        error.kind(),
+                        io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                    ) =>
+                {
+                    return;
+                }
+                Err(_) => {
+                    self.retire_with(Retirement::TransportFailure);
+                    return;
+                }
+            };
+            self.candidates += 1;
+            match active.session.attach(socket) {
+                Ok(_) => {}
+                Err(PeerRefusal::CredentialsRejected) => {
+                    if self.candidates == self.candidate_limit {
+                        self.retire_with(Retirement::CandidateLimit);
+                    }
+                    return;
+                }
+                Err(_) => {
+                    self.retire_with(Retirement::TransportFailure);
+                    return;
+                }
+            }
+        }
+        let report = match active.session.drive(DriveBudget {
+            frames: 1,
+            ..DriveBudget::default()
+        }) {
+            Ok(report) => report,
+            Err(_) => {
+                self.retire_with(Retirement::TransportFailure);
+                return;
+            }
+        };
+        self.frames += report.progress.frames;
+        if report.status.failure.is_some() {
+            self.retire_with(Retirement::TransportFailure);
+        } else if self.started.elapsed() >= self.wall {
+            self.retire_with(Retirement::Expired);
+        } else if let ChannelState::Closed(reason) = report.status.channel {
+            match reason {
+                CloseReason::PeerClosed => {
+                    active.session.disconnect();
+                }
+                CloseReason::ExchangeLimit => self.retire_with(Retirement::ExchangeLimit),
+                CloseReason::TruncatedFrame
+                | CloseReason::FrameTooLarge
+                | CloseReason::IoFailure => {
+                    self.retire_with(Retirement::TransportFailure);
+                }
+            }
+        }
+    }
+
+    pub(super) fn retire(&mut self) {
+        self.retire_with(Retirement::SupervisorEnded);
+    }
+
+    fn retire_with(&mut self, reason: Retirement) {
+        let Some(mut active) = self.active.take() else {
+            return;
+        };
+        active.session.revoke();
+        self.retirement = Some(reason);
+        eprintln!(
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}",
+            self.candidates,
+            self.frames,
+            active
+                .inspection
+                .as_ref()
+                .map(FileSupervisorInspectionGrant::remaining_queries),
+            active
+                .explanation
+                .as_ref()
+                .map(FileSupervisorExplanationGrant::remaining_queries)
+        );
+        // Dropping the only custodians revokes all their weak ports/cursors.
+        // BoundSocket removes only this invocation's original socket inode.
+    }
+}
+
+impl Drop for Service {
+    fn drop(&mut self) {
+        self.retire();
+    }
+}
+
+#[cfg(test)]
+#[path = "operator/tests.rs"]
+mod tests;

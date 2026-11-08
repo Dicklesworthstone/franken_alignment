@@ -58,11 +58,23 @@ playbook below. Missing disclosure or owner eligibility remains explicit refusal
 
 A separately installed supervisor inspection grant connects native `situation`
 for authenticated operators. It captures the original acknowledged owner with
-its native basis, complete ledger accounting and a bounded first page. Unlisted
-attempts are explicitly marked by `enumeration_complete: false`; Unknown and
+its native basis, complete ledger accounting and bounded pages from that same
+immutable capture. Copy the returned continuation for each subsequent page;
+a new first-page capture replaces earlier progress. Unlisted attempts are
+explicitly marked by `enumeration_complete: false`, including when the last
+permitted query has no continuation. Unknown and
 irrecoverably unknown liabilities remain unresolved and charged. Grant clones
 share finite work and revocation. Ordinary actors and precheck users cannot
 acquire this capability, and a lost owner never reuses a previous live report.
+
+For the ordinary running single-request Tower service, select an explicit
+`--operator-profile OPERATOR_PROFILE` alongside `--tower-generation` and use
+`supervise_publication tower-operator-exchange OPERATOR_PROFILE REQUEST_JSON`.
+This [separate operator endpoint](LIVE_TOWER_OPERATOR.md) authenticates its own
+peer and installs only the selected inspection and admission-explanation grants.
+It keeps the original owner live through intake, review and terminal reply grace.
+Explanation additionally requires explicit policy/selected-witness disclosure;
+it remains historical admission evidence, not current `why-held` or permission.
 
 The integrating host can combine those original facades with the
 [shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence

@@ -12,6 +12,10 @@ mod learned;
 mod multi;
 #[path = "actor_service/native.rs"]
 mod native;
+#[path = "actor_service/operator.rs"]
+mod operator;
+#[path = "actor_service/precheck.rs"]
+mod precheck;
 #[path = "actor_service/profile.rs"]
 mod profile;
 #[path = "actor_service/qualification.rs"]
@@ -24,8 +28,6 @@ mod series;
 mod tokenizer;
 #[path = "actor_service/topology.rs"]
 mod topology;
-#[path = "actor_service/precheck.rs"]
-mod precheck;
 #[path = "actor_service/tower.rs"]
 mod tower;
 use profile::Profile;
@@ -43,7 +45,7 @@ use super::CLOCK_DOMAIN;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; single-request Tower services also accept --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -85,10 +87,20 @@ pub(crate) fn tower_exchange_command(args: &[String], output: &mut impl std::io:
     tower::client::command(args, output)
 }
 
+pub(crate) fn tower_operator_exchange_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
+    tower::client::operator_command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     // The selected wire format owns its complete ordinary-service grammar.
     // No other profile can consume this option and silently run actor JSON.
-    if args.iter().any(|arg| arg == "--tower-generation") {
+    if args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--tower-generation" | "--operator-profile"))
+    {
         return tower::command(args, credibility);
     }
     // Learned services own their complete grammar. Ordinary precheck, topology
@@ -231,14 +243,22 @@ where F: FnMut() -> ElapsedTick {
         credibility, topology, None, time)
 }
 
-fn serve_selected_with_precheck<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+fn serve_selected_with_precheck<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    open: bool,
+    credibility: Option<&Path>,
     topology: Option<super::continuation::creation::topology::Selection>,
-    precheck_settings: Option<&precheck::Settings>, time: F)
-    -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
+    precheck_settings: Option<&precheck::Settings>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     serve_selected_ingress(config, actor, reviewer_profile, publication, open, credibility,
-        topology, precheck_settings, None, time)
+        topology, precheck_settings, None, None, time)
 }
 
 fn serve_selected_ingress<F>(
@@ -251,13 +271,15 @@ fn serve_selected_ingress<F>(
     topology: Option<super::continuation::creation::topology::Selection>,
     precheck_settings: Option<&precheck::Settings>,
     tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
     mut time: F,
 ) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
     if tower_generation.is_some_and(|generation| generation == 0)
-        || (tower_generation.is_some() && topology.is_some()) {
+        || (tower_generation.is_some() && topology.is_some())
+        || (operator_settings.is_some() && tower_generation.is_none()) {
         return Err("Tower ingress requires an explicit nonzero generation and the ordinary single-request profile".into());
     }
     // A selected precheck service keeps its independent native listener,
@@ -282,6 +304,13 @@ where
     } else { None };
     actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
     if let Some(settings) = precheck_settings { settings.check_host(&config, actor, reviewer_profile)?; }
+    if let Some(settings) = operator_settings {
+        let additional: Vec<_> = precheck_settings
+            .into_iter()
+            .map(|settings| settings.socket_path())
+            .collect();
+        settings.check_host(&config, actor, reviewer_profile, &additional)?;
+    }
     if actor.socket == reviewer_profile.socket(actor.request)
         || actor.socket == super::control::socket_path(reviewer_profile, actor.request)
     {
@@ -358,6 +387,21 @@ where
         )?)
     };
     let mut precheck: Option<precheck::Service> = None;
+    // This separate session owns only explicit supervisor read grants. It uses
+    // the same original owner, remains alive through review and reply grace,
+    // and never supplies an admission source, Permit purpose or review key.
+    let mut operator = operator_settings
+        .map(|settings| {
+            operator::Service::start(
+                settings,
+                actor,
+                port.clone(),
+                &driver,
+                tower_generation.expect("operator selection checked above"),
+                &deadline,
+            )
+        })
+        .transpose()?;
     let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
     eprintln!("Live actor endpoint ready: {:?}; request={}", actor.socket, actor.request);
     let work = (|| {
@@ -385,6 +429,9 @@ where
                 if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                     return Ok(());
                 }
+            }
+            if let Some(service) = &mut operator {
+                service.checkpoint();
             }
             if let Some(service) = &mut precheck {
                 // Precheck transport faults retire this sidecar only. They must
@@ -433,6 +480,11 @@ where
             wall: deadline.wall,
         };
         let mut pump = |driver: &mut FileSupervisedDriver| {
+            // LiveControl has already serviced independent Stop before this
+            // cooperative ingress checkpoint. Read-side faults retire only it.
+            if let Some(service) = &mut operator {
+                service.checkpoint();
+            }
             ingress.observe(driver)?;
             let status = driver
                 .supervisor()
@@ -481,6 +533,7 @@ where
     // disconnection nor a failed output proves nonexecution or requests a resend.
     let started = Instant::now();
     while started.elapsed() < Duration::from_millis(actor.reply_ms) {
+        if let Some(service) = &mut operator { service.checkpoint(); }
         if let Err(error) = ingress.observe(&mut driver) {
             if failure.is_none() {
                 failure = Some(error);
@@ -488,6 +541,9 @@ where
             break;
         }
         pause(actor.poll_ms);
+    }
+    if let Some(service) = &mut operator {
+        service.retire();
     }
     ingress.revoke();
     // A retained topology checkpoint is evidence of a healthy acknowledged

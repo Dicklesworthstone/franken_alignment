@@ -22,7 +22,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE]";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE] (operator profile requires a single-request service)";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -33,6 +33,7 @@ struct Arguments<'a> {
     generation: u64,
     requests: Option<Vec<u64>>,
     precheck: Option<&'a Path>,
+    operator: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -45,7 +46,7 @@ impl<'a> Arguments<'a> {
             _ => return Err(USAGE.into()),
         };
         let positional = if checked { 5 } else { 4 };
-        if (args.len() != positional + 2 && args.len() != positional + 4)
+        if ![positional + 2, positional + 4, positional + 6].contains(&args.len())
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
@@ -55,9 +56,9 @@ impl<'a> Arguments<'a> {
         let mut generation = None;
         let mut requests = None;
         let mut precheck = None;
-        // The registration pair leaves room for one optional profile only.
-        // Precheck custody belongs to a single selected admission, so a request
-        // schedule cannot silently renew it at each handoff.
+        let mut operator = None;
+        // Each opt-in owns one complete pair. Operator read custody is separate
+        // from admission-time precheck disclosure and cannot widen actor grants.
         for pair in args[positional..].chunks_exact(2) {
             match pair[0].as_str() {
                 FLAG if generation.is_none() => {
@@ -87,8 +88,17 @@ impl<'a> Arguments<'a> {
                     }
                     precheck = Some(Path::new(&pair[1]));
                 }
+                "--operator-profile" if operator.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    operator = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
+        }
+        if requests.is_some() && (precheck.is_some() || operator.is_some()) {
+            return Err(USAGE.into());
         }
         let generation = generation.ok_or(USAGE)?;
         Ok(Self {
@@ -100,6 +110,7 @@ impl<'a> Arguments<'a> {
             generation,
             requests,
             precheck,
+            operator,
         })
     }
 }
@@ -121,6 +132,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let precheck = selected
         .precheck
         .map(super::precheck::Settings::read)
+        .transpose()?;
+    let operator = selected
+        .operator
+        .map(super::operator::Settings::read)
         .transpose()?;
     if let Some(requests) = selected.requests.as_deref() {
         return super::series::serve_tower(
@@ -147,6 +162,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         None,
         precheck.as_ref(),
         Some(selected.generation),
+        operator.as_ref(),
         super::super::clock,
     )
 }

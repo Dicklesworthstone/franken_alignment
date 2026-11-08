@@ -120,6 +120,7 @@ fn serve_with_precheck(
         None,
         Some(settings),
         Some(GENERATION),
+        None,
         || ElapsedTick(1000),
     )
 }
@@ -345,6 +346,7 @@ fn checked_tower_precheck_preserves_final_whole_input_validation() {
             None,
             Some(&settings),
             Some(GENERATION),
+        None,
             || {
                 if !advanced
                     && let Ok(disk) = FileOversight::read_publication(&store, &bootstrap)
@@ -499,6 +501,7 @@ fn tower_sidecar_socket_preflight_precedes_clocks_source_and_store_creation() {
             None,
             Some(&settings),
             Some(GENERATION),
+        None,
             || panic!("preflight entered the clock/source boundary"),
         );
         assert!(result.is_err());
@@ -537,6 +540,7 @@ fn recorded_tower_requests_cannot_acquire_a_new_precheck_disclosure() {
         None,
         Some(&settings),
         Some(GENERATION),
+        None,
         || ElapsedTick(200000),
     );
     assert!(

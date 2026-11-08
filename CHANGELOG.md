@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-08: expose authenticated operator reads during live publication
+
+- Add an explicitly configured operator socket to all four ordinary single-request
+  Tower service modes, composable with the original precheck sidecar.
+- Install separately bounded native inspection and optional policy/admission
+  explanation grants from the same original owner. Keep operator reads separate
+  from actor admission, source evidence and helper/human publication keys.
+- Preserve Stop-first cooperative scheduling, shared quotas/cursors through
+  reconnects, historical recovery and terminal reply grace. Retire failed read
+  transport without cancelling publication, and release custody on every exit.
+- Add `tower-operator-exchange` through the original bounded, server-authenticated
+  request client, preserving raw correlated observations and explicit requests.
+- Add real-owner, client and live-publication regressions for permitted reads and
+  authority/disclosure boundaries. Source review and syntax/format checks do not
+  substitute for the still-blocked remote compilation and runtime gate.
+
 ## 2026-11-08: paginate original native Tower situations
 
 - Continue operator inspection beyond 16 attempts using the original immutable

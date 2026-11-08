@@ -28,6 +28,10 @@ pub(crate) struct Settings {
 }
 
 impl Settings {
+    pub(crate) fn socket_path(&self) -> &Path {
+        &self.socket
+    }
+
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, 16_384)?)
     }

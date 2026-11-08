@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: authenticated operator reads beside live Tower publication
+
+All four ordinary single-request Tower service modes now accept an explicit
+`--operator-profile` alongside the registration generation and optional native
+precheck sidecar. The closed profile fixes a separate kernel-authenticated
+socket, complete audience, native inspection allowance and independently opted-in
+policy/admission-explanation disclosure with bounded event replay. Profile and
+socket conflicts refuse before clock, source or persistent setup.
+
+The new endpoint installs original weak native read ports from the same
+supervisor and retains their noncloneable custodians. It grants operator read
+access without a Permit purpose, source-admission callback or review key.
+Stop remains first at the original intake/execution checkpoints; reads continue
+through helper/human review and terminal reply grace. Healthy reconnects retain
+the same cursor, native query allowances and transport spending. Transport failure
+retires only the read sidecar. Every exit drops its custody before helper cleanup.
+Recorded-request recovery can expose its original historical observations without
+source acquisition, helper reruns or another effect.
+
+`tower-operator-exchange` reuses the bounded original Tower client through a
+connection-only view, with no fabricated actor profile or request identity.
+It freezes explicit request files before connecting, authenticates the server
+before bytes, preserves correlated original responses and does not follow pages,
+poll, reconnect or resend automatically.
+
+Twenty-eight new regression functions cover native reads, explicit disclosure, preinstalled
+snapshot/Permit refusal, reconnect/cursor/query conservation, actual publication
+while human approval is pending, observation-only recovery, malformed transport,
+kernel credentials, partial-frame Stop, setup preflight and output failure.
+Independent source review and local Rust 2024 syntax/format checks completed
+using rustfmt 1.10.0-nightly (9085017724, 2026-08-30), not the qualified compiler
+identity. The required remote RCH gate remains unavailable with
+zero configured workers and no daemon; compilation, Clippy, runtime tests and
+the complete gate remain pending. No bead or packet is closed. See the
+[live operator contract](docs/LIVE_TOWER_OPERATOR.md).
+
 ## 2026-11-08: continue native Tower situations through the original capture
 
 Operator `situation` now enumerates beyond the first 16 attempts through one

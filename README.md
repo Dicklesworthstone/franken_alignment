@@ -130,6 +130,17 @@ covering native, typed and JSON paths. Independent source review and syntax/form
 checks are complete; RCH compilation and runtime qualification remain pending.
 See [the native inspection contract](docs/TOWER_PUBLICATION.md#inspect-the-original-live-owners-situation).
 
+The ordinary single-request Tower service can now expose those reads through
+an explicitly configured [live operator endpoint](docs/LIVE_TOWER_OPERATOR.md).
+`--operator-profile` provisions a separate authenticated socket, inspection
+allowance and optional policy/admission-explanation disclosure. It remains
+available through real helper/human review and terminal reply grace, with the
+same original owner and cumulative quotas across reconnects. Use
+`tower-operator-exchange` to exchange explicit request documents. Operator
+traffic has no Permit purpose or source admission path, and its transport
+failure retires only the sidecar. Compilation and runtime qualification remain
+pending the required remote gate.
+
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
 complete monitor from checkpoint files](docs/TRAIN_LEARNED_KV_PROBES_COMMAND.md), provision

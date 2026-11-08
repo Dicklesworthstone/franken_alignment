@@ -108,6 +108,7 @@ fn serve_tower(
         None,
         None,
         Some(GENERATION),
+        None,
         || ElapsedTick(at),
     )
 }
@@ -323,3 +324,6 @@ mod series;
 
 #[path = "tower_service/precheck.rs"]
 mod precheck;
+
+#[path = "tower_service/operator.rs"]
+mod operator;

@@ -166,7 +166,10 @@ tenant, ControlLedger/Verify authority and matching optional registration
 generation. It additionally requires the host-authenticated operator role.
 Neither ordinary actor intake nor a precheck disclosure grants that role or
 inspection port. Actor requests cannot mint, install or widen the capability.
-The [ordinary live actor service](TOWER_PEER.md) keeps operator access disabled.
+The [ordinary live actor service](TOWER_PEER.md) keeps operator access disabled
+on its actor connection. An explicit
+[operator sidecar](LIVE_TOWER_OPERATOR.md) provisions a separate authenticated
+session with its own native read custody and no Permit purpose.
 
 ```json
 {

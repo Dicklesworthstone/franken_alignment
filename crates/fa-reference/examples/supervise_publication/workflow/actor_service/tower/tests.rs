@@ -1,5 +1,8 @@
 use super::*;
 
+#[path = "tests/operator.rs"]
+mod operator;
+
 #[test]
 fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
     for (mode, count, open) in [
