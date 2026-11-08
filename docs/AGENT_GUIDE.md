@@ -78,6 +78,16 @@ allowances across handoffs; a later request never renews spent operator work.
 Explanation additionally requires explicit policy/selected-witness disclosure;
 it remains historical admission evidence, not current `why-held` or permission.
 
+To enumerate a live owner's original situation capture, use
+`supervise_publication tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N`
+with a canonical run address carrying its exact registration generation and an
+explicit page allowance from 1 to 64. The client validates each native page and
+follows its exact continuation within one authenticated connection and the
+original allowances. Success requires explicit completion. On exhaustion or a
+native diagnostic, valid earlier JSON lines remain output and the command fails;
+check its exit status before treating the enumeration as complete. It never
+recaptures automatically, and the result remains historical observation.
+
 The integrating host can combine those original facades with the
 [shared Tower router](TOWER_ROUTER.md), using the same `TowerRequest` for evidence
 reads, precheck, native submission and acquired-request polling. A live mount

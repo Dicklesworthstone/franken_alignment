@@ -137,7 +137,10 @@ allowance and optional policy/admission-explanation disclosure. It remains
 available through real helper/human review and terminal reply grace, with the
 same original owner and cumulative quotas across reconnects and every handoff
 in an explicit finite request schedule. Use
-`tower-operator-exchange` to exchange explicit request documents. Operator
+`tower-operator-exchange` to exchange explicit request documents, or
+`tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages 64` to follow one
+original capture with bounded, validated pagination and explicit incomplete
+output. Operator
 traffic has no Permit purpose or source admission path, and its transport
 failure retires only the sidecar. Compilation and runtime qualification remain
 pending the required remote gate.

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-08: enumerate native situations with bounded automatic continuation
+
+- Add `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` through the
+  original authenticated transport, one finite budget and the exact native
+  continuation. Bound requests by both the explicit cap and profile allowance.
+- Validate full capture identity, scope, summary, offsets, rows, cursors,
+  accounting and completion before emitting or following Known pages. Retain
+  bounded IDs and one basis/summary instead of the complete response history.
+- Preserve original valid JSON lines and diagnostics while reporting incomplete
+  enumeration as failure. Never reconnect, retry or recapture after exhaustion,
+  owner/transport loss, invalid pages or output failure.
+- Add 18 regressions spanning actual native captures, live owner changes,
+  correlated substitution and wire corruption, independent limits, output loss,
+  authentication and closed executable grammar. Source review and syntax/format
+  checks are complete; required remote compilation/runtime execution is pending.
+
 ## 2026-11-08: retain operator reads across publication schedules
 
 - Compose the separate authenticated operator endpoint with all four ordinary

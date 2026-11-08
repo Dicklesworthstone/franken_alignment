@@ -94,6 +94,13 @@ pub(crate) fn tower_operator_exchange_command(
     tower::client::operator_command(args, output)
 }
 
+pub(crate) fn tower_situation_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
+    tower::client::situation_command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     // The selected wire format owns its complete ordinary-service grammar.
     // No other profile can consume this option and silently run actor JSON.

@@ -134,6 +134,50 @@ the actor service, for example `fa://1/attempt/request-3-2-4-5-7@41`, with
 `arguments: null`. It describes the original policy admission and its distinct
 ending cut; it does not establish current eligibility or explain a later hold.
 
+## Enumerate one original situation capture
+
+```sh
+supervise_publication tower-situation OPERATOR_PROFILE fa://1/run/3@41 --max-pages 64
+```
+
+This Linux command follows the native situation continuation for you. The run
+address must be canonical, match the operator profile's tenant and run, and
+include the exact nonzero registration generation. The explicit page allowance
+is a canonical integer from 1 through 64. Grammar and address checks precede
+profile reads; profile/run checks precede connection. The server authenticates
+the operator and the client authenticates the server before protocol bytes.
+
+The first request has null arguments. Later requests use only the exact cursor
+returned by the previous accepted page, on the same connection and within one
+transport budget. The smaller of `--max-pages` and the profile's original
+exchange allowance limits requests. Native query exhaustion remains independent
+and can end enumeration earlier. No reconnect, retry or new capture occurs.
+
+Before emitting or following a Known page, the client checks the original
+acknowledged-owner basis, complete scope, unchanged journal/control/time cut and
+whole-ledger summary. It also checks contiguous offsets, the native 16-row page
+bound, unique attempt IDs and continuation IDs, canonical full-width integers,
+accounting totals and explicit completion. A page whose capture basis or summary
+changes, or whose sequence is inconsistent, is rejected before its bytes are
+output. The server's original branded native continuation preserves the actual
+capture identity; live owner changes do not replace that capture.
+
+Original accepted replies are written as JSON lines. Exit success means the
+Known enumeration explicitly completed; it does not mean the observation is
+current eligibility or publication authority. If a page, exchange or native
+grant limit ends an incomplete enumeration, already emitted valid pages remain
+available and the command exits with an error. Correlated native Unknown,
+Withheld, refusal and error replies are also preserved before failure. Output
+failure stops further requests without restoring spent native work; a failed
+write can leave partial output, so consumers must check both framing and exit
+status.
+
+The client retains one basis and summary plus at most 1,024 attempt IDs and 64
+cursor IDs, rather than accumulating the entire ledger or all page bytes. A
+larger reported total is valid but does not enlarge this work allowance. The
+existing client checks elapsed time and finite byte/I/O work at checkpoints;
+synchronous OS connection and output calls are not preempted by those checks.
+
 ## Lifetime and authority
 
 The service provisions the original native read grants once and retains their

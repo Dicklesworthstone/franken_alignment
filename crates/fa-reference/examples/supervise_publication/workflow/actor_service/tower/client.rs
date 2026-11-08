@@ -18,6 +18,9 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
+#[path = "client/situation.rs"]
+mod situation;
+
 const MAX_DOCUMENTS: usize = 64;
 const MAX_REPLY_BYTES: usize = 1_048_576;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
@@ -68,6 +71,12 @@ pub(crate) fn operator_command(args: &[String], output: &mut impl Write) -> Resu
         started,
         || settings.check_directory(),
     )
+}
+
+/// Enumerate one native historical situation capture within the caller's
+/// explicit page allowance and the original transport and server grants.
+pub(crate) fn situation_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    situation::command(args, output)
 }
 
 /// Only shared transport parameters. An operator profile is never converted
@@ -132,39 +141,57 @@ fn exchange_endpoint(
         budget.check()?;
         let request = decode_request(&read_regular(path, MAX_REQUEST_BYTES)?)
             .map_err(|_| "invalid bounded Tower request document".to_owned())?;
-        let mut frame = encode_request(&request)
-            .map_err(|_| "Tower request could not be canonically framed".to_owned())?
-            .into_bytes();
-        // Canonicalization changes only JSON spelling, never request identity,
-        // proposal bytes or integers. A pretty-printed file becomes one frame.
-        frame.push(b'\n');
+        let frame = request_frame(&request)?;
         documents.push(Prepared { request, frame });
     }
+    let mut socket = connect_endpoint(endpoint, &budget, check_directory)?;
+    for document in documents {
+        budget.write_frame(&mut socket, &document.frame)?;
+        let response = budget.read_frame(&mut socket)?;
+        validate_response(&response, &document.request)?;
+        emit_response(&response, output, &budget)?;
+    }
+    Ok(())
+}
+
+fn request_frame(request: &TowerRequest) -> Result<Vec<u8>, String> {
+    let mut frame = encode_request(request)
+        .map_err(|_| "Tower request could not be canonically framed".to_owned())?
+        .into_bytes();
+    // Canonicalization changes only JSON spelling, never request identity,
+    // proposal bytes or integers. A pretty-printed file becomes one frame.
+    frame.push(b'\n');
+    Ok(frame)
+}
+
+fn connect_endpoint(
+    endpoint: Endpoint<'_>,
+    budget: &Budget,
+    check_directory: impl FnOnce() -> Result<(), String>,
+) -> Result<UnixStream, String> {
     budget.check()?;
     check_directory()?;
-    let mut socket = UnixStream::connect(endpoint.socket)
+    let socket = UnixStream::connect(endpoint.socket)
         .map_err(|error| format!("Tower connection failed: {error}; no request was sent"))?;
     // Check this connected server before writing or reading ANY protocol data.
     endpoint.supervisor.verify(&socket).map_err(debug)?;
     socket.set_nonblocking(true).map_err(debug)?;
     budget.check()?;
-    for document in documents {
-        budget.write_frame(&mut socket, &document.frame)?;
-        let response = budget.read_frame(&mut socket)?;
-        validate_response(&response, &document.request)?;
-        budget.check()?;
-        // Emit each original complete reply without interpreting Unknown,
-        // Pending, denial or a successful intake as execution or permission.
-        output
-            .write_all(&response)
-            .and_then(|()| output.write_all(b"\n"))
-            .and_then(|()| output.flush())
-            .map_err(|error| format!(
-                "Tower response received, output failed: {error}; no later request or retry was sent"
-            ))?;
-        budget.check()?;
-    }
-    Ok(())
+    Ok(socket)
+}
+
+fn emit_response(response: &[u8], output: &mut impl Write, budget: &Budget) -> Result<(), String> {
+    budget.check()?;
+    // Emit each original complete reply without interpreting Unknown,
+    // Pending, denial or a successful intake as execution or permission.
+    output
+        .write_all(response)
+        .and_then(|()| output.write_all(b"\n"))
+        .and_then(|()| output.flush())
+        .map_err(|error| format!(
+            "Tower response received, output failed: {error}; no later request or retry was sent"
+        ))?;
+    budget.check()
 }
 
 struct Budget {
@@ -309,6 +336,10 @@ impl Budget {
 // Correlation and bounded syntax only. We deliberately do not reconstruct a
 // public Knowledge, native ticket, signed profile or authority from this data.
 fn validate_response(bytes: &[u8], request: &TowerRequest) -> Result<(), String> {
+    parse_response(bytes, request).map(|_| ())
+}
+
+fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> {
     let invalid =
         || "invalid or unbound Tower response; no later request or retry was sent".to_owned();
     let parsed = strict_json::parse(
@@ -366,7 +397,7 @@ fn validate_response(bytes: &[u8], request: &TowerRequest) -> Result<(), String>
         (Some("explanation"), Verb::Explain) => {}
         _ => return Err(invalid()),
     }
-    Ok(())
+    Ok(parsed)
 }
 
 #[cfg(test)]

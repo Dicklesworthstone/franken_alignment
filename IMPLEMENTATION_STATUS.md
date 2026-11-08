@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: enumerate one native situation through the authenticated client
+
+`tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` now follows native
+situation continuations on one authenticated connection. Closed grammar,
+canonical registered addresses and profile scope checks run before unrelated
+configuration or network work. The client reuses the original Tower transport,
+framing, correlation and finite budget, issuing only an initial situation and
+the exact returned continuation within its explicit 1..64 page allowance and
+the original profile exchange limit.
+
+Every Known page is checked before output or continuation: original complete
+scope and acknowledged-owner basis, stable journal/control/time cut and whole
+summary, contiguous offsets, native row bounds, unique attempt/cursor IDs,
+canonical full-width integers, accounting and explicit completion. It retains
+only one basis/summary and bounded IDs. Live changes cannot substitute a newer
+capture, and a larger reported total cannot enlarge the allowed client work.
+
+Original validated replies remain JSON lines. Only explicit Known completion
+returns success. Valid partial output and correlated native diagnostics remain
+available when the command fails; malformed or inconsistent Known pages are not
+emitted. Native grant exhaustion, absent continuation, client limits, owner or
+transport loss and output failure stop without reconnect, retry or recapture.
+Synchronous connection/output calls retain the existing OS blocking limitation;
+elapsed checks do not claim hard preemption.
+
+Eighteen new regression functions cover 33 native attempts across three original
+pages while the owner advances, exact completion, independent work limits,
+source-cut substitution and malformed pages, output/transport/owner loss,
+identity and scope boundaries, canonical integers and complete executable
+grammar. Independent source review and Rust 2024 syntax/format checks use the
+unqualified rustfmt 1.10.0-nightly (9085017724, 2026-08-30). Required remote RCH
+compilation, Clippy, runtime tests and the full gate remain pending; no bead or
+packet is closed. See the [client contract](docs/LIVE_TOWER_OPERATOR.md#enumerate-one-original-situation-capture).
+
 ## 2026-11-08: retain operator observation across publication schedules
 
 All four ordinary Tower service modes now compose `--operator-profile` with a

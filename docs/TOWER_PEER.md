@@ -58,6 +58,9 @@ precheck sidecar or a finite request schedule, with distinct sockets and
 independent budgets. A schedule retains the same operator session, native
 custodians and spent allowances across every handoff. Use
 `tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
+Use `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` for one original
+situation capture with bounded automatic continuation and explicit incomplete
+output; every page is validated before its cursor is followed.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.
 
