@@ -64,7 +64,9 @@ custodians and spent allowances across every handoff. Use
 `tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
 Use `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` for one original
 situation capture with bounded automatic continuation and explicit incomplete
-output; every page is validated before its cursor is followed.
+output; every page is validated before its cursor is followed. Add a final
+`--request-links` flag to validate the versioned original request addresses
+alongside each captured attempt, with unchanged transport and query limits.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.
 

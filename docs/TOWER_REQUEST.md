@@ -93,6 +93,12 @@ projection does not recapture or grant another read. Imported reference
 snapshots reject this native projection without charging their read allowance.
 See [captured request links](TOWER_PUBLICATION.md#follow-captured-attempts-to-original-requests).
 
+The bounded operator client exposes the same selection as
+`tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N --request-links`.
+It validates every paired request identity and the selected v2 schema before
+emitting a page or following its original cursor. Default client requests and
+v1 validation remain unchanged.
+
 ### Native proposals
 
 The proposal object preserves the original native actor schema. All five target

@@ -25,6 +25,8 @@ mod native;
 
 #[path = "tests/continuation.rs"]
 mod continuation;
+#[path = "tests/links.rs"]
+mod links;
 #[path = "tests/validation.rs"]
 mod validation;
 

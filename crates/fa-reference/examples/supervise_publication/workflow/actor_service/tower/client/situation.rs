@@ -7,19 +7,21 @@ use super::{
     connect_endpoint, emit_response, parse_response, request_frame,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_INSPECTION_ATTEMPTS;
+use fa_reference::action::consequence::oversight::actor::MAX_ACTOR_REQUESTS;
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::address_resolver::{Address, Noun};
+use fa_reference::tower::publication::request_address_for;
 use fa_reference::tower::{MAX_REQUEST_STRING_BYTES, ReadArguments};
 use std::collections::{BTreeMap, BTreeSet};
 
 const MAX_PAGES: usize = 64;
-const USAGE: &str = "tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N (canonical run address with nonzero registration generation; N is 1..64; one capture, no reconnect or retry)";
+const USAGE: &str = "tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N [--request-links] (canonical run address with nonzero registration generation; N is 1..64; one capture, no reconnect or retry)";
 const INVALID: &str =
     "invalid or inconsistent native situation page; no continuation or new capture was requested";
 
 pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
     // Own the entire grammar and address before opening even the public profile.
-    let (address, max_pages) = selection(args)?;
+    let (address, max_pages, request_links) = selection(args)?;
     let started = Instant::now();
     let settings = OperatorSettings::read(Path::new(&args[1]))?;
     if address.tenant != settings.scope.tenant.to_string()
@@ -27,16 +29,24 @@ pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
     {
         return Err("Tower situation address does not match the operator profile scope; no connection was opened".into());
     }
-    enumerate(&settings, address, max_pages, output, started)
+    enumerate(
+        &settings,
+        address,
+        max_pages,
+        request_links,
+        output,
+        started,
+    )
 }
 
-fn selection(args: &[String]) -> Result<(Address, usize), String> {
-    if args.len() != 5
+fn selection(args: &[String]) -> Result<(Address, usize, bool), String> {
+    if !matches!(args.len(), 5 | 6)
         || args[0] != "tower-situation"
         || args[1].is_empty()
         || args[1].starts_with("--")
         || args[2].len() > MAX_REQUEST_STRING_BYTES
         || args[3] != "--max-pages"
+        || (args.len() == 6 && args[5] != "--request-links")
     {
         return Err(USAGE.into());
     }
@@ -51,13 +61,14 @@ fn selection(args: &[String]) -> Result<(Address, usize), String> {
     {
         return Err(USAGE.into());
     }
-    Ok((address, max_pages as usize))
+    Ok((address, max_pages as usize, args.len() == 6))
 }
 
 fn enumerate(
     settings: &OperatorSettings,
     address: Address,
     max_pages: usize,
+    request_links: bool,
     output: &mut impl Write,
     started: Instant,
 ) -> Result<(), String> {
@@ -65,6 +76,9 @@ fn enumerate(
     let page_limit = (max_pages as u64).min(endpoint.exchanges) as usize;
     let mut budget = Budget::new(&endpoint, started);
     let mut capture = Capture::new(settings.scope, max_pages);
+    if request_links {
+        capture = capture.with_request_links(address.clone());
+    }
     let mut socket = connect_endpoint(endpoint, &budget, || settings.check_directory())?;
     let mut cursor = None;
     for page in 1..=page_limit {
@@ -73,9 +87,11 @@ fn enumerate(
             address.clone(),
             Verb::Situation,
         );
-        request.arguments = cursor.map_or(ReadArguments::None, |cursor| {
-            ReadArguments::SituationPage { cursor }
-        });
+        request.arguments = if request_links {
+            ReadArguments::SituationLinks { cursor }
+        } else {
+            cursor.map_or(ReadArguments::None, |cursor| ReadArguments::SituationPage { cursor })
+        };
         let frame = request_frame(&request)?;
         budget.write_frame(&mut socket, &frame)?;
         let response = budget.read_frame(&mut socket)?;
@@ -101,10 +117,12 @@ enum Progress {
 
 struct Capture {
     scope: Scope,
+    link_registration: Option<Address>,
     basis: Option<Json>,
     summary: Option<Json>,
     next_offset: u64,
     attempts: BTreeSet<u64>,
+    requests: BTreeSet<u64>,
     cursors: BTreeSet<u64>,
     max_rows: usize,
 }
@@ -113,13 +131,22 @@ impl Capture {
     fn new(scope: Scope, max_pages: usize) -> Self {
         Self {
             scope,
+            link_registration: None,
             basis: None,
             summary: None,
             next_offset: 0,
             attempts: BTreeSet::new(),
+            requests: BTreeSet::new(),
             cursors: BTreeSet::new(),
             max_rows: max_pages * MAX_INSPECTION_ATTEMPTS,
         }
+    }
+
+    /// Freeze the original validated run registration for every returned link.
+    /// Link data is never followed automatically or exchanged for a ticket.
+    fn with_request_links(mut self, registration: Address) -> Self {
+        self.link_registration = Some(registration);
+        self
     }
 
     fn accept(&mut self, response: &Json) -> Result<Progress, String> {
@@ -152,7 +179,12 @@ impl Capture {
             ]
         };
         let wrapper = object(value, &fields)?;
-        if wrapper["schema"].as_str() != Some("fa.publication-situation/1")
+        let schema = if self.link_registration.is_some() {
+            "fa.publication-situation/2"
+        } else {
+            "fa.publication-situation/1"
+        };
+        if wrapper["schema"].as_str() != Some(schema)
             || wrapper["operation"].as_str() != Some("situation")
             || wrapper["historical"].as_bool() != Some(true)
             || wrapper["current_eligibility"].as_str() != Some("not_observed")
@@ -254,11 +286,20 @@ impl Capture {
             return Err(INVALID.into());
         }
         let mut new_attempts = BTreeSet::new();
+        let mut new_requests = BTreeSet::new();
         for row in rows {
-            let attempt = check_attempt(row, self.scope.tenant)?;
+            let (attempt, request) = check_attempt(row, self.scope, self.link_registration.as_ref())?;
             if self.attempts.contains(&attempt) || !new_attempts.insert(attempt) {
                 return Err(INVALID.into());
             }
+            if let Some(request) = request {
+                if self.requests.contains(&request) || !new_requests.insert(request) {
+                    return Err(INVALID.into());
+                }
+            }
+        }
+        if self.requests.len().saturating_add(new_requests.len()) > MAX_ACTOR_REQUESTS {
+            return Err(INVALID.into());
         }
         // Retain only one small basis/summary and bounded IDs, never the whole
         // ledger or accumulated response bytes. Large totals do not enlarge the
@@ -268,6 +309,7 @@ impl Capture {
             self.summary = Some(summary.clone());
         }
         self.attempts.extend(new_attempts);
+        self.requests.extend(new_requests);
         self.next_offset = end;
         if complete {
             Ok(Progress::Complete)
@@ -380,22 +422,26 @@ fn check_summary(summary: &Json) -> Result<u64, String> {
     Ok(attempts)
 }
 
-fn check_attempt(row: &Json, tenant: u64) -> Result<u64, String> {
-    let row = object(
-        row,
-        &[
-            "address",
-            "attempt",
-            "stage",
-            "target",
-            "units",
-            "payload_bytes",
-            "proposal_policy_epoch",
-            "deadline",
-        ],
-    )?;
+fn check_attempt(
+    row: &Json,
+    scope: Scope,
+    registration: Option<&Address>,
+) -> Result<(u64, Option<u64>), String> {
+    const FIELDS: [&str; 10] = [
+        "address",
+        "attempt",
+        "stage",
+        "target",
+        "units",
+        "payload_bytes",
+        "proposal_policy_epoch",
+        "deadline",
+        "external_request",
+        "request_address",
+    ];
+    let row = object(row, &FIELDS[..if registration.is_some() { 10 } else { 8 }])?;
     let attempt = nonzero(&row["attempt"])?;
-    if row["address"].as_str() != Some(format!("fa://{tenant}/attempt/{attempt}").as_str())
+    if row["address"].as_str() != Some(format!("fa://{}/attempt/{attempt}", scope.tenant).as_str())
         || !matches!(
             row["stage"].as_str(),
             Some(
@@ -432,7 +478,26 @@ fn check_attempt(row: &Json, tenant: u64) -> Result<u64, String> {
     number(&row["payload_bytes"])?;
     number(&row["proposal_policy_epoch"])?;
     nonzero(&row["deadline"])?;
-    Ok(attempt)
+    let request = match registration {
+        None => None,
+        Some(registration) => match (
+            row["external_request"].is_null(),
+            row["request_address"].is_null(),
+        ) {
+            (true, true) => None,
+            (false, false) => {
+                let request = nonzero(&row["external_request"])?;
+                let address = request_address_for(scope, registration, request)
+                    .map_err(|_| INVALID.to_owned())?;
+                if row["request_address"].as_str() != Some(address.canonical_string().as_str()) {
+                    return Err(INVALID.into());
+                }
+                Some(request)
+            }
+            _ => return Err(INVALID.into()),
+        },
+    };
+    Ok((attempt, request))
 }
 
 fn object<'a>(value: &'a Json, fields: &[&str]) -> Result<&'a BTreeMap<String, Json>, String> {

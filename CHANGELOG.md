@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-08: enumerate captured request links with the bounded Tower client
+
+- Add optional final `--request-links` to `tower-situation`, selecting and
+  validating v2 on every page through the same authenticated session and budget.
+- Check canonical paired request identity against the full original scope and
+  registration, preserve direct null links and reject duplicate or excessive
+  request keys before committing any page state or emitting output.
+- Preserve strict default v1 behavior, original incomplete/error handling and
+  no-retry/no-recapture semantics. Links trigger no implicit follow-up reads.
+- Add nine native-capture/client regression functions and independent source
+  review. Syntax/format checks do not substitute for pending remote compilation
+  and runtime execution.
+
 ## 2026-11-08: reopen live Tower publication through exact mediated recovery
 
 - Add explicit guarded v2 source-checkpoint recovery to both single-request

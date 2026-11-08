@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: validate original request links during bounded situation enumeration
+
+`tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N --request-links`
+now selects v2 on every native page while retaining one authenticated connection
+and the original finite transport, page, exchange and query allowances. The
+optional final flag owns its closed grammar before profile reads. Default mode
+keeps its original requests and strict v1 row shape; an unexpected response
+profile refuses without downgrade, recapture or reconnect.
+
+The client validates paired nullable request fields against the original complete
+scope and frozen registration. Canonical nonzero full-width keys must match the
+exact run/principal/branch/authority/tenant/generation address. Direct attempts
+keep null pairs. Duplicate identities and more than the original 128 request
+keys refuse, while unlinked direct attempts remain supported. Temporary page
+sets ensure any failed row leaves capture state unchanged. Validation precedes
+output and continuation; links cause no implicit explanation or ticket request.
+
+Nine new regression functions use real native captures and the original
+authenticated transport to cover owner advancement, full-width/direct keys,
+schema mismatch, address/nullable/row corruption, duplicate and atomic rejected
+pages, preserved partial output and limits, the 128-key boundary and CLI grammar.
+Independent source review and Rust 2024 syntax/format checks use the unqualified
+rustfmt 1.10.0-nightly (9085017724, 2026-08-30). Remote compilation, Clippy,
+runtime tests and the full RCH gate remain pending; no bead or packet is closed.
+See the [operator client contract](docs/LIVE_TOWER_OPERATOR.md#enumerate-one-original-situation-capture).
+
 ## 2026-11-08: recover topology-enforced live Tower publication
 
 Both single-request Tower open modes now accept paired `--guarded` recovery

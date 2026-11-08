@@ -165,6 +165,7 @@ explanation grant. See [the request-link contract](TOWER_PUBLICATION.md#follow-c
 
 ```sh
 supervise_publication tower-situation OPERATOR_PROFILE fa://1/run/3@41 --max-pages 64
+supervise_publication tower-situation OPERATOR_PROFILE fa://1/run/3@41 --max-pages 64 --request-links
 ```
 
 This Linux command follows the native situation continuation for you. The run
@@ -174,11 +175,28 @@ is a canonical integer from 1 through 64. Grammar and address checks precede
 profile reads; profile/run checks precede connection. The server authenticates
 the operator and the client authenticates the server before protocol bytes.
 
-The first request has null arguments. Later requests use only the exact cursor
-returned by the previous accepted page, on the same connection and within one
+The default first request has null arguments. Later default requests use only
+the exact cursor returned by the previous accepted page, on the same connection and within one
 transport budget. The smaller of `--max-pages` and the profile's original
 exchange allowance limits requests. Native query exhaustion remains independent
 and can end enumeration earlier. No reconnect, retry or new capture occurs.
+
+The optional final `--request-links` flag explicitly selects v2 on every page:
+`{"request_links":true}` initially, then the same flag with the exact returned
+cursor. Default mode requires the original v1 response; linked mode requires
+v2. An unexpected profile or a schema relabeling refuses before output or
+continuation, with no automatic fallback.
+
+Linked rows have exactly ten fields, including paired nullable
+`external_request` and `request_address`. The client verifies each canonical
+nonzero full-width key against the exact address derived from the original
+scope and selected registration generation. Tenant, run, principal, branch,
+authority, generation and key must all match. Direct attempts require both
+fields to be null. Duplicate request identities within/across pages and more
+than the original 128 request keys refuse; direct attempts do not consume this
+key limit. The entire page is checked before retaining any new IDs or capture
+progress. Returned links remain data for separately authorized explicit reads;
+the client does not issue Explain or Get calls for them.
 
 Before emitting or following a Known page, the client checks the original
 acknowledged-owner basis, complete scope, unchanged journal/control/time cut and
@@ -200,10 +218,18 @@ write can leave partial output, so consumers must check both framing and exit
 status.
 
 The client retains one basis and summary plus at most 1,024 attempt IDs and 64
-cursor IDs, rather than accumulating the entire ledger or all page bytes. A
+cursor IDs, with at most 128 external keys in linked mode, rather than accumulating the entire ledger or all page bytes. A
 larger reported total is valid but does not enlarge this work allowance. The
 existing client checks elapsed time and finite byte/I/O work at checkpoints;
 synchronous OS connection and output calls are not preempted by those checks.
+
+Nine additional authored client regressions cover linked native captures across
+live owner changes, full-width/direct identities, explicit v1/v2 selection,
+scope/generation/key substitution, nullable pairs and row closure, duplicate
+keys with atomic rejected-page handling, no follow-up after a damaged reply,
+independent limits, the actual 128-request plus direct-attempt boundary and
+closed final-flag grammar. Independent source review and syntax/format checks
+remain separate from the pending remote compilation and runtime gate.
 
 ## Lifetime and authority
 
