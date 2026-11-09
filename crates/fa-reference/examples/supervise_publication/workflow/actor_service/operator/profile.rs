@@ -3,9 +3,13 @@ use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_QUERIES,
+    MAX_POLICY_REPLAY_QUERIES,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
+use fa_reference::action::consequence::policy_campaign::{
+    MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES, ReplayLimits,
+};
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::strict_json::{self, Json, Limits};
 use std::collections::BTreeMap;
@@ -29,6 +33,45 @@ pub(crate) struct Settings {
     pub(crate) explanation_queries: usize,
     pub(crate) explanation_replay_events: usize,
     pub(crate) explanation_disclosure: String,
+    pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct PolicyReplaySettings {
+    pub(crate) queries: usize,
+    pub(crate) limits: ReplayLimits,
+    pub(crate) disclosure: String,
+}
+
+impl PolicyReplaySettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            limits: ReplayLimits {
+                cases: usize::try_from(fields.number("cases")?).map_err(debug)?,
+                input_bytes: usize::try_from(fields.number("input_bytes")?).map_err(debug)?,
+            },
+            disclosure: fields.text("disclosure")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_POLICY_REPLAY_QUERIES
+            || self.limits.cases == 0
+            || self.limits.cases > MAX_REPLAY_CASES
+            || self.limits.input_bytes == 0
+            || self.limits.input_bytes > MAX_REPLAY_INPUT_BYTES
+            || self.disclosure != "policy_and_case_traces"
+        {
+            return Err("policy replay requires explicit policy-and-case-traces disclosure and bounded work".into());
+        }
+        Ok(())
+    }
 }
 
 impl Settings {
@@ -79,6 +122,10 @@ impl Settings {
             explanation_replay_events: usize::try_from(fields.number("explanation_replay_events")?)
                 .map_err(debug)?,
             explanation_disclosure: fields.text("explanation_disclosure")?,
+            policy_replay: match fields.optional("policy_replay") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(PolicyReplaySettings::decode(value)?),
+            },
         };
         fields.end()?;
         settings.validate()?;
@@ -126,7 +173,9 @@ impl Settings {
             || self.poll_ms > self.runtime_ms
             || self.inspection_queries > MAX_INSPECTION_QUERIES
             || self.explanation_queries > MAX_EXPLANATION_QUERIES
-            || (self.inspection_queries == 0 && self.explanation_queries == 0)
+            || (self.inspection_queries == 0
+                && self.explanation_queries == 0
+                && self.policy_replay.is_none())
         {
             return Err("operator service work or lifetime limit is out of range".into());
         }
@@ -141,6 +190,9 @@ impl Settings {
             || self.explanation_disclosure != "policy_and_selected_witnesses"
         {
             return Err("explanation requires explicit policy-and-selected-witness disclosure and bounded replay".into());
+        }
+        if let Some(selected) = &self.policy_replay {
+            selected.validate()?;
         }
         Ok(())
     }
@@ -260,6 +312,9 @@ impl Fields {
         self.0
             .remove(name)
             .ok_or_else(|| format!("missing operator field {name}"))
+    }
+    fn optional(&mut self, name: &str) -> Option<Json> {
+        self.0.remove(name)
     }
     fn text(&mut self, name: &str) -> Result<String, String> {
         self.take(name)?

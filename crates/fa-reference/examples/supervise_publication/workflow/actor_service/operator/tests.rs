@@ -1,5 +1,8 @@
 //! Actual original owners and authenticated Unix sockets, without qualification
 //! claims about production deployment or independent model judgments.
+#[path = "tests/policy_replay.rs"]
+mod policy_replay;
+
 use super::super::{Config, PeerProfile};
 use super::*;
 use fa_reference::Snapshot;

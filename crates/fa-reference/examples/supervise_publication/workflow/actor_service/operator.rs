@@ -1,5 +1,5 @@
-//! Separately authenticated native inspection beside the original live owner.
-//! Read grants never admit requests, renew evidence or enter the control path.
+//! Separately authenticated native inspection and policy replay beside the owner.
+//! Observational grants never admit requests or enter the control path.
 #[path = "operator/profile.rs"]
 mod profile;
 pub(crate) use profile::Settings;
@@ -8,7 +8,7 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileSupervisorExplanationGrant, FileSupervisorInspectionGrant,
+    FileSupervisorExplanationGrant, FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
@@ -20,6 +20,7 @@ use fa_reference::observation_algebra::AuthorityKind;
 use fa_reference::tower::publication::peer::PublicationPeerSession;
 use fa_reference::tower::publication::{PublicationLimits, PublicationTower};
 use fa_reference::tower::{MAX_REQUEST_BYTES, TowerAccess};
+use fa_reference::typestate_cx::PurposeTag;
 use std::collections::BTreeSet;
 
 struct Active {
@@ -27,6 +28,7 @@ struct Active {
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
+    policy_replay: Option<FileSupervisorPolicyReplayGrant>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,7 +52,7 @@ pub(super) struct Service {
 }
 
 impl Service {
-    /// Issue only selected original read grants. No source, clock, snapshot,
+    /// Issue only selected original observational grants. No source, clock, snapshot,
     /// helper input or journal mutation is needed to expose this endpoint.
     pub(super) fn start(
         settings: &Settings,
@@ -103,8 +105,23 @@ impl Service {
         } else {
             None
         };
-        // Operator status admits only the installed supervisor READ ports.
-        // No Permit purpose, precheck disclosure or experiment context exists.
+        let policy_replay = if let Some(selected) = &settings.policy_replay {
+            let (port, custodian) = driver
+                .supervisor()
+                .policy_replay_port(selected.queries, selected.limits)
+                .map_err(debug)?;
+            tower.set_policy_replay(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        // Experiment permits only the explicitly selected native comparison.
+        // It grants neither publication admission nor policy promotion.
+        let purposes = if policy_replay.is_some() {
+            vec![PurposeTag::Experiment]
+        } else {
+            Vec::new()
+        };
         let access = TowerAccess::new(
             CallerScope {
                 caller_tenant: settings.scope.tenant.to_string(),
@@ -112,7 +129,7 @@ impl Service {
                 granted_authorities: BTreeSet::from([AuthorityKind::Verify]),
             },
             true,
-            Vec::new(),
+            purposes,
             0,
         );
         let session = PublicationPeerSession::new(
@@ -137,6 +154,7 @@ impl Service {
                 session,
                 inspection,
                 explanation,
+                policy_replay,
             }),
             started,
             wall,
@@ -156,7 +174,7 @@ impl Service {
         Ok(service)
     }
 
-    /// One bounded read turn. Call only AFTER the original independent Stop
+    /// One bounded operator turn. Call only AFTER the original independent Stop
     /// checkpoint. A transport fault retires this sidecar, never publication.
     pub(super) fn checkpoint(&mut self) {
         if self.retirement.is_some() {
@@ -252,7 +270,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -262,7 +280,11 @@ impl Service {
             active
                 .explanation
                 .as_ref()
-                .map(FileSupervisorExplanationGrant::remaining_queries)
+                .map(FileSupervisorExplanationGrant::remaining_queries),
+            active
+                .policy_replay
+                .as_ref()
+                .map(FileSupervisorPolicyReplayGrant::remaining_queries)
         );
         // Dropping the only custodians revokes all their weak ports/cursors.
         // BoundSocket removes only this invocation's original socket inode.

@@ -395,6 +395,7 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
         (Some("explanation"), Verb::Explain) => {}
+        (Some("policy-replay"), Verb::PolicyReplay) => {}
         _ => return Err(invalid()),
     }
     Ok(parsed)

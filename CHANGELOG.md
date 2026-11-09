@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-09: serve policy experiments through the authenticated operator endpoint
+
+- Add an explicit optional `policy_replay` operator profile with immutable
+  query/case/input limits and policy-and-case-traces disclosure. Existing profiles
+  stay valid; replay-only profiles are supported.
+- Issue the separate native grant from the original supervisor, add Experiment
+  purpose only when selected, and retain its campaign cache and cumulative
+  allowance across reconnects and publication-schedule handoffs.
+- Admit the new result kind in the bounded operator client while preserving exact
+  request correlation, closed envelopes, wrong-verb refusal and native errors.
+- Add six real-owner/service and three original-native-response client regressions
+  covering authentication, original-owner binding, authority separation, exact
+  retries, cumulative work, owner loss and corrupt replies.
+- The operator production slice passed local Cargo type checking before the
+  workspace became unavailable. Completed operator/client changes were recovered
+  from recorded patches and independently reviewed through GitHub; the final
+  recovered tree and its nine tests still require compiler/runtime qualification.
+  No full gate, remote execution or packet completion is claimed.
+
 ## 2026-11-09: connect complete-corpus policy replay to the native Tower
 
 - Add a separate original-owner experiment grant and bounded campaign cache over

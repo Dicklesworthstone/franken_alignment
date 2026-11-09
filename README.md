@@ -145,7 +145,11 @@ See [the native inspection contract](docs/TOWER_PUBLICATION.md#inspect-the-origi
 The ordinary Tower service can now expose those reads through
 an explicitly configured [live operator endpoint](docs/LIVE_TOWER_OPERATOR.md).
 `--operator-profile` provisions a separate authenticated socket, inspection
-allowance and optional policy/admission-explanation disclosure. It remains
+allowance and optional policy/admission-explanation disclosure. An explicit
+`policy_replay` object additionally selects bounded candidate-policy experiments
+and their separate disclosure grant; ordinary profiles retain their original
+purposes. The same `tower-operator-exchange` client carries correlated complete
+reports, exact campaign retries and native refusals. The endpoint remains
 available through real helper/human review and terminal reply grace, with the
 same original owner and cumulative quotas across reconnects and every handoff
 in an explicit finite request schedule. Use

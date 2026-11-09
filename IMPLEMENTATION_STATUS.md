@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: expose explicit policy experiments during live publication
+
+The ordinary authenticated Tower operator endpoint accepts an optional closed
+`policy_replay` object containing `queries`, `cases`, `input_bytes` and the
+literal disclosure marker `policy_and_case_traces`. Absent or null selection
+preserves the original profile. Explicit replay-only profiles work without
+inspection or explanation allowance. The original supervisor issues one
+separately custodied native grant, which survives reconnects and finite request
+handoffs with the same campaign cache, original reports and spent work. Retirement
+withdraws custody; reopening an owner cannot transfer the prior cache.
+
+Only explicit replay selection adds Experiment purpose. The original operator
+still has no Permit purpose, actor intake path, source-admission allowance,
+helper judgment, policy mutation or promotion key. Kernel peer authentication,
+original-owner checks, independent Stop priority and existing transport/output
+limits remain on the same service path. A complete report that exceeds the live
+response bound refuses as a whole and preserves its already-spent native campaign.
+
+The existing `tower-operator-exchange` client now accepts the correlated
+`policy-replay` result kind. It retains closed envelope parsing, identity and verb
+correlation, unchanged native error/Knowledge bytes, finite explicit request
+sequences and refusal before a subsequent request after malformed output. See the
+[operator profile and examples](docs/LIVE_TOWER_OPERATOR.md)
+and the [native report contract](docs/TOWER_POLICY_REPLAY.md).
+
+Six new service regression functions cover strict opt-in, authenticated original
+reports, fresh versus cached cuts, shared reconnect/query allowances, rejected
+peer identity, foreign owners, authority separation and owner loss. Three new
+client regressions use genuine native reports to check correlation, byte-preserved
+Known/retry/Capacity output and stop-on-corruption. These are authored coverage,
+not runtime passes.
+
+Before environment loss, the library and operator production example passed local
+Cargo type checking with qualified `nightly-2026-09-08`. A complete example-test
+metadata attempt then aborted during workspace exhaustion; it is not a pass.
+After the native commit was safely on main, the execution environment became
+unavailable. The completed operator/client edits were recovered from recorded
+patches onto that exact GitHub parent and independently source-reviewed. Their
+final recovered source, including the additional client changes, has not been
+compiled or executed. The source inventory binds the recovered bytes without
+altering admission rules. Current full-gate and remote qualification remain open;
+no bead or packet is closed. Earlier executed native tests retain only their
+stated scope.
+
 ## 2026-11-09: rehearse the complete original policy corpus through Tower
 
 The native publication profile now connects `policy-replay`, using a separately

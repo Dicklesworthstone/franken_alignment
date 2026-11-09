@@ -39,7 +39,7 @@ example. The complete target, payload, units, policy epoch and native deadline
 still undergo original validation and review.
 
 The four ordinary service modes above also accept an explicit bounded request
-schedule, an operator read endpoint, or a single-request precheck sidecar.
+schedule, an operator endpoint, or a single-request precheck sidecar.
 The two create modes additionally accept the existing topology-enforced
 publication profile. The two open modes support explicit independently anchored
 mediated recovery with a retained source checkpoint, as described below.
@@ -54,14 +54,15 @@ context, precheck disclosure or supervisor capability. Unsupported operations
 return ordinary Tower refusals. A caller cannot add authority fields to JSON.
 
 An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
-service now provisions a separate authenticated read endpoint. It installs
-only the selected native inspection and optional admission-explanation grants;
-the actor session stays unchanged. The operator profile can compose with a
+service provisions a separate authenticated endpoint for selected native
+inspection, admission explanation and optional `policy-replay`. The actor
+session keeps its original grants. The operator profile can compose with a
 precheck sidecar, a finite request schedule, topology creation or explicit guarded
 topology recovery, with distinct sockets and
 independent budgets. A schedule retains the same operator session, native
 custodians and spent allowances across every handoff. Use
-`tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit reads.
+`tower-operator-exchange OPERATOR_PROFILE JSON [JSON ...]` for explicit observations
+and candidate policy comparisons.
 Use `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N` for one original
 situation capture with bounded automatic continuation and explicit incomplete
 output; every page is validated before its cursor is followed. Add a final
@@ -69,6 +70,23 @@ output; every page is validated before its cursor is followed. Add a final
 alongside each captured attempt, with unchanged transport and query limits.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.
+
+Policy replay is disabled when the optional `policy_replay` profile field is
+absent or null. Enabling it requires explicit `policy_and_case_traces`
+disclosure and bounded campaign, case and replay-input allowances. The service
+installs the original owner's native replay grant and adds only `Experiment`
+purpose to that operator endpoint. It adds no `Permit`, policy-promotion key or
+actor admission capability. The report compares the complete original retained
+policy corpus without fresh evidence, helper execution or policy mutation.
+
+An exact campaign retry on a healthy reconnect returns the first historical
+report and cut without another replay charge; a new campaign spends the same
+grant's remaining allowance. Connection, exchange and publication-source work
+remain independently bounded. Campaign custody and its cache survive request
+handoffs within the service lifetime, and are revoked when the service retires;
+the cache does not survive a service restart. See
+[the operator replay example](LIVE_TOWER_OPERATOR.md#compare-a-candidate-against-the-original-retained-policy-corpus)
+for the exact profile fields, request, disclosure and native limits.
 
 ## Preserve topology enforcement through Tower admission
 

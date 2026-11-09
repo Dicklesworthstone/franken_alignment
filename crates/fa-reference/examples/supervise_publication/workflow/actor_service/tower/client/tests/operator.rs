@@ -1,4 +1,7 @@
 //! Real operator-profile transport, with grants fixed by the original server.
+#[path = "operator/policy_replay.rs"]
+mod policy_replay;
+
 use super::*;
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
