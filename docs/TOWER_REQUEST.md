@@ -54,6 +54,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
 | `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
+| `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`; requires a separate native grant, canonical matching key and explicit nonzero mount generation |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -140,6 +141,55 @@ native paths described in [TOWER_PUBLICATION.md](TOWER_PUBLICATION.md). An exact
 submission retry retains original content binding, tickets and durable one-shot
 behavior. A repeated precheck label spends another original disclosure query.
 
+### Native candidate-policy replay
+
+An explicitly granted operator can use `policy-replay` at the original native
+run mount to compare a candidate with the owner's complete retained
+current-policy corpus. The request requires the host's operator role and
+`Experiment` purpose, an installed same-owner policy-replay port, and an exact
+registration generation. The caller cannot select cases or provide evidence.
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "compare-policy-91",
+  "address": "fa://1/run/3@41",
+  "verb": "policy-replay",
+  "arguments": {
+    "campaign": "91",
+    "expected_policy_generation": "1",
+    "candidate": {
+      "generation": "2",
+      "nodes": [{"op": "payload_at_most", "maximum": "128"}]
+    }
+  },
+  "idempotency_key": "91"
+}
+```
+
+The closed argument object has exactly `campaign`,
+`expected_policy_generation` and `candidate`. The first two are nonzero decimal
+strings, and the key must equal `campaign`. The candidate has exactly
+`generation` and `nodes`; all predicate arguments and child indices use the
+same canonical string convention. Bytes use lowercase hexadecimal. The original
+`Policy::new` constructor validates the bounded, reachable, topologically ordered
+graph. Unknown operators, extra fields, duplicate keys and invalid references
+refuse before native work. The native port additionally requires candidate
+generation to exceed the expected current-policy generation.
+
+The typed form is `ReadArguments::PolicyReplay { campaign,
+expected_policy_generation, candidate }`. Exact campaign retries retain the
+first result and original owner cut across aliases and later journal changes,
+without spending another campaign. Different contents conflict; a fresh
+comparison requires a new admitted campaign. This retained cache belongs to the
+native grant, and every disclosure still checks original owner health and live
+custody. Its identities do not survive owner/grant replacement.
+
+The response uses `fa.publication-policy-replay/1`, preserves every selected case
+and exact trace, and omits payload and observed witness values. It supplies no
+promotion or publication authority. See the [full policy-replay contract](TOWER_POLICY_REPLAY.md)
+for predicate syntax, disclosure, result basis, bounded failures and exact retries.
+
 ### Branch replay edits
 
 The closed intervention forms use the original edit tags:
@@ -172,7 +222,7 @@ The entire document is parsed and validated before route lookup or backend work.
 The strict parser rejects malformed UTF-8, invalid escapes and unpaired surrogates,
 duplicate keys at every depth, concatenated documents and trailing non-whitespace
 bytes. Closed nested objects reject hidden authority fields as well as unknown
-proposal, target or intervention fields.
+proposal, target, intervention or policy-graph fields.
 
 The input ceiling is 256 KiB, the JSON depth ceiling is eight, and decoded
 strings are bounded to 128 KiB. A 2,048-item ceiling bounds structural
@@ -213,11 +263,13 @@ fn exchange(
 `PublicationTower::exchange` directly returns the original `PublicationResponse`.
 Callers that already construct typed requests can continue using `dispatch`, or
 use `encode_request` to produce a bounded request for another integrating host.
-The typed and byte interfaces share the original dispatcher and native owners;
-there is no alternate backend, result cache or dependency.
+The typed and byte interfaces share the original dispatcher and native owners.
+The codec adds no alternate backend, result cache or dependency; policy campaign
+retention belongs to the original explicitly granted native port.
 
-The codec and real-owner integration regressions accompany this source change.
-Execution and the full dispatcher/deployment qualifications remain open until
-the required revision-bound RCH checks run. Request decoding does not implement
+The codec and real-owner integration regressions accompany these interfaces.
+The policy-replay contract records its [focused local runtime result](TOWER_POLICY_REPLAY.md#executed-coverage-and-remaining-qualification).
+Full dispatcher, repository and deployment qualifications remain open until the
+required revision-bound checks run. Request decoding does not implement
 the remaining registered verbs, a `fa` executable, a network service, live global
 situation reconstruction or signed receipt verification.

@@ -104,6 +104,18 @@ separate replay budget. Existing actor and situation grants cannot obtain this
 policy disclosure. See the [native explanation contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
 Source review and syntax checks remain separate from pending RCH execution.
 
+Separately granted operator [`policy-replay`](docs/TOWER_POLICY_REPLAY.md) now
+compares a candidate policy against the original owner's complete retained
+current-policy corpus, including exact denials and applied reviews. It reports
+newly blocked/reviewable cases and preserves missing observations as requiring
+shadow evaluation. Campaign identities share finite native work and retention
+limits across port clones; exact retries keep their original report and cut
+after history advances. The strict Tower projection discloses the selected
+policy graphs and case traces without action payloads or retained witness values.
+It changes no policy, reads no live source and grants no publication or promotion
+authority. All 12 focused integration tests pass locally with the qualified
+nightly compiler and Cranelift; full qualification remains open.
+
 The [durable publication Tower](docs/TOWER_PUBLICATION.md) connects `propose`
 and request-local `get` to the original file-backed actor gateway. Real native
 intake, exact retries across recovery and fresh outcome polling share the common

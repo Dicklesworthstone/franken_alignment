@@ -14,6 +14,12 @@ pub use inspection::{
     FileSupervisorInspectionGrant, FileSupervisorInspectionPort, MAX_INSPECTION_ATTEMPTS,
     MAX_INSPECTION_QUERIES,
 };
+mod policy_replay;
+pub use policy_replay::{
+    FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayObservation, FilePolicyReplayResult,
+    FileSupervisorPolicyReplayGrant, FileSupervisorPolicyReplayPort, MAX_POLICY_REPLAY_QUERIES,
+    MAX_POLICY_REPLAY_RETAINED_BYTES,
+};
 #[cfg(target_os = "linux")]
 pub mod learned_intake;
 pub mod receipt;

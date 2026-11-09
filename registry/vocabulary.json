@@ -358,7 +358,7 @@
       "idempotency": "campaign id",
       "cost_class": "expensive",
       "response": "PolicyReplayCampaign",
-      "note": ""
+      "note": "Native publication profile: separately granted complete current-policy corpus comparison; exact campaign retries retain the original cut, missing observations require shadow, no promotion authority"
     },
     {
       "verb": "promote",

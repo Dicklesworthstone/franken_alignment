@@ -11,10 +11,12 @@ mod support;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
-use fa_reference::action::consequence::delivery::persistent::Reconciliation;
+use fa_reference::action::ElapsedTick;
+use fa_reference::action::consequence::delivery::persistent::observed::publication::PublicationBasis;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FilePrecheckOutcome, precheck_wire::PrecheckWireError,
 };
+use fa_reference::action::consequence::delivery::persistent::{JournalError, Reconciliation};
 use fa_reference::action::consequence::oversight::{
     actor::{
         ActorOutcome, ActorProposal, BasisSource, Knowledge as ActorKnowledge,
@@ -221,7 +223,7 @@ fn full_width_tail_arguments_match_original_dispatch_without_losing_decimal_prec
 #[test]
 fn source_precheck_and_real_publication_keep_native_charges_and_exact_retry_observations() {
     let root = Directory::new();
-    let (port, mut supervisor, reviewer, proposal, source) = source_owner(&root);
+    let (port, mut supervisor, reviewer, proposal, mut source) = source_owner(&root);
     let original_port = port.clone();
     let mut adapter = publication(port);
     let mount = adapter.mount_address().clone();
@@ -336,10 +338,38 @@ fn source_precheck_and_real_publication_keep_native_charges_and_exact_retry_obse
     {
         let mut host = supervisor.host_mut().unwrap();
         let revision = host.revision();
-        host.publish(revision, attempt).unwrap();
+        let before = canonical(&root);
+        assert_eq!(
+            host.publish(revision, attempt),
+            Err(JournalError::Contract(fa_reference::Error::Incomplete))
+        );
+        assert_eq!(host.revision(), revision);
+        assert_eq!(canonical(&root), before);
+        assert_eq!(host.inspect().executions, 0);
+
+        // The original file source installs a mandatory publication guard.
+        // Capture again after dispatch; a Tower observation cannot replace it.
+        let captured = host
+            .refresh_file_source(revision, &mut source, ElapsedTick(2))
+            .unwrap();
+        let current = captured
+            .inputs_for(&keys.action, &support::profile().committee)
+            .unwrap();
+        let revision = host.revision();
+        let published = host
+            .publish_checked(
+                revision,
+                attempt,
+                Some(&current),
+                captured.snapshot().clone(),
+                ElapsedTick(3),
+            )
+            .unwrap();
+        assert_eq!(published.basis, PublicationBasis::Revalidated);
         assert_eq!(host.inspect().payload, proposal.payload);
         assert_eq!(host.inspect().executions, 1);
     }
+    assert_eq!(source.status().read_attempts, source_reads + 1);
     assert_eq!(
         request_result(&router.exchange(&access(), call.as_bytes())).result,
         request_result(&uncertain).result

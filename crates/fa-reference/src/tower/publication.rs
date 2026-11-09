@@ -12,6 +12,8 @@ mod inspection;
 pub use inspection::LinkedSituation;
 #[cfg(target_os = "linux")]
 pub mod peer;
+mod policy_replay;
+pub use policy_replay::LinkedPolicyReplay;
 mod precheck;
 
 use super::{
@@ -22,6 +24,7 @@ use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileSupervisorExplanationPort, FileSupervisorInspectionPort,
+    FileSupervisorPolicyReplayPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -35,13 +38,14 @@ use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 6] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 7] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
     Verb::Capabilities,
     Verb::Situation,
     Verb::Explain,
+    Verb::PolicyReplay,
 ];
 
 /// Response bound for this native profile. Ticket, proposal and durable owner
@@ -75,6 +79,7 @@ pub enum PublicationResult {
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
+    PolicyReplay(LinkedPolicyReplay),
     Refused(Knowledge<()>),
 }
 
@@ -103,6 +108,7 @@ pub struct PublicationTower {
     inspection: Option<FileSupervisorInspectionPort>,
     inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
+    policy_replay: Option<FileSupervisorPolicyReplayPort>,
     limits: PublicationLimits,
 }
 
@@ -136,6 +142,7 @@ impl PublicationTower {
             inspection: None,
             inspection_cursor: None,
             explanation: None,
+            policy_replay: None,
             limits,
         })
     }
@@ -233,7 +240,8 @@ impl PublicationTower {
             .address
             .generation
             .is_some_and(|g| Some(g) != self.mount.generation)
-            || (request.verb == Verb::Propose && request.address.generation.is_none())
+            || (matches!(request.verb, Verb::Propose | Verb::PolicyReplay)
+                && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
             response.envelope.would_change_this = vec![self.mount.clone()];
@@ -246,6 +254,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Explain {
             return self.dispatch_explanation(access, request);
+        }
+
+        if request.verb == Verb::PolicyReplay {
+            return self.dispatch_policy_replay(access, request);
         }
 
         if request.verb == Verb::Capabilities {

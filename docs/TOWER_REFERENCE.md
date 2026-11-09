@@ -31,6 +31,14 @@ remain authoritative.
 Its `capabilities` route describes that same granted endpoint and remaining
 shared query allowance through the original informational native response.
 Discovery remains unavailable on the imported reference snapshot.
+The native profile also connects separately granted operator `situation`,
+historical exact-admission `explain`, and
+[`policy-replay`](TOWER_POLICY_REPLAY.md), for seven native verbs in total.
+Policy replay evaluates a candidate against the original owner's complete
+retained current-policy corpus, including denials and applied reviews, without
+changing policy or rerunning helpers. Its separate grant, Experiment purpose,
+original-cut campaign cache and sealed registration remain native; an imported
+reference snapshot cannot answer it or replace an unavailable owner.
 
 An integrating Unix host can now consume these existing facades through the
 [shared Tower router](TOWER_ROUTER.md). Fixed native addresses take precedence
@@ -60,7 +68,7 @@ by the integrating host. Its grants and operator flag must never be accepted as
 actor-supplied claims. This API checks those grants; it does not authenticate
 their origin or manufacture proofs for an imported snapshot.
 
-For a valid authorized request, every other registered verb returns
+On the imported reference facade, every other registered verb returns
 `CapabilityUnsupported` before spending a read unit or entering a backend.
 Malformed and unauthorized requests fail their earlier admission checks.
 Unknown and retired names fail `Verb::from_str`.
@@ -203,6 +211,13 @@ value while labeling it `Known`.
 
 ## Executed verification and remaining gates
 
+On 2026-11-09, the native policy-replay extension built and executed all **12
+public integration tests** with the qualified `nightly-2026-09-08` compiler and
+Cranelift backend. The [policy-replay contract](TOWER_POLICY_REPLAY.md#executed-coverage-and-remaining-qualification)
+records the actual native corpus, authority-preservation, retry, custody, codec
+and router coverage, plus the corrected fixture attempt. This local focused
+result does not establish full repository or remote/deployment qualification.
+
 The replay-plan extension passed all **82 selected public regressions** and the
 no-Permit compile-fail contract. The
 [planning receipt](../artifacts/execution/2026-11-05-tower-replay-plan-receipt.json)
@@ -224,8 +239,8 @@ no failures or ignored tests. The
 [execution receipt](../artifacts/execution/2026-11-05-tower-read-receipt.json)
 records commands, compiler identity and the exact changed-source hashes.
 
-`xtask check` passed the reference lock, source inventory and compiler identity
-checks, then stopped at `snapshot_binding_mismatch`: the declared source
+The 2026-11-05 `xtask check` run passed the reference lock, source inventory and
+compiler identity checks, then stopped at `snapshot_binding_mismatch`: the declared source
 manifest hash differs from the manifest's actual digest. Later full-gate checks
 did not execute. This scoped local result does not establish remote execution,
 native deployment qualification, all 38 connected verbs or completion of the

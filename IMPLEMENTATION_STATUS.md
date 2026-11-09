@@ -1,5 +1,51 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: rehearse the complete original policy corpus through Tower
+
+The native publication profile now connects `policy-replay`, using a separately
+issued `FileSupervisorPolicyReplayPort` and its noncopyable custodian from the
+same original supervisor. The caller supplies a bounded candidate policy and
+campaign identity; the existing native engine selects every retained proposal
+and applied review under the original current policy, including exact denials.
+It preserves the original per-case evaluations, newly blocked/reviewable deltas
+and conservative `RequiresShadow` result for unavailable observations, without
+reconstructing a favorable subset or rerunning numerical evidence.
+
+Each new admitted campaign spends one original operation, even for stale,
+unavailable or over-capacity corpora. At most 64 campaigns share an 8 MiB logical
+retention bound. Exact retries retain their initial report, recorded observation,
+journal revision, control sequence and policy cut after later owner changes;
+conflicting content refuses. Custody, the original owner and storage health are
+checked before both fresh work and cached disclosure. Work limits are immutable,
+and failed output cannot refund or repeat native replay.
+
+The typed and JSON Tower paths require an operator, Experiment purpose, explicit
+mount generation and matching canonical campaign key. The closed policy grammar
+retains the existing request limits. A private native-linked result prevents
+public envelope fields from rebinding reports to another registration. Bounded
+output includes the original policy graphs and every case trace, omits action
+payloads and retained witness values, and refuses an oversized complete report
+without returning a selective prefix. No source read, clock observation, journal
+mutation, admission-snapshot consumption, helper run, policy change or promotion
+key is introduced. See the [native contract](docs/TOWER_POLICY_REPLAY.md).
+
+All 12 focused public integration tests pass locally with
+`nightly-2026-09-08` (`cea272fa356e94bd2ee2cadf376630aa0683867a`) and Cranelift.
+They exercise actual retained corpus selection, exact retries after owner
+advancement, independent custody, unchanged publication authority, conservative
+shadow results, complete output limits, route binding and strict full-width
+request encoding. The first runtime attempt correctly refused an oversized
+fixture payload before replay; the fixture now fits its original unit bound,
+with no disabled or weakened assertion. Native unit regressions additionally
+cover cumulative retention and numerical-history conservation; their execution
+and the full remote gate remain pending. A complete library-test metadata attempt
+was killed with SIGKILL under the shared memory limit; it is not a compile pass.
+All eight neighboring native capability tests passed. Two older Tower fixtures
+incorrectly used raw publication after enabling its mandatory guard. They now
+assert that refusal and reacquire the original source before checked publication;
+their rerun reached object generation but ran out of workspace disk space.
+No bead or qualification packet is closed.
+
 ## 2026-11-08: restore complete publication-harness compilation
 
 Compiler execution exposed stale test-module paths that loaded unrelated suites

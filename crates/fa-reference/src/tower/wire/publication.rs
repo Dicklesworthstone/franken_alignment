@@ -6,6 +6,7 @@
 
 mod explanation;
 mod inspection;
+mod policy_replay;
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
 use crate::action::consequence::delivery::persistent::requests::actor::{
@@ -92,15 +93,21 @@ impl PublicationResponse {
             }
             PublicationResult::SituationLinks(linked) => (
                 "situation",
-                inspection::encode_linked(
-                    linked,
+                inspection::encode_linked(linked, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::Explanation(native) => (
+                "explanation",
+                explanation::encode(native, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::PolicyReplay(native) => (
+                "policy-replay",
+                policy_replay::encode(
+                    native,
                     &self.envelope.address,
+                    self.envelope.idempotency_key.as_deref(),
                     &encoder,
                 )?,
             ),
-            PublicationResult::Explanation(native) => {
-                ("explanation", explanation::encode(native, &self.envelope.address, &encoder)?)
-            }
             PublicationResult::Refused(refusal) => (
                 "refused",
                 encoder.knowledge::<_, PublicationRefusal>(refusal, |_| {
@@ -120,7 +127,10 @@ fn publication_limits_json(limits: PublicationLimits) -> String {
         ("max_actor_requests", MAX_ACTOR_REQUESTS.to_string()),
         ("max_precheck_queries", MAX_PRECHECK_QUERIES.to_string()),
         ("max_inspection_queries", MAX_INSPECTION_QUERIES.to_string()),
-        ("max_explanation_queries", MAX_EXPLANATION_QUERIES.to_string()),
+        (
+            "max_explanation_queries",
+            MAX_EXPLANATION_QUERIES.to_string(),
+        ),
         ("max_explanation_events", MAX_EXPLANATION_EVENTS.to_string()),
         (
             "max_inspection_attempts",

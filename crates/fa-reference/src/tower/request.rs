@@ -7,6 +7,8 @@
 use std::collections::BTreeMap;
 use std::fmt::{self, Write};
 
+pub(super) mod policy;
+
 use super::{ReadArguments, TowerRequest, Verb, replay, validate_address};
 use crate::action::consequence::experiment::{Intervention, MAX_INTERVENTION_BYTES};
 use crate::action::consequence::oversight::actor::{ActorError, ActorProposal};
@@ -227,6 +229,17 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 expected_policy_epoch: decimal(args, "expected_policy_epoch")?,
             })
         }
+        Verb::PolicyReplay => {
+            fields(
+                args,
+                &["campaign", "expected_policy_generation", "candidate"],
+            )?;
+            Ok(ReadArguments::PolicyReplay {
+                campaign: decimal(args, "campaign")?,
+                expected_policy_generation: decimal(args, "expected_policy_generation")?,
+                candidate: policy::decode(field(args, "candidate")?)?,
+            })
+        }
         _ => Err(TowerDecodingError::MalformedRequest),
     }
 }
@@ -267,6 +280,26 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
+        (
+            Verb::PolicyReplay,
+            ReadArguments::PolicyReplay {
+                campaign,
+                expected_policy_generation,
+                candidate,
+            },
+        ) => {
+            if *campaign == 0
+                || *expected_policy_generation == 0
+                || request.idempotency_key.as_deref() != Some(campaign.to_string().as_str())
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+            policy::validate_wire(candidate)?;
+        }
         (Verb::Situation, ReadArguments::SituationPage { cursor }) => {
             if *cursor == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
@@ -289,7 +322,10 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                 return Err(TowerDecodingError::Capacity);
             }
         }
-        (Verb::Propose | Verb::Precheck | Verb::Capabilities, ReadArguments::None) => {
+        (
+            Verb::Propose | Verb::Precheck | Verb::Capabilities | Verb::PolicyReplay,
+            ReadArguments::None,
+        ) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -422,7 +458,10 @@ fn text<'a>(value: &'a Object, key: &str) -> DecodeResult<&'a str> {
 }
 
 fn decimal(value: &Object, key: &str) -> DecodeResult<u64> {
-    let value = text(value, key)?;
+    decimal_text(text(value, key)?)
+}
+
+fn decimal_text(value: &str) -> DecodeResult<u64> {
     if value.is_empty()
         || value.len() > 20
         || !value.bytes().all(|byte| byte.is_ascii_digit())
@@ -536,6 +575,18 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
                 "expected_policy_epoch",
                 quote(&expected_policy_epoch.to_string()),
             ),
+        ]),
+        ReadArguments::PolicyReplay {
+            campaign,
+            expected_policy_generation,
+            candidate,
+        } => object_json(&[
+            ("campaign", quote(&campaign.to_string())),
+            (
+                "expected_policy_generation",
+                quote(&expected_policy_generation.to_string()),
+            ),
+            ("candidate", policy::encode(candidate)),
         ]),
     }
 }

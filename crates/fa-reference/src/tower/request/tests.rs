@@ -89,6 +89,17 @@ fn fixed_request_vector_is_stable_and_all_registered_verbs_are_recognized() {
                 }
             }
             Verb::Replay => value.idempotency_key = Some("replay-1".to_owned()),
+            Verb::PolicyReplay => {
+                use crate::action::consequence::gate::containment::session::policy::{
+                    Policy, Predicate,
+                };
+                value.arguments = ReadArguments::PolicyReplay {
+                    campaign: 1,
+                    expected_policy_generation: 1,
+                    candidate: Policy::new(2, vec![Predicate::UnitsAtMost(4)]).unwrap(),
+                };
+                value.idempotency_key = Some("1".to_owned());
+            }
             _ => {}
         }
         round_trip(&value);

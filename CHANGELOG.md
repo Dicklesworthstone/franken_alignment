@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-11-09: connect complete-corpus policy replay to the native Tower
+
+- Add a separate original-owner experiment grant and bounded campaign cache over
+  the existing exact-policy replay engine. Include all retained current-policy
+  proposals and applied reviews, including exact denials; missing evidence keeps
+  the native shadow requirement.
+- Preserve the first complete report and acknowledged cut across exact retries,
+  owner advancement and port clones. Recheck custody and owner health before
+  cached disclosure; retain charged stale, unavailable and capacity outcomes.
+- Connect `policy-replay` through the unified Tower, strict lossless request
+  grammar and bounded native projection. Seal campaign/registration identity,
+  preserve complete-case output and omit action payloads and witness values.
+- Keep live sources, admission snapshots, policy mutation, helper execution and
+  effect/promotion authority outside this experiment grant.
+- Pass all 12 public integration tests locally with the qualified dated compiler
+  and Cranelift. Add native budget, custody and numerical-history regressions;
+  their execution and full remote qualification remain pending.
+- Preserve mandatory publication guarding in two older Tower test fixtures by
+  requiring a fresh original source capture and checked publication. All eight
+  neighboring capability tests pass; resource-limited broader attempts remain
+  separate from execution credit.
+
 ## 2026-11-08: restore publication test-harness compilation
 
 - Register the intended existing situation, precheck and learned test modules

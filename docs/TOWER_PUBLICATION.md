@@ -1,9 +1,10 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects the
-registered `propose`, `get`, `precheck`, `capabilities` and separately granted
-operator `situation` and historical admission `explain` operations to an original
-`FileActorPort<FileOversight>`. It uses the same `TowerRequest`, verb vocabulary
+On Unix, `fa_reference::tower::publication::PublicationTower` connects seven
+registered operations to an original `FileActorPort<FileOversight>`: `propose`,
+`get`, `precheck`, `capabilities`, and separately granted operator `situation`,
+historical admission `explain` and candidate `policy-replay`.
+It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
 request-local observations and recovery. This adapter owns no authority journal.
@@ -33,6 +34,11 @@ the original automatic and human keys, and invokes dispatch and publication.
 The Tower retains a weak actor port, so dropping the supervisor releases the
 original authority lock and makes further observations explicitly unavailable.
 
+The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the newest native
+route: complete current-policy corpus comparison, distinct disclosure custody,
+exact campaign retries and a sealed response registration. It changes no policy
+or publication authority.
+
 ## Acquire fresh evidence at native intake
 
 For a source-backed live owner, use
@@ -51,8 +57,9 @@ original bounded source and clock observations and installs their one-use
 admission snapshot immediately before the original durable submission. It does
 not substitute caller declarations for source evidence or create another ledger.
 
-Polls, precheck, capabilities, malformed or unauthorized documents, full ticket
-sessions, and both exact and conflicting retries acquire no new source or time.
+Polls, precheck, capabilities, policy replay, malformed or unauthorized
+documents, full ticket sessions, and both exact and conflicting retries acquire
+no new source or time.
 Retries still compare the entire proposal in the original durable owner. A
 source acquisition failure preserves its original invalidation and accounting;
 the actor receives only the native redacted unavailable/capacity result.
@@ -387,6 +394,46 @@ its own separately issued capability. The ordinary actor service still grants
 no operator role or explanation port. An independently provisioned operator
 connection can carry this profile through the same bounded peer and client.
 
+## Compare a candidate with the original retained policy corpus
+
+`policy-replay` uses the mounted run with an explicit exact registration
+generation and `ReadArguments::PolicyReplay { campaign,
+expected_policy_generation, candidate }`. The nonzero campaign is also the
+canonical envelope idempotency key. The caller needs the host-authenticated
+operator role and `Experiment` purpose in addition to subject access.
+
+The original supervisor separately issues
+`policy_replay_port(queries, ReplayLimits { cases, input_bytes })` and retains
+its noncloneable `FileSupervisorPolicyReplayGrant`. The host installs the weak
+port with `set_policy_replay(Some(port))`; foreign owner replacement clears the
+previous installation before refusing. Existing actor, precheck, situation and
+explanation capabilities do not grant this comparison.
+
+The original native engine evaluates all retained proposals and applied reviews
+bound to the current policy, including exact denials. A caller cannot choose a
+favorable subset. Missing candidate witnesses remain `RequiresShadow`; an empty
+or unreconstructable corpus is Unknown. A newly reviewable case inherits no
+helper approval, and the original policy, journal, source, clock, request tickets
+and publication keys remain unchanged.
+
+Every admitted campaign retains its complete expected generation, candidate and
+original result. Exact retries across port clones and facades preserve the first
+owner cut without another charge, even after later journal changes. Conflicting
+contents refuse. Custody and original owner health are checked before cache
+access; a reopened owner needs a new grant.
+
+The result is `PublicationResult::PolicyReplay(LinkedPolicyReplay)`. Its private
+fields seal the native result to the exact mount registration and campaign.
+`native()`, `registration()` and `campaign()` expose observations only. Encoding
+rejects attempts to rebind the envelope's subject, generation or key, including
+native error results. The `fa.publication-policy-replay/1` wire body discloses
+policy literals and complete case traces, with explicit historical/rehearsal
+markers; it omits action payloads and actual witness values and grants no effect
+or promotion authority.
+
+See [TOWER_POLICY_REPLAY.md](TOWER_POLICY_REPLAY.md) for the full API, JSON policy
+syntax, resource accounting, epistemic outcomes and tested end-to-end examples.
+
 ## Submit an actual proposal
 
 Use the mounted run address with its exact registration generation, `Verb::Propose`,
@@ -457,6 +504,12 @@ marker. It retains `FilePrecheckBasis` and the original remaining-query count;
 neither becomes a global Tower budget or control sequence. An inconsistent
 publicly reconstructed response fails its original encoder's correlation checks.
 
+The `policy-replay` body preserves its sealed original policy comparison and
+native journal revision, control sequence, policy generation/epoch and recorded
+tick. Its `remaining_campaigns_at_capture` is historical grant-local accounting.
+Neither the candidate generation nor a cached result becomes a current global
+Tower observation or permission to change policy.
+
 The envelope keeps all sixteen common fields. Global generation, control
 sequence, source frontiers, budgets, realized cost and uncomputed affordances
 remain `Unknown`, or `Withheld` on an unauthorized request. Neither a native
@@ -487,6 +540,13 @@ one retained native capture per grant and 16 returned attempt rows per page.
 The host chooses the actual grant allowance, which is distinct from native
 precheck work, request tickets and global Tower budgets.
 
+Policy replay has a separate allowance of 1–64 admitted campaigns and a shared
+8 MiB logical request/result cache. Each complete corpus must fit the host's
+1–5,120 case limit and logical input limit of one byte through 32 MiB. A response
+limit refuses the whole encoding without refunding native work; an exact retry
+through a larger same-owner facade can encode the retained complete result.
+The original grant and owner must still be available.
+
 The Linux [live Tower peer and client](TOWER_PEER.md) now integrate this profile
 into the existing ordinary `supervise_publication` service. Fresh source
 admission, peer credentials, selected-request scheduling, independent Stop and
@@ -500,14 +560,23 @@ Earlier publication qualification is recorded in the
 [publication receipt](../artifacts/execution/2026-11-06-tower-publication-receipt.json)
 and subsequent [precheck receipt](../artifacts/execution/2026-11-06-tower-precheck-receipt.json).
 Publication's library and selected test targets passed type checking before the
-precheck extension. Runtime execution and the final extension's compiler check
-remain blocked by the recorded shared-memory limit; those earlier checks do not
-qualify the later source.
+precheck extension. Runtime execution and that extension's compiler check were
+blocked by the recorded shared-memory limit; those earlier checks do not qualify
+the later source.
 
 The capabilities increment adds eight real-source regression functions for
 permitted discovery, shared allowances, unchanged source/journal state,
 generation/scope/refusal admission, owner identity/lifetime, revocation and exact
 native encoding. It updates the exhaustive router test to recognize the newly
 connected verb. Independent source review and qualified nightly syntax/format
-checks passed. RCH is unavailable in the current environment, so compilation,
-Clippy, test execution and the canonical gate remain pending for this revision.
+checks passed. That increment recorded RCH as unavailable and left compilation,
+Clippy, test execution and the canonical gate pending.
+
+For the later policy-replay extension, the qualified `nightly-2026-09-08`
+compiler with Cranelift executed all **12 public policy-replay integration
+tests** successfully on 2026-11-09. They cover actual complete-corpus evaluation,
+unchanged authority followed by real publication, exact retries, custody,
+uncertainty, strict encoding and routing. This scoped local result does not
+qualify the full repository, remote deployment or remaining dispatcher verbs;
+the [policy-replay verification section](TOWER_POLICY_REPLAY.md#executed-coverage-and-remaining-qualification)
+records its scope and corrected fixture attempt.
