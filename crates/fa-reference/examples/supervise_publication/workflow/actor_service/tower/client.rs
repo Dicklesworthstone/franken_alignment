@@ -10,6 +10,7 @@ use fa_reference::action::consequence::oversight::actor_wire::client::{
     CLIENT_IO_CHUNK, MAX_CLIENT_IO_BYTES, MAX_CLIENT_IO_CALLS,
 };
 use fa_reference::strict_json::{self, Json, Limits};
+use fa_reference::tower::publication::MAX_PUBLICATION_RESPONSE_BYTES;
 use fa_reference::tower::{
     ENVELOPE_FIELDS, MAX_REQUEST_BYTES, MAX_REQUEST_STRING_BYTES, RESPONSE_SCHEMA, TowerRequest,
     Verb, decode_request, encode_request,
@@ -22,7 +23,12 @@ use std::path::Path;
 mod situation;
 
 const MAX_DOCUMENTS: usize = 64;
-const MAX_REPLY_BYTES: usize = 1_048_576;
+const MAX_REPLY_BYTES: usize = MAX_PUBLICATION_RESPONSE_BYTES;
+// Complete policy reports repeat canonical decimal strings and trace objects.
+// Their densest repeated arrays require at least four wire bytes per item;
+// this allowance covers the original 1 MiB response without unbounded parsing.
+// Other operations retain the smaller existing parser-work allowance.
+const MAX_POLICY_REPLAY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
 const OPERATOR_USAGE: &str = "tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic page following or resend)";
 
@@ -347,7 +353,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         Limits {
             max_bytes: MAX_REPLY_BYTES,
             max_depth: 16,
-            max_items: 4096,
+            max_items: if request.verb == Verb::PolicyReplay {
+                MAX_POLICY_REPLAY_REPLY_ITEMS
+            } else {
+                4096
+            },
             max_string_bytes: MAX_REQUEST_STRING_BYTES,
         },
     )

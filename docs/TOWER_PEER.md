@@ -88,6 +88,16 @@ the cache does not survive a service restart. See
 [the operator replay example](LIVE_TOWER_OPERATOR.md#compare-a-candidate-against-the-original-retained-policy-corpus)
 for the exact profile fields, request, disclosure and native limits.
 
+An optional operator `response_bytes` selection raises the complete response
+allowance from its unchanged 16,384-byte default to at most 1,048,576 bytes. It
+uses the original native publication bounds and is validated before endpoint
+setup; it grants no additional operation or disclosure. The client accepts
+complete policy-replay traces with a separate finite 262,144-item JSON allowance,
+while other operations keep their 4,096-item limit. Frame, string, nesting,
+correlation and cumulative transport limits remain in force. A report that
+still exceeds the selected output bound refuses whole, preserving its original
+native cached campaign and spent work.
+
 ## Preserve topology enforcement through Tower admission
 
 ```sh
@@ -125,8 +135,8 @@ after retention and can still make the command fail. A retained checkpoint is
 acknowledged source/history evidence, not proof that all direct children were
 reaped. Actor, human-review, Stop and operator sockets
 and checkpoint destinations must be distinct, including canonical parent-path
-aliases; conflicts refuse before clock or persistent setup. Operator reads have
-only their existing historical inspection/explanation grants and cannot certify
+aliases; conflicts refuse before clock or persistent setup. Operator observations have
+only their explicitly selected native grants and cannot certify
 a cut or advance publication.
 
 An acknowledged source refusal is retained with its actual unavailable state,

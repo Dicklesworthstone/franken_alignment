@@ -4,22 +4,33 @@ use super::*;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileSupervisorPolicyReplayGrant;
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};
 use fa_reference::action::consequence::policy_campaign::ReplayLimits;
+use fa_reference::tower::publication::{
+    MAX_PUBLICATION_RESPONSE_BYTES, MIN_PUBLICATION_RESPONSE_BYTES,
+};
 use fa_reference::typestate_cx::PurposeTag;
 
 struct NativeReplay {
     tower: PublicationTower,
     supervisor: native::Supervisor,
     grant: FileSupervisorPolicyReplayGrant,
+    cases: usize,
     _storage: native::Directory,
 }
 
 impl NativeReplay {
     fn new() -> Self {
+        Self::with_cases(1, MIN_PUBLICATION_RESPONSE_BYTES)
+    }
+
+    fn with_cases(cases: usize, response_bytes: usize) -> Self {
         let storage = native::Directory::new();
         let (actor, mut supervisor, _reviewer, proposal) = native::create(&storage);
-        native::observe(&mut supervisor);
-        let ticket = actor.submit(7, &proposal).unwrap();
-        assert_eq!(actor.poll(&ticket), ActorKnowledge::Pending { request: 7 });
+        for index in 0..cases {
+            let request = 7 + index as u64;
+            native::observe(&mut supervisor);
+            let ticket = actor.submit(request, &proposal).unwrap();
+            assert_eq!(actor.poll(&ticket), ActorKnowledge::Pending { request });
+        }
         let (port, grant) = supervisor
             .policy_replay_port(
                 1,
@@ -29,13 +40,20 @@ impl NativeReplay {
                 },
             )
             .unwrap();
-        let mut tower =
-            PublicationTower::new(mount(), actor, PublicationLimits::default()).unwrap();
+        let mut tower = PublicationTower::new(
+            mount(),
+            actor,
+            PublicationLimits {
+                max_response_bytes: response_bytes,
+            },
+        )
+        .unwrap();
         tower.set_policy_replay(Some(port)).unwrap();
         Self {
             tower,
             supervisor,
             grant,
+            cases,
             _storage: storage,
         }
     }
@@ -61,8 +79,8 @@ impl NativeReplay {
         };
         match linked.native() {
             Ok(ActorKnowledge::Known { value, .. }) => {
-                assert_eq!(value.report().cases().len(), 1);
-                assert_eq!(value.report().newly_blocked().len(), 1);
+                assert_eq!(value.report().cases().len(), self.cases);
+                assert_eq!(value.report().newly_blocked().len(), self.cases);
                 assert!(!value.report().requires_shadow());
             }
             Err(fa_reference::action::consequence::oversight::actor::ActorError::Capacity) => {}
@@ -75,14 +93,41 @@ impl NativeReplay {
 }
 
 fn replay_request(campaign: u64) -> TowerRequest {
+    replay_request_with_candidate(
+        campaign,
+        Policy::new(2, vec![Predicate::PayloadAtMost(1)]).unwrap(),
+    )
+}
+
+fn replay_request_with_candidate(campaign: u64, candidate: Policy) -> TowerRequest {
     let mut request = TowerRequest::new("operator-policy", mount(), Verb::PolicyReplay);
     request.arguments = ReadArguments::PolicyReplay {
         campaign,
         expected_policy_generation: native::profile().delivery.policy.generation(),
-        candidate: Policy::new(2, vec![Predicate::PayloadAtMost(1)]).unwrap(),
+        candidate,
     };
     request.idempotency_key = Some(campaign.to_string());
     request
+}
+
+fn traced_candidate() -> Policy {
+    let mut nodes = vec![Predicate::PayloadAtMost(1); 127];
+    nodes.push(Predicate::All((0..127).collect()));
+    Policy::new(2, nodes).unwrap()
+}
+
+fn selected_replay_settings(root: &Directory, response_bytes: usize) -> PathBuf {
+    let path = replay_settings(root);
+    let original = fs::read_to_string(&path).unwrap();
+    let selected = original.replacen('{', &format!("{{\"response_bytes\":{response_bytes},"), 1);
+    assert_eq!(
+        OperatorSettings::decode(selected.as_bytes())
+            .unwrap()
+            .response_bytes,
+        response_bytes,
+    );
+    fs::write(&path, selected).unwrap();
+    path
 }
 
 fn replay_settings(root: &Directory) -> PathBuf {
@@ -189,7 +234,12 @@ fn operator_client_emits_original_known_retry_and_exhaustion_without_extra_work(
             let value = parsed.get("result").unwrap().get("value").unwrap();
             if index < 2 {
                 assert_eq!(
-                    value.get("knowledge").unwrap().get("state").unwrap().as_str(),
+                    value
+                        .get("knowledge")
+                        .unwrap()
+                        .get("state")
+                        .unwrap()
+                        .as_str(),
                     Some("known")
                 );
             } else {
@@ -233,8 +283,7 @@ fn damaged_policy_reply_is_not_emitted_and_stops_before_the_next_campaign() {
         authenticate(&socket);
         assert_eq!(decode_request(&read_document(&mut socket)).unwrap(), first);
         let original = native.exchange(&first);
-        let damaged =
-            original.replace("\"kind\":\"policy-replay\"", "\"kind\":\"situation\"");
+        let damaged = original.replace("\"kind\":\"policy-replay\"", "\"kind\":\"situation\"");
         assert_ne!(damaged, original);
         socket.write_all(damaged.as_bytes()).unwrap();
         socket.write_all(b"\n").unwrap();
@@ -251,4 +300,195 @@ fn damaged_policy_reply_is_not_emitted_and_stops_before_the_next_campaign() {
     assert!(error.contains("invalid or unbound Tower response"));
     assert!(output.is_empty());
     server.join().unwrap();
+}
+
+#[test]
+fn operator_client_preserves_complete_large_literals_traces_and_cached_retries() {
+    for (cases, candidate) in [
+        (
+            1,
+            Policy::new(2, vec![Predicate::PayloadIs(vec![0xaa; 20_000])]).unwrap(),
+        ),
+        (6, traced_candidate()),
+    ] {
+        let root = Directory::new();
+        let profile = selected_replay_settings(&root, MAX_PUBLICATION_RESPONSE_BYTES);
+        let first = replay_request_with_candidate(71, candidate);
+        let mut retry = first.clone();
+        retry.operation_id = "operator-large-retry".into();
+        let expected = [first, retry];
+        let documents: Vec<_> = expected
+            .iter()
+            .enumerate()
+            .map(|(index, request)| root.document(&format!("large-{index}.json"), request))
+            .collect();
+        let listener = UnixListener::bind(root.socket()).unwrap();
+        let server = std::thread::spawn(move || {
+            let mut native = NativeReplay::with_cases(cases, MAX_PUBLICATION_RESPONSE_BYTES);
+            let mut socket = bounded_socket(&listener);
+            authenticate(&socket);
+            let mut replies = Vec::new();
+            let mut retained = None;
+            let mut original_knowledge = None;
+            for expected in expected {
+                let request = decode_request(&read_document(&mut socket)).unwrap();
+                assert_eq!(request, expected);
+                let response = native.exchange(&request);
+                assert!(response.len() > MIN_PUBLICATION_RESPONSE_BYTES);
+                let parsed = parse_response(response.as_bytes(), &request).unwrap();
+                let knowledge = parsed
+                    .get("result")
+                    .unwrap()
+                    .get("value")
+                    .unwrap()
+                    .get("knowledge")
+                    .unwrap();
+                assert_eq!(knowledge.get("state").unwrap().as_str(), Some("known"));
+                let report = knowledge.get("value").unwrap();
+                let rows = report.get("cases").unwrap().as_array().unwrap();
+                assert_eq!(rows.len(), cases);
+                assert_eq!(
+                    report.get("case_count").unwrap().as_str().unwrap(),
+                    cases.to_string()
+                );
+                if cases == 6 {
+                    assert_eq!(
+                        strict_json::parse(
+                            response.as_bytes(),
+                            Limits {
+                                max_bytes: MAX_REPLY_BYTES,
+                                max_depth: 16,
+                                max_items: 4096,
+                                max_string_bytes: MAX_REQUEST_STRING_BYTES,
+                            }
+                        )
+                        .unwrap_err()
+                        .kind,
+                        strict_json::ErrorKind::ItemLimit,
+                    );
+                    for row in rows {
+                        assert_eq!(
+                            row.get("candidate")
+                                .unwrap()
+                                .get("trace")
+                                .unwrap()
+                                .as_array()
+                                .unwrap()
+                                .len(),
+                            128
+                        );
+                    }
+                } else {
+                    let nodes = report
+                        .get("candidate_policy")
+                        .unwrap()
+                        .get("nodes")
+                        .unwrap()
+                        .as_array()
+                        .unwrap();
+                    assert_eq!(
+                        nodes[0].get("value_hex").unwrap().as_str().unwrap(),
+                        "aa".repeat(20_000)
+                    );
+                }
+                if let Some(original) = &original_knowledge {
+                    assert_eq!(knowledge, original);
+                    assert_eq!(Some(native.grant.retained_bytes()), retained);
+                } else {
+                    original_knowledge = Some(knowledge.clone());
+                    retained = Some(native.grant.retained_bytes());
+                }
+                assert_eq!(native.grant.remaining_queries(), 0);
+                socket.write_all(response.as_bytes()).unwrap();
+                socket.write_all(b"\n").unwrap();
+                socket.flush().unwrap();
+                replies.push(response);
+            }
+            assert_eq!(
+                socket.read(&mut [0_u8]).unwrap(),
+                0,
+                "unexpected automatic replay"
+            );
+            replies
+        });
+        let mut output = Vec::new();
+        operator_command(&args(&profile, &documents), &mut output).unwrap();
+        assert_eq!(
+            output,
+            (server.join().unwrap().join("\n") + "\n").as_bytes()
+        );
+    }
+}
+
+#[test]
+fn larger_policy_parser_keeps_other_verbs_bounded_and_rejects_damaged_reports() {
+    let request = replay_request_with_candidate(71, traced_candidate());
+    let mut native = NativeReplay::with_cases(6, MAX_PUBLICATION_RESPONSE_BYTES);
+    let response = native.exchange(&request);
+    validate_response(response.as_bytes(), &request).unwrap();
+    let retained = native.grant.retained_bytes();
+
+    // Relabeling this genuine large document would pass the generic envelope
+    // and kind checks; unrelated operations still reject its parser work.
+    for (verb, kind) in [
+        (Verb::Situation, "situation"),
+        (Verb::Explain, "explanation"),
+    ] {
+        let mut relabeled_request = request.clone();
+        relabeled_request.verb = verb;
+        let relabeled = response.replace(
+            "\"kind\":\"policy-replay\"",
+            &format!("\"kind\":\"{kind}\""),
+        );
+        assert_ne!(relabeled, response);
+        assert!(validate_response(relabeled.as_bytes(), &relabeled_request).is_err());
+    }
+    for damaged in [
+        response.replace("operator-policy", "wrong-operation"),
+        response.replace("\"idempotency_key\":\"71\"", "\"idempotency_key\":\"72\""),
+        response.replacen("\"envelope\":{", "\"envelope\":{\"extra\":null,", 1),
+        response.replacen(
+            "\"retry_safe\":true",
+            "\"retry_safe\":true,\"retry_safe\":false",
+            1,
+        ),
+        format!("{response}null"),
+    ] {
+        assert_ne!(damaged, response);
+        assert!(validate_response(damaged.as_bytes(), &request).is_err());
+    }
+    // An attacker cannot use the larger allowance to remove the finite item,
+    // nesting, string, or complete-response byte bounds.
+    let too_many = response.replacen(
+        "\"value\":{",
+        &format!(
+            "\"value\":{{\"items\":[{}],",
+            vec!["0"; MAX_POLICY_REPLAY_REPLY_ITEMS + 1].join(",")
+        ),
+        1,
+    );
+    assert!(too_many.len() < MAX_REPLY_BYTES);
+    let too_deep = response.replacen(
+        "\"value\":{",
+        &format!(
+            "\"value\":{{\"nested\":{}0{},",
+            "[".repeat(17),
+            "]".repeat(17)
+        ),
+        1,
+    );
+    let too_long = response.replacen(
+        "\"value\":{",
+        &format!(
+            "\"value\":{{\"literal\":\"{}\",",
+            "x".repeat(MAX_REQUEST_STRING_BYTES + 1)
+        ),
+        1,
+    );
+    let too_large = format!("{response}{}", " ".repeat(MAX_REPLY_BYTES));
+    for damaged in [too_many, too_deep, too_long, too_large] {
+        assert!(validate_response(damaged.as_bytes(), &request).is_err());
+    }
+    assert_eq!(native.grant.remaining_queries(), 0);
+    assert_eq!(native.grant.retained_bytes(), retained);
 }

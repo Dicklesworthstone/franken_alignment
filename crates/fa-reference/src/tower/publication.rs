@@ -48,6 +48,11 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 7] = [
     Verb::PolicyReplay,
 ];
 
+/// Smallest native response allowance; also the compatibility default.
+pub const MIN_PUBLICATION_RESPONSE_BYTES: usize = 16 * 1024;
+/// Largest complete response accepted by the native publication facade.
+pub const MAX_PUBLICATION_RESPONSE_BYTES: usize = 1024 * 1024;
+
 /// Response bound for this native profile. Ticket, proposal and durable owner
 /// limits remain the original native limits and cannot be enlarged here.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,14 +63,17 @@ pub struct PublicationLimits {
 impl Default for PublicationLimits {
     fn default() -> Self {
         Self {
-            max_response_bytes: 16 * 1024,
+            max_response_bytes: MIN_PUBLICATION_RESPONSE_BYTES,
         }
     }
 }
 
 impl PublicationLimits {
-    fn valid(self) -> bool {
-        (16 * 1024..=1024 * 1024).contains(&self.max_response_bytes)
+    /// Validate a host-selected allowance before any endpoint or owner setup.
+    /// This changes output capacity only, never a native operation's authority.
+    pub fn valid(self) -> bool {
+        (MIN_PUBLICATION_RESPONSE_BYTES..=MAX_PUBLICATION_RESPONSE_BYTES)
+            .contains(&self.max_response_bytes)
     }
 }
 

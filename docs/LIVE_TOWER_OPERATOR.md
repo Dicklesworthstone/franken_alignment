@@ -95,6 +95,7 @@ deployment's values:
   "candidate_limit": 8,
   "connection_limit": 4,
   "exchange_limit": 128,
+  "response_bytes": 131072,
   "runtime_ms": 60000,
   "poll_ms": 5,
   "inspection_queries": 64,
@@ -115,7 +116,13 @@ fields fail. `policy_replay` is optional; omitting it or setting it to `null`
 keeps replay disabled, so existing inspection/explanation profiles retain their
 behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
-format.
+format. The optional numeric `response_bytes` selects the complete response
+allowance for this operator endpoint. Omitting it preserves the original
+16,384-byte default; an explicit selection must be an integer from 16,384 through
+1,048,576, using the native `PublicationLimits` bounds. Null, strings, fractions,
+duplicates and unknown fields refuse. Validation happens before grants or a
+socket are created. A larger output allowance adds no disclosure or purpose
+grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, explanation
@@ -143,9 +150,20 @@ report. Inspection or explanation alone cannot provide this grant.
 Replay input accounting counts action payloads and retained witness occurrences,
 including repeated occurrences. It does not measure elapsed time, allocator
 memory or fresh source reads. The existing request, transport and response
-bounds remain independent: the live operator uses the original 16 KiB response
-limit and refuses a report that cannot fit completely. Raising a case/input
-allowance does not enlarge the response or retained-cache limit.
+bounds remain independent. The live operator uses the selected `response_bytes`
+allowance and refuses a report that cannot fit completely. For example, the
+128 KiB selection above can deliver a retained policy literal larger than the
+default 16 KiB reply. Raising a case/input allowance does not enlarge the response
+or retained-cache limit. Even the maximum 1 MiB response cannot deliver every
+report that fits the native 8 MiB retained-data allowance; a complete-output
+refusal never substitutes a partial report.
+
+The client retains its original 1 MiB frame ceiling, depth and string bounds,
+correlated closed envelope, and cumulative elapsed/byte/I/O allowances. Only
+an explicitly requested `policy-replay` reply uses the larger finite JSON work
+allowance of 262,144 items, accommodating complete case and predicate traces.
+Other operations retain the original 4,096-item parser limit. A reply exceeding
+any bound is rejected before output or a later request.
 
 A replay-only profile sets `inspection_queries`, `explanation_queries` and
 `explanation_replay_events` to zero, keeps `explanation_disclosure` as `"none"`,
@@ -384,14 +402,17 @@ These are cooperative observations of the original acknowledged state. Native
 synchronous source, journal and replay work is not preempted by this endpoint.
 The feature does not supply the full prospective `fa` CLI, native current
 `why-held`/`next`, mutation verbs or deployment qualification. The policy-replay
-operator addition has six authored regressions covering closed optional profile
+operator addition has nine authored regressions covering closed optional profile
 selection, authenticated reports, exact retries after owner advancement,
 cumulative reconnect work, kernel-identity rejection, absent disclosure,
-separation from publication permission, foreign-owner refusal and owner loss.
+separation from publication permission, foreign-owner refusal and owner loss,
+explicit response bounds, complete large policy literals and multi-case traces.
 They use the original file owner and real Unix sockets. The live-service
-client adds three further regressions carrying genuine native reports through
+client adds five further regressions carrying genuine native reports through
 the strict response validator and actual operator command: original Known,
 cached-retry and exhausted replies are preserved, while wrong verbs, damaged
-envelopes and a corrupted first reply cannot trigger the next campaign. The
-live-service executable's runtime qualification and full canonical gate remain
+envelopes and a corrupted first reply cannot trigger the next campaign. Larger
+complete reports preserve all cases, literals and traces across exact retries;
+the distinct parser-work limits and unchanged structural bounds remain enforced.
+The live-service executable's runtime qualification and full canonical gate remain
 separate from targeted public-library policy-replay verification.

@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: transport larger complete original policy comparisons
+
+The live operator profile now accepts an explicit numeric `response_bytes`.
+Omission preserves 16,384 bytes; accepted selections stay within the original
+16,384–1,048,576 native range. Profile admission uses the same public
+`PublicationLimits::valid` check as the native constructor, before listener
+setup. The selected allowance reaches the original authenticated Tower without
+replacing its owner, source, campaign grant, exchange allowance or lifetime.
+
+The policy-replay client now has a finite 262,144-item JSON parser allowance
+within its existing 1 MiB response bound. Other verbs retain 4,096 items; depth,
+string, correlation, byte, I/O and elapsed bounds are unchanged. This connects
+already valid native reports containing large policy literals or many complete
+case traces to the actual operator consumer. Oversized native work and reports
+above the selected response bound still refuse whole and preserve spent work.
+
+Five new service/client regression functions exercise real 20,000-byte policy
+literals, six-case 128-node traces crossing the old item limit, original cached
+retries, strict profile grammar and hostile replies. The modules now contain
+nine service and five client regression functions. Independent source review
+and qualified dated rustfmt parsing/formatting are complete. Current shared
+memory is at its 8 GiB limit and the source volume has less than 64 MiB of raw
+free space; no compilation or runtime pass is inferred from the new tests.
+Current full-gate and remote qualification remain open. This increment changes
+transport capacity only; it adds no disclosure grant or authority. See the
+[operator contract](docs/LIVE_TOWER_OPERATOR.md).
+
 ## 2026-11-09: expose explicit policy experiments during live publication
 
 The ordinary authenticated Tower operator endpoint accepts an optional closed

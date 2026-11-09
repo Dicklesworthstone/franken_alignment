@@ -3,10 +3,90 @@
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_POLICY_REPLAY_QUERIES;
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};
-use fa_reference::action::consequence::policy_campaign::{MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES};
+use fa_reference::action::consequence::policy_campaign::{
+    MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES,
+};
+use fa_reference::tower::publication::{
+    MAX_PUBLICATION_RESPONSE_BYTES, MIN_PUBLICATION_RESPONSE_BYTES,
+};
 
 fn with_replay(profile: &str, selected: &str) -> String {
     profile.replacen('{', &format!("{{\"policy_replay\":{selected},"), 1)
+}
+
+fn with_response_bytes(profile: &str, selected: &str) -> String {
+    profile.replacen('{', &format!("{{\"response_bytes\":{selected},"), 1)
+}
+
+fn select_response_bytes(fixture: &mut Fixture, selected: usize) {
+    fixture.settings = Settings::decode(
+        with_response_bytes(
+            &with_replay(
+                &profile_json(&fixture.settings.socket, fixture.settings.operator, 0, 0),
+                &selection(1, 16, 1_048_576),
+            ),
+            &selected.to_string(),
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+}
+
+fn selected_query(
+    fixture: &Fixture,
+    service: &mut Service,
+    request: TowerRequest,
+) -> (Vec<u8>, Json) {
+    service.checkpoint();
+    let mut socket = UnixStream::connect(&fixture.settings.socket).unwrap();
+    fixture.settings.supervisor.verify(&socket).unwrap();
+    let mut document = encode_request(&request).unwrap().into_bytes();
+    document.push(b'\n');
+    socket.write_all(&document).unwrap();
+    socket.set_nonblocking(true).unwrap();
+    let mut response = Vec::new();
+    for _ in 0..4_096 {
+        service.checkpoint();
+        let mut buffer = [0_u8; 4_096];
+        match socket.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(count) => response.extend_from_slice(&buffer[..count]),
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+                ) => {}
+            Err(error) => panic!("selected operator response failed: {error}"),
+        }
+        assert!(response.len() <= fixture.settings.response_bytes + 1);
+        if response.ends_with(b"\n") {
+            break;
+        }
+    }
+    assert!(
+        response.ends_with(b"\n"),
+        "incomplete selected operator reply"
+    );
+    let parsed =
+        strict_json::parse(&response, fa_reference::strict_json::Limits::default()).unwrap();
+    (response, parsed)
+}
+
+fn retained_bytes(service: &Service) -> usize {
+    service
+        .active
+        .as_ref()
+        .unwrap()
+        .policy_replay
+        .as_ref()
+        .unwrap()
+        .retained_bytes()
+}
+
+fn traced_candidate() -> Policy {
+    let mut nodes = vec![Predicate::PayloadAtMost(1); 127];
+    nodes.push(Predicate::All((0..127).collect()));
+    Policy::new(2, nodes).unwrap()
 }
 
 fn selection(queries: usize, cases: usize, input_bytes: usize) -> String {
@@ -76,10 +156,7 @@ fn report(response: &Json, cases: usize, newly_blocked: usize, remaining: usize)
         field(report, &["case_count"]).as_str().unwrap(),
         cases.to_string()
     );
-    assert_eq!(
-        field(report, &["cases"]).as_array().unwrap().len(),
-        cases
-    );
+    assert_eq!(field(report, &["cases"]).as_array().unwrap().len(), cases);
     assert_eq!(
         field(report, &["newly_blocked"]).as_array().unwrap().len(),
         newly_blocked
@@ -90,10 +167,7 @@ fn report(response: &Json, cases: usize, newly_blocked: usize, remaining: usize)
             .unwrap()
             .is_empty()
     );
-    assert_eq!(
-        field(report, &["requires_shadow"]).as_bool(),
-        Some(false)
-    );
+    assert_eq!(field(report, &["requires_shadow"]).as_bool(), Some(false));
     assert_eq!(
         field(report, &["previous_policy", "generation"]).as_str(),
         Some("1")
@@ -428,4 +502,185 @@ fn cached_policy_report_cannot_keep_a_dropped_owner_or_its_authority_lock_alive(
     assert_eq!(fixture.config.source.status().read_attempts, 0);
     service.retire();
     assert!(!fixture.settings.socket.exists());
+}
+
+#[test]
+fn response_selection_preserves_defaults_and_refuses_invalid_bounds_before_setup() {
+    let identity = PeerPolicy::new(1, 2, Some(3)).unwrap();
+    let original = profile_json(Path::new("/operator/inspection.sock"), identity, 2, 0);
+    let ordinary = Settings::decode(original.as_bytes()).unwrap();
+    assert_eq!(ordinary.response_bytes, MIN_PUBLICATION_RESPONSE_BYTES);
+    for selected in [
+        MIN_PUBLICATION_RESPONSE_BYTES,
+        MIN_PUBLICATION_RESPONSE_BYTES + 1,
+        128 * 1024,
+        MAX_PUBLICATION_RESPONSE_BYTES,
+    ] {
+        let settings =
+            Settings::decode(with_response_bytes(&original, &selected.to_string()).as_bytes())
+                .unwrap();
+        assert_eq!(settings.response_bytes, selected);
+        assert_eq!(settings.inspection_queries, ordinary.inspection_queries);
+        assert_eq!(settings.explanation_queries, ordinary.explanation_queries);
+        assert!(settings.policy_replay.is_none());
+    }
+    for selected in [
+        "0",
+        "16383",
+        "1048577",
+        "null",
+        "true",
+        "\"131072\"",
+        "[]",
+        "{}",
+        "-1",
+        "1.5",
+        "1e5",
+        "18446744073709551616",
+    ] {
+        assert!(
+            Settings::decode(with_response_bytes(&original, selected).as_bytes()).is_err(),
+            "accepted response_bytes {selected}"
+        );
+    }
+    let selected = with_response_bytes(&original, "131072");
+    assert!(Settings::decode(with_response_bytes(&selected, "262144").as_bytes()).is_err());
+    assert!(
+        Settings::decode(
+            selected
+                .replace("response_bytes", "response_byte")
+                .as_bytes()
+        )
+        .is_err()
+    );
+    let no_grants = profile_json(Path::new("/operator/inspection.sock"), identity, 0, 0);
+    assert!(Settings::decode(with_response_bytes(&no_grants, "1048576").as_bytes()).is_err());
+
+    let fixture = Fixture::new(1, 0);
+    let before = fixture.files();
+    let mut invalid = fixture.settings.clone();
+    invalid.response_bytes = MIN_PUBLICATION_RESPONSE_BYTES - 1;
+    assert!(
+        Service::start(
+            &invalid,
+            &fixture.actor,
+            fixture.port.clone(),
+            &fixture.driver,
+            REGISTRATION,
+            &deadline(),
+        )
+        .is_err()
+    );
+    assert!(!fixture.settings.socket.exists());
+    assert_eq!(fixture.files(), before);
+}
+
+#[test]
+fn selected_operator_delivers_complete_large_literals_and_default_refusal_spends_once() {
+    for selected in [None, Some(128 * 1024)] {
+        let mut fixture = Fixture::new(1, 0);
+        fixture.submit(7);
+        select(&mut fixture, 1);
+        if let Some(bytes) = selected {
+            select_response_bytes(&mut fixture, bytes);
+        }
+        let owner = fixture.driver.supervisor().host().unwrap().inspect();
+        let before = fixture.files();
+        let query = request(
+            &fixture,
+            71,
+            Policy::new(2, vec![Predicate::PayloadIs(vec![0xaa; 20_000])]).unwrap(),
+        );
+        let mut service = fixture.start();
+        let (bytes, first) = selected_query(&fixture, &mut service, query.clone());
+        let retained = retained_bytes(&service);
+        assert!(retained > 20_000);
+        assert_eq!(remaining(&service), 0);
+        let (_, retry) = selected_query(&fixture, &mut service, query);
+        assert_eq!(remaining(&service), 0);
+        assert_eq!(retained_bytes(&service), retained);
+        assert_eq!(first, retry);
+        match selected {
+            Some(_) => {
+                assert!(bytes.len() > MIN_PUBLICATION_RESPONSE_BYTES + 1);
+                report(&first, 1, 1, 0);
+                let nodes = field(
+                    &first,
+                    &[
+                        "result",
+                        "value",
+                        "knowledge",
+                        "value",
+                        "candidate_policy",
+                        "nodes",
+                    ],
+                )
+                .as_array()
+                .unwrap();
+                assert_eq!(
+                    field(&nodes[0], &["value_hex"]).as_str().unwrap(),
+                    "aa".repeat(20_000)
+                );
+            }
+            None => {
+                assert!(bytes.len() <= MIN_PUBLICATION_RESPONSE_BYTES + 1);
+                assert_eq!(field(&first, &["result", "kind"]).as_str(), Some("refused"));
+                assert_eq!(
+                    field(&first, &["envelope", "reason_code"]).as_str(),
+                    Some("BudgetExhausted")
+                );
+                assert!(!String::from_utf8(bytes).unwrap().contains("aaaa"));
+            }
+        }
+        assert_eq!(fixture.driver.supervisor().host().unwrap().inspect(), owner);
+        assert_eq!(fixture.files(), before);
+        assert_eq!(fixture.config.source.status().read_attempts, 0);
+        assert_eq!(service.frames, 2);
+    }
+}
+
+#[test]
+fn selected_operator_keeps_every_case_and_trace_beyond_the_old_client_item_bound() {
+    let mut fixture = Fixture::new(1, 0);
+    for key in 7..13 {
+        fixture.submit(key);
+    }
+    select_response_bytes(&mut fixture, MAX_PUBLICATION_RESPONSE_BYTES);
+    let owner = fixture.driver.supervisor().host().unwrap().inspect();
+    let before = fixture.files();
+    let query = request(&fixture, 71, traced_candidate());
+    let mut service = fixture.start();
+    let (bytes, first) = selected_query(&fixture, &mut service, query.clone());
+    assert!(bytes.len() > MIN_PUBLICATION_RESPONSE_BYTES);
+    let old_limits = fa_reference::strict_json::Limits {
+        max_bytes: MAX_PUBLICATION_RESPONSE_BYTES,
+        max_depth: 16,
+        max_items: 4096,
+        max_string_bytes: fa_reference::tower::MAX_REQUEST_STRING_BYTES,
+    };
+    assert_eq!(
+        strict_json::parse(&bytes, old_limits).unwrap_err().kind,
+        fa_reference::strict_json::ErrorKind::ItemLimit,
+    );
+    report(&first, 6, 6, 0);
+    for case in field(&first, &["result", "value", "knowledge", "value", "cases"])
+        .as_array()
+        .unwrap()
+    {
+        assert_eq!(
+            field(case, &["candidate", "trace"])
+                .as_array()
+                .unwrap()
+                .len(),
+            128
+        );
+    }
+    let retained = retained_bytes(&service);
+    let (_, retried) = selected_query(&fixture, &mut service, query);
+    assert_eq!(first, retried);
+    assert_eq!(remaining(&service), 0);
+    assert_eq!(retained_bytes(&service), retained);
+    assert_eq!(fixture.driver.supervisor().host().unwrap().inspect(), owner);
+    assert_eq!(fixture.files(), before);
+    assert_eq!(fixture.config.source.status().read_attempts, 0);
 }

@@ -80,8 +80,14 @@ impl Service {
             Some(generation),
         )
         .map_err(debug)?;
-        let mut tower =
-            PublicationTower::new(mount, port, PublicationLimits::default()).map_err(debug)?;
+        let mut tower = PublicationTower::new(
+            mount,
+            port,
+            PublicationLimits {
+                max_response_bytes: settings.response_bytes,
+            },
+        )
+        .map_err(debug)?;
         let inspection = if settings.inspection_queries != 0 {
             let (port, custodian) = driver
                 .supervisor()

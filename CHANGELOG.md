@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-09: deliver larger complete policy reports through the live operator
+
+- Add optional operator `response_bytes`, preserving the 16 KiB default and
+  validating explicit selections against the original native 1 MiB maximum
+  before endpoint setup. Share the authoritative native response bounds.
+- Connect the selected allowance to the existing authenticated Tower and allow
+  policy-replay clients to parse complete trace-heavy replies within finite
+  byte, item, depth, string, I/O and lifetime bounds. Other verbs retain their
+  original parser-work limit.
+- Add five service/client regressions for actual large literal and 128-node
+  trace reports, default refusal, original cached retries, profile admission and
+  malformed replies. Preserve campaign/source allowances and all authority
+  separation. Independent source review and qualified formatting are complete;
+  compilation/runtime and full qualification remain pending under current
+  shared memory and source-volume exhaustion.
+
 ## 2026-11-09: serve policy experiments through the authenticated operator endpoint
 
 - Add an explicit optional `policy_replay` operator profile with immutable

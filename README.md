@@ -149,8 +149,11 @@ allowance and optional policy/admission-explanation disclosure. An explicit
 `policy_replay` object additionally selects bounded candidate-policy experiments
 and their separate disclosure grant; ordinary profiles retain their original
 purposes. The same `tower-operator-exchange` client carries correlated complete
-reports, exact campaign retries and native refusals. The endpoint remains
-available through real helper/human review and terminal reply grace, with the
+reports, exact campaign retries and native refusals. Replies are bounded by the explicitly selected `response_bytes` (16 KiB by default, up to
+1 MiB). The policy client accepts trace-heavy complete reports within its
+separate finite parser allowance; unrelated operations keep their existing
+parser limits. See [large report delivery](docs/LIVE_TOWER_OPERATOR.md).
+The endpoint remains available through real helper/human review and terminal reply grace, with the
 same original owner and cumulative quotas across reconnects and every handoff
 in an explicit finite request schedule. Use
 `tower-operator-exchange` to exchange explicit request documents, or

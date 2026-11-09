@@ -12,6 +12,7 @@ use fa_reference::action::consequence::policy_campaign::{
 };
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::strict_json::{self, Json, Limits};
+use fa_reference::tower::publication::PublicationLimits;
 use std::collections::BTreeMap;
 use std::fs;
 use std::io;
@@ -27,6 +28,7 @@ pub(crate) struct Settings {
     pub(crate) candidate_limit: u64,
     pub(crate) connection_limit: u64,
     pub(crate) exchange_limit: u64,
+    pub(crate) response_bytes: usize,
     pub(crate) runtime_ms: u64,
     pub(crate) poll_ms: u64,
     pub(crate) inspection_queries: usize,
@@ -113,6 +115,12 @@ impl Settings {
             candidate_limit: fields.number("candidate_limit")?,
             connection_limit: fields.number("connection_limit")?,
             exchange_limit: fields.number("exchange_limit")?,
+            response_bytes: fields
+                .optional_number("response_bytes")?
+                .map(usize::try_from)
+                .transpose()
+                .map_err(debug)?
+                .unwrap_or_else(|| PublicationLimits::default().max_response_bytes),
             runtime_ms: fields.number("runtime_ms")?,
             poll_ms: fields.number("poll_ms")?,
             inspection_queries: usize::try_from(fields.number("inspection_queries")?)
@@ -133,6 +141,15 @@ impl Settings {
     }
 
     pub(super) fn validate(&self) -> Result<(), String> {
+        if !(PublicationLimits {
+            max_response_bytes: self.response_bytes,
+        })
+        .valid()
+        {
+            return Err(
+                "operator response_bytes exceeds the native publication response bounds".into(),
+            );
+        }
         if self.scope.purpose != Purpose::Effect
             || [
                 self.scope.tenant,
@@ -326,6 +343,15 @@ impl Fields {
         self.take(name)?
             .as_u64()
             .ok_or_else(|| format!("{name} must be an unsigned integer"))
+    }
+    fn optional_number(&mut self, name: &str) -> Result<Option<u64>, String> {
+        self.optional(name)
+            .map(|value| {
+                value
+                    .as_u64()
+                    .ok_or_else(|| format!("{name} must be an unsigned integer"))
+            })
+            .transpose()
     }
     fn end(self) -> Result<(), String> {
         if self.0.is_empty() {
