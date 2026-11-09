@@ -4,6 +4,9 @@
 #[path = "support/file_oversight_actor.rs"]
 mod support;
 
+#[path = "tower_policy_replay_pages/client.rs"]
+mod client;
+
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{

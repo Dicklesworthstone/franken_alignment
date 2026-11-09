@@ -214,6 +214,9 @@ return no continuation before every case has been delivered. These identities
 are process-local and supply no authority across restart or grant replacement.
 See [bounded policy pages](TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages)
 for original custody, summary, output refusal and client validation behavior.
+The authenticated `tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON
+--max-pages N` consumer accepts an explicit initial paged document and follows
+only validated native continuations within the original connection and budgets.
 
 ### Branch replay edits
 

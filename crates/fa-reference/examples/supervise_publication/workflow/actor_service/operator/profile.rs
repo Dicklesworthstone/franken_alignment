@@ -3,7 +3,7 @@ use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_QUERIES,
-    MAX_POLICY_REPLAY_QUERIES,
+    MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
@@ -41,6 +41,7 @@ pub(crate) struct Settings {
 #[derive(Clone, Debug)]
 pub(crate) struct PolicyReplaySettings {
     pub(crate) queries: usize,
+    pub(crate) page_queries: usize,
     pub(crate) limits: ReplayLimits,
     pub(crate) disclosure: String,
 }
@@ -50,6 +51,13 @@ impl PolicyReplaySettings {
         let mut fields = Fields::new(value)?;
         let selected = Self {
             queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            page_queries: match fields.optional_number("page_queries")? {
+                None => 0,
+                Some(0) => {
+                    return Err("explicit policy replay page_queries must be positive".into());
+                }
+                Some(value) => usize::try_from(value).map_err(debug)?,
+            },
             limits: ReplayLimits {
                 cases: usize::try_from(fields.number("cases")?).map_err(debug)?,
                 input_bytes: usize::try_from(fields.number("input_bytes")?).map_err(debug)?,
@@ -64,6 +72,7 @@ impl PolicyReplaySettings {
     fn validate(&self) -> Result<(), String> {
         if self.queries == 0
             || self.queries > MAX_POLICY_REPLAY_QUERIES
+            || self.page_queries > MAX_POLICY_REPLAY_PAGE_QUERIES
             || self.limits.cases == 0
             || self.limits.cases > MAX_REPLAY_CASES
             || self.limits.input_bytes == 0

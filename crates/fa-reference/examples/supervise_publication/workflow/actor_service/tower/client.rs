@@ -19,6 +19,8 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
+#[path = "client/policy_replay.rs"]
+mod policy_replay;
 #[path = "client/situation.rs"]
 mod situation;
 
@@ -83,6 +85,13 @@ pub(crate) fn operator_command(args: &[String], output: &mut impl Write) -> Resu
 /// explicit page allowance and the original transport and server grants.
 pub(crate) fn situation_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
     situation::command(args, output)
+}
+
+pub(crate) fn policy_replay_command(
+    args: &[String],
+    output: &mut impl Write,
+) -> Result<(), String> {
+    policy_replay::command(args, output)
 }
 
 /// Only shared transport parameters. An operator profile is never converted

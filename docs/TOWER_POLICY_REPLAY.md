@@ -346,8 +346,8 @@ Hosts can separately opt into page disclosure by issuing
 `policy_replay_port_with_pages(queries, limits, page_queries)` instead of the
 original constructor. `page_queries` must be 1 through 1,024 and is shared by
 all ports and facades holding that grant. The original constructor keeps paging
-disabled. Hosts retain the original page grant for the service lifetime; the existing
-live profile has not yet gained this opt-in.
+disabled. The live operator exposes the same opt-in as `policy_replay.page_queries`;
+see [operator setup](LIVE_TOWER_OPERATOR.md).
 
 Add the exact boolean `"paged": true` to the complete initial request's
 `arguments`. Its typed form is `ReadArguments::PolicyReplayPaged { campaign,
@@ -355,6 +355,12 @@ expected_policy_generation, candidate }`. It runs or retrieves the same complete
 native comparison; it never selects a smaller replay corpus. A legacy v1 request
 and a paged request with the same campaign and candidate share that original
 comparison and native campaign charge.
+
+The native Rust port exposes `replay_candidate_policy_page` and
+`continue_policy_replay`. Its sealed `FilePolicyReplayPage` exposes `original`,
+`basis`, `summary`, case offsets, whole cases and the native continuation. The
+grant exposes `remaining_pages`, `pages_enabled` and `retained_page_bytes` in
+addition to its independent campaign accounting.
 
 The first response is a header containing both original policy graphs, the
 original basis and complete-corpus summary, with no cases. To follow its
@@ -440,7 +446,43 @@ and cached chain without another native charge. The live operator accepts
 `response_bytes` from 16 KiB through 1 MiB to accommodate large policy literals
 and case traces.
 
+### Authenticated complete-report consumer
+
+The Linux `supervise_publication` example provides:
+
+```text
+tower-policy-replay OPERATOR_PROFILE PAGED_TOWER_REQUEST_JSON --max-pages N
+```
+
+It requires an explicit paged initial document and a finite page cap. It uses the
+original credential checks, connection, lifetime and cumulative I/O bounds. It
+validates each complete response before writing its original JSON line or
+following a cursor. It performs no reconnect, retry or new campaign on failure.
+A native refusal, incomplete allowance, exhausted client cap, malformed page or
+failed output ends unsuccessfully and sends no next continuation.
+
+The reusable `tower::policy_replay_client::PolicyReplayCapture` validates the
+trusted native scope, request correlation, registration, historical basis,
+policies, complete summary, contiguous offsets, unique case and cursor
+identities, exact trace shapes and page-local delta lists. It commits progress
+only after the whole page passes. It retains the two bounded policy graphs,
+summary and seen identities, not action payloads, witness values or a second
+case corpus. `progress().complete` becomes true only after validated totals and
+all original cases agree.
+
 ## Executed coverage and remaining qualification
+
+The automatic consumer increment adds ten public consumer and eight
+CLI/service regression functions. Its unchanged consumer modules and complete
+23-function public integration target typechecked in a focused composition with
+the already-compiled native pagination library. The current full-library build
+and full example test-harness metadata attempt were killed at the shared memory
+limit; the focused composition's runtime link could not resolve the cached
+split-metadata artifact. These results provide no new consumer runtime or full
+repository qualification. The core runtime evidence below retains its original
+source scope. The canonical gate verified the current 2,355-file source closure,
+compiler/admission inventories and concordance, then stopped at three existing
+playbook coverage omissions before later build, Clippy and test stages.
 
 The native pagination increment was compiled with qualified
 `nightly-2026-09-08` and Cranelift on 2026-11-09. All **13 public page integration

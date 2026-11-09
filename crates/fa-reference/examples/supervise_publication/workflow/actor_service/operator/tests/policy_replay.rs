@@ -1,5 +1,8 @@
 //! Explicit replay disclosure over the original owner and authenticated socket.
 //! A report remains observational across reconnects and cannot authorize effects.
+#[path = "policy_replay/pages.rs"]
+mod pages;
+
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_POLICY_REPLAY_QUERIES;
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};

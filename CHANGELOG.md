@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-11-09: consume complete paged policy reports through the authenticated operator
+
+- Add explicit optional `policy_replay.page_queries` and provision the original
+  finite native page grant in the live operator. Omission preserves the legacy
+  grant. Add `tower-policy-replay` with a required initial paged document and
+  caller-selected page cap on the original authenticated connection.
+- Add a reusable bounded consumer that validates scope, registration, campaign,
+  original basis/policies/summary, whole ordered case coverage, exact trace
+  shape, delta totals and continuations before committing page progress.
+  Validate and emit each original JSON line before following its cursor; stop
+  on incomplete traversal, native refusal, malformed input or output failure.
+- Add ten public consumer, five authenticated CLI and three service regression
+  functions, including atomic rejection/recovery and no hidden continuations.
+  Source review and qualified formatting of the new modules are complete. The new consumer modules
+  and the full 23-function public target typechecked in a focused composition
+  against the already-compiled original native library. Full new-library and
+  example test-harness builds were killed at the shared memory limit; these
+  focused metadata results are not runtime or repository-gate qualification.
+  The canonical gate verified the 2,355-file source and admission closure before
+  stopping at three existing missing playbook mappings; later stages did not run.
+
 ## 2026-11-09: enumerate complete native policy comparisons in bounded pages
 
 - Add separately granted policy page observations, shared immutable reports and

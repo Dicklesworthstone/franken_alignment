@@ -24,6 +24,8 @@ use crate::typestate_cx::{ExperimentCx, PurposeTag};
 mod dispatch_replay;
 mod intake;
 #[cfg(unix)]
+pub mod policy_replay_client;
+#[cfg(unix)]
 pub mod publication;
 pub mod replay;
 mod request;

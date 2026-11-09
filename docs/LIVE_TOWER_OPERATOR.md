@@ -94,8 +94,8 @@ deployment's values:
   "operator": {"uid": 1001, "gid": 1000, "pid": null},
   "candidate_limit": 8,
   "connection_limit": 4,
-  "exchange_limit": 128,
-  "response_bytes": 131072,
+  "exchange_limit": 1024,
+  "response_bytes": 1048576,
   "runtime_ms": 60000,
   "poll_ms": 5,
   "inspection_queries": 64,
@@ -104,7 +104,8 @@ deployment's values:
   "explanation_disclosure": "policy_and_selected_witnesses",
   "policy_replay": {
     "queries": 2,
-    "cases": 16,
+    "page_queries": 512,
+    "cases": 5120,
     "input_bytes": 1048576,
     "disclosure": "policy_and_case_traces"
   }
@@ -133,16 +134,22 @@ selects policy-literal and selected-witness disclosure, with a positive bounded
 replay-event allowance. It does not disclose the entire source, helper input
 or action payload.
 
-Selecting `policy_replay` requires all four fields shown above and the exact
+Selecting `policy_replay` requires `queries`, `cases`, `input_bytes` and the exact
 disclosure marker `"policy_and_case_traces"`. This separately grants disclosure
 of the previous and candidate policies, including their literal values, and the
 complete retained case comparisons and predicate traces. Action payload bytes,
 retained source witness values and helper inputs are not included in the Tower
-report. Inspection or explanation alone cannot provide this grant.
+report. Inspection or explanation alone cannot provide this grant. The optional
+`page_queries` field separately enables paged delivery. Omitting it preserves
+the complete-report-only grant; an explicit value must be a JSON integer from
+1 through 1,024. Zero, null, strings, fractions, duplicates and unknown nested
+fields refuse before setup. Selecting pages does not change campaign admission
+or grant another purpose.
 
 | Replay allowance | Permitted selection | Scope |
 |---|---:|---|
 | `queries` | 1–64 | Distinct admitted campaign identities over the grant's lifetime |
+| `page_queries` | Absent, or 1–1,024 | Separately admitted headers and case pages across every campaign on the same live grant |
 | `cases` | 1–5,120 | Complete retained proposal/review cases in one campaign |
 | `input_bytes` | 1–33,554,432 | Native logical replay-input accounting in one campaign |
 | Retained campaign data | Fixed 8 MiB maximum | Shared candidate and report cache over the grant's lifetime |
@@ -150,13 +157,15 @@ report. Inspection or explanation alone cannot provide this grant.
 Replay input accounting counts action payloads and retained witness occurrences,
 including repeated occurrences. It does not measure elapsed time, allocator
 memory or fresh source reads. The existing request, transport and response
-bounds remain independent. The live operator uses the selected `response_bytes`
-allowance and refuses a report that cannot fit completely. For example, the
-128 KiB selection above can deliver a retained policy literal larger than the
-default 16 KiB reply. Raising a case/input allowance does not enlarge the response
-or retained-cache limit. Even the maximum 1 MiB response cannot deliver every
-report that fits the native 8 MiB retained-data allowance; a complete-output
-refusal never substitutes a partial report.
+bounds remain independent. A default v1 request uses the selected
+`response_bytes` allowance for the entire report and refuses if it cannot fit.
+For example, an explicit 128 KiB selection can deliver a retained policy literal
+larger than the default 16 KiB reply. Raising a case/input allowance does not
+enlarge the response or retained-cache limit. Even the maximum 1 MiB response
+cannot hold every native report; explicitly selected v2 pages deliver that
+complete cached corpus in bounded pieces, as described below. Each header or
+case page must still fit in one complete response. An output refusal never
+substitutes truncated policies, traces or cases.
 
 The client retains its original 1 MiB frame ceiling, depth and string bounds,
 correlated closed envelope, and cumulative elapsed/byte/I/O allowances. Only
@@ -301,6 +310,136 @@ it never receives `Permit`, a policy governor or a promotion key. See the
 [native publication contract](TOWER_PUBLICATION.md) for the original capability
 and response boundaries.
 
+## Enumerate a complete policy report through bounded pages
+
+Enable `policy_replay.page_queries` in the service profile, retain a sufficient
+`exchange_limit`, and select `response_bytes` for one whole page. The 1 MiB
+selection in the example accommodates the bounded pair of policy graphs and
+case traces without repeating those policy graphs on every response. Existing
+v1 requests and profiles without `page_queries` keep their original behavior.
+
+Use an explicit initial request with `"paged": true`:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "operator-policy-pages-71",
+  "address": "fa://1/run/3@41",
+  "verb": "policy-replay",
+  "arguments": {
+    "campaign": "71",
+    "expected_policy_generation": "1",
+    "candidate": {
+      "generation": "2",
+      "nodes": [{"op": "payload_at_most", "maximum": "256"}]
+    },
+    "paged": true
+  },
+  "idempotency_key": "71"
+}
+```
+
+Then run the bounded Linux client:
+
+```sh
+supervise_publication tower-policy-replay OPERATOR_PROFILE POLICY_REPLAY_PAGED_JSON --max-pages 512
+```
+
+The command accepts one initial paged request file and a canonical page allowance
+from 1 through 1,024. Legacy complete-report requests and continuation documents
+cannot silently begin an enumeration. The request must name the profile's Run,
+complete scope and explicit nonzero route generation. The client validates the
+local selection before connecting and authenticates the supervisor using the
+same kernel credential checks as `tower-operator-exchange`. The server separately
+authenticates the operator and enforces its original grants.
+
+The server performs the complete native comparison once. A Known v2 header
+contains the previous and candidate policies, original acknowledged-owner basis,
+full summary and an issued continuation, with no case rows. Later responses
+contain contiguous pages of at most 16 whole cases; policies are null on those
+pages. The last case page explicitly marks `enumeration_complete: true`.
+The maximum 5,120-case corpus therefore needs 321 responses including the header,
+provided every selected native, response and transport bound permits it. No page
+request selects a favorable subset or asks the native engine to rerun a slice.
+
+All v2 responses retain kind `policy-replay` and use schema
+`fa.publication-policy-replay/2`. The shared summary contains complete case/input
+counts, original replay limits, `requires_shadow`, and global delta counts.
+`newly_reviewable` and `newly_blocked` are page-local ID lists in native row order.
+The header contains empty local lists. `remaining_campaigns_at_capture` remains
+historical; `remaining_pages_at_capture` describes the shared page allowance when
+that particular page was first admitted. Other readers can spend the allowance
+between pages, so a later page may show more than one page of decline.
+
+Every newly admitted header or continuation spends one page query. A new
+campaign also spends its existing campaign query and retains the complete report
+under the original 8 MiB logical cache bound. Pages share that original report;
+they do not make a deep copy of its corpus for each cursor. Their own fixed
+metadata cache is bounded separately by the maximum 1,024 admitted page results.
+Page work is shared across reconnects, schedule transitions, campaigns and any
+clones of the same grant. Exact original header/cursor retries preserve the same
+result, next cursor and historical remaining counts without replaying or spending
+another page query. Failed output restores neither campaign nor page allowance.
+
+A continuation request uses only the original campaign and exact issued cursor:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "operator-policy-page-2",
+  "address": "fa://1/run/3@41",
+  "verb": "policy-replay",
+  "arguments": {"campaign": "71", "cursor": "123"},
+  "idempotency_key": "71"
+}
+```
+
+Here `123` must be replaced with the actual returned cursor; inventing a number
+cannot construct native custody. The native cursor binds the original owner,
+grant, campaign, immutable report and next offset. The Tower mount retains only
+issued weak handles. Wrong campaigns, foreign or revoked handles, owner loss
+and replacement registrations cannot transfer access to that original report.
+The automatic client follows each accepted cursor on the same connection and
+uses the same campaign and idempotency key. It never follows stale-mount advice
+to another endpoint, reconnects, retries or starts a new campaign.
+
+Before output, the public `tower::policy_replay_client::PolicyReplayCapture`
+validator checks the closed correlated envelope, v2 schema and flags, original
+scope and basis, exact requested candidate and expected previous generation,
+unchanged summary, cursor chain, contiguous offsets and native 16-case chunks.
+It requires unique case IDs in native proposal-then-review order, exact trace
+node coverage and witness-index shape, valid disclosed action fields, consistent
+Known/Unknown outcomes and shadow classification, correct page-local delta IDs,
+and final agreement with every global delta count. Pure predicates and Boolean
+trace results are checked against the disclosed projection. Hidden payload and
+witness values remain hidden: structural checks do not reconstruct those values
+or independently prove their truth. Authentication and original native custody
+remain necessary.
+
+The validator retains two bounded policies, one basis/summary, at most 5,120
+case IDs and 1,024 cursor IDs. It does not accumulate the full corpus, traces or
+all page bytes. Its parser has an explicit 65,536-item allowance for one header
+or at most 16 complete cases, plus the unchanged 1 MiB, depth-16 and 131,072-byte
+string limits. Rejected pages change no accepted state and are never emitted or
+followed. Other CLI response parsers keep their existing independent limits.
+
+Accepted original replies are emitted unchanged as JSON lines. Success requires
+complete, exact case coverage; it confers neither current eligibility nor policy
+promotion authority. The smaller of `--max-pages`, the profile's page allowance
+and its original exchange limit bounds the automatic loop. The existing elapsed,
+64 MiB cumulative byte and finite I/O-call limits also apply, so a sufficiently
+large corpus can exhaust transport even when page counts permit it. There is no
+implicit increase or fresh connection to evade those limits.
+
+An accepted native refusal, Unknown, Withheld, error, exhausted continuation or
+local page cap preserves already emitted valid pages and returns a nonzero exit.
+A malformed page is excluded from output. Output failure stops before requesting
+the next cursor and can leave a partial final line; consumers must check framing
+and process status. A native output-size refusal preserves the original cache
+and spent work but does not mean enumeration completed. Configure a suitable
+per-page response bound before starting the live service; this client never
+reconfigures the service or retries automatically.
+
 ## Enumerate one original situation capture
 
 ```sh
@@ -414,5 +553,12 @@ cached-retry and exhausted replies are preserved, while wrong verbs, damaged
 envelopes and a corrupted first reply cannot trigger the next campaign. Larger
 complete reports preserve all cases, literals and traces across exact retries;
 the distinct parser-work limits and unchanged structural bounds remain enforced.
+The page addition has three further authored service tests for closed opt-in
+page allowances, original grants across reconnects and cached header retries,
+and legacy-grant refusal without campaign spending. Five authored client tests
+exercise real authenticated 20-case page traversal, local/native exhaustion,
+damaged-page suppression, output failure and preconnection request selection.
+The public consumer has separate native-response coverage for stable captures,
+atomic rejection, exact enumeration and strict trace/Knowledge semantics.
 The live-service executable's runtime qualification and full canonical gate remain
 separate from targeted public-library policy-replay verification.

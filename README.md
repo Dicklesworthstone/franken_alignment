@@ -156,7 +156,11 @@ parser limits. See [large report delivery](docs/LIVE_TOWER_OPERATOR.md).
 Native hosts can also provision a separate finite page allowance and enumerate
 one complete comparison through a policy header and contiguous 16-case pages.
 Those pages retain one original report, basis and campaign charge across exact
-retries; see [bounded policy pages](docs/TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages).
+retries. With explicit `policy_replay.page_queries`, the authenticated
+`tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON --max-pages N` command
+validates and emits each original page before following its native continuation.
+It reports incomplete traversal and stops on refusal, malformed data or failed
+output; see [bounded policy pages](docs/TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages).
 The endpoint remains available through real helper/human review and terminal reply grace, with the
 same original owner and cumulative quotas across reconnects and every handoff
 in an explicit finite request schedule. Use

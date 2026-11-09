@@ -112,10 +112,18 @@ impl Service {
             None
         };
         let policy_replay = if let Some(selected) = &settings.policy_replay {
-            let (port, custodian) = driver
-                .supervisor()
-                .policy_replay_port(selected.queries, selected.limits)
-                .map_err(debug)?;
+            let (port, custodian) = if selected.page_queries == 0 {
+                driver
+                    .supervisor()
+                    .policy_replay_port(selected.queries, selected.limits)
+            } else {
+                driver.supervisor().policy_replay_port_with_pages(
+                    selected.queries,
+                    selected.limits,
+                    selected.page_queries,
+                )
+            }
+            .map_err(debug)?;
             tower.set_policy_replay(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {

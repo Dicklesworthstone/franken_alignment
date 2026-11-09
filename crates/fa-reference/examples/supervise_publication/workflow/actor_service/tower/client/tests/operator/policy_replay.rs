@@ -1,5 +1,8 @@
 //! Carry original native policy reports through the actual operator client.
 //! Damaging a real response must still stop the explicit document sequence.
+#[path = "policy_replay/pages.rs"]
+mod pages;
+
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileSupervisorPolicyReplayGrant;
 use fa_reference::action::consequence::gate::containment::session::policy::{Policy, Predicate};

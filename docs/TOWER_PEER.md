@@ -98,6 +98,30 @@ correlation and cumulative transport limits remain in force. A report that
 still exceeds the selected output bound refuses whole, preserving its original
 native cached campaign and spent work.
 
+For complete reports that need multiple frames, explicitly select the optional
+nested `policy_replay.page_queries` allowance, an integer from 1 through 1,024.
+Absent means pages are disabled; zero or null is not an enabling selection.
+An initial policy request with `"paged":true` returns a v2 header containing both
+policies and the complete original summary. Issued continuations return at most
+16 whole cases per page from that same cached campaign. Separate page charges
+are cumulative across reconnects, campaigns and request-schedule handoffs;
+exact original page retries neither replay nor replenish work. Existing complete
+v1 requests stay unchanged.
+
+Use `tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON --max-pages N`
+to validate and follow one explicitly paged initial request. The authenticated
+client requires stable basis/policies/summary, exact contiguous case coverage,
+unique ordered IDs, valid trace and Knowledge shapes, matching delta lists and
+counts, issued cursors and explicit final completion. It emits only fully
+validated original JSON lines and succeeds only after every case has been
+received. Its bounded consumer retains IDs and header metadata, not all case
+traces. A page cap, native exhaustion, damaged response or output failure stops
+without automatic reconnect, retry, new campaign or refunded work. The original
+frame, byte, deadline and I/O limits remain independent. See
+[complete policy report enumeration](LIVE_TOWER_OPERATOR.md#enumerate-a-complete-policy-report-through-bounded-pages)
+for exact request grammar, cache custody, validation scope and partial-output
+semantics.
+
 ## Preserve topology enforcement through Tower admission
 
 ```sh

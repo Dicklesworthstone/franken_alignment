@@ -1,5 +1,54 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: follow the original policy comparison through the authenticated client
+
+The live operator now accepts optional `policy_replay.page_queries`: absence
+keeps paging disabled; explicit selections are integers from 1 through 1,024.
+Setup issues the same original native grant used by the Tower, retaining its
+independent campaign/page allowances across the service lifetime and reconnects.
+The new `tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON --max-pages N`
+command requires an explicit initial paged request and follows native cursors on
+one authenticated connection within the minimum of selected page and exchange
+allowances. Every response is validated and successfully emitted before another
+request. Incomplete coverage, refused work, malformed data or output failure
+ends unsuccessfully without reconnect, retry or a fresh campaign.
+
+The reusable `tower::policy_replay_client::PolicyReplayCapture` retains bounded
+policies, basis/summary, at most 5,120 case IDs and 1,024 cursor IDs. It checks
+trusted native scope, original registration/campaign, invariant historical cut,
+policy identity, full summary, contiguous whole cases, ordered unique IDs,
+trace structure and disclosed predicate results, page-local deltas and complete
+totals. Every page is staged locally before accepted progress changes. A valid
+stale-mount refusal may advise another nonzero generation of the identical Run;
+it terminates the capture and never redirects it. Hidden payload/witness values
+are not reconstructed, and completion is transport coverage, not authority.
+
+Ten new public consumer functions and eight actual CLI/service regression
+functions accompany this increment. Independent production/test source review,
+qualified rustfmt for the new modules and focused feature files, and scoped diff
+checks passed. Two existing command-registration files retain unrelated
+formatting differences; their new registration follows the qualified formatter.
+A full new-library Cranelift build was killed by SIGKILL at the shared 8 GiB memory
+limit before test execution.
+A focused composition then compiled the unchanged consumer modules and actual
+23-function public target to metadata against the already-built native core
+from the preceding pagination increment. It reused the exact policy codec and
+its unchanged pure decoding helpers; no production source, test assertion or
+gate was replaced. Its attempted runtime link failed on the cached split-metadata
+artifact, so no new consumer runtime pass is claimed. Full example test-harness
+metadata compilation was also killed by SIGKILL. The preceding core's 13 executed
+public tests remain scoped to that source, and the six native unit functions,
+new consumer/CLI runtime tests and current full repository/RCH qualification
+remain open. The canonical `cargo run --locked -p xtask -- check` attempt did
+verify the dated compiler, all 2,355 source files, both admitted target package
+inventories, registry links and founding concordance. It then stopped at the
+pre-existing missing playbook coverage for `compare-learned-prompt`,
+`serve-learned-generated` and `stop-fleet`, before the later compilation, Clippy
+and test stages. No Bead or production qualification is closed.
+
+See the [operator profile and command](docs/LIVE_TOWER_OPERATOR.md) and
+[complete-report consumer contract](docs/TOWER_POLICY_REPLAY.md#authenticated-complete-report-consumer).
+
 ## 2026-11-09: enumerate the original complete policy corpus in finite pages
 
 Native hosts can now provision `policy_replay_port_with_pages` with a separate
