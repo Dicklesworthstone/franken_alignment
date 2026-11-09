@@ -187,6 +187,12 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 cursor: decimal(args, "cursor")?,
             })
         }
+        Verb::Explain => {
+            fields(args, &["round"])?;
+            Ok(ReadArguments::ReviewExplanation {
+                round: decimal(args, "round")?,
+            })
+        }
         Verb::Next => {
             fields(args, &["max_cost"])?;
             Ok(ReadArguments::Next {
@@ -344,6 +350,11 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                     .generation
                     .is_none_or(|generation| generation == 0)
             {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        (Verb::Explain, ReadArguments::ReviewExplanation { round }) => {
+            if *round == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
@@ -598,6 +609,9 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ]),
             None => object_json(&[("request_links", "true".to_owned())]),
         },
+        ReadArguments::ReviewExplanation { round } => {
+            object_json(&[("round", quote(&round.to_string()))])
+        }
         ReadArguments::Next { max_cost } => {
             object_json(&[("max_cost", quote(&max_cost.to_string()))])
         }

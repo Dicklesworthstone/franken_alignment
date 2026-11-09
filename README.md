@@ -104,6 +104,15 @@ separate replay budget. Existing actor and situation grants cannot obtain this
 policy disclosure. See the [native explanation contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
 Source review and syntax checks remain separate from pending RCH execution.
 
+A separately granted [`explain` selection for a completed congress](docs/TOWER_REVIEW_EXPLANATION.md)
+now exposes the original policy trace, frozen member/cohort roster, missing and
+abstaining votes, capped tally and reducer rules through the native Tower. It
+keeps the actual application separate from the decision, so a stale `Continue`
+cannot appear as applied approval. One bounded replay also joins the selected
+review to the original two-key dispatch, outcome and reconciliation when those
+events were observed. The three historical cuts remain distinct, hidden inputs
+and payload bytes stay undisclosed, and current eligibility remains Unknown.
+
 Separately granted operator [`policy-replay`](docs/TOWER_POLICY_REPLAY.md) now
 compares a candidate policy against the original owner's complete retained
 current-policy corpus, including exact denials and applied reviews. It reports

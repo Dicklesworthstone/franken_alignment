@@ -368,8 +368,9 @@ fn canonical_explanation_encodes_every_original_predicate_without_reinterpreting
 #[test]
 fn encoding_rejects_rebound_provenance_and_subject_after_a_genuine_denial() {
     let root = Directory::new();
-    let (actor, mut supervisor, _reviewer, mut proposal) = create(&root);
-    proposal.payload = vec![b'x'; 129];
+    // Reach a real exact-policy denial with a proposal that satisfies native
+    // intake accounting. A 129-byte payload under 16 units never reached policy.
+    let (actor, mut supervisor, proposal) = custom_policy(&root, vec![Predicate::PayloadAtMost(8)]);
     observe(&mut supervisor);
     let _ticket = actor.submit(701, &proposal).unwrap();
     let (port, _grant) = supervisor.explanation_port(1).unwrap();

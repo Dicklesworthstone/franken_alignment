@@ -45,7 +45,8 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 
 | Verb | `arguments` |
 |---|---|
-| `get`, `explain`, `why-held`, `replay-plan` | `null` |
+| `get`, `why-held`, `replay-plan` | `null` |
+| `explain` | `null` for the existing explanation; `{"round":"801"}` selects a separately granted original completed congress at a native request address |
 | `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | `null` or `{"since_seq":"0","max_events":"64"}` |

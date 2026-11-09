@@ -8,6 +8,13 @@ pub use explanation::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
 };
 mod host;
+mod review_explanation;
+pub use review_explanation::{
+    FileReviewApplication, FileReviewExplanation, FileReviewExplanationBasis,
+    FileReviewExplanationObservation, FileReviewExplanationResult,
+    FileSupervisorReviewExplanationGrant, FileSupervisorReviewExplanationPort,
+    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
+};
 mod inspection;
 pub use inspection::{
     FileInspectionCursor, FileInspectionObservation, FileInspectionPage, FileInspectionResult,

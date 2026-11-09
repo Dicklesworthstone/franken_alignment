@@ -7,6 +7,7 @@
 mod explanation;
 mod inspection;
 mod policy_replay;
+mod review_explanation;
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
 use crate::action::consequence::delivery::persistent::requests::actor::{
@@ -98,6 +99,10 @@ impl PublicationResponse {
             PublicationResult::Explanation(native) => (
                 "explanation",
                 explanation::encode(native, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::ReviewExplanation(native) => (
+                "review-explanation",
+                review_explanation::encode(native, &self.envelope.address, &encoder)?,
             ),
             PublicationResult::PolicyReplay(native) => (
                 "policy-replay",

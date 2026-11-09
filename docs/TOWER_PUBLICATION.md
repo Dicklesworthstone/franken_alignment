@@ -3,7 +3,7 @@
 On Unix, `fa_reference::tower::publication::PublicationTower` connects seven
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
-historical admission `explain` and candidate `policy-replay`.
+historical admission or separately granted completed-review `explain`, and candidate `policy-replay`.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -334,7 +334,12 @@ Existing actor, precheck and situation-inspection grants do not confer this
 stronger disclosure. Replacement withdraws the previous installation even when
 a foreign owner's replacement is rejected.
 
-Use `explain` with no arguments at the **request address** derived by the facade:
+Use `explain` with no arguments at the **request address** derived by the facade.
+The independent [completed-congress profile](TOWER_REVIEW_EXPLANATION.md) instead
+uses `{"round":"801"}` and a separately installed review disclosure grant;
+admission explanation never implicitly enables that stronger disclosure.
+
+For the original admission:
 
 ```json
 {

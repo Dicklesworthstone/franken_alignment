@@ -37,6 +37,9 @@ impl PublicationTower {
         if !access.operator {
             return self.withheld(&request);
         }
+        if matches!(request.arguments, ReadArguments::ReviewExplanation { .. }) {
+            return self.dispatch_review_explanation(request);
+        }
         let Some(key) = self.request_key(&request.address) else {
             return self.refusal(&request, ReasonCode::MissingRequiredObservation, true);
         };

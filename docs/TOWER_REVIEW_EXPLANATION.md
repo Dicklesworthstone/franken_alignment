@@ -1,0 +1,124 @@
+# Explain an original completed congress through Tower
+
+The separately granted completed-review profile connects the original native
+publication owner's congress history to the existing `explain` verb. It serves
+an operator investigating a held or published request: which exact policy and
+committee applied, what each member actually revealed, which reducer rules
+selected the consequence, whether that consequence applied, and what the
+original publication journal subsequently observed.
+
+This implements a scoped part of FA-132/136 under plan §§9.2–9.4, 9.8, 17.3,
+17.8 and 22.1, serving FI-A06, FI-A13 and FI-A14. It uses the original replay
+machine and effect audit; there is no second evaluator, congress, ledger or
+publication path. It does not claim a complete current `why-held` tree.
+
+## Native custody and selection
+
+An original `FileActorSupervisor<FileOversight>` issues
+`review_explanation_port_with_budget(queries, max_replay_events)`. The host
+retains the noncloneable `FileSupervisorReviewExplanationGrant` and installs its
+port with `PublicationTower::set_review_explanation`. Queries range from 1
+through 1,024; each complete acknowledged history must fit the explicitly
+selected positive event bound, at most `MAX_REVIEW_EXPLANATION_EVENTS`.
+
+This grant is independent of actor intake, precheck, situation inspection,
+admission explanation and candidate policy replay. The port retains weak owner
+and grant references. A foreign owner cannot be installed even when all numeric
+scope fields match; a rejected replacement withdraws the old installation.
+Revocation/drop suppresses future queries through every clone. Owner loss,
+active mutable borrowing or storage failure cannot expose a previously captured
+answer. There is no read cache or refund after encoding failure.
+
+`explain_review(request, round)` first resolves the external request through its
+original durable disposition. It then uses the original completed-review cursor
+to validate the complete acknowledged suffix once, including the selected
+review's actual application and selected-attempt effect audit. The native action,
+attempt and round must all bind to the request; equality of numeric request and
+attempt IDs is insufficient. Missing/unadmitted requests, unfinished rounds,
+unsupported numerical histories, insufficient replay work and failed
+reconstruction remain `Unknown`, never proof of absence.
+
+Every entered valid query spends one shared allowance, including repeated and
+unknown requests. Malformed zero identities, invalid Tower syntax, unauthorized
+callers and stale mount generations refuse before native expenditure. Reads do
+not refresh source evidence, sample time, consume admission snapshots, acquire
+either publication key or write journal events.
+
+## Explicit request
+
+Select a nonzero original round at the facade's external **request address**:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "explain-review-701-801",
+  "address": "fa://1/attempt/request-3-2-4-5-701@41",
+  "verb": "explain",
+  "arguments": {"round": "801"},
+  "idempotency_key": null
+}
+```
+
+The exact round is an explicit historical selector, not a capability or an
+offset into a replacement archive. The field is a canonical unsigned decimal
+string; missing, duplicate, extra, zero, fractional, signed, numeric and
+overflowing values refuse. `arguments: null` retains the original admission
+explanation and its existing wire schema. An imported `ReferenceTower` refuses
+this native selector before spending its unrelated logical read allowance.
+
+## The historical response
+
+The unchanged sixteen-field envelope carries result kind `review-explanation`
+and schema `fa.publication-review-explanation/1`. The projection binds its
+address, registration and selected round, including unknown/refused results.
+The public response cannot be relabeled to another request or registration by
+rebuilding outer fields.
+
+Known results contain three distinct native cuts: the original pre-vote anchor,
+the completed application, and the end of the acknowledged journal. Native
+control sequences and recorded ticks stay in that basis; no synthetic global
+Tower clock or current eligibility is constructed.
+
+The body includes:
+
+- The original policy graph and exact evaluation trace, with witness references
+  and count. Policy literals are part of the explicit disclosure; retained
+  source witness values and action payload bytes are omitted.
+- The complete frozen congress roster, cohorts, declared and admitted weights,
+  influence caps, thresholds, accepted commit/reveal times and original verdicts.
+  Missing members and explicit abstentions stay separate, visible outcomes.
+- The original capped tally, consequence, authority floor and reducer rule
+  trace. A helper `Deny` remains an empirical recommendation rather than being
+  promoted to an exact policy disqualifier.
+- The actual application: an applied control sequence/input revision/consequence
+  or the original refusal code. A replayable `Continue` that failed with `Stale`
+  remains a refused application.
+- Historical effect observations from the same replay: stage after review,
+  stage at the ending cut, dispatched automatic-review identity and consumed
+  human approval metadata, terminal endpoint outcome and reconciliation. A later
+  review of the same attempt is identified as a different dispatch origin.
+
+An unobserved dispatch/outcome/reconciliation is `Unknown{not_observed}`. It is
+never a receipt for nonexecution. Effect claims apply to the original reference
+publication sink; they do not authenticate an arbitrary remote service. Hidden
+helper input, source snapshots, action payload and reveal salts are not exposed.
+The wire says that helpers were not rerun and live evidence was not read.
+
+The original durable replay checks consistency under its existing host, clock,
+source and reference commitment assumptions. This projection is not an
+independent cryptographic verification, proof that helpers were honest, or proof
+that a chosen policy was sound. No returned data can mint a permit.
+
+## Bounded delivery and qualification
+
+The selected `PublicationLimits.max_response_bytes` remains the complete-output
+bound: 16 KiB by default and at most 1 MiB. Member/trace arrays are encoded with
+incremental bounds. An oversized answer becomes an explicit budget refusal; it
+does not truncate the roster, erase a dissent, retry replay or repay work.
+Cloned native results share one immutable original replay. Wire projection
+indexes the accepted member events once without recomputing the reducer.
+
+The public integration target is `tower_review_explanation`; native custody and
+storage-failure tests accompany the port. Exact executed validation and remaining
+repository qualification are recorded in `IMPLEMENTATION_STATUS.md`. No Bead,
+full roadmap packet or production profile is closed by this increment.

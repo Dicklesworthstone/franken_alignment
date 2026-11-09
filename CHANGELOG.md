@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-09: explain original completed congresses and their actual effects
+
+- Add separately granted, revocable, bounded native completed-review reads with
+  original request/action/round binding and one complete historical replay.
+- Connect explicit `explain` round selection to the native Tower and a sealed,
+  bounded wire profile. Preserve original policy predicates, frozen roster,
+  caps, verdicts, missing/abstaining members and reducer rules without hidden
+  helper input, source witness values, payload bytes or reveal salts.
+- Keep actual application refusal separate from the congress consequence, and
+  join the selected review to original two-key dispatch/outcome/reconciliation
+  observations without acquiring keys or changing current authority.
+- Add 13 native and 12 public positive/negative regression functions. Qualified
+  library compilation and all 12 public integration tests passed after repairing
+  invalid fixture preconditions without changing budgets or assertions. The
+  complete native unit harness hit the shared memory limit before execution;
+  broader RCH/repository qualification remains open.
+- Re-run the existing six admission-explanation and 23 policy-page/consumer
+  regressions successfully against this source; preserve full old contracts.
+
 ## 2026-11-09: consume complete paged policy reports through the authenticated operator
 
 - Add explicit optional `policy_replay.page_queries` and provision the original

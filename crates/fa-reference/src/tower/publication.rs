@@ -8,6 +8,8 @@
 
 mod capabilities;
 mod explanation;
+mod review_explanation;
+pub use review_explanation::LinkedReviewExplanation;
 mod inspection;
 pub use inspection::LinkedSituation;
 #[cfg(target_os = "linux")]
@@ -25,6 +27,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FilePolicyReplayCursor, FileSupervisorExplanationPort,
     FileSupervisorInspectionPort, FileSupervisorPolicyReplayPort,
+    FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -88,6 +91,7 @@ pub enum PublicationResult {
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
+    ReviewExplanation(LinkedReviewExplanation),
     PolicyReplay(LinkedPolicyReplay),
     PolicyReplayPage(LinkedPolicyReplayPage),
     Refused(Knowledge<()>),
@@ -118,6 +122,7 @@ pub struct PublicationTower {
     inspection: Option<FileSupervisorInspectionPort>,
     inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
+    review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
     limits: PublicationLimits,
@@ -153,6 +158,7 @@ impl PublicationTower {
             inspection: None,
             inspection_cursor: None,
             explanation: None,
+            review_explanation: None,
             policy_replay: None,
             policy_replay_cursors: BTreeMap::new(),
             limits,

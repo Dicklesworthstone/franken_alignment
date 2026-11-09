@@ -175,6 +175,12 @@ pub enum ReadArguments {
     SituationLinks {
         cursor: Option<u64>,
     },
+    /// Read one completed native congress for this exact external request.
+    /// A separate host disclosure grant is required; a round number conveys
+    /// neither access to helper judgments nor live review authority.
+    ReviewExplanation {
+        round: u64,
+    },
     Next {
         max_cost: u64,
     },
@@ -603,10 +609,10 @@ impl ReferenceTower {
             (
                 Verb::Situation,
                 ReadArguments::SituationPage { .. } | ReadArguments::SituationLinks { .. }
-            )
+            ) | (Verb::Explain, ReadArguments::ReviewExplanation { .. })
         ) {
-            // Native capture cursors cannot select a page of an imported
-            // snapshot or consume its unrelated logical read allowance.
+            // Native capture cursors and completed-review selectors cannot
+            // read an imported snapshot or spend its unrelated read allowance.
             return self.refusal(
                 &request,
                 ReasonCode::CapabilityUnsupported,

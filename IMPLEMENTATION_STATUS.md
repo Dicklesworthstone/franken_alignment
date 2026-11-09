@@ -1,5 +1,50 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: explain the original completed congress and effect history
+
+A new separately retained `FileSupervisorReviewExplanationGrant` exposes one
+original completed review through `explain_review(request, round)` and the
+Tower's explicit `explain` arguments `{"round":"801"}`. It binds the durable
+external request to the original attempt/action/round and uses the existing
+complete review cursor and effect audit in one bounded replay. Finite query
+allowances are shared across weak port clones; revocation, original owner loss,
+active borrowing and storage failure retain their existing refusal boundaries.
+Numerical histories require a separate work contract and remain Unknown here.
+
+The private native result shares one immutable original replay and offers only
+selected policy, evaluation, congress, timing, application and effect getters.
+The versioned wire projection preserves the frozen roster, missing versus
+abstaining members, capped influence and reducer rules. Actual application
+refusals stay separate from the historical consequence. Original automatic and
+consumed human-key metadata, endpoint outcomes and reconciliation retain their
+own observed revisions and distinguish a later review of the same attempt.
+No live source, clock, helper, admission snapshot, key or journal is consumed.
+Three historical cuts remain distinct; current hold reasons/eligibility and
+unobserved effects remain Unknown. Native and wire bounds never truncate a
+roster or refund an oversized response. Existing admission explanation stays
+compatible and cannot disclose this stronger profile.
+
+The qualified dated compiler with Cranelift passed the complete library check
+and all 12 new public integration tests. The first runtime attempt exposed two
+invalid test-fixture preconditions: a private payload exceeded its original
+16-unit admission allowance, and a large-output fixture put a 20 KB literal in
+the action payload. The repaired fixtures keep all original native/output
+bounds and assertions: a short private payload and a large original policy
+alternative alongside an admissible ordinary payload. All 12 then passed.
+The existing admission-denial regression had the same precondition problem;
+it now reaches a genuine exact-policy denial with valid native accounting.
+The six admission-explanation regressions and all 23 existing policy-page
+regressions also passed, including the ten reusable consumer tests whose
+previous session had only reached focused metadata compilation.
+
+Thirteen additional native unit functions and four compile-fail examples are
+authored and source-reviewed. The full library unit harness was killed by
+SIGKILL at the shared memory limit before execution, so no native-unit runtime
+pass is claimed. Qualified formatting and independent source review passed.
+Broader required RCH/full repository qualification and all Bead/packet closures
+remain open.
+See [the completed-review contract](docs/TOWER_REVIEW_EXPLANATION.md).
+
 ## 2026-11-09: follow the original policy comparison through the authenticated client
 
 The live operator now accepts optional `policy_replay.page_queries`: absence

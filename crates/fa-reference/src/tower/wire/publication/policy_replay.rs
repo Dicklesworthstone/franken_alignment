@@ -297,7 +297,7 @@ fn case_json(
     ]))
 }
 
-fn evaluation(
+pub(super) fn evaluation(
     value: &Evaluation,
     policy: &Policy,
     encoder: &Encoder,
@@ -330,7 +330,7 @@ fn evaluation(
     ]))
 }
 
-fn bounded_array(
+pub(super) fn bounded_array(
     values: impl IntoIterator<Item = Result<String, TowerEncodingError>>,
     encoder: &Encoder,
 ) -> Result<String, TowerEncodingError> {
@@ -374,7 +374,7 @@ fn case_id(id: ReplayCaseId) -> String {
     }
 }
 
-fn target(value: ResolvedTarget) -> String {
+pub(super) fn target(value: ResolvedTarget) -> String {
     object_json(&[
         ("adapter", number(value.adapter)),
         ("object", number(value.object)),
