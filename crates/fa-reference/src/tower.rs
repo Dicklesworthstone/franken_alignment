@@ -199,6 +199,19 @@ pub enum ReadArguments {
         expected_policy_generation: u64,
         candidate: crate::action::consequence::gate::containment::session::policy::Policy,
     },
+    /// Explicitly capture the header of a complete native campaign for bounded
+    /// enumeration. Pages never select a new corpus or replace its policies.
+    PolicyReplayPaged {
+        campaign: u64,
+        expected_policy_generation: u64,
+        candidate: crate::action::consequence::gate::containment::session::policy::Policy,
+    },
+    /// Read one original issued page. The scalar can only select a native
+    /// cursor already held by this facade; it is not an offset or capability.
+    PolicyReplayContinue {
+        campaign: u64,
+        cursor: u64,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

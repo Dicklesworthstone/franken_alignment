@@ -108,6 +108,15 @@ impl PublicationResponse {
                     &encoder,
                 )?,
             ),
+            PublicationResult::PolicyReplayPage(native) => (
+                "policy-replay",
+                policy_replay::encode_page(
+                    native,
+                    &self.envelope.address,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
             PublicationResult::Refused(refusal) => (
                 "refused",
                 encoder.knowledge::<_, PublicationRefusal>(refusal, |_| {

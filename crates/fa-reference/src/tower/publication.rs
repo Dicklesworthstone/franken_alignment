@@ -13,7 +13,7 @@ pub use inspection::LinkedSituation;
 #[cfg(target_os = "linux")]
 pub mod peer;
 mod policy_replay;
-pub use policy_replay::LinkedPolicyReplay;
+pub use policy_replay::{LinkedPolicyReplay, LinkedPolicyReplayPage};
 mod precheck;
 
 use super::{
@@ -23,8 +23,8 @@ use super::{
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
-    FileInspectionResult, FileSupervisorExplanationPort, FileSupervisorInspectionPort,
-    FileSupervisorPolicyReplayPort,
+    FileInspectionResult, FilePolicyReplayCursor, FileSupervisorExplanationPort,
+    FileSupervisorInspectionPort, FileSupervisorPolicyReplayPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -37,6 +37,7 @@ use crate::action::{Purpose, Scope};
 use crate::address_resolver::{Address, Noun};
 use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
+use std::collections::BTreeMap;
 
 pub const CONNECTED_PUBLICATION_VERBS: [Verb; 7] = [
     Verb::Propose,
@@ -88,6 +89,7 @@ pub enum PublicationResult {
     SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
     PolicyReplay(LinkedPolicyReplay),
+    PolicyReplayPage(LinkedPolicyReplayPage),
     Refused(Knowledge<()>),
 }
 
@@ -117,6 +119,7 @@ pub struct PublicationTower {
     inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
+    policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
     limits: PublicationLimits,
 }
 
@@ -151,6 +154,7 @@ impl PublicationTower {
             inspection_cursor: None,
             explanation: None,
             policy_replay: None,
+            policy_replay_cursors: BTreeMap::new(),
             limits,
         })
     }

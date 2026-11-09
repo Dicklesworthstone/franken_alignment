@@ -54,7 +54,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
 | `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
-| `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`; requires a separate native grant, canonical matching key and explicit nonzero mount generation |
+| `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`, optionally adding `"paged":true`; native page continuation uses exactly `{"campaign":"1","cursor":"17"}`. Requires separate native grants, canonical matching key and explicit nonzero mount generation |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -189,6 +189,31 @@ The response uses `fa.publication-policy-replay/1`, preserves every selected cas
 and exact trace, and omits payload and observed witness values. It supplies no
 promotion or publication authority. See the [full policy-replay contract](TOWER_POLICY_REPLAY.md)
 for predicate syntax, disclosure, result basis, bounded failures and exact retries.
+
+### Native candidate-policy pages
+
+The complete initial `policy-replay` arguments may additionally contain
+`"paged": true`, selecting `ReadArguments::PolicyReplayPaged`. This selector must
+be the boolean true; false, null, text and unrelated fields are rejected. A
+separately provisioned page allowance is required. The original complete replay
+and campaign cache are unchanged; only disclosure is divided into a header and
+contiguous groups of at most 16 whole cases.
+
+Follow the returned native cursor using exactly `{"campaign":"91","cursor":"17"}`
+and the matching `"91"` idempotency key at the original explicit mount. This is
+`ReadArguments::PolicyReplayContinue`; both values must be nonzero canonical
+unsigned decimal strings. Candidate, expected generation, paged selector,
+caller-supplied offsets and extra fields are forbidden on continuations. The
+facade accepts only sealed native cursor handles it has issued, bound to the
+original owner, grant, campaign and report.
+
+Responses use `fa.publication-policy-replay/2`. Exact requests retain the
+original page and cut without another native campaign or page charge. Check
+`page.enumeration_complete` independently of `page.next_cursor`: exhaustion can
+return no continuation before every case has been delivered. These identities
+are process-local and supply no authority across restart or grant replacement.
+See [bounded policy pages](TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages)
+for original custody, summary, output refusal and client validation behavior.
 
 ### Branch replay edits
 

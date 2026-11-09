@@ -16,8 +16,11 @@ pub use inspection::{
 };
 mod policy_replay;
 pub use policy_replay::{
-    FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayObservation, FilePolicyReplayResult,
-    FileSupervisorPolicyReplayGrant, FileSupervisorPolicyReplayPort, MAX_POLICY_REPLAY_QUERIES,
+    FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayCursor, FilePolicyReplayObservation,
+    FilePolicyReplayPage, FilePolicyReplayPageObservation, FilePolicyReplayPageResult,
+    FilePolicyReplayResult, FilePolicyReplaySummary, FileSupervisorPolicyReplayGrant,
+    FileSupervisorPolicyReplayPort, MAX_POLICY_REPLAY_PAGE_CASES, MAX_POLICY_REPLAY_PAGE_QUERIES,
+    MAX_POLICY_REPLAY_PAGE_RETAINED_BYTES, MAX_POLICY_REPLAY_QUERIES,
     MAX_POLICY_REPLAY_RETAINED_BYTES,
 };
 #[cfg(target_os = "linux")]

@@ -11,7 +11,7 @@ use crate::action::consequence::gate::containment::session::policy::{
     MAX_POLICY_EDGES, MAX_POLICY_LITERAL_BYTES, MAX_POLICY_NODES, Policy, Predicate,
 };
 
-pub(super) fn decode(value: &Json) -> DecodeResult<Policy> {
+pub(in crate::tower) fn decode(value: &Json) -> DecodeResult<Policy> {
     let value = object(value)?;
     fields(value, &["generation", "nodes"])?;
     let generation = decimal(value, "generation")?;
@@ -109,6 +109,15 @@ fn index(value: u64) -> DecodeResult<usize> {
 /// Check the exact fixed encoding before retaining or encoding a typed request;
 /// never enlarge the common transport limits for a candidate policy.
 pub(in crate::tower) fn validate_wire(policy: &Policy) -> DecodeResult<()> {
+    validate_items(policy, 23)
+}
+
+pub(in crate::tower) fn validate_paged_wire(policy: &Policy) -> DecodeResult<()> {
+    // The explicit paged selector adds its key and boolean value.
+    validate_items(policy, 25)
+}
+
+fn validate_items(policy: &Policy, fixed: usize) -> DecodeResult<()> {
     let node_items: usize = policy
         .nodes()
         .iter()
@@ -119,8 +128,7 @@ pub(in crate::tower) fn validate_wire(policy: &Policy) -> DecodeResult<()> {
             _ => 5,
         })
         .sum();
-    // Root fields, arguments and candidate object/array contribute 23 items.
-    if 23 + node_items > MAX_REQUEST_ITEMS {
+    if fixed + node_items > MAX_REQUEST_ITEMS {
         Err(TowerDecodingError::Capacity)
     } else {
         Ok(())

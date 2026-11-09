@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-11-09: enumerate complete native policy comparisons in bounded pages
+
+- Add separately granted policy page observations, shared immutable reports and
+  once-computed complete-corpus summaries. Fixed pages expose at most sixteen
+  whole original cases; a header never masquerades as complete enumeration.
+- Connect explicit paged and continuation requests to the original native Tower
+  owner and a versioned response projection. Retain typed cursor custody across
+  exact cached retries, preserve original cut and charges, and refuse scalar
+  cursor rebinding across grants, owners, campaigns and unprepared facades.
+- Add six native and thirteen public integration regressions, including a real
+  82-case corpus, source/journal conservation, original-key publication, later
+  owner advancement, output refusal and finite incomplete traversal. Preserve
+  the legacy complete-report route and its wire schema. The authenticated
+  automatic page consumer is a separate integration increment.
+- Source review and qualified formatting are complete. The qualified dated
+  nightly with Cranelift built the current library and passed all thirteen new
+  public page tests. An invalid disconnected test policy was corrected without
+  relaxing native bounds or assertions. Native unit execution and full repository
+  qualification remain pending; the ordinary example check hit the shared OOM
+  limit before the focused lower-memory build succeeded.
+
 ## 2026-11-09: deliver larger complete policy reports through the live operator
 
 - Add optional operator `response_bytes`, preserving the 16 KiB default and

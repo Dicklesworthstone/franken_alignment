@@ -2,7 +2,13 @@
 //! Exact campaign retries retain their first result and acknowledged cut. No
 //! source, clock, journal, helper, live campaign or promotion authority is used.
 
+mod pages;
 mod retention;
+pub use pages::{
+    FilePolicyReplayCursor, FilePolicyReplayPage, FilePolicyReplayPageObservation,
+    FilePolicyReplayPageResult, MAX_POLICY_REPLAY_PAGE_CASES, MAX_POLICY_REPLAY_PAGE_QUERIES,
+    MAX_POLICY_REPLAY_PAGE_RETAINED_BYTES,
+};
 
 use super::{
     ActorError, FileActorPort, FileActorSupervisor, JournalError, Knowledge, OwnerRef,
@@ -11,7 +17,7 @@ use super::{
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::gate::containment::session::policy::Policy;
-use crate::action::consequence::policy_campaign::{PolicyReplayReport, ReplayLimits};
+use crate::action::consequence::policy_campaign::{PolicyDelta, PolicyReplayReport, ReplayLimits};
 use crate::action::{ElapsedTick, Scope};
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
@@ -40,6 +46,43 @@ pub struct FilePolicyReplayBasis {
     pub recorded_at: Option<ElapsedTick>,
 }
 
+/// Complete-corpus totals computed once at the original native capture. Pages
+/// share these historical values; a page is not a newly selected policy corpus.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FilePolicyReplaySummary {
+    pub case_count: usize,
+    pub input_bytes: usize,
+    pub unchanged: usize,
+    pub newly_blocked: usize,
+    pub newly_reviewable: usize,
+    pub requires_shadow_cases: usize,
+    pub requires_shadow: bool,
+}
+
+impl FilePolicyReplaySummary {
+    fn capture(report: &PolicyReplayReport) -> Self {
+        let mut summary = Self {
+            case_count: report.cases().len(),
+            input_bytes: report.input_bytes(),
+            unchanged: 0,
+            newly_blocked: 0,
+            newly_reviewable: 0,
+            requires_shadow_cases: 0,
+            requires_shadow: false,
+        };
+        for case in report.cases() {
+            match case.delta() {
+                PolicyDelta::Unchanged => summary.unchanged += 1,
+                PolicyDelta::NewlyBlocked => summary.newly_blocked += 1,
+                PolicyDelta::NewlyReviewable => summary.newly_reviewable += 1,
+                PolicyDelta::RequiresShadow => summary.requires_shadow_cases += 1,
+            }
+        }
+        summary.requires_shadow = summary.requires_shadow_cases != 0;
+        summary
+    }
+}
+
 /// Complete original exact-policy comparison, sealed to its native cut.
 /// This privileged Rust grant discloses the original policies and retained
 /// case evidence. A transport may project less but must not invent a complete
@@ -53,7 +96,8 @@ pub struct FilePolicyReplayBasis {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FilePolicyReplay {
     basis: FilePolicyReplayBasis,
-    report: PolicyReplayReport,
+    report: Rc<PolicyReplayReport>,
+    summary: FilePolicyReplaySummary,
     limits: ReplayLimits,
     remaining_queries: usize,
 }
@@ -64,6 +108,9 @@ impl FilePolicyReplay {
     }
     pub fn report(&self) -> &PolicyReplayReport {
         &self.report
+    }
+    pub fn summary(&self) -> FilePolicyReplaySummary {
+        self.summary
     }
     pub fn limits(&self) -> ReplayLimits {
         self.limits
@@ -84,6 +131,12 @@ struct CachedReplay {
     result: FilePolicyReplayResult,
 }
 
+struct ReplayRequest {
+    query: u64,
+    expected_policy_generation: u64,
+    candidate: Policy,
+}
+
 #[derive(Default)]
 struct Cache {
     retained_bytes: usize,
@@ -94,6 +147,7 @@ struct Grant {
     remaining: Cell<usize>,
     limits: ReplayLimits,
     cache: RefCell<Cache>,
+    pages: Option<RefCell<pages::PageCache>>,
 }
 
 /// Noncopyable governance disclosure custody for a finite set of experiments.
@@ -119,6 +173,25 @@ impl FileSupervisorPolicyReplayGrant {
     pub fn retained_bytes(&self) -> usize {
         self.grant.cache.borrow().retained_bytes
     }
+    /// Remaining independently granted page observations. Exact retries keep
+    /// their original observation and do not spend another page.
+    pub fn remaining_pages(&self) -> usize {
+        self.grant
+            .pages
+            .as_ref()
+            .map_or(0, |pages| pages.borrow().remaining())
+    }
+    pub fn pages_enabled(&self) -> bool {
+        self.grant.pages.is_some()
+    }
+    /// Logical page metadata only. All pages share the original report already
+    /// charged by retained_bytes; no page retains a second case corpus.
+    pub fn retained_page_bytes(&self) -> usize {
+        self.grant
+            .pages
+            .as_ref()
+            .map_or(0, |pages| pages.borrow().retained_bytes())
+    }
     pub fn revoke(self) {
         drop(self);
     }
@@ -129,6 +202,7 @@ impl fmt::Debug for FileSupervisorPolicyReplayGrant {
         f.debug_struct("FileSupervisorPolicyReplayGrant")
             .field("remaining_queries", &self.remaining_queries())
             .field("replay_limits", &self.replay_limits())
+            .field("remaining_pages", &self.remaining_pages())
             .finish_non_exhaustive()
     }
 }
@@ -175,6 +249,45 @@ impl FileActorSupervisor<FileOversight> {
         ),
         JournalError,
     > {
+        self.policy_replay_port_with_page_allowance(queries, limits, None)
+    }
+
+    /// Separately opt into finite transport pages of the original complete
+    /// campaigns. The old constructor grants no paging. Neither allowance can
+    /// replenish the other; every clone and facade shares the same custody.
+    pub fn policy_replay_port_with_pages(
+        &self,
+        queries: usize,
+        limits: ReplayLimits,
+        page_queries: usize,
+    ) -> Result<
+        (
+            FileSupervisorPolicyReplayPort,
+            FileSupervisorPolicyReplayGrant,
+        ),
+        JournalError,
+    > {
+        if page_queries == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if page_queries > MAX_POLICY_REPLAY_PAGE_QUERIES {
+            return Err(Error::Limit.into());
+        }
+        self.policy_replay_port_with_page_allowance(queries, limits, Some(page_queries))
+    }
+
+    fn policy_replay_port_with_page_allowance(
+        &self,
+        queries: usize,
+        limits: ReplayLimits,
+        page_queries: Option<usize>,
+    ) -> Result<
+        (
+            FileSupervisorPolicyReplayPort,
+            FileSupervisorPolicyReplayGrant,
+        ),
+        JournalError,
+    > {
         if queries == 0 {
             return Err(Error::InvalidInput.into());
         }
@@ -193,6 +306,7 @@ impl FileActorSupervisor<FileOversight> {
             remaining: Cell::new(queries),
             limits,
             cache: RefCell::new(Cache::default()),
+            pages: page_queries.map(|queries| RefCell::new(pages::PageCache::new(queries))),
         });
         Ok((
             FileSupervisorPolicyReplayPort {
@@ -256,11 +370,41 @@ impl FileSupervisorPolicyReplayPort {
         let Ok(mut cache) = grant.cache.try_borrow_mut() else {
             return unknown();
         };
+        let admission = Self::admission(
+            &grant,
+            &cache,
+            query,
+            expected_policy_generation,
+            &candidate,
+        )?;
+        self.replay_with_cache(
+            &owner.host,
+            &grant,
+            &mut cache,
+            ReplayRequest {
+                query,
+                expected_policy_generation,
+                candidate,
+            },
+            admission,
+        )
+    }
+
+    /// Preflight both first-page and legacy requests before either optional
+    /// page work or native campaign work is charged. Conflicts always win over
+    /// exhausted paging and cannot reuse a header from different policy data.
+    fn admission(
+        grant: &Grant,
+        cache: &Cache,
+        query: u64,
+        expected_policy_generation: u64,
+        candidate: &Policy,
+    ) -> Result<Option<usize>, ActorError> {
         if let Some(cached) = cache.campaigns.get(&query) {
             return if cached.expected_policy_generation == expected_policy_generation
-                && cached.candidate == candidate
+                && &cached.candidate == candidate
             {
-                cached.result.clone()
+                Ok(None)
             } else {
                 Err(ActorError::IdempotencyConflict)
             };
@@ -269,12 +413,37 @@ impl FileSupervisorPolicyReplayPort {
         if remaining == 0 || cache.campaigns.len() >= MAX_POLICY_REPLAY_QUERIES {
             return Err(ActorError::Capacity);
         }
-        let request_bytes = retention::request_bytes(&candidate).ok_or(ActorError::Capacity)?;
+        let request_bytes = retention::request_bytes(candidate).ok_or(ActorError::Capacity)?;
         let retained_bytes = cache
             .retained_bytes
             .checked_add(request_bytes)
             .filter(|bytes| *bytes <= MAX_POLICY_REPLAY_RETAINED_BYTES)
             .ok_or(ActorError::Capacity)?;
+        Ok(Some(retained_bytes))
+    }
+
+    fn replay_with_cache(
+        &self,
+        host: &FileOversight,
+        grant: &Grant,
+        cache: &mut Cache,
+        request: ReplayRequest,
+        admission: Option<usize>,
+    ) -> FilePolicyReplayResult {
+        let ReplayRequest {
+            query,
+            expected_policy_generation,
+            candidate,
+        } = request;
+        let Some(retained_bytes) = admission else {
+            return cache
+                .campaigns
+                .get(&query)
+                .expect("checked campaign")
+                .result
+                .clone();
+        };
+        let remaining = grant.remaining.get();
         // Retain normalized bounded content, not a caller's spare Vec capacity.
         // The initial Unknown tombstone makes an admitted operation one-shot even
         // if the embedding host catches an unwind from the original evaluator.
@@ -290,7 +459,7 @@ impl FileSupervisorPolicyReplayPort {
             },
         );
         let result = self.run(
-            &owner.host,
+            host,
             query,
             expected_policy_generation,
             candidate,
@@ -362,7 +531,8 @@ impl FileSupervisorPolicyReplayPort {
         Ok(Knowledge::Known {
             value: FilePolicyReplay {
                 basis,
-                report,
+                summary: FilePolicyReplaySummary::capture(&report),
+                report: Rc::new(report),
                 limits,
                 remaining_queries,
             },

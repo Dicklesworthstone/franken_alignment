@@ -22,6 +22,9 @@ pub(super) fn request_bytes(candidate: &Policy) -> Option<usize> {
 
 pub(super) fn report_bytes(report: &PolicyReplayReport) -> Option<usize> {
     let mut charge = Charge(size_of::<PolicyReplayReport>());
+    // The complete report is shared by legacy observations and optional pages.
+    // Charge its allocation's strong/weak counters once, never per case page.
+    charge.add(2 * size_of::<usize>())?;
     // Count both policies per retained report even if an Rc is shared elsewhere.
     charge.policy(report.previous_policy())?;
     charge.policy(report.candidate_policy())?;

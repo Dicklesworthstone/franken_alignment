@@ -12,7 +12,9 @@ use crate::action::consequence::oversight::actor::{ActorError, Knowledge, Unknow
 use crate::action::consequence::policy_campaign::{PolicyDelta, PolicyReplayCase, ReplayCaseId};
 use crate::action::{Purpose, ResolvedTarget};
 use crate::address_resolver::{Address, Noun};
-use crate::tower::publication::LinkedPolicyReplay;
+use crate::tower::publication::{LinkedPolicyReplay, LinkedPolicyReplayPage};
+
+mod pages;
 use crate::tower::request::policy;
 
 pub(super) fn encode(
@@ -24,10 +26,27 @@ pub(super) fn encode(
     if address != linked.registration() || key != Some(linked.campaign().to_string().as_str()) {
         return Err(TowerEncodingError::InvalidKnowledge);
     }
-    let (field, result) = match linked.native() {
-        Ok(Knowledge::Known { value, basis }) => {
-            ("knowledge", known(value, *basis, address, key, encoder)?)
-        }
+    let (field, result) = observation(linked.native(), |value, basis| {
+        known(value, basis, address, key, encoder)
+    })?;
+    projection("fa.publication-policy-replay/1", field, result, encoder)
+}
+
+pub(super) fn encode_page(
+    linked: &LinkedPolicyReplayPage,
+    address: &Address,
+    key: Option<&str>,
+    encoder: &Encoder,
+) -> Result<String, TowerEncodingError> {
+    pages::encode(linked, address, key, encoder)
+}
+
+fn observation<T>(
+    result: &Result<Knowledge<T, FilePolicyReplayBasis>, ActorError>,
+    encode_known: impl FnOnce(&T, FilePolicyReplayBasis) -> Result<String, TowerEncodingError>,
+) -> Result<(&'static str, String), TowerEncodingError> {
+    Ok(match result {
+        Ok(Knowledge::Known { value, basis }) => ("knowledge", encode_known(value, *basis)?),
         Ok(Knowledge::Unknown {
             reason: UnknownReason::ControllerUnavailable,
         }) => (
@@ -71,9 +90,17 @@ pub(super) fn encode(
             )]),
         ),
         Ok(_) => return Err(TowerEncodingError::InvalidKnowledge),
-    };
+    })
+}
+
+fn projection(
+    schema: &str,
+    field: &str,
+    result: String,
+    encoder: &Encoder,
+) -> Result<String, TowerEncodingError> {
     encoder.bounded(object_json(&[
-        ("schema", quote("fa.publication-policy-replay/1")),
+        ("schema", quote(schema)),
         ("operation", quote("policy-replay")),
         ("scope", quote("retained_current_policy_corpus")),
         ("historical", "true".to_owned()),
@@ -162,6 +189,15 @@ fn known(
             number(value.remaining_queries()),
         ),
     ]))?;
+    let source = basis_json(basis);
+    encoder.bounded(object_json(&[
+        ("state", quote("known")),
+        ("basis", source),
+        ("value", body),
+    ]))
+}
+
+fn basis_json(basis: FilePolicyReplayBasis) -> String {
     let scope = basis.scope;
     let source = object_json(&[
         (
@@ -188,11 +224,7 @@ fn known(
                 .map_or_else(|| "null".to_owned(), |tick| number(tick.0)),
         ),
     ]);
-    encoder.bounded(object_json(&[
-        ("state", quote("known")),
-        ("basis", source),
-        ("value", body),
-    ]))
+    source
 }
 
 fn case_json(

@@ -1,5 +1,47 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: enumerate the original complete policy corpus in finite pages
+
+Native hosts can now provision `policy_replay_port_with_pages` with a separate
+1–1,024 page allowance. The original campaign still captures every retained
+current-policy proposal and applied review before any successful header. Its
+immutable report is shared, and complete-corpus summary counts are computed
+once. A header carries both graphs; each following page carries at most sixteen
+whole cases in original order. The old constructor and v1 request remain intact.
+
+`PublicationTower` accepts explicit paged headers and native continuations under
+`policy-replay`, retaining only issued weak native cursor handles. The v2 wire
+projection separates page coverage from complete-corpus totals. Exact retries
+keep their original page, cut, continuation and historical allowance without
+another native charge. Every cached read rechecks the same live grant and healthy
+original owner; scalar IDs cannot reconstruct custody in another facade.
+Incomplete allowance and whole-page output refusal remain explicit. The live
+profile and automatic authenticated consumer are the next integration slice.
+
+Six native regression functions and thirteen public integration functions cover
+shared report storage, once-only charging, actual 82-case traversal, later owner
+advancement, original publication keys, cross-owner/grant/campaign/mount refusals,
+revocation, incomplete traversal and larger-output retries. Independent static
+review and qualified dated rustfmt parsing/formatting are complete. A qualified
+ordinary example check on preceding commit `e7166b2` exited 101 after rustc
+received SIGKILL and the shared cgroup OOM-kill counter increased. Clearing only
+this task's disposable cache and obsolete toolchain recovered disk space.
+
+A subsequent qualified `nightly-2026-09-08` Cranelift build of the current native
+page source succeeded. All thirteen public page tests passed with none ignored.
+The first run found a disconnected 128-node policy in one test fixture before
+reaching the feature; connecting its 127 leaves to the final root fixed that
+fixture without changing native budgets or assertions. The passing rerun took
+9.68 seconds to build and 0.97 seconds to execute. Six new native unit functions
+remain unexecuted, as do the current full repository/RCH gates. A separate
+attempt to rerun the existing policy-replay and capability targets was killed
+while compiling `tower_policy_replay`, before either target ran; their earlier
+passes are not credited to this new source. No Bead or production qualification
+is closed.
+
+See the [native page contract](docs/TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages)
+and [request forms](docs/TOWER_REQUEST.md#native-candidate-policy-pages).
+
 ## 2026-11-09: transport larger complete original policy comparisons
 
 The live operator profile now accepts an explicit numeric `response_bytes`.

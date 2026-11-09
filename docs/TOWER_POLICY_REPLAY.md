@@ -339,7 +339,120 @@ configured larger same-owner facade can encode that existing report without
 replaying it or spending another campaign. All custody and original registration
 checks still apply to each newly issued linked response.
 
+## Enumerate a complete comparison in bounded pages
+
+A complete retained comparison can exceed the largest single Tower response.
+Hosts can separately opt into page disclosure by issuing
+`policy_replay_port_with_pages(queries, limits, page_queries)` instead of the
+original constructor. `page_queries` must be 1 through 1,024 and is shared by
+all ports and facades holding that grant. The original constructor keeps paging
+disabled. Hosts retain the original page grant for the service lifetime; the existing
+live profile has not yet gained this opt-in.
+
+Add the exact boolean `"paged": true` to the complete initial request's
+`arguments`. Its typed form is `ReadArguments::PolicyReplayPaged { campaign,
+expected_policy_generation, candidate }`. It runs or retrieves the same complete
+native comparison; it never selects a smaller replay corpus. A legacy v1 request
+and a paged request with the same campaign and candidate share that original
+comparison and native campaign charge.
+
+The first response is a header containing both original policy graphs, the
+original basis and complete-corpus summary, with no cases. To follow its
+`next_cursor`, send the same run address, campaign and matching idempotency key
+with exactly these arguments:
+
+```json
+{"campaign":"91","cursor":"17"}
+```
+
+The typed continuation is `ReadArguments::PolicyReplayContinue { campaign,
+cursor }`. The cursor shown is illustrative; use only the nonzero canonical
+identifier returned by the original facade. Every subsequent page contains the
+next contiguous group of at most 16 whole cases. It does not repeat the policy
+graphs. The native report is shared through an immutable `Rc`, and its summary
+is computed once when captured. Traversal neither copies another whole corpus
+nor reruns its policy comparison.
+
+### Page schema and completion
+
+Paged replies use `fa.publication-policy-replay/2` under the same outer
+`policy-replay` result and sixteen-field envelope. Historical and authority
+flags, native uncertainty states, payload/witness omissions and exact trace
+representation are unchanged. A Known `knowledge.value` has:
+
+| Field | Meaning |
+|---|---|
+| `page.kind` | `header` for the initial response, then `cases` |
+| `page.request_cursor` | Null for the header; the requested continuation identity thereafter |
+| `page.offset`, `page.count`, `page.total` | Contiguous case coordinates in the complete original corpus |
+| `page.enumeration_complete` | Whether every original case has now been enumerated |
+| `page.next_cursor` | An issued native continuation, or null |
+| `page.remaining_pages_at_capture` | Shared allowance immediately after this page was first admitted |
+| `summary` | Original case/input counts, delta counts, shadow flag, replay limits and campaign allowance at capture |
+| `previous_policy`, `candidate_policy` | Whole graphs on the header, null on case pages |
+| `cases` | Empty on the header; at most 16 complete original cases thereafter |
+| `newly_reviewable`, `newly_blocked` | Case IDs for those deltas on this page only |
+
+Every numeric coordinate uses the existing canonical decimal string convention.
+The complete delta totals live in `summary.delta_counts`. The summary and native
+basis remain identical across the whole traversal, including after the healthy
+owner advances. A Known page proves delivery of that section only. A null
+continuation with `enumeration_complete: false` explicitly reports incomplete
+traversal; it is not an empty or successful complete comparison.
+
+### Charges, custody and retries
+
+Each newly admitted header or continuation spends one page observation. A new
+header also spends the original campaign allowance if that comparison has not
+already been captured. A native stale, unknown or admitted capacity result stays
+charged and cached. Exact header and continuation retries return their original
+observation, next cursor and historical remaining allowance without another
+page or campaign charge, even when no new allowance remains. Shared callers may
+spend intervening allowance; a returned count reserves no future page.
+
+The native cursor is sealed to the exact owner, grant, campaign and captured
+report. Its scalar wire identifier cannot construct that handle. The facade
+retains only handles that it actually issued in an encodable response, and a
+replaced installation clears them. Process-wide nonreused identifiers prevent
+same-process grant replacement from rebinding an old number. Original grant
+custody and healthy owner availability are checked before every cached read.
+Revocation, owner loss, conflicting borrow or storage failure suppress disclosure.
+
+A different facade with a clone of the same live grant must first issue the
+original header and, if needed, its cached continuation chain to import those
+handles. Copying a scalar cursor to an unprepared facade cannot skip this step.
+The wrapper `LinkedPolicyReplayPage` seals every response, including uncertainty,
+to its original registration, campaign and requested cursor. Restarted owners
+cannot reconstruct this process-local capture or continue it from a wire number.
+
+Page metadata has its own finite bound, exposed by
+`MAX_POLICY_REPLAY_PAGE_RETAINED_BYTES`; it does not enlarge the original 8 MiB
+campaign cache. There are at most 1,024 admitted page entries per grant. A maximum
+5,120-case comparison needs one header plus 320 case pages if neither allowance
+nor output capacity stops traversal. Complete comparisons that exceed native
+work or retention bounds still refuse whole before enumeration.
+
+Each header or case page must fit the selected response allowance. An oversized
+page returns the ordinary bounded output refusal without a partial graph, trace
+or case. The original native page remains charged and cached. An authorized
+same-owner facade with enough response capacity can reissue the original header
+and cached chain without another native charge. The live operator accepts
+`response_bytes` from 16 KiB through 1 MiB to accommodate large policy literals
+and case traces.
+
 ## Executed coverage and remaining qualification
+
+The native pagination increment was compiled with qualified
+`nightly-2026-09-08` and Cranelift on 2026-11-09. All **13 public page integration
+tests** in `tower_policy_replay_pages.rs` passed, with none ignored. This includes
+complete 82-case traversal after owner advancement, original-key publication,
+shared exact retries, incomplete allowances, custody boundaries, unchanged
+journals and whole-page output refusal followed by larger-facade recovery.
+The first run exposed a disconnected policy graph in one fixture; its 128 nodes
+were connected to their final root without changing the tested budgets or
+assertions, and the complete focused rerun passed. Six native unit regression
+functions have source/format review but have not executed. This evidence does
+not replace the full repository or remote qualification gate.
 
 On 2026-11-09, the qualified `nightly-2026-09-08` compiler with the Cranelift
 backend built and executed all **12 public integration tests** in

@@ -230,6 +230,32 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             })
         }
         Verb::PolicyReplay => {
+            if args.contains_key("cursor") {
+                fields(args, &["campaign", "cursor"])?;
+                return Ok(ReadArguments::PolicyReplayContinue {
+                    campaign: decimal(args, "campaign")?,
+                    cursor: decimal(args, "cursor")?,
+                });
+            }
+            if args.contains_key("paged") {
+                fields(
+                    args,
+                    &[
+                        "campaign",
+                        "expected_policy_generation",
+                        "candidate",
+                        "paged",
+                    ],
+                )?;
+                if field(args, "paged")?.as_bool() != Some(true) {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::PolicyReplayPaged {
+                    campaign: decimal(args, "campaign")?,
+                    expected_policy_generation: decimal(args, "expected_policy_generation")?,
+                    candidate: policy::decode(field(args, "candidate")?)?,
+                });
+            }
             fields(
                 args,
                 &["campaign", "expected_policy_generation", "candidate"],
@@ -286,6 +312,11 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                 campaign,
                 expected_policy_generation,
                 candidate,
+            }
+            | ReadArguments::PolicyReplayPaged {
+                campaign,
+                expected_policy_generation,
+                candidate,
             },
         ) => {
             if *campaign == 0
@@ -298,7 +329,23 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
-            policy::validate_wire(candidate)?;
+            if matches!(request.arguments, ReadArguments::PolicyReplayPaged { .. }) {
+                policy::validate_paged_wire(candidate)?;
+            } else {
+                policy::validate_wire(candidate)?;
+            }
+        }
+        (Verb::PolicyReplay, ReadArguments::PolicyReplayContinue { campaign, cursor }) => {
+            if *campaign == 0
+                || *cursor == 0
+                || request.idempotency_key.as_deref() != Some(campaign.to_string().as_str())
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
         }
         (Verb::Situation, ReadArguments::SituationPage { cursor }) => {
             if *cursor == 0 {
@@ -587,6 +634,23 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
                 quote(&expected_policy_generation.to_string()),
             ),
             ("candidate", policy::encode(candidate)),
+        ]),
+        ReadArguments::PolicyReplayPaged {
+            campaign,
+            expected_policy_generation,
+            candidate,
+        } => object_json(&[
+            ("campaign", quote(&campaign.to_string())),
+            (
+                "expected_policy_generation",
+                quote(&expected_policy_generation.to_string()),
+            ),
+            ("candidate", policy::encode(candidate)),
+            ("paged", "true".to_owned()),
+        ]),
+        ReadArguments::PolicyReplayContinue { campaign, cursor } => object_json(&[
+            ("campaign", quote(&campaign.to_string())),
+            ("cursor", quote(&cursor.to_string())),
         ]),
     }
 }

@@ -1,11 +1,14 @@
 //! Separately granted complete-corpus candidate replay on the original owner.
 
+mod pages;
+pub use pages::LinkedPolicyReplayPage;
+
 use super::{
     ActorError, ActorKnowledge, ActorUnknownReason, PublicationResponse, PublicationResult,
     PublicationTower, ReadArguments, ReasonCode, TowerAccess, TowerInstallError, TowerRequest,
 };
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FilePolicyReplayResult, FileSupervisorPolicyReplayPort,
+    FilePolicyReplayBasis, FilePolicyReplayResult, FileSupervisorPolicyReplayPort,
 };
 use crate::address_resolver::Address;
 use crate::typestate_cx::PurposeTag;
@@ -50,6 +53,7 @@ impl PublicationTower {
         port: Option<FileSupervisorPolicyReplayPort>,
     ) -> Result<(), TowerInstallError> {
         self.policy_replay = None;
+        self.policy_replay_cursors.clear();
         if let Some(port) = port {
             if !port.belongs_to(self.wire.request_port()) {
                 return Err(TowerInstallError::SnapshotMismatch);
@@ -60,7 +64,7 @@ impl PublicationTower {
     }
 
     pub(super) fn dispatch_policy_replay(
-        &self,
+        &mut self,
         access: &TowerAccess,
         request: TowerRequest,
     ) -> PublicationResponse {
@@ -74,6 +78,12 @@ impl PublicationTower {
         }
         if request.address.without_generation() != self.mount.without_generation() {
             return self.refusal(&request, ReasonCode::MissingRequiredObservation, false);
+        }
+        if matches!(
+            request.arguments,
+            ReadArguments::PolicyReplayPaged { .. } | ReadArguments::PolicyReplayContinue { .. }
+        ) {
+            return self.dispatch_policy_replay_page(request);
         }
         let ReadArguments::PolicyReplay {
             campaign,
@@ -113,7 +123,9 @@ impl PublicationTower {
     }
 }
 
-fn reason(result: &FilePolicyReplayResult) -> Option<ReasonCode> {
+fn reason<T>(
+    result: &Result<ActorKnowledge<T, FilePolicyReplayBasis>, ActorError>,
+) -> Option<ReasonCode> {
     match result {
         Ok(ActorKnowledge::Known { .. }) => None,
         Ok(ActorKnowledge::Stale { .. }) => Some(ReasonCode::StaleGeneration),

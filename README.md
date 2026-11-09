@@ -153,6 +153,10 @@ reports, exact campaign retries and native refusals. Replies are bounded by the 
 1 MiB). The policy client accepts trace-heavy complete reports within its
 separate finite parser allowance; unrelated operations keep their existing
 parser limits. See [large report delivery](docs/LIVE_TOWER_OPERATOR.md).
+Native hosts can also provision a separate finite page allowance and enumerate
+one complete comparison through a policy header and contiguous 16-case pages.
+Those pages retain one original report, basis and campaign charge across exact
+retries; see [bounded policy pages](docs/TOWER_POLICY_REPLAY.md#enumerate-a-complete-comparison-in-bounded-pages).
 The endpoint remains available through real helper/human review and terminal reply grace, with the
 same original owner and cumulative quotas across reconnects and every handoff
 in an explicit finite request schedule. Use
