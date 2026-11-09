@@ -112,6 +112,9 @@ cannot appear as applied approval. One bounded replay also joins the selected
 review to the original two-key dispatch, outcome and reconciliation when those
 events were observed. The three historical cuts remain distinct, hidden inputs
 and payload bytes stay undisclosed, and current eligibility remains Unknown.
+The existing authenticated operator endpoint enables it through an explicit
+`review_explanation` profile and carries selected-round requests through
+`tower-operator-exchange`, retaining separate disclosure work across reconnects.
 
 Separately granted operator [`policy-replay`](docs/TOWER_POLICY_REPLAY.md) now
 compares a candidate policy against the original owner's complete retained

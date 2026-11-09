@@ -9,6 +9,7 @@ use super::{
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileSupervisorExplanationGrant, FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
+    FileSupervisorReviewExplanationGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
@@ -28,6 +29,7 @@ struct Active {
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
+    review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
 }
 
@@ -111,6 +113,16 @@ impl Service {
         } else {
             None
         };
+        let review_explanation = if let Some(selected) = &settings.review_explanation {
+            let (port, custodian) = driver
+                .supervisor()
+                .review_explanation_port_with_budget(selected.queries, selected.max_replay_events)
+                .map_err(debug)?;
+            tower.set_review_explanation(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let policy_replay = if let Some(selected) = &settings.policy_replay {
             let (port, custodian) = if selected.page_queries == 0 {
                 driver
@@ -168,6 +180,7 @@ impl Service {
                 session,
                 inspection,
                 explanation,
+                review_explanation,
                 policy_replay,
             }),
             started,
@@ -284,7 +297,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; review_explanation_queries={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -295,6 +308,10 @@ impl Service {
                 .explanation
                 .as_ref()
                 .map(FileSupervisorExplanationGrant::remaining_queries),
+            active
+                .review_explanation
+                .as_ref()
+                .map(FileSupervisorReviewExplanationGrant::remaining_queries),
             active
                 .policy_replay
                 .as_ref()

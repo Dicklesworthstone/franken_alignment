@@ -1,6 +1,8 @@
 //! Real operator-profile transport, with grants fixed by the original server.
 #[path = "operator/policy_replay.rs"]
 mod policy_replay;
+#[path = "operator/review_explanation.rs"]
+mod review_explanation;
 
 use super::*;
 use fa_reference::action::ElapsedTick;

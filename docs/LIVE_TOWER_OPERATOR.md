@@ -2,7 +2,7 @@
 
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
-`situation`, historical admission `explain`, and explicitly selected
+`situation`, historical admission or completed-congress `explain`, and explicitly selected
 `policy-replay` capabilities to the running supervisor. Policy replay compares a
 candidate against the original owner's retained policy corpus without changing
 policy or issuing authority. The service keeps its original journal lock, source
@@ -102,6 +102,11 @@ deployment's values:
   "explanation_queries": 8,
   "explanation_replay_events": 4096,
   "explanation_disclosure": "policy_and_selected_witnesses",
+  "review_explanation": {
+    "queries": 8,
+    "max_replay_events": 4096,
+    "disclosure": "policy_and_congress_trace"
+  },
   "policy_replay": {
     "queries": 2,
     "page_queries": 512,
@@ -113,8 +118,8 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `policy_replay` is optional; omitting it or setting it to `null`
-keeps replay disabled, so existing inspection/explanation profiles retain their
+fields fail. `policy_replay` and `review_explanation` are independently optional;
+omitting either or setting it to `null` keeps that capability disabled, so existing inspection/explanation profiles retain their
 behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
@@ -126,13 +131,23 @@ socket are created. A larger output allowance adds no disclosure or purpose
 grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
-original native maximum of 1,024 queries. At least one of inspection, explanation
-or policy replay must be enabled. For inspection only, set
+original native maximum of 1,024 queries. At least one of inspection, admission
+explanation, completed-review explanation or policy replay must be enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
 selects policy-literal and selected-witness disclosure, with a positive bounded
 replay-event allowance. It does not disclose the entire source, helper input
 or action payload.
+
+The independent `review_explanation` object requires exactly `queries` (1–1,024),
+`max_replay_events` (1–4,096), and `disclosure: "policy_and_congress_trace"`.
+This grants original policy/congress/reducer and actual application/effect
+observations; ordinary admission explanation does not grant it. Unknown nested
+fields, duplicate fields, zero/excessive bounds, malformed numeric types and a
+different disclosure marker refuse before setup. A review-only endpoint may
+leave inspection and admission explanation disabled and omit policy replay.
+The original grant and spent work persist across reconnects, scheduled handoffs
+and terminal reply grace. See [completed-review explanations](TOWER_REVIEW_EXPLANATION.md).
 
 Selecting `policy_replay` requires `queries`, `cases`, `input_bytes` and the exact
 disclosure marker `"policy_and_case_traces"`. This separately grants disclosure
@@ -169,8 +184,9 @@ substitutes truncated policies, traces or cases.
 
 The client retains its original 1 MiB frame ceiling, depth and string bounds,
 correlated closed envelope, and cumulative elapsed/byte/I/O allowances. Only
-an explicitly requested `policy-replay` reply uses the larger finite JSON work
-allowance of 262,144 items, accommodating complete case and predicate traces.
+an explicitly requested `policy-replay` or completed-review `explain` reply uses
+its separately selected finite JSON work allowance of 262,144 items,
+accommodating complete case, congress and predicate traces.
 Other operations retain the original 4,096-item parser limit. A reply exceeding
 any bound is rejected before output or a later request.
 

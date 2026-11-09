@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: connect completed-review explanations to the authenticated operator
+
+The ordinary live Tower operator now accepts an independent optional
+`review_explanation` object with finite `queries`, `max_replay_events` and the
+explicit `policy_and_congress_trace` disclosure marker. Omission/null preserves
+existing behavior; a review-only service is supported. Setup provisions and
+retains the original native custodian, with no Experiment/Permit purpose or
+source admission path. Its allowance survives reconnects and scheduled handoffs.
+
+The existing `tower-operator-exchange` client carries explicit completed-round
+requests. Before output or another request it validates the distinct closed
+response profile, requested round in every outcome, historical/disclosure flags,
+known native scope/request identity and ordered cuts. Rich review reports have
+a separately selected finite parser allowance under the original frame, depth,
+string, cumulative I/O and deadline limits. Admission explanation retains its
+old profile and parser bound. These checks establish correlation and bounded
+shape, not independent verification of the original congress or a live permit.
+
+Four genuine native-service/socket tests and four authenticated-client tests
+cover separate grants, explicit profile bounds, cumulative reconnect work,
+missing/history-limited rounds, unchanged source/authority, mismatched response
+termination and delivery of a large original policy. The complete ordinary
+example compiles with the qualified dated compiler. Its complete original test
+harness, including all eight new functions, typechecks successfully to metadata;
+only compiler emission/output location changed for that check, not source or
+assertions. The attempted runtime-harness build was killed by SIGKILL at the
+shared memory ceiling, so these eight tests have no runtime pass in this session.
+The complete original library unit harness also typechecked to metadata,
+including all 13 new native functions. These successful type checks do not
+replace runtime execution. The preceding core's 12 new public plus 29 existing
+read/consumer tests did run and pass against this same library source.
+
+The canonical `cargo run --locked -p xtask -- check` verified the qualified
+compiler, the exact 2,368-file source closure, both admitted target inventories,
+registry links and founding concordance. It stopped at the same three existing
+missing playbook mappings (`compare-learned-prompt`, `serve-learned-generated`
+and `stop-fleet`) before formatting, compilation, Clippy and test stages.
+No gate was changed. Full repository/RCH qualification, production activation
+and Bead/packet closure remain open.
+
+See [the live operator profile](docs/LIVE_TOWER_OPERATOR.md) and
+[completed-review client usage](docs/TOWER_REVIEW_EXPLANATION.md#use-the-authenticated-operator-endpoint).
+
 ## 2026-11-09: explain the original completed congress and effect history
 
 A new separately retained `FileSupervisorReviewExplanationGrant` exposes one

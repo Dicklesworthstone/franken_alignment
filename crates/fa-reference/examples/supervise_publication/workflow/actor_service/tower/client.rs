@@ -12,8 +12,8 @@ use fa_reference::action::consequence::oversight::actor_wire::client::{
 use fa_reference::strict_json::{self, Json, Limits};
 use fa_reference::tower::publication::MAX_PUBLICATION_RESPONSE_BYTES;
 use fa_reference::tower::{
-    ENVELOPE_FIELDS, MAX_REQUEST_BYTES, MAX_REQUEST_STRING_BYTES, RESPONSE_SCHEMA, TowerRequest,
-    Verb, decode_request, encode_request,
+    ENVELOPE_FIELDS, MAX_REQUEST_BYTES, MAX_REQUEST_STRING_BYTES, RESPONSE_SCHEMA, ReadArguments,
+    TowerRequest, Verb, decode_request, encode_request,
 };
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
@@ -21,6 +21,8 @@ use std::path::Path;
 
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
+#[path = "client/review_explanation.rs"]
+mod review_explanation;
 #[path = "client/situation.rs"]
 mod situation;
 
@@ -31,6 +33,9 @@ const MAX_REPLY_BYTES: usize = MAX_PUBLICATION_RESPONSE_BYTES;
 // this allowance covers the original 1 MiB response without unbounded parsing.
 // Other operations retain the smaller existing parser-work allowance.
 const MAX_POLICY_REPLAY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
+// Completed congress reports have their own finite allowance. Ordinary
+// admission explanations keep the original smaller parser-work bound.
+const MAX_REVIEW_EXPLANATION_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
 const OPERATOR_USAGE: &str = "tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic page following or resend)";
 
@@ -364,6 +369,8 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
             max_depth: 16,
             max_items: if request.verb == Verb::PolicyReplay {
                 MAX_POLICY_REPLAY_REPLY_ITEMS
+            } else if review_explanation::selected_round(request).is_some() {
+                MAX_REVIEW_EXPLANATION_REPLY_ITEMS
             } else {
                 4096
             },
@@ -413,7 +420,12 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("precheck"), Verb::Precheck) => {}
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
-        (Some("explanation"), Verb::Explain) => {}
+        (Some("explanation"), Verb::Explain) if request.arguments == ReadArguments::None => {}
+        (Some("review-explanation"), Verb::Explain) => {
+            if !review_explanation::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
         (Some("policy-replay"), Verb::PolicyReplay) => {}
         _ => return Err(invalid()),
     }

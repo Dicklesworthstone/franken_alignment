@@ -109,6 +109,45 @@ source and reference commitment assumptions. This projection is not an
 independent cryptographic verification, proof that helpers were honest, or proof
 that a chosen policy was sound. No returned data can mint a permit.
 
+## Use the authenticated operator endpoint
+
+In the existing `fa.tower-operator-service/1` profile, explicitly select:
+
+```json
+"review_explanation": {
+  "queries": 8,
+  "max_replay_events": 4096,
+  "disclosure": "policy_and_congress_trace"
+}
+```
+
+This is an optional object within the full [operator profile](LIVE_TOWER_OPERATOR.md),
+not a standalone connection profile. Absence or null keeps the capability
+disabled. It has its own finite grant even when admission explanation, situation
+inspection and policy replay share the same authenticated endpoint. A service
+may select review explanation alone. Its original custodian survives reconnects
+and scheduled request handoffs without replenishing work.
+
+Start an ordinary Tower service with its existing `--operator-profile` selection
+and send the explicit request above through:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE REVIEW_REQUEST_JSON
+```
+
+The client checks the connected supervisor's kernel credentials before any wire
+exchange. It verifies the closed response schema, historical/disclosure flags,
+requested round in every result, and the known basis's native request/scope/cuts
+before output. A mismatched response stops before any later request or output;
+there is no automatic retry or reconnect. These are correlation and bounded
+shape checks, not independent verification of the congress decision.
+
+The selected completed-review reply has its own finite 262,144-item parser
+allowance within the original 1 MiB frame ceiling, depth, string and cumulative
+I/O/deadline limits. Ordinary admission explanation keeps its previous 4,096-item
+parser limit. A large policy/committee requires an explicitly sufficient server
+`response_bytes` allowance; increasing that allowance grants no disclosure.
+
 ## Bounded delivery and qualification
 
 The selected `PublicationLimits.max_response_bytes` remains the complete-output

@@ -2,6 +2,8 @@
 //! claims about production deployment or independent model judgments.
 #[path = "tests/policy_replay.rs"]
 mod policy_replay;
+#[path = "tests/review_explanation.rs"]
+mod review_explanation;
 
 use super::super::{Config, PeerProfile};
 use super::*;
@@ -66,6 +68,13 @@ struct Fixture {
 }
 impl Fixture {
     fn new(inspection: usize, explanation: usize) -> Self {
+        Self::configured(inspection, explanation, |_| {})
+    }
+    fn configured(
+        inspection: usize,
+        explanation: usize,
+        configure: impl FnOnce(&mut Config),
+    ) -> Self {
         let root = Directory::new();
         let mut config = Config::decode(include_bytes!(
             "../../../../../fixtures/supervised_publication.json"
@@ -73,6 +82,7 @@ impl Fixture {
         .unwrap();
         config.store = root.0.join("store");
         config.profile.delivery.max_attempts = 64;
+        configure(&mut config);
         // Deliberately unavailable: a supervisor read cannot silently bootstrap
         // evidence, launch the configured helpers or acquire an admission view.
         config.source = FileEvidenceSource::new(

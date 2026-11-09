@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-09: inspect completed reviews through the authenticated live operator
+
+- Add a separately selected bounded review-explanation disclosure object,
+  original native grant custody and review-only operator services. Preserve
+  spent work across reconnects and finite publication schedules.
+- Connect explicit round explanations to `tower-operator-exchange`, with
+  closed-profile round/request/basis correlation before output, bounded rich
+  parsing and preserved ordinary admission-explanation behavior.
+- Add four service/socket and four authenticated-client regression functions.
+  The full ordinary example compiles and its complete unchanged test harness
+  typechecks to metadata. Runtime-harness code generation exceeded the shared
+  memory limit; no new socket-test runtime or full qualification is claimed.
+- The canonical gate verified all 2,368 source files, compiler/admission and
+  founding concordance before the three existing playbook coverage failures.
+  The complete library unit harness also typechecked to metadata; its new
+  native tests still await runtime execution.
+
 ## 2026-11-09: explain original completed congresses and their actual effects
 
 - Add separately granted, revocable, bounded native completed-review reads with
