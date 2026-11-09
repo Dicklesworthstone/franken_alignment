@@ -1,6 +1,8 @@
 //! Tower bytes use the original mediated owner and the original final effect cut.
 //! Complete fixture graphs and synthetic helper votes are not deployment proof.
 
+#[path = "tower/failure_custody.rs"]
+mod failure_custody;
 #[path = "tower/series.rs"]
 mod series;
 

@@ -303,16 +303,15 @@ where
         OwnerStart::Ordinary,
         deadline,
         time,
-        |host, source, succeeded| {
-            // Match the existing topology-create contract: acknowledged final
-            // custody is exported on success, never used to retry an effect.
-            if succeeded {
-                output
-                    .as_ref()
-                    .map_or(Ok(()), |output| output.retain(host, source))
-            } else {
-                Ok(())
-            }
+        |host, source, _succeeded| {
+            // Earlier effects and all source expenditure survive a later failed
+            // request. Attempt their exact native checkpoint before releasing
+            // this owner, using retained documents rather than changed files.
+            // Retention supplies no new source check, authority or effect retry;
+            // the common lifecycle preserves both work and export failures.
+            output
+                .as_ref()
+                .map_or(Ok(()), |output| output.retain(host, source))
         },
     )
 }

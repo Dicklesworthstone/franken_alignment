@@ -47,7 +47,7 @@ use profile::Profile;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; single-request Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE; single-request Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -405,15 +405,16 @@ where
         OwnerStart::Ordinary,
         deadline,
         time,
-        |host, topology, succeeded| {
-            // Creation preserves its existing success-only export boundary.
-            if succeeded {
-                topology_output
-                    .as_ref()
-                    .map_or(Ok(()), |output| output.retain(host, topology))
-            } else {
-                Ok(())
-            }
+        |host, topology, _succeeded| {
+            // A failed service can already contain acknowledged source work or
+            // a charged effect. Retain that SAME healthy owner/source cut before
+            // cleanup, including native source refusals. The original capture
+            // reads only retained documents and never retries or certifies an
+            // effect. Failed capture/export is combined with the work error by
+            // the common lifecycle; an unhealthy owner cannot supply a cut.
+            topology_output
+                .as_ref()
+                .map_or(Ok(()), |output| output.retain(host, topology))
         },
     )
 }

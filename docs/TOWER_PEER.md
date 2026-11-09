@@ -98,9 +98,11 @@ and dispatch. Original unresolved-outcome and charged-rights rules apply; a
 failed observation does not refund an unknown effect. Unrelated witness changes
 can pass only through the existing semantic witness checks.
 
-Version 2 topology profiles retain their original checkpoint output from the
-driver's actual custody after execution, Stop and reply processing complete
-without error and native checkpoint validation succeeds. Helper cleanup runs
+Version 2 topology profiles attempt their selected checkpoint output from the
+driver's actual custody after execution, Stop and reply processing, including
+acknowledged failures. Native validation must still establish a healthy exact
+owner/source cut. A failed later request cannot silently discard custody for
+earlier committed effects or spent source work. Helper cleanup runs
 after retention and can still make the command fail. A retained checkpoint is
 acknowledged source/history evidence, not proof that all direct children were
 reaped. Actor, human-review, Stop and operator sockets
@@ -108,6 +110,13 @@ and checkpoint destinations must be distinct, including canonical parent-path
 aliases; conflicts refuse before clock or persistent setup. Operator reads have
 only their existing historical inspection/explanation grants and cannot certify
 a cut or advance publication.
+
+An acknowledged source refusal is retained with its actual unavailable state,
+original documents and spent allowance; it does not certify the rejected cut
+or refund work. The original service error remains an error, with independent
+checkpoint failures appended. Capture performs no live-source reread, clock
+observation, refresh or effect retry. Failure before native custody exists
+produces no checkpoint, and an unhealthy owner cannot export one.
 
 An explicit `--requests` schedule uses the same original mediated owner, driver
 and topology source throughout. Its first qualification and every later final

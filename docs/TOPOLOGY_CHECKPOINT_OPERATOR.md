@@ -201,7 +201,8 @@ its charge, overwrite earlier custody, or trigger a resend. Keep the prior
 archives until their successors are durably acknowledged. No source checkpoint
 is produced when recovery/preparation cannot establish the required healthy cut.
 
-For learned services, an acknowledged refusal or Stop can still leave a healthy
+For learned services and ordinary topology-supervised creation (including Tower
+request schedules), an acknowledged refusal or Stop can still leave a healthy
 native owner with source expenditure to retain. A service error therefore does
 not suppress its selected source output. The archive records the actual native
 availability, including withdrawal after an uncertified cut or missing input;

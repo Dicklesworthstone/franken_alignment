@@ -246,7 +246,9 @@ fn topology_tower_schedule_rechecks_second_dispatch_and_preserves_the_first_real
         let config = configuration(&root);
         evidence(&root, &config);
         let (actor, reviewer) = profiles(&root, &config);
-        let selected = selected_checks(&root, &root.path("source.bin"), 3);
+        let archive = root.path("source.bin");
+        let selected = selected_checks(&root, &archive, 3);
+        let original_topology = fs::read(root.path("topology.json")).unwrap();
         let first = document(&config, 7, 1, "6669727374");
         let second = document(&config, 8, 2, "7365636f6e64");
         let first_poll = poll(&config, 7);
@@ -328,17 +330,36 @@ fn topology_tower_schedule_rechecks_second_dispatch_and_preserves_the_first_real
             assert!(result.is_ok(), "{result:?}");
             assert_eq!(state.control.ledger.charged, 14);
         } else if state.control.ledger.charged == 7 {
+            assert!(result.is_err(), "{mode}: {result:?}");
             assert_eq!(
                 state.control.ledger.stages[&2],
                 ActionState::ConfirmedNotExecuted
             );
         } else {
+            assert!(result.is_err(), "{mode}: {result:?}");
             assert_eq!(state.control.ledger.charged, 14);
             assert!(matches!(
                 state.control.ledger.stages[&2],
                 ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown
             ));
         }
+        let saved = TopologyCheckpoint::read_trusted(
+            &mut Cursor::new(fs::read(&archive).unwrap()),
+            MAX_TOPOLOGY_CHECKPOINT_BYTES,
+        )
+        .unwrap();
+        assert_eq!(saved.history_anchor().revision(), state.revision);
+        assert_eq!(saved.minimum().control_sequence, state.control.sequence);
+        assert_eq!(saved.minimum().authority_epoch, state.control.ledger.epoch);
+        assert_eq!(saved.work().checks, 3);
+        assert_eq!(
+            saved.work().reserved_read_bytes,
+            3 * TOPOLOGY_REFRESH_READ_BYTES
+        );
+        assert_eq!(saved.last_operation(), 3);
+        assert_eq!(saved.available(), succeeds);
+        assert_eq!(saved.topology_bytes(), original_topology);
+        assert_eq!(saved.inventory_bytes(), INVENTORY);
     }
 }
 
@@ -348,7 +369,9 @@ fn topology_tower_handoff_does_not_replenish_the_source_check_allowance() {
     let config = configuration(&root);
     evidence(&root, &config);
     let (actor, reviewer) = profiles(&root, &config);
-    let selected = selected_checks(&root, &root.path("source.bin"), 2);
+    let archive = root.path("source.bin");
+    let selected = selected_checks(&root, &archive, 2);
+    let original_topology = fs::read(root.path("topology.json")).unwrap();
     let first = document(&config, 7, 1, "6669727374");
     let second = document(&config, 8, 2, "7365636f6e64");
     let first_poll = poll(&config, 7);
@@ -385,6 +408,7 @@ fn topology_tower_handoff_does_not_replenish_the_source_check_allowance() {
     peer.join().unwrap();
     first_human.join().unwrap();
     second_human.join().unwrap();
+    assert!(result.is_err(), "{result:?}");
     let state = FileOversight::read_publication(&store, &profile).unwrap();
     assert_eq!(state.executions, 1, "{result:?}");
     assert_eq!(state.payload, b"first");
@@ -398,6 +422,23 @@ fn topology_tower_handoff_does_not_replenish_the_source_check_allowance() {
         profile.delivery.total
     );
     assert!(state.control.ledger.charged >= 7);
+    let saved = TopologyCheckpoint::read_trusted(
+        &mut Cursor::new(fs::read(&archive).unwrap()),
+        MAX_TOPOLOGY_CHECKPOINT_BYTES,
+    )
+    .unwrap();
+    assert_eq!(saved.history_anchor().revision(), state.revision);
+    assert_eq!(saved.minimum().control_sequence, state.control.sequence);
+    assert_eq!(saved.minimum().authority_epoch, state.control.ledger.epoch);
+    assert_eq!(saved.work().checks, 2);
+    assert_eq!(
+        saved.work().reserved_read_bytes,
+        2 * TOPOLOGY_REFRESH_READ_BYTES
+    );
+    assert_eq!(saved.last_operation(), 3);
+    assert!(!saved.available());
+    assert_eq!(saved.topology_bytes(), original_topology);
+    assert_eq!(saved.inventory_bytes(), INVENTORY);
 }
 
 #[test]

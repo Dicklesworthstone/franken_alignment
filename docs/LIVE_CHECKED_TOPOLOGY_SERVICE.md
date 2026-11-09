@@ -28,8 +28,11 @@ The topology profile is the original `fa.mediated-create/1` or
 `fa.mediated-create/2` document. Its graph, inventory, external input custody,
 source budget, initial certification and final automatic refresh retain their
 existing semantics. Selecting version 2 retains a topology-source checkpoint
-after execution, Stop and reply processing finish without error and native
-checkpoint validation succeeds. Helper cleanup follows and can still fail;
+after execution, Stop and reply processing, including acknowledged source or
+publication failure when native checkpoint validation accepts the healthy exact
+cut. The original work error is preserved and an independent export error is
+appended. Missing or unhealthy native custody cannot produce an archive.
+Helper cleanup follows and can still fail;
 the checkpoint does not attest child reaping.
 
 The witness profile for this composition is `fa.supervised-witnesses/1`. It

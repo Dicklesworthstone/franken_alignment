@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-08: preserve topology creation custody after acknowledged failure
+
+- Attempt opted-in source checkpoint retention after single or scheduled service
+  failure, preserving the healthy original owner's exact history and spent work.
+- Preserve the original error and append independent retention failure; never
+  overwrite an existing output, reread live source, refund work or retry effects.
+- Cover late source loss/change, cumulative exhaustion, output races and failure
+  before native custody with exact checkpoint/conservation regressions.
+  Execution and full remote qualification remain pending.
+
 ## 2026-11-08: resume topology-enforced Tower request schedules
 
 - Connect finite schedules to the original independently anchored mediated

@@ -1,5 +1,26 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: retain exact source custody after failed topology creation
+
+Single and scheduled topology/Tower creation now attempt explicitly selected
+v2 checkpoint output after acknowledged work failures. The existing native
+capture validates the healthy original owner/source cut and preserves actual
+history, availability, authority floors, source checks/bytes and operation
+floor. This preserves recoverable custody when an early effect committed and a
+later request failed, without rereading live inputs, observing time, refreshing
+topology, mutating the journal or resending an effect.
+
+The original service failure remains primary; independent capture/export
+failure is appended before cleanup. A destination race preserves the existing
+file, unacknowledged/poisoned custody refuses capture, and preparation failure
+before owner creation produces no archive. Retention does not assert publication
+success, topology certification or helper reaping.
+
+Two new single/preparation regressions and strengthened sequence source-loss,
+changed-cut and exhaustion cases require exact retained cuts and conserved
+work. Qualified Rust 2024 syntax and independent native-source review are
+complete; runtime and full remote qualification remain pending.
+
 ## 2026-11-08: recover complete topology-enforced Tower schedules
 
 Both Tower open modes now accept finite request schedules with their original

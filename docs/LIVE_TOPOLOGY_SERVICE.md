@@ -23,9 +23,13 @@ driver's mandatory final topology refresh after evidence capture and before the
 final publication clock.
 
 Version 2 creation profiles retain their existing `retain_checkpoint` path.
-The live service exports that checkpoint only from the actual driver-owned
-source after execution, stop/drain and reply-grace processing complete without
-error and native checkpoint validation succeeds. Helper cleanup runs afterward
+The live service attempts that checkpoint from the actual driver-owned source
+after execution, stop/drain and reply-grace processing, including acknowledged
+failure. Native validation must establish the exact healthy owner/source cut;
+a refusal preserves its actual unavailable state and spent work. Capture does
+not reread source files, refresh topology, observe time or resend an effect.
+The original work error remains and an independent export error is appended.
+Helper cleanup runs afterward
 and can still make the command fail. The retained checkpoint acknowledges
 source/history custody; it does not attest that all direct children were reaped.
 Successful retention preserves real spent checks, operation floor, source
