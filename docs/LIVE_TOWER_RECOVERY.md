@@ -6,11 +6,13 @@ mediated owner and continue through its original Tower endpoint:
 ```sh
 supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE
 supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation 41 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --operator-profile OPERATOR_PROFILE
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --requests 8,9 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --operator-profile OPERATOR_PROFILE
 ```
 
-Option pairs may follow the positional files in any order. This is a
-single-request service with the existing plain checked-publication profile and
-optional separate operator endpoint. Request schedules, precheck sidecars,
+Option pairs may follow the positional files in any order. The service accepts
+one request or an explicit `--requests` schedule of 1–64 distinct keys, with the
+existing plain checked-publication profile and optional separate operator
+endpoint. A schedule must start with the actor profile's request. Precheck sidecars,
 multiple peers, generated/learned modes and stronger feed, wait, snapshot or joint
 witness profiles keep their separate lifecycles. Unsupported combinations refuse
 before service setup.
@@ -32,6 +34,8 @@ authority store. Both outputs and the actor, human-review, Stop and operator
 sockets must be canonically distinct, including parent-directory aliases. These
 checks precede the clock, listeners and recovery mutation. Creation also checks
 all selected endpoint classes before setup.
+For a schedule, these checks include every future reviewer and Stop socket;
+an output cannot reuse an endpoint merely because that request has not begun.
 
 The original cursor checks source guard, effective policy, initial/current
 topology, availability, publication requirements, reserve and all independent
@@ -65,6 +69,16 @@ option applies to new work through its original path, and existing credibility
 requirements remain enforced. Operator situation/explanation reads remain
 observational.
 
+All scheduled keys are inspected before choosing the recovery path. If any key
+is new, one original source rebind and initial qualification serve the entire
+schedule, including a retained prefix followed by new work. Source limits,
+spent checks/bytes and operation floors are never renewed at handoff. Each new
+effect still acquires fresh actor evidence, independent helper/human review,
+both publication keys and a separate final topology/witness check. The next
+request waits for terminal settlement and confirmed helper reaping. Actor
+tickets, operator queries/cursors, connection/exchange limits and the original
+service deadline remain cumulative.
+
 A recorded request uses observation-only actor ingress. An exact repeated
 proposal receives its original request observation through the existing codec.
 This path never opens next topology/inventory, live actor evidence, helper
@@ -73,6 +87,11 @@ topology and independent custody inputs remain necessary. Actor traffic causes
 no extra sweep, source refresh or effect, and a recorded transport timeout does
 not automatically Stop the settled owner. The sealed successor can retain the
 same spent work for another exact paired-custody recovery with missing live assets.
+An entirely recorded schedule follows this observation-only path for every key,
+even when live source files, witness captures and helper programs are absent.
+Historical actor transport failure does not manufacture a Stop or refresh the
+saved cut. Any genuinely unresolved old delivery still refuses the whole
+schedule before admission, including a schedule beginning with that old request.
 
 Independent authenticated Stop remains available against partial actor frames
 and during reply grace. If Stop advances a recorded owner's cut, the new history

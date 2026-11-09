@@ -135,12 +135,17 @@ supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-g
 ```
 
 `serve-open-checked` accepts the same options after its plain witness profile;
-both support the separate operator endpoint. The explicit `fa.guarded-submit/1`
+both support an explicit `--requests` schedule and the separate operator endpoint.
+The explicit `fa.guarded-submit/1`
 history/floors and `fa.mediated-submit/2` source checkpoint must describe the same
 complete original cut. Recovery reuses the original native Fence/Time/Sweep,
 keeps source spending, refuses unresolved old effects and requires newer graph
 and inventory generations before fresh work. The same source, helper, human,
 two-key and final topology/witness checks determine publication.
+One original owner and cumulative source allowance span the entire recovered
+schedule. A retained prefix can precede fresh requests; entirely retained
+schedules acquire no live source or helper assets. Each handoff still waits for
+terminal settlement and confirmed helper reaping.
 
 Recorded requests remain observational and can retain a new paired checkpoint
 without live source files or helper programs. Authenticated Stop stays available;

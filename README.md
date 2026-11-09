@@ -152,6 +152,9 @@ remain on the publication path alongside source freshness and both approval keys
 One original topology source and its spent allowance survive every scheduled
 handoff; each publication still needs fresh evidence, independent review and
 its own final topology check.
+The same finite schedules now reopen through independently anchored guarded
+recovery, preserving spent source work and recorded requests. Entirely
+historical schedules do not require live source files or helper programs.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a

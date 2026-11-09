@@ -1,6 +1,9 @@
 //! Actual Tower restart across independently retained original custody. Synthetic
 //! helpers/captures exercise enforcement; they do not establish evaluator quality.
 
+#[path = "recovery/sequence.rs"]
+mod sequence;
+
 use super::*;
 use crate::workflow::actor_service::{operator::Settings, tower::command_with_clock};
 use fa_reference::ReadWitness;

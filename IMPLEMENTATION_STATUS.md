@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: recover complete topology-enforced Tower schedules
+
+Both Tower open modes now accept finite request schedules with their original
+independently anchored `fa.guarded-submit/1` history and
+`fa.mediated-submit/2` source checkpoint. Complete replay and settlement checks
+precede the schedule. Any new key selects one native source rebind for the
+entire owner lifetime; the original limits, spent work, operation floors,
+fresh review and final publication checks survive each handoff.
+
+Mixed recorded/new schedules preserve the historical prefix and acquire source
+only for their explicitly selected new work. Entirely recorded schedules need
+no live topology, inventory, evidence, witness or helper assets and can retain
+another exact paired-custody successor. Historical transport failure does not
+manufacture a Stop. Independent Stop remains available, and an advanced cut
+cannot export an obsolete source checkpoint. Both selected archives are
+attempted before owner cleanup, including acknowledged failures.
+
+Every future reviewer and Stop endpoint participates in canonical alias checks
+alongside actor/operator endpoints and independent archives. One grammar and
+six real-service regression functions cover plain/checked successive effects,
+mixed history, source exhaustion/change, repeated historical recovery,
+genuinely unknown charged dispatch and later endpoint aliases. Qualified Rust
+2024 syntax and independent source review are complete; runtime and the full
+remote gate remain pending. The prior library and publication example passed
+local type checking with `nightly-2026-09-08`; that does not qualify execution.
+No parent acceptance, dependency admission or research claim is changed.
+
 ## 2026-11-08: compose topology-enforced Tower publication with finite schedules
 
 Tower creation now accepts an explicit request schedule with the original

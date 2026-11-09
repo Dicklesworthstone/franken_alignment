@@ -17,7 +17,7 @@ use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
     observed::{
-        driver::topology::checkpoint::TopologyCheckpoint,
+        driver::topology::{FileDriverTopology, checkpoint::TopologyCheckpoint},
         guarded::recovery::{
             FilePublicationRecoveryRequirements, mediated::ReconciledMediatedOwner,
         },
@@ -38,6 +38,71 @@ pub(in super::super) fn serve<F>(
     topology: &Selection,
     generation: u64,
     operator: Option<&operator::Settings>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config,
+        actor,
+        reviewer,
+        publication,
+        credibility,
+        recovery,
+        topology,
+        generation,
+        operator,
+        None,
+        time,
+    )
+}
+
+/// Resume one explicit schedule on the original independently anchored owner.
+/// A schedule with only retained requests needs no new source; a schedule with
+/// new work rebinds the original cumulative source once for its entire lifetime.
+pub(in super::super) fn serve_sequence<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    recovery: &SubmitProfile,
+    topology: &Selection,
+    generation: u64,
+    operator: Option<&operator::Settings>,
+    requests: &[u64],
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config,
+        actor,
+        reviewer,
+        publication,
+        credibility,
+        recovery,
+        topology,
+        generation,
+        operator,
+        Some(requests),
+        time,
+    )
+}
+
+fn serve_selected<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    recovery: &SubmitProfile,
+    topology: &Selection,
+    generation: u64,
+    operator: Option<&operator::Settings>,
+    requests: Option<&[u64]>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -58,8 +123,20 @@ where
     }
     actor.check_host(&config)?;
     reviewer.check_host(&config)?;
+    let scheduled = requests.unwrap_or(std::slice::from_ref(&actor.request));
+    super::super::series::validate(scheduled, actor, reviewer)?;
     if let Some(settings) = operator {
-        settings.check_host(&config, actor, reviewer, &[])?;
+        let endpoints: Vec<_> = scheduled
+            .iter()
+            .flat_map(|&request| {
+                [
+                    reviewer.socket(request),
+                    crate::workflow::control::socket_path(reviewer, request),
+                ]
+            })
+            .collect();
+        let paths: Vec<_> = endpoints.iter().map(|path| path.as_path()).collect();
+        settings.check_host(&config, actor, reviewer, &paths)?;
     }
     if actor.socket == reviewer.socket(actor.request)
         || actor.socket == crate::workflow::control::socket_path(reviewer, actor.request)
@@ -71,7 +148,14 @@ where
         .acknowledged_output()
         .map(|path| AcknowledgedOutput::admit(&config, path))
         .transpose()?;
-    check_destinations(actor, reviewer, operator, &custody, archive.as_ref())?;
+    check_destinations(
+        actor,
+        reviewer,
+        operator,
+        scheduled,
+        &custody,
+        archive.as_ref(),
+    )?;
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
         logical: plus(time(), runtime)?,
@@ -118,10 +202,16 @@ where
     let prepared = (|| {
         mediated::require_settled(&owner, &outcomes)?;
         check_deployment(&config, &owner, publication)?;
-        match owner.request_status(actor.request) {
-            Ok(_) => return Ok(None),
-            Err(JournalError::Contract(Error::Missing)) => {}
-            Err(error) => return Err(debug(error)),
+        let mut has_new_work = false;
+        for &request in scheduled {
+            match owner.request_status(request) {
+                Ok(_) => {}
+                Err(JournalError::Contract(Error::Missing)) => has_new_work = true,
+                Err(error) => return Err(debug(error)),
+            }
+        }
+        if !has_new_work {
+            return Ok(None);
         }
         if owner.inspect().stop.is_some() {
             return Err("the original domain is terminally stopped".into());
@@ -151,36 +241,61 @@ where
     // The SAME service installs the original source, performs its initial check,
     // acquires current actor evidence and uses the driver's final cut before
     // publication. Neither target version nor expected actor epoch is rewritten.
-    let result = serve_ready_ingress(
-        config,
-        actor,
-        reviewer,
-        publication,
-        credibility,
-        None,
-        Some(generation),
-        operator,
-        socket,
-        owner,
-        roles.oversight.human,
-        source,
-        OwnerStart::Reconciled,
-        deadline,
-        time,
-        |host, source, _succeeded| {
-            let history = guarded::retain(&custody, host);
-            let source = match (archive.as_ref(), capture.as_ref()) {
-                (Some(archive), Some(capture)) => capture
-                    .capture(host, source)
-                    .and_then(|saved| archive.retain(&saved)),
-                (Some(archive), None) => retain_unchanged(archive, &saved, host),
-                (None, _) => Ok(()),
-            };
-            // Acknowledged failures keep custody too, before releasing the
-            // original driver; each independent export is attempted exactly once.
-            checkpoint::combine(history, source)
-        },
-    );
+    let retain = |host: &FileOversight, source: Option<&FileDriverTopology>, _succeeded| {
+        let history = guarded::retain(&custody, host);
+        let source = match (archive.as_ref(), capture.as_ref()) {
+            (Some(archive), Some(capture)) => capture
+                .capture(host, source)
+                .and_then(|saved| archive.retain(&saved)),
+            (Some(archive), None) => retain_unchanged(archive, &saved, host),
+            (None, _) => Ok(()),
+        };
+        // Acknowledged failures keep custody too, before releasing the
+        // original driver; each independent export is attempted exactly once.
+        checkpoint::combine(history, source)
+    };
+    let result = if let Some(requests) = requests {
+        super::super::series::serve_ready_ingress(
+            config,
+            actor,
+            reviewer,
+            publication,
+            super::super::series::Options {
+                requests,
+                open: true,
+                credibility,
+            },
+            Some(generation),
+            operator,
+            socket,
+            owner,
+            roles.oversight.human,
+            source,
+            OwnerStart::Reconciled,
+            deadline,
+            time,
+            retain,
+        )
+    } else {
+        serve_ready_ingress(
+            config,
+            actor,
+            reviewer,
+            publication,
+            credibility,
+            None,
+            Some(generation),
+            operator,
+            socket,
+            owner,
+            roles.oversight.human,
+            source,
+            OwnerStart::Reconciled,
+            deadline,
+            time,
+            retain,
+        )
+    };
     result.map_err(|error| guarded::acknowledged(revision, &error))
 }
 
@@ -213,17 +328,17 @@ fn check_destinations(
     actor: &Profile,
     reviewer: &PeerProfile,
     operator: Option<&operator::Settings>,
+    requests: &[u64],
     custody: &Custody,
     archive: Option<&AcknowledgedOutput>,
 ) -> Result<(), String> {
-    let mut sockets = vec![
-        canonical_destination(&actor.socket)?,
-        canonical_destination(&reviewer.socket(actor.request))?,
-        canonical_destination(&crate::workflow::control::socket_path(
-            reviewer,
-            actor.request,
-        ))?,
-    ];
+    let mut sockets = vec![canonical_destination(&actor.socket)?];
+    for &request in requests {
+        sockets.push(canonical_destination(&reviewer.socket(request))?);
+        sockets.push(canonical_destination(
+            &crate::workflow::control::socket_path(reviewer, request),
+        )?);
+    }
     if let Some(operator) = operator {
         sockets.push(canonical_destination(&operator.socket)?);
     }

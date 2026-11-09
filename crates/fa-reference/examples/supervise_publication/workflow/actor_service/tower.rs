@@ -56,6 +56,7 @@ impl<'a> Arguments<'a> {
             positional + 4,
             positional + 6,
             positional + 8,
+            positional + 10,
         ]
         .contains(&args.len())
             || args[1..positional]
@@ -123,7 +124,7 @@ impl<'a> Arguments<'a> {
             }
         }
         if (requests.is_some() && precheck.is_some())
-            || (topology.is_some() && (precheck.is_some() || (open && requests.is_some())))
+            || (topology.is_some() && precheck.is_some())
             || (guarded.is_some() && (!open || topology.is_none()))
             || (open && topology.is_some() && guarded.is_none())
         {
@@ -186,6 +187,21 @@ where
                 .topology
                 .expect("guarded topology pair checked before reads"),
         )?;
+        if let Some(requests) = selected.requests.as_deref() {
+            return super::topology::recovery::serve_sequence(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                credibility,
+                &recovery,
+                &topology,
+                selected.generation,
+                operator.as_ref(),
+                requests,
+                time,
+            );
+        }
         return super::topology::recovery::serve(
             config,
             &actor,

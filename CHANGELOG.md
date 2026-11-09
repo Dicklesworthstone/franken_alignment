@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-08: resume topology-enforced Tower request schedules
+
+- Connect finite schedules to the original independently anchored mediated
+  recovery, with one owner/source rebind and cumulative work across all effects.
+- Preserve recorded prefixes, source-free historical schedules, independent
+  Stop, unresolved liabilities and both selected recovery archives.
+- Validate all future endpoint/archive aliases before recovery mutation and
+  retain the original actor/operator session allowances through handoff.
+- Add six real-service regressions and complete option-admission coverage;
+  execution and full remote qualification remain pending.
+
 ## 2026-11-08: preserve topology enforcement across Tower request schedules
 
 - Compose finite Tower creation schedules with the original mediated bootstrap,
