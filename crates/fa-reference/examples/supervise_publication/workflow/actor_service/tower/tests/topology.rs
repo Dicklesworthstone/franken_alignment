@@ -96,7 +96,7 @@ fn create_topology_and_optional_operator_are_selected_in_every_option_order() {
 }
 
 #[test]
-fn topology_cannot_enter_open_recovery_scheduled_precheck_or_other_service_modes() {
+fn topology_cannot_enter_unselected_open_recovery_precheck_or_other_service_modes() {
     for mode in [
         "serve-open",
         "serve-open-checked",
@@ -117,7 +117,6 @@ fn topology_cannot_enter_open_recovery_scheduled_precheck_or_other_service_modes
     }
     for mode in ["serve-create", "serve-create-checked"] {
         for forbidden in [
-            ["--requests", "7,8"],
             ["--precheck-profile", "precheck.json"],
             ["--peers", "peer.json"],
             ["--native-text", "native.json"],
@@ -200,7 +199,7 @@ fn topology_paths_and_duplicates_cannot_be_consumed_as_another_option() {
             "--operator-profile",
             "operator",
             "--requests",
-            "7",
+            "7,7",
         ],
         vec![
             FLAG,
@@ -228,6 +227,115 @@ fn topology_paths_and_duplicates_cannot_be_consumed_as_another_option() {
                 .map(str::to_owned),
         );
         refused_before_reads(&args);
+    }
+}
+
+#[test]
+fn topology_creation_schedules_keep_all_selected_profiles_in_every_option_order() {
+    for mode in ["serve-create", "serve-create-checked"] {
+        let pairs = [
+            [FLAG, "11"],
+            ["--topology-profile", "topology.json"],
+            ["--requests", "7,8,18446744073709551615"],
+            ["--operator-profile", "operator.json"],
+        ];
+        for first in 0..4 {
+            for second in 0..4 {
+                for third in 0..4 {
+                    for fourth in 0..4 {
+                        let order = [first, second, third, fourth];
+                        if order
+                            .iter()
+                            .enumerate()
+                            .any(|(i, value)| order[..i].contains(value))
+                        {
+                            continue;
+                        }
+                        let mut args = positional(mode);
+                        for index in order {
+                            args.extend(pairs[index].into_iter().map(str::to_owned));
+                        }
+                        let selected = Arguments::parse(&args).unwrap();
+                        assert!(!selected.open);
+                        assert_eq!(selected.generation, 11);
+                        assert_eq!(selected.requests, Some(vec![7, 8, u64::MAX]));
+                        assert_eq!(selected.topology, Some(Path::new("topology.json")));
+                        assert_eq!(selected.operator, Some(Path::new("operator.json")));
+                        assert_eq!(selected.publication.is_some(), mode.ends_with("-checked"));
+                        assert!(selected.precheck.is_none());
+                        assert!(selected.guarded.is_none());
+                    }
+                }
+            }
+        }
+        let mut args = positional(mode);
+        args.extend(
+            [
+                FLAG,
+                "11",
+                "--topology-profile",
+                "topology.json",
+                "--requests",
+                "7,8",
+            ]
+            .into_iter()
+            .map(str::to_owned),
+        );
+        let selected = Arguments::parse(&args).unwrap();
+        assert_eq!(selected.requests, Some(vec![7, 8]));
+        assert!(selected.operator.is_none());
+    }
+}
+
+#[test]
+fn topology_creation_schedule_cannot_consume_malformed_keys_or_an_extra_grant() {
+    for mode in ["serve-create", "serve-create-checked"] {
+        for keys in [
+            "",
+            "0",
+            "07,8",
+            "7,7",
+            "7,",
+            "7,18446744073709551616",
+            "--operator-profile",
+        ] {
+            let mut args = positional(mode);
+            args.extend(
+                [
+                    FLAG,
+                    "11",
+                    "--topology-profile",
+                    "topology.json",
+                    "--requests",
+                    keys,
+                ]
+                .into_iter()
+                .map(str::to_owned),
+            );
+            refused_before_reads(&args);
+        }
+        for pair in [
+            ["--precheck-profile", "precheck.json"],
+            ["--guarded", "recovery.json"],
+            ["--requests", "9"],
+            ["--topology-profile", "other.json"],
+        ] {
+            let mut args = positional(mode);
+            args.extend(
+                [
+                    FLAG,
+                    "11",
+                    "--topology-profile",
+                    "topology.json",
+                    "--requests",
+                    "7,8",
+                ]
+                .into_iter()
+                .map(str::to_owned),
+            );
+            args.extend(pair.into_iter().map(str::to_owned));
+            refused_before_reads(&args);
+        }
     }
 }
 

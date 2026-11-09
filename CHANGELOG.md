@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-08: preserve topology enforcement across Tower request schedules
+
+- Compose finite Tower creation schedules with the original mediated bootstrap,
+  plain checked publication, source work, independent review and final cut.
+- Share the original owner, driver, actor session and operator disclosure across
+  handoffs; conserve every budget and require settlement plus helper reaping.
+- Preflight all future reviewer/Stop endpoints and checkpoint aliases before
+  source or persistent setup. Add actual sequential-effect and causal-negative
+  service regressions plus closed-grammar coverage.
+- Repair the inspection fixture's private import and remove duplicate checkpoint
+  serialization and redundant inspection work found during build validation.
+  Runtime and full remote qualification remain pending; no packet is closed.
+
 ## 2026-11-08: enumerate captured request links with the bounded Tower client
 
 - Add optional final `--request-links` to `tower-situation`, selecting and

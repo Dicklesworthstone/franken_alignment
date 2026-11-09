@@ -2,9 +2,11 @@ use super::*;
 use crate::Snapshot;
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
 use crate::action::consequence::delivery::persistent::observed::{
-    FileHumanRequest, FileHumanReviewer, FileOversightProfile, FilePermit,
+    FileHumanRequest, FileHumanReviewer, FileOversightProfile,
 };
-use crate::action::consequence::delivery::persistent::{FileDeliveryProfile, JournalLimits};
+use crate::action::consequence::delivery::persistent::{
+    FileDeliveryProfile, FilePermit, JournalLimits,
+};
 use crate::action::consequence::gate::containment::session::policy::{Policy, Predicate};
 use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
 use crate::action::consequence::oversight::human::HumanReviewPolicy;

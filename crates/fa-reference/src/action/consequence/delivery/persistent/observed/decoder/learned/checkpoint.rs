@@ -190,11 +190,6 @@ pub(in super::super::super) fn write(w: &mut Writer, event: &CheckpointEvent) ->
             w.u8(3)?; w.u64(*checkpoint)?; w.u64(*actor_revision)?; w.u64(*epoch)?; w.blob(witness)?;
         }
         CheckpointEvent::Reset { operation, witness } => {
-            if *operation == 0 { return Err(Error::InvalidInput); }
-            check_witness(witness)?;
-            w.u8(2)?; w.u64(*operation)?; w.blob(witness)?;
-        }
-        CheckpointEvent::Reset { operation, witness } => {
             if *operation == 0 {
                 return Err(Error::InvalidInput);
             }

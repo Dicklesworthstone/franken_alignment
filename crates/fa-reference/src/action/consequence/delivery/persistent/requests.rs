@@ -565,7 +565,7 @@ impl Machine {
             request,
             spec,
             self.broker.scope,
-            &self.broker.inspect(),
+            &inspection,
             self.broker.stop_receipt().is_some(),
         )?;
         let result = self

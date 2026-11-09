@@ -1,6 +1,9 @@
 //! Tower bytes use the original mediated owner and the original final effect cut.
 //! Complete fixture graphs and synthetic helper votes are not deployment proof.
 
+#[path = "tower/series.rs"]
+mod series;
+
 use super::*;
 use crate::workflow::actor_service::operator::Settings;
 use crate::workflow::actor_service::serve_selected_ingress;

@@ -75,9 +75,10 @@ disclosure selection, request examples and Stop-first lifetime.
 ```sh
 supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --topology-profile TOPOLOGY_PROFILE
 supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --topology-profile TOPOLOGY_PROFILE --operator-profile OPERATOR_PROFILE --tower-generation 41
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --topology-profile TOPOLOGY_PROFILE --requests 7,8
 ```
 
-The topology, generation and optional operator pairs may follow the positional
+The topology, generation, optional schedule and operator pairs may follow the positional
 files in any order. This selects the original
 [topology-supervised creation workflow](LIVE_TOPOLOGY_SERVICE.md) and, for the
 checked form, its [plain publication-witness contract](LIVE_CHECKED_TOPOLOGY_SERVICE.md).
@@ -108,8 +109,18 @@ aliases; conflicts refuse before clock or persistent setup. Operator reads have
 only their existing historical inspection/explanation grants and cannot certify
 a cut or advance publication.
 
+An explicit `--requests` schedule uses the same original mediated owner, driver
+and topology source throughout. Its first qualification and every later final
+publication check spend the original cumulative source allowance. Every request
+still acquires fresh actor evidence, helper review and human approval; a prior
+certified publication cannot certify its successor. Handoff waits for terminal
+settlement and confirmed helper reaping. Actor tickets, operator queries,
+connection/exchange limits and deadlines remain cumulative. Canonical destination
+checks cover every future reviewer and Stop socket before setup, including any
+selected checkpoint archive.
+
 This creation composition uses `serve-create` and `serve-create-checked` with
-plain witness profiles. Topology cannot be combined with `--requests`,
+plain witness profiles. Topology cannot be combined with
 `--precheck-profile`, ordinary open/recovery, credibility activation, multiple
 peers, native text or generated/learned modes. Feed, wait, snapshot and joint
 witness profiles are refused before clock, source, socket or store setup.

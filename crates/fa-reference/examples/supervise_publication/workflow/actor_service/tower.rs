@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; single-request create modes also accept --topology-profile TOPOLOGY_PROFILE; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -51,7 +51,13 @@ impl<'a> Arguments<'a> {
             _ => return Err(USAGE.into()),
         };
         let positional = if checked { 5 } else { 4 };
-        if ![positional + 2, positional + 4, positional + 6, positional + 8].contains(&args.len())
+        if ![
+            positional + 2,
+            positional + 4,
+            positional + 6,
+            positional + 8,
+        ]
+        .contains(&args.len())
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
@@ -117,7 +123,7 @@ impl<'a> Arguments<'a> {
             }
         }
         if (requests.is_some() && precheck.is_some())
-            || (topology.is_some() && (requests.is_some() || precheck.is_some()))
+            || (topology.is_some() && (precheck.is_some() || (open && requests.is_some())))
             || (guarded.is_some() && (!open || topology.is_none()))
             || (open && topology.is_some() && guarded.is_none())
         {
@@ -195,6 +201,23 @@ where
     }
     let topology = selected.topology.map(TopologySelection::read).transpose()?;
     if let Some(requests) = selected.requests.as_deref() {
+        if let Some(topology) = topology {
+            return super::series::serve_tower_with_topology(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                super::series::Options {
+                    requests,
+                    open: selected.open,
+                    credibility,
+                },
+                selected.generation,
+                operator.as_ref(),
+                topology,
+                time,
+            );
+        }
         return super::series::serve_tower(
             config,
             &actor,

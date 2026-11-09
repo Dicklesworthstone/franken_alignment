@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: compose topology-enforced Tower publication with finite schedules
+
+Tower creation now accepts an explicit request schedule with the original
+mediated bootstrap and plain checked-publication profile. One ready-owner
+lifecycle retains the original driver, topology source, actor session and
+operator grants across every request. Initial qualification and each final
+publication check spend cumulative source work. New requests still require
+fresh evidence, independent helper/human review and both keys; advancement
+requires terminal settlement and confirmed helper reaping.
+
+Canonical destination checks cover every scheduled reviewer and Stop endpoint,
+the actor and operator endpoints, and selected source-checkpoint output before
+source reads or persistent setup. Existing exact retries retain their tickets,
+limits and uncertainty. No dependency or journal format changed.
+
+Two grammar and five real-service regression functions cover actual plain and
+checked successive effects, shared operator/transport budgets, post-dispatch
+topology changes, cumulative source exhaustion, independent Stop and later
+endpoint aliases. Independent source review and qualified
+`nightly-2026-09-08` Rust 2024 parsing/formatting are complete. Local execution
+attempts encountered the shared 8 GiB memory ceiling; runtime and the full remote
+gate remain pending. The baseline workspace check also exposed a private-import
+error in the inspection test fixture, repaired with its original public type;
+duplicate checkpoint serialization and redundant inspection work were removed.
+No bead or packet is closed.
+
 ## 2026-11-08: validate original request links during bounded situation enumeration
 
 `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N --request-links`

@@ -144,11 +144,14 @@ output. Operator traffic has no Permit purpose or source admission path, and its
 failure retires only the sidecar. Compilation and runtime qualification remain
 pending the required remote gate.
 
-Tower create modes also compose with the existing
+Tower create modes, including explicit finite request schedules, compose with the existing
 [topology-enforced publication workflow](docs/TOWER_PEER.md#preserve-topology-enforcement-through-tower-admission),
 including plain checked publication and an optional operator endpoint. The
 original mediated bootstrap, initial certification and final topology refresh
 remain on the publication path alongside source freshness and both approval keys.
+One original topology source and its spent allowance survive every scheduled
+handoff; each publication still needs fresh evidence, independent review and
+its own final topology check.
 
 The learned K/V workflow has executable operator entry points: [train the codec
 from checkpoint token documents](docs/TRAIN_LEARNED_KV_CODEC_COMMAND.md), [train a
