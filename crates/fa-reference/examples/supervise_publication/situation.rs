@@ -128,7 +128,9 @@ fn emit(situation: &FileSituation, page_size: usize, out: &mut impl Write,
 }
 
 #[cfg(test)]
+#[path = "situation/tests.rs"]
 mod tests;
 
 #[cfg(test)]
+#[path = "situation/learned_arguments.rs"]
 mod learned_arguments;

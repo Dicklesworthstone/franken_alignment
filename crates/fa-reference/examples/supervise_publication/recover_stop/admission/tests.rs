@@ -150,7 +150,7 @@ fn explicit_drain_preserves_original_executed_and_expired_outcomes_after_clock_f
                 value.get("unresolved").unwrap().as_array().unwrap().len(),
                 1
             );
-            assert!(
+            assert_eq!(
                 value
                     .get("irrecoverable")
                     .unwrap()

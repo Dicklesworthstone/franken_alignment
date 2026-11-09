@@ -27,7 +27,6 @@ use fa_reference::action::consequence::oversight::actor_wire::client::{
     ActorClient, ActorClientState, ClientProgress, ClientSessionLimits,
 };
 use fa_reference::action::consequence::oversight::actor_wire::{WireError, WireResponse};
-use fixture::{Directory, snapshot};
 use std::{cell::Cell, fs, os::unix::net::UnixStream};
 
 fn actor(root: &Directory, scope: fa_reference::action::Scope) -> Profile {

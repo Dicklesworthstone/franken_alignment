@@ -78,4 +78,5 @@ fn write_response(response: &PrecheckCapabilitiesResponse, settings: &Settings,
 }
 
 #[cfg(test)]
+#[path = "discovery/tests.rs"]
 mod tests;

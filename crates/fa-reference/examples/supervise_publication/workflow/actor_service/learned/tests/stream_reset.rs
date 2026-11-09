@@ -168,8 +168,9 @@ fn prepared_control(root: &Root, audit_failure: bool, fenced: bool, begin: bool)
         }
         let intent = FileLearnedResetIntent::for_recovery(saved.id(), control, budget).unwrap();
         if begin {
+            let revision = host.revision();
             host.begin_learned_stream_reset(
-                host.revision(),
+                revision,
                 &saved,
                 intent.control().clone(),
                 intent.budget(),
@@ -179,7 +180,8 @@ fn prepared_control(root: &Root, audit_failure: bool, fenced: bool, begin: bool)
         }
         assert_eq!(host.learned_recovery_usage().unwrap().restart_attempts, 0);
         if fenced {
-            host.fence(host.revision()).unwrap();
+            let revision = host.revision();
+            host.fence(revision).unwrap();
             assert!(host.pending_learned_reset().unwrap().unwrap().interrupted);
         }
         loaded.recovery_anchor = Some(host.history_anchor().unwrap());

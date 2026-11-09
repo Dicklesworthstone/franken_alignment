@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-08: restore publication test-harness compilation
+
+- Register the intended existing situation, precheck and learned test modules
+  under their actual parents; repair imports and preserve all assertions.
+- Restore original native helper-epoch fixtures, private directory setup,
+  exact reset revision/epoch sampling and operator disclosure-limit selection.
+- Type-check the complete publication harness successfully with the
+  qualified dated compiler, including the new schedule/recovery regressions.
+  This compiler result is separate from runtime and full remote qualification.
+- Rebind the independently reviewed source inventory and its policy digest.
+  The local gate passes all 2,331 source identities, both target admission
+  profiles, registry checks and founding concordance, then refuses the existing
+  three missing playbook verb references. The executable test build was killed
+  with SIGKILL under shared memory pressure; runtime execution remains pending.
+
 ## 2026-11-08: preserve topology creation custody after acknowledged failure
 
 - Attempt opted-in source checkpoint retention after single or scheduled service

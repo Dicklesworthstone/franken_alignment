@@ -2,6 +2,7 @@
 //! Numerical fixtures establish this bounded path, not safety-detector quality.
 use super::*;
 use super::super::audit as audit_command;
+use fa_reference::Snapshot;
 use fa_reference::action::consequence::activation::probe::learned::{KvGroup, KvRow, RESIDUAL_HEADER_BYTES};
 use fa_reference::action::consequence::activation::tensor::kv::{experiment::KvSide,
     decoder::MAX_DECODER_PRODUCTS};

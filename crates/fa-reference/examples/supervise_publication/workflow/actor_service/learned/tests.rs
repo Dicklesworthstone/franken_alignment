@@ -40,7 +40,6 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     helpers::learned::native::{NativeReviewStatus, NativeMemberRecord, sequence::FileNativeSidecarSequence},
 };
 use fa_reference::action::consequence::oversight::sidecar::receiver::native::SidecarDecisionBasis;
-use fixture::{Root, configured, evidence};
 use std::fs;
 
 type Wire = ActorWire<FileLearnedTextStreamActorPort>;

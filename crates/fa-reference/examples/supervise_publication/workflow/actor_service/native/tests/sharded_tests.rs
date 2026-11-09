@@ -139,7 +139,7 @@ fn publication(root: &Root, config: &Config) -> (PublicationProfile, FilePublica
         producer,
     )
 }
-fn seed(config: &mut Config, native: &Inputs, publication: &PublicationProfile) {
+fn seed(root: &Root, config: &mut Config, native: &Inputs, publication: &PublicationProfile) {
     let selected = publication
         .generated_profile(
             &config.profile,
@@ -178,7 +178,7 @@ fn seed(config: &mut Config, native: &Inputs, publication: &PublicationProfile) 
             .generation_revision(),
         1
     );
-    set_helper_epoch(config, 1);
+    config.programs = native_programs_at_epoch(root, 1);
 }
 fn executed(response: &WireResponse) -> bool {
     matches!(
@@ -299,7 +299,7 @@ fn native_sharded_checked_create_and_resume_keep_witnesses_and_independent_human
                 let (actor, reviewer) = profiles(&root, &config);
                 let (publication, _producer) = publication(&root, &config);
                 if open {
-                    seed(&mut config, &native, &publication);
+                    seed(&root, &mut config, &native, &publication);
                     config.programs = native_programs_at_epoch(&root, 1);
                 }
                 let store = config.store.clone();

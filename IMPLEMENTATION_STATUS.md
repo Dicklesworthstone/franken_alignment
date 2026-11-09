@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-08: restore complete publication-harness compilation
+
+Compiler execution exposed stale test-module paths that loaded unrelated suites
+under the wrong parents, duplicate/missing imports, an invalid zero-count
+assertion, a shadowed operator-query limit, nonexistent native helper-epoch
+setup and overlapping mutable/immutable reset borrows. The intended modules,
+original fixture helpers and exact pre-mutation values are restored. Private
+directory fixtures no longer attempt to create an already-created directory.
+No test is removed, disabled or weakened, and production semantics are unchanged.
+
+The complete `supervise_publication` test harness, with no test modules excluded,
+now passes a local Rust 2024 metadata/type check against the actual Cargo-built library using
+`nightly-2026-09-08` (`cea272fa356e94bd2ee2cadf376630aa0683867a`). This includes
+all new topology sequence, guarded recovery and failure-custody regression
+functions. Four existing warnings remain in that check. The library and ordinary
+publication example also passed Cargo type checking. Earlier failed checks and
+memory-constrained code-generation attempts are not runtime passes. The final
+Cranelift executable build compiled the library, then the publication test
+compiler was killed with SIGKILL under the shared 8 GiB memory ceiling. No
+publication runtime test is credited by this session; full remote qualification
+remains open.
+
+After independent source review, the exact source inventory and its policy
+digest were rebound without changing admission rules or qualification claims.
+The local `xtask check` passed the qualified compiler identity, all 2,331 source
+files, closed dependency admission for both target profiles, registry checks
+and founding concordance. It then refused the existing system-map playbook
+coverage gaps for `compare-learned-prompt`, `serve-learned-generated` and
+`stop-fleet`, before formatting, compilation, Clippy or runtime tests. The
+unchanged vocabulary/playbook inputs are not repaired by weakening this gate.
+
 ## 2026-11-08: retain exact source custody after failed topology creation
 
 Single and scheduled topology/Tower creation now attempt explicitly selected

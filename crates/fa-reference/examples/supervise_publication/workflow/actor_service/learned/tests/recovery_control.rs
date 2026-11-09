@@ -7,6 +7,7 @@ use super::super::prediction;
 use super::*;
 use crate::workflow::control::socket_path;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::PeerCredentials;
+use fa_reference::action::consequence::oversight::learned_host::HostedLearnedInspection;
 use std::{collections::BTreeMap, io::Read, os::unix::net::UnixStream, path::Path};
 
 struct Case {

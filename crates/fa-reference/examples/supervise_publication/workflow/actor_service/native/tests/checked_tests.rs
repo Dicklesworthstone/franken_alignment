@@ -96,7 +96,7 @@ fn publication(
         producer,
     )
 }
-fn seed(config: &mut Config, native: &Inputs, publication: &PublicationProfile, steps: u64) {
+fn seed(root: &Root, config: &mut Config, native: &Inputs, publication: &PublicationProfile, steps: u64) {
     let selected = publication
         .generated_profile(
             &config.profile,
@@ -132,7 +132,7 @@ fn seed(config: &mut Config, native: &Inputs, publication: &PublicationProfile, 
             .unwrap();
     }
     assert_eq!(host.inspect().executions, 0);
-    set_helper_epoch(config, 1);
+    config.programs = native_programs_at_epoch(root, 1);
 }
 fn executed(response: &WireResponse) -> bool {
     matches!(
@@ -181,7 +181,7 @@ fn native_checked_create_and_recovery_keep_producer_witnesses_and_independent_hu
             let (publication, _producer) = publication(&root, &config, false);
             let policy_epoch = u64::from(steps.is_some());
             if let Some(steps) = steps {
-                seed(&mut config, &native, &publication, steps);
+                seed(&root, &mut config, &native, &publication, steps);
                 // The one original recovery fence advances the action epoch.
                 // Helpers remain independently bound to that exact expectation.
                 config.programs = native_programs_at_epoch(&root, policy_epoch);

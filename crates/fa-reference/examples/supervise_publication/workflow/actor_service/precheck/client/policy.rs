@@ -70,4 +70,5 @@ fn emit(response: &PolicyResponse, disclosure: u64, out: &mut impl Write) -> Res
 }
 
 #[cfg(test)]
+#[path = "policy/tests.rs"]
 mod tests;

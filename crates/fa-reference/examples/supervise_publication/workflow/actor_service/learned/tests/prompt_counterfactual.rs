@@ -1,4 +1,5 @@
 //! Real checkpoint intake, sampled source effects and retained failure denominators.
+#[path = "prompt_counterfactual/fixture.rs"]
 mod fixture;
 use super::{Root, configured};
 use super::super::{prompt_counterfactual as command, recipe, recovery};

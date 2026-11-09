@@ -2,7 +2,7 @@
 //! cursors/results. Socket/helper peers remain synthetic same-process fixtures.
 use super::*;
 
-fn seed(config: &mut Config, native: &Inputs, begin: bool, steps: u64) {
+fn seed(root: &Root, config: &mut Config, native: &Inputs, begin: bool, steps: u64) {
     let (mut host, _) = FileOversight::create_generated_text_stream_with_reserve(
         &config.store,
         config.profile.clone(),
@@ -40,7 +40,7 @@ fn seed(config: &mut Config, native: &Inputs, begin: bool, steps: u64) {
         );
     }
     assert_eq!(host.inspect().executions, 0);
-    set_helper_epoch(config, 1);
+    config.programs = native_programs_at_epoch(root, 1);
     // Dropping models a stopped process at an acknowledged cut, NOT a Stop
     // consequence. Ordinary service failure deliberately records Stop instead.
 }
@@ -57,7 +57,7 @@ fn native_recovery_continues_partial_and_complete_intents_with_independent_human
             let bootstrap = config.profile.clone();
             let decoder = native.decoder.clone();
             let tokenizer = native.tokenizer.clone();
-            seed(&mut config, &native, true, steps);
+            seed(&root, &mut config, &native, true, steps);
             config.programs = native_programs_at_epoch(&root, 1);
             let before = FileOversight::read_decoder_text_progress(
                 &store, &bootstrap, &decoder, &tokenizer, 7,
@@ -155,7 +155,7 @@ fn native_recovery_rejects_changed_prompt_budget_length_and_generation_without_a
         let bootstrap = config.profile.clone();
         let decoder = native.decoder.clone();
         let tokenizer = native.tokenizer.clone();
-        seed(&mut config, &native, true, 1);
+        seed(&root, &mut config, &native, true, 1);
         match changed {
             0 => native.request.prompt = b"ba".to_vec(),
             1 => native.request.generation.sampling_entries -= 1,
@@ -299,7 +299,7 @@ fn native_recovery_source_loss_cannot_resume_or_publish_the_saved_prefix() {
     let bootstrap = config.profile.clone();
     let decoder = native.decoder.clone();
     let tokenizer = native.tokenizer.clone();
-    seed(&mut config, &native, true, 1);
+    seed(&root, &mut config, &native, true, 1);
     std::fs::remove_file(root.0.join("evidence.json")).unwrap();
     let mut output = Vec::new();
     assert!(
@@ -353,7 +353,7 @@ fn native_recovery_never_invents_an_intent_or_restarts_held_or_limited_work() {
             "limited" => 3,
             _ => 0,
         };
-        seed(&mut config, &native, mode != "missing", steps);
+        seed(&root, &mut config, &native, mode != "missing", steps);
         let mut output = Vec::new();
         assert!(
             serve_mode(
@@ -439,7 +439,7 @@ fn native_recovery_cannot_skip_a_later_pending_intent_even_before_its_first_toke
     let mut config = configured(&root);
     let native = inputs(&root, &config);
     let (actor, reviewer) = profiles(&root, &config);
-    seed(&mut config, &native, true, 4);
+    seed(&root, &mut config, &native, true, 4);
     let (mut host, _) = FileOversight::open_generated_text_stream_with_reserve(
         &config.store,
         config.profile.clone(),

@@ -195,4 +195,5 @@ fn emit_response(response: &PrecheckWireResponse, settings: &Settings,
 }
 
 #[cfg(test)]
+#[path = "client/tests.rs"]
 mod tests;

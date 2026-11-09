@@ -129,19 +129,19 @@ fn prepared_operator_cli(
 ) -> Vec<String> {
     let profile = root.0.join("operator-profile.json");
     let situation = root.0.join("operator-situation.json");
-    let explanation = root.0.join("operator-explanation.json");
+    let explanation_document = root.0.join("operator-explanation.json");
     fs::write(
         &profile,
         settings_document(root, config, inspection, explanation),
     )
     .unwrap();
     fs::write(&situation, situation_document(config)).unwrap();
-    fs::write(&explanation, explain_document(config)).unwrap();
+    fs::write(&explanation_document, explain_document(config)).unwrap();
     vec![
         "tower-operator-exchange".to_owned(),
         profile.to_str().unwrap().to_owned(),
         situation.to_str().unwrap().to_owned(),
-        explanation.to_str().unwrap().to_owned(),
+        explanation_document.to_str().unwrap().to_owned(),
     ]
 }
 

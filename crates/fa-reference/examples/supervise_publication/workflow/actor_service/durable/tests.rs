@@ -34,7 +34,6 @@ use fa_reference::action::consequence::oversight::actor_wire::{
     ActorChannel, ActorWire, ChannelLimits, encode_command,
 };
 use fa_reference::strict_json::{self, Json, Limits};
-use fixture::{Directory, snapshot};
 use std::{cell::Cell, fs, io, os::unix::net::UnixListener};
 
 type Port = FileActorPort<FileOversight>;

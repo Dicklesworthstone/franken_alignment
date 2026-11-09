@@ -1,6 +1,6 @@
 //! Actual checked workflow over the existing executable-helper fixture. These
 //! synthetic choices exercise credential plumbing, not human judgment quality.
-use super::super::peers::PeerProfile;
+use crate::peers::PeerProfile;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::PeerCredentials;
 use std::fs;

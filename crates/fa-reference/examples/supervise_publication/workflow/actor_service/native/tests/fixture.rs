@@ -21,10 +21,6 @@ impl Root {
             crate::workflow::clock().0,
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
-        std::fs::DirBuilder::new()
-            .mode(0o700)
-            .create(&path)
-            .unwrap();
         Self(path)
     }
 }

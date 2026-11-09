@@ -151,6 +151,7 @@ fn query(mode: Mode, actor: &Profile, settings: &Settings, documents: &[&Path], 
 }
 
 #[cfg(test)]
+#[path = "batch/tests"]
 mod tests {
     use super::*;
     use fa_reference::action::ResolvedTarget;

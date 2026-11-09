@@ -110,6 +110,9 @@ fn rows(page: &Json) -> &[Json] { value(page).get("attempts").unwrap().as_array(
 fn text<'a>(json: &'a Json, key: &str) -> &'a str { json.get(key).unwrap().as_str().unwrap() }
 fn complete(json: &Json) -> bool { value(json).get("enumeration_complete").unwrap().as_bool().unwrap() }
 
+#[path = "tests/command_tests.rs"]
 mod command_tests;
+#[path = "tests/output_tests.rs"]
 mod output_tests;
+#[path = "tests/fleet.rs"]
 mod fleet;

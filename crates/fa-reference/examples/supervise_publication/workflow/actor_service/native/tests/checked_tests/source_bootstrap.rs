@@ -317,7 +317,7 @@ fn native_source_service_opens_legacy_pending_work_and_validated_source_rotation
         let mut config = configured(&root);
         let native = inputs(&root, &config);
         let (publication, _producer) = publication(&root, &config, false);
-        seed(&mut config, &native, &publication, 1); // original two-write bootstrap
+        seed(&root, &mut config, &native, &publication, 1); // original two-write bootstrap
         if rotate {
             let selected = bootstrap::selection(&config, &native, Some(&publication)).unwrap();
             let (mut host, _) = bootstrap::prepare(&config, &native, selected, true).unwrap();

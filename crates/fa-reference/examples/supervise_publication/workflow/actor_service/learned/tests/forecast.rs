@@ -3,6 +3,10 @@
 #[path = "forecast/restart.rs"]
 mod restart;
 use super::*;
+use super::super::{
+    fields::{Assets, Fields, MAX_DATA_BYTES},
+    forecast::ForecastInput,
+};
 use fa_reference::action::consequence::activation::{
     CaptureProfile,
     consistency::{BinaryForecast, ErrorBudget, ForecastRegistration},

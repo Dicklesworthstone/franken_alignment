@@ -97,7 +97,7 @@ fn native_tied_checked_creation_and_recovery_still_require_independent_human_app
             let (actor, reviewer) = profiles(&root, &config);
             let (publication, _producer) = publication(&root, &config, false);
             if let Some(steps) = steps {
-                seed(&mut config, &native, &publication, steps);
+                seed(&root, &mut config, &native, &publication, steps);
                 config.programs = native_programs_at_epoch(&root, 1);
             }
             let store = config.store.clone();

@@ -64,12 +64,15 @@ fn prepared(root: &Root, audit_failure: bool) -> SourceCase {
     let saved = {
         let mut host = driver.supervisor_mut().host_mut().unwrap();
         let initial = host.learned_generation_inspection().unwrap().numerical;
-        host.advance_learned_generation(host.revision(), initial.actor_revision, initial.position)
+        let revision = host.revision();
+        host.advance_learned_generation(revision, initial.actor_revision, initial.position)
             .unwrap().unwrap();
         let numerical = host.learned_generation_inspection().unwrap().numerical;
         assert_eq!(numerical.position, 1);
-        host.capture_learned_stream_checkpoint(host.revision(), 1, numerical.actor_revision,
-            host.inspect().control.ledger.epoch).unwrap()
+        let revision = host.revision();
+        let epoch = host.inspect().control.ledger.epoch;
+        host.capture_learned_stream_checkpoint(revision, 1, numerical.actor_revision,
+            epoch).unwrap()
     };
     assert!(generate(&mut driver, &reviewer, &mut config, &mut control, &limit,
         &mut || ElapsedTick(1000)).unwrap());
@@ -99,7 +102,8 @@ fn prepared(root: &Root, audit_failure: bool) -> SourceCase {
             binding: ReviewBinding { round: 900, reducer_generation: 1, evidence_root: [8; 32] },
             retained_targets: vec![current.target],
         }, budget).unwrap();
-        host.begin_learned_stream_reset(host.revision(), &saved, intent.control().clone(),
+        let revision = host.revision();
+        host.begin_learned_stream_reset(revision, &saved, intent.control().clone(),
             intent.budget(), first).unwrap();
         loaded.recovery_anchor = Some(host.history_anchor().unwrap());
         loaded.anchor_output = Some(root.0.join("next.anchor"));
