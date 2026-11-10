@@ -118,7 +118,7 @@ fn resolution_profile_requires_explicit_bounded_authority_and_does_not_upgrade_o
     for profile in [original.clone(), with_resolution(&original, "null")] {
         let decoded = Settings::decode(profile.as_bytes()).unwrap();
         assert!(decoded.resolution.is_none());
-        decoded.check_learned_observer().unwrap();
+        decoded.check_learned_operator().unwrap();
     }
     let selected = selection(MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_REPLAY_EVENTS);
     let decoded = Settings::decode(with_resolution(
@@ -126,11 +126,12 @@ fn resolution_profile_requires_explicit_bounded_authority_and_does_not_upgrade_o
     ).as_bytes()).unwrap();
     assert_eq!((decoded.inspection_queries, decoded.explanation_queries), (0, 0));
     assert!(decoded.hold_diagnosis.is_none());
-    assert!(decoded.check_learned_observer().is_err());
+    assert!(decoded.check_learned_operator().is_err());
     let selected = decoded.resolution.unwrap();
     assert_eq!(selected.queries, MAX_RESOLUTION_QUERIES);
     assert_eq!(selected.operations, MAX_RESOLUTION_OPERATIONS);
     assert_eq!(selected.max_replay_events, MAX_RESOLUTION_REPLAY_EVENTS);
+    assert_eq!(selected.numerical_replay_events, None);
     for invalid in [
         "false".to_owned(), "{}".to_owned(), "[]".to_owned(),
         selection(0, 1, 1), selection(1, 0, 1), selection(1, 1, 0),
@@ -242,4 +243,63 @@ fn stale_operator_action_refuses_before_work_and_receipt_absence_keeps_the_liabi
     assert!(fixture.port.submit(8, &fixture.proposal()).is_err());
     assert_eq!(remaining(&service), (1, 1));
     assert_eq!(fixture.config.source.status().read_attempts, 0);
+}
+
+
+fn numerical_selection(selected: &str, events: &str) -> String {
+    selected.replacen('{', &format!("{{\"numerical_replay_events\":{events},"), 1)
+}
+
+#[test]
+fn numerical_resolution_requires_a_separate_positive_cumulative_profile_selection() {
+    let identity = PeerPolicy::new(1, 2, Some(3)).unwrap();
+    let original = profile_json(Path::new("/operator/resolve.sock"), identity, 0, 0);
+    let legacy = selection(3, 2, 64);
+    let selected = Settings::decode(
+        with_resolution(&original, &numerical_selection(&legacy, "128")).as_bytes(),
+    ).unwrap();
+    selected.check_learned_operator().unwrap();
+    assert_eq!(
+        selected.resolution.as_ref().unwrap().numerical_replay_events,
+        Some(128)
+    );
+    assert!(selected.review_explanation.is_none());
+    assert_eq!((selected.inspection_queries, selected.explanation_queries), (0, 0));
+
+    for invalid in [
+        "0", "129", "null", "true", "\"1\"", "1.5", "-1", "[]", "{}",
+        "18446744073709551616",
+    ] {
+        assert!(Settings::decode(
+            with_resolution(&original, &numerical_selection(&legacy, invalid)).as_bytes(),
+        ).is_err(), "accepted invalid numerical resolution budget {invalid}");
+    }
+    let duplicate = numerical_selection(&numerical_selection(&legacy, "1"), "1");
+    assert!(Settings::decode(with_resolution(&original, &duplicate).as_bytes()).is_err());
+    let unknown = numerical_selection(&legacy, "1")
+        .replacen('{', "{\"numerical_products\":1,", 1);
+    assert!(Settings::decode(with_resolution(&original, &unknown).as_bytes()).is_err());
+    let legacy = Settings::decode(with_resolution(&original, &legacy).as_bytes()).unwrap();
+    assert!(legacy.resolution.unwrap().numerical_replay_events.is_none());
+}
+
+#[test]
+fn ordinary_operator_keeps_its_numerical_allowance_when_no_numerical_history_exists() {
+    let mut fixture = fixture(2, 1);
+    fixture.settings.resolution.as_mut().unwrap().numerical_replay_events = Some(1);
+    pending(&mut fixture, true);
+    let mut service = fixture.start();
+    let plan = fixture.query(&mut service, next(&fixture, 905));
+    let command = action(&fixture, &plan);
+    let resolved = fixture.query(&mut service, command.clone());
+    known(&resolved, "resolution");
+    assert_eq!(
+        service.active.as_ref().unwrap().resolution.as_ref().unwrap()
+            .remaining_numerical_replay_events(),
+        Some(1)
+    );
+    let saved = fixture.files();
+    assert_eq!(fixture.query(&mut service, command), resolved);
+    assert_eq!(fixture.files(), saved);
+    assert_eq!(remaining(&service), (1, 0));
 }

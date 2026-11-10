@@ -77,8 +77,8 @@ impl Service {
         })
     }
 
-    /// Observe this exact learned owner without obtaining an ordinary actor
-    /// port. The native facade permanently refuses effectful Tower operations.
+    /// Select the original learned observer, or an explicitly budgeted
+    /// reconciliation operator. Neither facade exposes ordinary actor intake.
     pub(super) fn start_learned(
         settings: &Settings,
         actor: &Profile,
@@ -87,9 +87,14 @@ impl Service {
         generation: u64,
         deadline: &Deadline,
     ) -> Result<Self, String> {
-        settings.check_learned_observer()?;
-        Self::start_with(settings, actor, driver, generation, deadline,
-            |mount, limits| PublicationTower::new_learned_observer(mount, port, limits))
+        settings.check_learned_operator()?;
+        Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
+            if settings.resolution.is_some() {
+                PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
+            } else {
+                PublicationTower::new_learned_observer(mount, port, limits)
+            }
+        })
     }
 
     fn start_with(
@@ -155,14 +160,20 @@ impl Service {
             None
         };
         let resolution = if let Some(selected) = &settings.resolution {
-            let (port, custodian) = driver
-                .supervisor()
-                .resolution_port(
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().resolution_port_with_numerical_budget(
                     selected.queries,
                     selected.operations,
                     selected.max_replay_events,
-                )
-                .map_err(debug)?;
+                    events,
+                ),
+                None => driver.supervisor().resolution_port(
+                    selected.queries,
+                    selected.operations,
+                    selected.max_replay_events,
+                ),
+            }
+            .map_err(debug)?;
             tower.set_resolution(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
@@ -385,7 +396,11 @@ impl Service {
             active
                 .resolution
                 .as_ref()
-                .map(|grant| (grant.remaining_queries(), grant.remaining_operations())),
+                .map(|grant| (
+                    grant.remaining_queries(),
+                    grant.remaining_operations(),
+                    grant.remaining_numerical_replay_events(),
+                )),
             active
                 .review_explanation
                 .as_ref()

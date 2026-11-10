@@ -88,7 +88,7 @@ eligibility remain Unknown. An Authorized observation does not authorize a
 follow-up effect, and Unknown liabilities stay charged. See
 [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
 
-For an original uncertain ordinary publication, separately select `resolution`
+For an original uncertain publication, separately select `resolution`
 with finite `queries`, `operations` and `max_replay_events`, and
 `authority: "reconcile_existing_receipts"`. Send `next` with
 `{"operation":"9001"}` to its original request address. When the Known plan
@@ -96,8 +96,13 @@ offers an `action`, select that complete request unchanged for a later explicit
 `tower-operator-exchange` invocation. It reconciles the original endpoint
 receipt, preserves charged uncertainty on a miss and never resends the effect.
 Keep its expected basis and operation identity; exact retries belong to that
-same live grant, and owner progress may make a new operation stale. A learned
-observer refuses this mutation profile. See the
+same live grant, and owner progress may make a new operation stale. Numerical
+histories additionally require a positive `numerical_replay_events` allowance
+inside resolution, bounded by `operations * max_replay_events`. Learned actor
+and resident services require that explicit allowance and select a restricted
+reconciliation facade; their default observer stays read-only. The complete
+original cut plus Reconcile is reserved before mutation, and missing/short
+numerical work never supplies an action. See the
 [native action and authenticated workflow](TOWER_RESOLUTION.md).
 
 To enumerate a live owner's original situation capture, use

@@ -3,7 +3,7 @@
 //! endpoint receipts and storage failure; no caller outcome replaces them.
 use super::*;
 mod fixture;
-use fixture::{learned_owner, raw_owner};
+use fixture::{learned_owner, owned_predictor_owner, raw_owner};
 
 fn reserved_cut(host: &FileOversight) -> usize {
     usize::try_from(host.revision()).unwrap() + 1
@@ -265,4 +265,62 @@ fn numerical_allowance_never_widens_per_operation_limit_or_charges_plain_owners(
     assert_eq!(receipt(port.resolve(input)).stage(), ActionState::Confirmed);
     assert_eq!(grant.remaining_numerical_replay_events(), Some(1));
     assert_eq!(grant.remaining_operations(), 0);
+}
+
+#[test]
+fn owned_learned_predictor_receipt_uses_its_original_forecast_without_new_predictions() {
+    let root = Root::new();
+    let host = owned_predictor_owner(&root);
+    let events = reserved_cut(&host);
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let before = supervisor.host().unwrap().inspect();
+    let numerical = supervisor.host().unwrap().learned_generation_inspection().unwrap().numerical;
+    let forecast = supervisor.host().unwrap().learned_action_consistency_snapshot().unwrap();
+    let observation = supervisor.host().unwrap().learned_action_consistency_observation(1).unwrap().clone();
+    supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+    let files = root.files();
+    let (ordinary, ordinary_grant) = supervisor.resolution_port(1, 1, events).unwrap();
+    let denied = plan(ordinary.next(701, 261));
+    assert_eq!(denied.block_reason(), Some(FileResolutionBlockReason::NumericalReplayUnsupported));
+    let input = FileResolutionRequest::new(261, denied.basis()).unwrap();
+    assert_eq!(ordinary.resolve(input), Err(FileResolutionError::Unsupported));
+    assert_eq!(ordinary_grant.remaining_operations(), 1);
+    let (short, short_grant) = supervisor
+        .resolution_port_with_numerical_budget(1, 1, events, events - 1).unwrap();
+    assert_eq!(plan(short.next(701, 261)).block_reason(), Some(FileResolutionBlockReason::NumericalReplayLimit));
+    assert_eq!(short.resolve(input), Err(FileResolutionError::Capacity));
+    assert_eq!(short_grant.remaining_numerical_replay_events(), Some(events - 1));
+    assert_eq!(short_grant.remaining_operations(), 1);
+    assert!(supervisor.owner.borrow().snapshot.is_some());
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(supervisor.host().unwrap().learned_action_consistency_snapshot().unwrap(), forecast);
+    assert_eq!(supervisor.host().unwrap().learned_generation_inspection().unwrap().numerical, numerical);
+    assert_eq!(root.files(), files);
+
+    let (port, grant) = supervisor.resolution_port_with_numerical_budget(1, 1, events, events).unwrap();
+    assert_eq!(plan(port.next(701, 261)).request(), Some(input));
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(events));
+    let acknowledged = receipt(port.resolve(input));
+    assert_eq!(acknowledged.stage(), ActionState::Confirmed);
+    assert!(matches!(acknowledged.outcome(), Reconciliation::Resolved(EndpointOutcome::Executed { .. })));
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(0));
+    assert_eq!(grant.remaining_operations(), 0);
+    let after = supervisor.host().unwrap().inspect();
+    assert_eq!(after.executions, 1);
+    assert_eq!(after.executions, before.executions);
+    assert_eq!(after.control.ledger.charged, 8);
+    assert_eq!(after.payload, before.payload);
+    assert_eq!(supervisor.host().unwrap().learned_generation_inspection().unwrap().numerical, numerical);
+    let after_forecast = supervisor.host().unwrap().learned_action_consistency_snapshot().unwrap();
+    assert_eq!(after_forecast.work, forecast.work);
+    assert_eq!(after_forecast.retained_source_bytes, forecast.retained_source_bytes);
+    assert_eq!(after_forecast.has_unreported_work, forecast.has_unreported_work);
+    assert_eq!(after_forecast.consistency.evidence, forecast.consistency.evidence);
+    assert_eq!(after_forecast.consistency.pending_attempt, forecast.consistency.pending_attempt);
+    assert_eq!(after_forecast.consistency.coverage_lost, forecast.consistency.coverage_lost);
+    assert_eq!(supervisor.host().unwrap().learned_action_consistency_observation(1).unwrap(), &observation);
+    let files = root.files();
+    assert_eq!(receipt(port.clone().resolve(input)), acknowledged);
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(0));
+    assert_eq!(root.files(), files);
 }

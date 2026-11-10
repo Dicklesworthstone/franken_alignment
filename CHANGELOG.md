@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10: serve budgeted learned receipt reconciliation
+
+- Admit explicit numerical resolution budgets in the ordinary/learned operator
+  profile, retaining separate original work custody across reconnects and releases.
+- Require numerical selection before learned startup and keep the default
+  observer read-only; select only the restricted reconciliation facade.
+- Preserve strict client action/receipt validation and expose the exact
+  numerical-work block reason without automatic retries.
+- Add two profile/service tests, one actual learned generation/congress/human/
+  authenticated-client test, and a native owned-predictor receipt regression.
+  Independent source review is complete; new-code execution remains unverified.
+
 ## 2026-11-10: grant bounded original numerical receipt reconciliation
 
 - Add an independently selected cumulative numerical allowance to native

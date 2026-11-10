@@ -1,5 +1,6 @@
-//! Explicit live observation of the original learned owner. The selected port
-//! cannot admit actor proposals, read a policy source or supply publication keys.
+//! Explicit live inspection and separately budgeted receipt reconciliation.
+//! The selected port cannot admit actor proposals, read a policy source or
+//! supply publication keys.
 use super::super::{Profile, operator};
 use super::{
     Config, Deadline, FileLearnedTextStreamActorPort, FileSupervisedDriver, Loaded, PeerProfile,
@@ -9,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 pub(super) type Service = operator::Service;
 
-const USAGE: &str = "learned operator observation requires paired --operator-profile PATH --tower-generation NONZERO in a live learned actor or resident sequence command";
+const USAGE: &str = "learned operator service requires paired --operator-profile PATH --tower-generation NONZERO in a live learned actor or resident sequence command";
 
 /// Own the complete live grammar before any other option can erase an
 /// incompatible receipt, audit, Stop, reset or maintenance selection.
@@ -118,7 +119,7 @@ impl Selection {
             return Err(USAGE.into());
         }
         let settings = operator::Settings::read(path)?;
-        settings.check_learned_observer()?;
+        settings.check_learned_operator()?;
         Ok(Self { settings, generation })
     }
 
@@ -135,7 +136,7 @@ impl Selection {
         if self.generation == 0 {
             return Err(USAGE.into());
         }
-        self.settings.check_learned_observer()?;
+        self.settings.check_learned_operator()?;
         let extra = precheck
             .map(|settings| settings.socket_path())
             .into_iter()

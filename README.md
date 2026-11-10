@@ -103,8 +103,12 @@ predecessors, bounded replay and per-grant retry identity apply; missing receipt
 stay charged Unknown, while measured cost, ranking and publication eligibility
 remain unestablished. An explicit `resolution` operator profile now connects
 this path to the authenticated `tower-operator-exchange` client, which validates
-the returned action and native receipt before output or further work. Learned
-observation rejects the mutation profile before startup. These source increments
+the returned action and native receipt before output or further work.
+An independent cumulative `resolution.numerical_replay_events` allowance
+connects original decoder and action-predictor receipts, including learned actor
+and resident services, without another generation or publication. Complete
+original cuts are reserved before mutation; default observation stays read-only,
+and unbudgeted learned resolution refuses before startup. These source increments
 still require execution qualification.
 
 A separately granted native [recorded-state `why-held`](docs/TOWER_HOLD_DIAGNOSIS.md)

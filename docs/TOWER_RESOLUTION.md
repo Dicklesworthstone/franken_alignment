@@ -233,17 +233,31 @@ unknown fields and malformed selections fail before setup. A
 resolution-only service may set inspection and admission-explanation counts to
 zero, retain `explanation_disclosure: "none"`, and omit the other optional grants.
 
+For an original numerical history, add the optional positive integer
+`"numerical_replay_events": 8192` inside that same resolution object. The total
+must not exceed `operations * max_replay_events`. Omission keeps the ordinary-only
+native grant. Explicit null, zero, nonintegers, duplicates, unknown fields and
+excessive totals refuse before setup. This allowance is independent of the
+similarly named completed-review explanation budget.
+
 The service retains one original custodian across healthy reconnects, request
 handoffs and terminal reply grace. Its selected Permit purpose is confined by
 the restricted operator constructor. Neither an actor request nor a different
 socket can acquire that grant. A learned actor or resident learned sequence
-rejects a selected resolution profile before clock/source acquisition, store
-creation or listener setup; its observer remains read-only.
+requires an explicit numerical allowance whenever resolution is selected.
+An unbudgeted selection fails before clock/source acquisition, store creation
+or listener setup. Omitted/null resolution retains the original read-only
+observer; the explicit budgeted selection uses the separate restricted learned
+reconciliation constructor. Reconnects and resident releases share the same
+resolution custodian and cumulative work.
 
 Start an ordinary service with both `--operator-profile OPERATOR_PROFILE` and
 `--tower-generation 41`, following the existing
 [live operator setup](LIVE_TOWER_OPERATOR.md#select-the-operator-endpoint).
-Save the explicit `next` request above as `NEXT_JSON`, then run:
+For learned actor or resident commands, use the existing
+[paired learned operator selection](LIVE_LEARNED_OPERATOR.md#reconcile-an-original-learned-publication)
+with that numerical allowance. The same explicit client workflow applies.
+Save the `next` request above as `NEXT_JSON`, then run:
 
 ```sh
 supervise_publication tower-operator-exchange OPERATOR_PROFILE NEXT_JSON
@@ -303,6 +317,15 @@ receipts, exact/short/default numerical allowances, shared retry custody and
 the unchanged observer boundary. A successful reconciliation advances only
 the original receipt transition; it does not generate another token, publish
 another message or sample new evidence.
+
+The authenticated numerical integration adds two profile/service regressions
+and a real learned command-client regression. It generates original output,
+completes native helper review and independent human approval, and checks both
+retained publication receipts and charged misses. A one-short grant refuses
+before mutation; an exact grant settles once, survives reconnects and preserves
+its cached result. The original driver recognizes an externally settled receipt
+before another clock/source callback. A separate native regression covers an
+owned learned consistency predictor's actual original forecast and receipt.
 
 The changes receive independent source review. The workspace was unavailable during part of implementation;
 the restored environment has no RCH runner or Rust toolchain.

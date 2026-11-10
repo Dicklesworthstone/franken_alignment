@@ -74,12 +74,12 @@ following identities and paths with the actual deployment's values:
 }
 ```
 
-The ordinary operator's optional `resolution` mutation grant is not accepted
-by learned observation. Omit that member or set it to `null`. Selecting it,
-including in a programmatically supplied profile, fails before clock/source
-acquisition, authority-store creation or listener setup. The learned facade
-retains its closed read-only verb set and cannot execute a `next` reconciliation
-action or `resolve` request.
+Omitted/null `resolution` retains the original read-only observer. A learned
+service can instead explicitly select bounded original receipt reconciliation
+with its independent numerical allowance, described below. A selected resolution
+object without that allowance, including a programmatically supplied profile,
+fails before clock/source acquisition, authority-store creation or listener
+setup. A historical explanation grant cannot authorize this mutation.
 
 The complete scope and selected supervisor identity must match every selected
 actor. Operator identity remains independently configured. Actual Linux UID/GID
@@ -192,9 +192,56 @@ observes the original policy, committee verdicts, reducer application and later
 effect linkage. It supplies neither current eligibility nor the still-required
 independent human publication key.
 
+## Reconcile an original learned publication
+
+An uncertain learned Message may already have an original endpoint receipt
+that the ledger has not yet accepted. To expose reconciliation, explicitly
+select this independent member in the public operator profile:
+
+```json
+"resolution": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "numerical_replay_events": 8192,
+  "authority": "reconcile_existing_receipts"
+}
+```
+
+The optional numerical total is mandatory for learned resolution. It is a
+positive integer no greater than `operations * max_replay_events`. The allowance
+reserves complete original journal cuts plus each entered Reconcile event, under
+the retained native model limits. It is independent of review-explanation work.
+An exact retry under the same live grant does not spend it again; reconnects and
+resident Message/Finish handoffs cannot replenish it.
+
+Use the same paired operator/generation CLI options shown above. Send a native
+`next` request with `{"operation":"9001"}` to the original external-request
+address through `tower-operator-exchange`. When the Known plan offers an action,
+select the complete `result.value.knowledge.value.action` object unchanged into
+a request file and submit it in a later explicit invocation. The client checks
+the exact native subject, original basis and receipt relationship before output
+or later work. It performs no automatic follow-up, retry or effect resend.
+
+A first Resolve requires the complete captured predecessor, an already-ready
+original clock and enough selected work. It reconciles only the existing receipt.
+A real executed receipt confirms the original effect; a missing or expired
+receipt stays Unknown and charged. It does not generate another token, acquire
+fresh policy evidence, supply a human key, publish or seal a message. The
+original driver checks its current ledger before further work and recognizes an
+operator-settled terminal receipt before another source or clock callback.
+
+Insufficient numerical allowance returns a typed blocked plan and refuses
+direct Resolve before operation spending or snapshot invalidation. The
+selected allowance is not a promise of a fixed number of successful operations:
+later original cuts are larger. After entry, failure or output loss does not
+refund the reservation or prove that no journal change occurred. Cached results
+remain historical and are not durable across grant replacement or owner reopening.
+See [the exact reconciliation contract](TOWER_RESOLUTION.md).
+
 ## Preserve cumulative work and independent control
 
-One service owns the socket, transport counters and native read custodians for
+One service owns the socket, transport counters and selected native custodians for
 the selected lifetime. Reconnects and resident handoffs do not reissue grants,
 reset query/transport allowances, refresh pending captures, extend the original
 deadline or replenish numerical/source work. Exhausted reads return their
@@ -210,11 +257,13 @@ expiry or exhausted connection/exchange limits retire only this observer. They d
 an effect, approve a request, stop a healthy publication or suppress the original
 actor response.
 
-The learned observer facade permanently restricts dispatch to operator
-observations. Arbitrary `propose` payloads, request `get` tickets, `precheck`,
-`capabilities` and other unsupported verbs remain unavailable even with broader
-host purpose tags. The separate learned actor port remains the selected intake
-path and continues to derive release bytes from its original numerical owner.
+The original learned observer facade permanently restricts dispatch to operator
+observations. The separately selected learned reconciliation facade adds only
+native Next and Resolve under their independent grant. Both keep arbitrary
+`propose` payloads, request `get` tickets, `hold`, `precheck`, `capabilities`
+and other unsupported verbs unavailable even with broader host purpose tags.
+The separate learned actor port remains the selected intake path and continues
+to derive release bytes from its original numerical owner.
 
 ## Historical and qualification boundaries
 

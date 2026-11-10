@@ -174,7 +174,8 @@ fn plan(
                         "not_dispatched" => matches!(stage, "proposed" | "prepared" | "reviewing" | "authorized"),
                         "terminal" => matches!(stage, "denied" | "cancelled" | "confirmed" | "confirmed_not_executed"),
                         "irrecoverably_unknown" => stage == "irrecoverably_unknown",
-                        "clock_unavailable" | "numerical_replay_unsupported" | "replay_limit"
+                        "clock_unavailable" | "numerical_replay_unsupported" | "numerical_replay_limit"
+                        | "replay_limit"
                         | "operation_limit" | "operation_already_used" => true,
                         _ => false,
                     }

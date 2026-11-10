@@ -2,6 +2,8 @@
 //! and independent Stop. Fixture weights establish protocol behavior only.
 #[path = "operator/review_explanation.rs"]
 mod review_explanation;
+#[path = "operator/resolution.rs"]
+mod resolution;
 
 use super::super::operator as live_operator;
 use super::peer_intake::{Behavior, actor, actor_profile, human};
@@ -688,7 +690,7 @@ fn cached_stop_failure_is_reported_after_the_original_terminal_actor_reply_is_de
 
 
 #[test]
-fn receipt_resolution_profile_is_refused_before_learned_time_owner_or_listeners() {
+fn unbudgeted_receipt_resolution_is_refused_before_learned_time_owner_or_listeners() {
     let root = Root::new();
     let config = configured(&root);
     let recipe_path = fixture::write(&root, b"allow");
@@ -720,7 +722,7 @@ fn receipt_resolution_profile_is_refused_before_learned_time_owner_or_listeners(
         Some(&profile),
         None,
         Some(&selected),
-        || panic!("resolution authority reached a learned clock or owner"),
+        || panic!("unbudgeted resolution reached a learned clock or owner"),
     ).is_err());
     assert!(!store.exists());
     assert!(!selected.settings.socket.exists());

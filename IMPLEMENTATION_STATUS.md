@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: connect budgeted learned reconciliation to the authenticated operator
+
+The closed resolution profile now accepts an independent positive cumulative
+`numerical_replay_events` allowance, bounded by its operation count times its
+per-operation event ceiling. The shared service provisions that exact original
+native grant; ordinary histories do not spend it. It remains separate from
+completed-review explanation's numerical reservations.
+
+Learned single-actor and resident selections require this explicit allowance
+whenever resolution is enabled, checking it before source, clock, authority
+store or listener startup. The selected service uses the restricted learned
+reconciliation constructor; omitted/null resolution preserves the original
+observer. Original custody and spent work survive reconnects and handoffs.
+The existing operator client validates the new numerical-limit block reason
+without changing its action/receipt correlations or automatic-retry policy.
+
+Two new profile/service regression functions cover closed numerical admission
+and ordinary-history compatibility. A learned integration function generates
+real output, completes native congress and independent human approval, and
+drives actual authenticated command-client exchanges over both a retained
+execution receipt and a charged miss. One-short work refuses before mutation;
+exact work settles once, cached retries do not repeat it, and later requests
+cannot replenish the allowance. After a confirmed receipt the original driver
+observes terminal state before another source or clock callback.
+
+A further native regression covers the original owned learned consistency
+predictor, including an actual original forecast, cold receipt reconciliation,
+default/short refusals and unchanged numerical/predictor observations. This
+supplements the preceding six native and seven public tests.
+
+Independent source review is complete. The workspace disconnected again;
+RCH and Rust were absent while it was available. No new compilation, formatter,
+Clippy, doctest, runtime test or full qualification pass is claimed. Numerical
+work units are conservative original-transition reservations, not measured CPU
+or products. The retry cache still belongs only to its original live grant.
+Ranked planning and all broader FA-138 acceptance conditions remain open.
+
+See [learned operator reconciliation](docs/LIVE_LEARNED_OPERATOR.md#reconcile-an-original-learned-publication).
+
 ## 2026-11-10: reconcile original learned receipts under explicit numerical work custody
 
 The original native resolution grant can now explicitly select a cumulative

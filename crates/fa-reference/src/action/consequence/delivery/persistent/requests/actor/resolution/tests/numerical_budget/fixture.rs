@@ -234,3 +234,59 @@ pub(super) fn raw_owner(root: &Root, published: bool) -> FileOversight {
     assert!(host.action_consistency_required());
     host
 }
+
+/// A distinct learned consistency predictor consumes the owner's original K/V
+/// source, not a supplied SourceFrame or stand-in forecast report.
+pub(super) fn owned_predictor_owner(root: &Root) -> FileOversight {
+    use crate::action::consequence::activation::consistency::{
+        BinaryForecast, ErrorBudget, ForecastRegistration,
+    };
+    use crate::action::consequence::activation::probe::learned::MAX_CHECKED_KV_BYTES;
+    use crate::action::consequence::delivery::persistent::observed::consistency::{
+        FileConsistencyConfig, FileConsistencyParameters,
+        learned::FileLearnedConsistencyConfig,
+    };
+
+    let model = model();
+    let tensor = model.cache_profile().layers()[&1].values();
+    let neutral = BinaryForecast::new(32768, 32768).unwrap();
+    let base = FileConsistencyConfig::new(FileConsistencyParameters {
+        probe_id: 91, probe_generation: 1, profile: tensor.profile(),
+        weights: vec![0.0; tensor.dimensions()], bias: 0.0, threshold: 0.0,
+        forecast: ForecastRegistration {
+            domain: 71, generation: 1, policy_generation: 1,
+            event_prefix: b"ok".to_vec(),
+            negative: neutral, at_threshold: neutral, positive: neutral,
+        },
+        alpha: ErrorBudget::new(1, 4).unwrap(), stream: 21,
+        max_predictions: 8, max_prediction_age_ticks: 8,
+    }).unwrap();
+    let predictor = FileLearnedConsistencyConfig::new(
+        base, 1, KvSide::Value,
+        LearnedMonitorBudget::default(), LearnedMonitorBudget::default(),
+        MAX_CHECKED_KV_BYTES,
+    ).unwrap().with_owned_generation().unwrap();
+    let mut selected = profile();
+    let mut actor_profile = selected.delivery.actor.profile();
+    actor_profile.model_generation = 3;
+    actor_profile.tokenizer_generation = 4;
+    selected.delivery.actor = ActorState::new(actor_profile, Vec::new(), vec![0], vec![0], 0).unwrap();
+    let (mut host, reviewer) = FileOversight::create(root.store(), selected).unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    host.enable_learned_generation(host.revision(), config(false, 1)).unwrap();
+    let observer = host.enable_learned_action_consistency(host.revision(), predictor).unwrap();
+    let numerical = host.learned_generation_inspection().unwrap().numerical;
+    host.advance_learned_generation(host.revision(), numerical.actor_revision, numerical.position)
+        .unwrap().unwrap();
+    let revision = host.revision();
+    let actor_revision = host.actor_snapshot().unwrap().actor_revision;
+    observer.forecast_owned_learned_request(&mut host, revision, 701, actor_revision)
+        .unwrap().unwrap().prediction().unwrap();
+    assert_eq!(host.pending_forecast_request().unwrap(), Some(701));
+    dispatch_and_optionally_publish(&mut host, &reviewer, true);
+    assert!(host.owned_learned_action_consistency_required());
+    assert_eq!(host.learned_action_consistency_snapshot().unwrap().consistency.evidence.samples(), 1);
+    // Exercise the original cold reconstruction of both learned contracts.
+    host.clear_learned_replay_cache();
+    host
+}

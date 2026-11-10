@@ -176,8 +176,22 @@ Omission or `null` disables the grant. A resolution-only profile sets inspection
 and admission-explanation counts to zero, keeps `explanation_disclosure` as
 `"none"`, and omits the other optional capabilities. This explicitly permits
 recording an existing endpoint receipt in the original journal; it provides no
-publication key, fresh clock or evidence source. Learned operator commands
-reject any selected resolution object before startup.
+publication key, fresh clock or evidence source.
+
+For original decoder or action-predictor histories, the object additionally
+accepts a positive integer `numerical_replay_events`, bounded by
+`operations * max_replay_events`. Each entered numerical Resolve reserves
+the complete original journal cut plus its Reconcile event before native work,
+even if the original warm replay cache can do less. This counts logical
+transitions under retained native model limits, not CPU time or scalar products.
+Omission keeps numerical histories unsupported; explicit null, zero, malformed,
+duplicate or excessive values refuse before setup. Review explanation's
+numerical allowance is separate and cannot pay for a resolution.
+
+Learned actor and resident commands require this numerical allowance whenever
+resolution is selected; unbudgeted resolution fails before startup. Omitted/null
+resolution keeps their original observer. A positive explicit selection installs
+the restricted learned reconciliation operator and original numerical grant.
 
 The independent `review_explanation` object requires `queries` (1–1,024),
 `max_replay_events` (1–4,096), and `disclosure: "policy_and_congress_trace"`.
@@ -377,8 +391,11 @@ Transport/output failure never proves that mutation did not commit.
 
 Costs, information gain, ranking and current publication eligibility remain
 Unknown. This exposes one connected operation and does not implement a general
-planner. Numerical histories require a different replay contract and remain
-unsupported for resolution. See [the native next and resolution contract](TOWER_RESOLUTION.md)
+planner. Numerical histories require the separate cumulative allowance above.
+Next checks it without reserving work; insufficient selected work returns
+`numerical_replay_limit` with no action. Exact entered retries consume no further
+reservation, and ordinary histories do not spend it.
+See [the native next and resolution contract](TOWER_RESOLUTION.md)
 for exact fields, authority, accounting, retry and qualification boundaries.
 
 ## Compare a candidate against the original retained policy corpus
@@ -725,3 +742,9 @@ one learned-startup regression functions covering real original receipts,
 explicit action selection, exact retries, stale and unknown outcomes, restricted
 authority and rejection of altered responses before later work. These new tests
 received source review; compilation and runtime execution remain unverified.
+
+The numerical resolution profile adds two authored profile/service regressions
+and a real learned generation/congress/human/client regression spanning both an
+executed original receipt and a charged missing receipt. Exact/short budgets,
+reconnects, cached results and the driver's settled-state handling are covered.
+Independent source review is complete; new compilation and execution are pending.

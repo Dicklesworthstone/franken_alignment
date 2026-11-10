@@ -50,6 +50,9 @@ pub(crate) struct ResolutionSettings {
     pub(crate) queries: usize,
     pub(crate) operations: usize,
     pub(crate) max_replay_events: usize,
+    /// Cumulative complete-cut reservations for original numerical histories,
+    /// including the new reconciliation event; not a measured CPU/work metric.
+    pub(crate) numerical_replay_events: Option<usize>,
     pub(crate) authority: String,
 }
 
@@ -60,6 +63,11 @@ impl ResolutionSettings {
             queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
             operations: usize::try_from(fields.number("operations")?).map_err(debug)?,
             max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
                 .map_err(debug)?,
             authority: fields.text("authority")?,
         };
@@ -79,6 +87,18 @@ impl ResolutionSettings {
         {
             return Err(
                 "resolution requires explicit receipt-reconciliation authority and bounded reads, operations and replay"
+                    .into(),
+            );
+        }
+        if self.numerical_replay_events.is_some_and(|events| {
+            events == 0
+                || self
+                    .operations
+                    .checked_mul(self.max_replay_events)
+                    .is_none_or(|maximum| events > maximum)
+        }) {
+            return Err(
+                "numerical resolution requires a positive cumulative event budget within the selected operation and replay bounds"
                     .into(),
             );
         }
@@ -378,12 +398,20 @@ impl Settings {
         Ok(())
     }
 
-    /// Learned observation remains a closed read-only service. Check this before
+    /// Learned observation retains its original read-only defaults. Selecting
+    /// reconciliation also requires explicit numerical work admission, before
     /// clock/source acquisition, owner startup or listener creation.
-    pub(crate) fn check_learned_observer(&self) -> Result<(), String> {
+    pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
         self.validate()?;
-        if self.resolution.is_some() {
-            return Err("learned operator observation does not grant receipt reconciliation".into());
+        if self
+            .resolution
+            .as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(
+                "learned receipt reconciliation requires an explicit numerical replay budget"
+                    .into(),
+            );
         }
         Ok(())
     }
