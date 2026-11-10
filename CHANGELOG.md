@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10: connect original history to review and fencing workflows
+
+- Add real authenticated composition regressions from observed Tail request and
+  round metadata to independently granted completed-review Explain, including
+  original revision linkage and unchanged owner/source state.
+- Cover independent Tail/Fence custody, immutable pre-Stop pagination, fresh
+  Stop discovery, retained charged Unknown liability and exact Fence retry.
+- Extend learned resident handoff/reconnect coverage without renewed Tail work.
+  Correct the Fence fixture clock profile so its positive path reaches startup.
+- Document direct-ID review discovery and retain the required gate failure log;
+  RCH absence still prevents compilation and runtime qualification.
+
 ## 2026-11-10: validate original metadata and explicit tail continuations
 
 - Apply exhaustive native event/identity rules to both bounded and explicit

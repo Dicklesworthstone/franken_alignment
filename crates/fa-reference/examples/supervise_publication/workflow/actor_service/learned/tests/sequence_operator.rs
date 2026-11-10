@@ -8,7 +8,9 @@ use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use fa_reference::address_resolver::{Address, Noun};
 use fa_reference::knowledge_surface::KNOWLEDGE_JSON_LIMITS;
 use fa_reference::strict_json::{self, Json};
-use fa_reference::tower::{TowerRequest, Verb, encode_request, publication::request_address_for};
+use fa_reference::tower::{
+    ReadArguments, TowerRequest, Verb, encode_request, publication::request_address_for,
+};
 use std::{
     io::Read,
     sync::{
@@ -26,7 +28,7 @@ fn selection(root: &Root, actor: &Profile) -> (PathBuf, live_operator::Selection
     let path = root.0.join("operator.json");
     let socket = root.0.join("peers/operator.sock");
     fs::write(&path, format!(
-        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
+        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"journal_tail":{{"queries":2,"events_per_page":4,"disclosure":"redacted_journal_events"}},"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
         scope.tenant, scope.principal, scope.run, scope.branch, scope.authority,
         quote(socket.to_str().unwrap()), identity.uid(), identity.gid(), identity.uid(), identity.gid(),
         MAX_EXPLANATION_EVENTS)).unwrap();
@@ -166,6 +168,7 @@ fn observe(
     .unwrap();
     let first_request =
         request_address_for(scope, &registration, entries[0].loaded.request).unwrap();
+    let first_key = entries[0].loaded.request;
     let peer = thread::spawn(move || {
         let maximum = selected.settings.response_bytes;
         let mut socket = connect(&selected);
@@ -264,6 +267,24 @@ fn observe(
             field(&earlier_rows[0], &["stage"]).as_str(),
             Some("confirmed")
         );
+        let mut tail = TowerRequest::new("sequence-first-tail", registration.clone(), Verb::Tail);
+        tail.arguments = ReadArguments::JournalTail { after_revision: 0 };
+        let first_tail = exchange(&mut socket, tail, maximum);
+        known(&first_tail, "journal-tail");
+        let original_basis = field(&first_tail, &["result", "value", "knowledge", "basis"]);
+        let original_page = field(&first_tail, &["result", "value", "knowledge", "value"]);
+        let cursor = number(original_page, &["continuation"]);
+        assert_eq!(number(original_page, &["offset"]), 0);
+        assert_eq!(number(original_page, &["after_revision"]), 0);
+        assert_eq!(number(original_page, &["through_revision"]), 4);
+        assert_eq!(
+            field(original_page, &["events"]).as_array().unwrap().len(),
+            4
+        );
+        assert_eq!(
+            field(original_page, &["enumeration_complete"]).as_bool(),
+            Some(false)
+        );
         let first = exchange(
             &mut socket,
             TowerRequest::new(
@@ -333,6 +354,57 @@ fn observe(
         .unwrap();
         assert_eq!(later_rows.len(), 2);
         assert_eq!(later_rows[0], earlier_rows[0]);
+        // This is the same operator service after a real actor handoff and a
+        // reconnect. Its second query must consume the earlier immutable cut,
+        // not refresh metadata from the second completed publication.
+        let mut tail =
+            TowerRequest::new("sequence-retained-tail", registration.clone(), Verb::Tail);
+        tail.arguments = ReadArguments::JournalTailPage { cursor };
+        let continued = exchange(&mut socket, tail, maximum);
+        known(&continued, "journal-tail");
+        assert_eq!(
+            field(&continued, &["result", "value", "knowledge", "basis"]),
+            original_basis
+        );
+        assert!(
+            number(
+                &last,
+                &["result", "value", "knowledge", "basis", "journal_revision"]
+            ) > number(original_basis, &["journal_revision"])
+        );
+        let continued_page = field(&continued, &["result", "value", "knowledge", "value"]);
+        assert_eq!(number(continued_page, &["offset"]), 4);
+        assert_eq!(number(continued_page, &["after_revision"]), 0);
+        let ending = number(original_basis, &["journal_revision"]);
+        assert_eq!(number(continued_page, &["through_revision"]), ending.min(8));
+        assert_eq!(
+            field(continued_page, &["enumeration_complete"]).as_bool(),
+            Some(ending <= 8)
+        );
+        assert!(
+            field(continued_page, &["continuation"]).is_null(),
+            "the original two-query grant must be exhausted"
+        );
+        for (index, event) in field(continued_page, &["events"])
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
+            assert_eq!(number(event, &["revision"]), index as u64 + 5);
+            let request = field(event, &["request"]);
+            if !request.is_null() {
+                assert_eq!(request.as_str(), Some(first_key.to_string().as_str()));
+            }
+        }
+        let mut tail =
+            TowerRequest::new("sequence-no-tail-renewal", registration.clone(), Verb::Tail);
+        tail.arguments = ReadArguments::JournalTail { after_revision: 0 };
+        let exhausted_tail = exchange(&mut socket, tail, maximum);
+        assert_eq!(
+            field(&exhausted_tail, &["result", "value", "error", "code"]).as_str(),
+            Some("capacity")
+        );
         let exhausted = exchange(
             &mut socket,
             TowerRequest::new("sequence-reconnected", registration, Verb::Situation),

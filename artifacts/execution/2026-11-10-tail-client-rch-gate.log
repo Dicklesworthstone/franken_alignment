@@ -1,0 +1,7 @@
+Base commit: ff0a2d3231d0b9beb2392d9f51991cc017ca2e7b
+Pending increment: original journal-tail client/review/Fence composition
+Command: RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask -- check
+Exit status: 127
+Compilation and tests did not start. No local fallback was run.
+Raw stderr follows:
+/bin/bash: line 1: rch: command not found

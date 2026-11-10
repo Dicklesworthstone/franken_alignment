@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: compose journal observations with review and original Stop
+
+The operator regression suite now connects original Tail metadata to a real
+completed-review Explain request under separate custody. It discovers the
+actual request and round, checks original begin/completion revisions and the
+recorded publication outcome, and preserves the exhausted Tail allowance,
+remaining unrelated disclosures, original owner and source accounting.
+
+A second real composition captures an unresolved dispatched effect and a
+reserved attempt, enters original admission Fence, and continues the pre-Stop
+Tail cut. Only the undispatched reservation is refunded; the Unknown liability
+stays charged. A fresh Tail observes the recorded Stop without claiming drain,
+actor termination or fleet fencing, and the exact Fence retry retains its
+original receipt. Existing learned resident tests additionally continue their
+original capture after handoff/reconnect and preserve exhausted read custody
+while later publication proceeds.
+
+The Fence test fixture now retains the deployment clock domain when selecting
+a native helper-review profile; the prior replacement selected clock 99 and
+could not pass actor/host startup checks. No production clock rule or assertion
+is weakened. The discovery guide explains direct IDs and independently
+observed cuts, with no inferred authority or current eligibility.
+
+Independent source reviews, dated rustfmt syntax processing, diff checks and
+exact staged source inventory/binding checks are complete. The required RCH
+full-gate attempt exits 127 before compilation because rch is absent; its raw
+stderr is retained in artifacts/execution/2026-11-10-tail-client-rch-gate.log.
+No runtime, compiler, Clippy or qualification pass is claimed, and the work
+remains open pending qualified execution.
+
 ## 2026-11-10: retain native identity and capture boundaries in explicit clients
 
 Both journal-tail clients now validate every native event category against its

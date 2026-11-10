@@ -3455,7 +3455,9 @@
         "crates/fa-reference/tests/tower_journal_tail.rs",
         "docs/TOWER_JOURNAL_TAIL.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/journal_tail_validation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/tail.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/tail.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/tail_composition.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_operator.rs"
       ],
       "founding_ideas": [
         "FI-A02",

@@ -364,3 +364,15 @@ qualification boundary.
 ## What this guide does not do
 
 It does not grant authority; every verb's authority requirement is in the vocabulary registry and enforced by purpose contexts. It does not describe the controlled actor's surface, which is deliberately narrower (refusal codes, remedial actions and, under an `exact_predicates` disclosure profile, `fa precheck`). The explicit reference mappings do not claim the prospective `fa` CLI or a complete deployment exists; see [`IMPLEMENTATION_STATUS.md`](../IMPLEMENTATION_STATUS.md).
+
+### Discover a completed original review from live history
+
+Use linked situation rows to retain the original request address and attempt.
+A journal-tail `begin_review` event directly names its attempt and round; a
+`finish_review` with that round records completion. A learned-sidecar completion
+can directly carry both identities. Select the observed round with the existing
+independently granted Explain request. Keep the separate observation bases and
+query allowances; an event label does not grant effect authority or establish
+current eligibility. The [exact discovery workflow](TOWER_JOURNAL_TAIL.md#discover-an-original-completed-review)
+includes the wire request and explains what a suffix missing the original
+begin record cannot establish.

@@ -14,6 +14,8 @@ mod policy_replay;
 mod resolution;
 #[path = "tests/review_explanation.rs"]
 mod review_explanation;
+#[path = "tests/tail_composition.rs"]
+mod tail_composition;
 
 use super::super::{Config, PeerProfile};
 use super::*;

@@ -173,6 +173,49 @@ IDs refuse before output or the next request. An unqualified request address
 cannot move an observed cursor to another registration. Unseen earlier pages
 remain unknown to the client; the original native owner enforces cursor custody.
 
+## Discover an original completed review
+
+Start with a linked situation for the same original run: select
+`{"request_links":true}` and retain the attempt's `attempt`,
+`external_request` and `request_address`. Then read enough of the original
+journal to include its `begin_review` record. That row directly records the
+attempt and round together. A later `finish_review` row with the same round
+locates the recorded completion; the completion row itself does not repeat the
+attempt or external request. A `learned_sidecar_finish` row directly records
+both attempt and round and can also locate a learned completion.
+
+For example, after observing that external request `701` belongs to attempt
+`1` at `fa://1/attempt/request-3-2-4-5-701@41`, a `begin_review` row with
+`attempt: "1"` and `round: "801"`, followed by `finish_review` with
+`round: "801"`, identifies the existing completed-review selector:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "explain-observed-round",
+  "address": "fa://1/attempt/request-3-2-4-5-701@41",
+  "verb": "explain",
+  "arguments": {"round": "801"},
+  "idempotency_key": null
+}
+```
+
+Use the actual observed identities; these example numbers are not a selection
+rule. Tail rows carry no `request_address`, and `submit_request` or `text_message`
+records disclose an external request without inventing its admitted attempt.
+Never equate request keys, attempt IDs, human-approval IDs or journal positions.
+A direct native attempt can have no external request. If a selected suffix
+omits the needed `begin_review`, that suffix does not establish the ordinary
+attempt-to-round link. An explicitly requested earlier capture can supply the
+missing metadata within the same remaining grant; no client silently recaptures.
+
+The situation and tail have independently observed bases. Retain both cuts and
+do not describe them as one atomic observation. Explain has its own
+`review_explanation` grant and, for numerical histories, its own numerical
+allowance. A finish label discloses neither the verdict nor whether the result
+was applied or refined. The [completed-review contract](TOWER_REVIEW_EXPLANATION.md)
+owns that historical explanation and its separate current-eligibility limits.
+
 ## Verification scope
 
 Native and public Tower regressions exercise real publication and learned
@@ -194,3 +237,12 @@ This session has no configured RCH executable or worker and lacks the qualified
 `nightly-2026-09-08` toolchain. Source review and permitted syntax-only checks do
 not establish compilation or runtime success. The implementation remains open
 for required RCH verification; no bead or full roadmap packet is closed.
+
+Additional composition regressions exercise Tail-discovered request/round
+metadata through the independent completed-review Explain grant; separate
+Tail/Fence custody with a retained charged Unknown and a refunded undispatched
+reservation; and an original capture retained across a real learned resident
+handoff and reconnect. The Fence fixture preserves the deployed clock domain
+when selecting its native review profile so the positive test reaches the
+original authenticated service. These tests remain authored source pending RCH
+execution; see the [composition tests](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/tail_composition.rs).

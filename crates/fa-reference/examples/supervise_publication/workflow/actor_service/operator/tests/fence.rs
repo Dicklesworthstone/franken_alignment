@@ -29,7 +29,11 @@ fn select(fixture: &mut Fixture, events: usize) {
 }
 
 fn fixture(events: usize) -> Fixture {
-    let mut fixture = Fixture::configured(1, 0, |config| config.profile = native::profile());
+    let mut fixture = Fixture::configured(1, 0, |config| {
+        let clock_domain = config.profile.delivery.clock_domain;
+        config.profile = native::profile();
+        config.profile.delivery.clock_domain = clock_domain;
+    });
     {
         let mut host = fixture.driver.supervisor_mut().host_mut().unwrap();
         let revision = host.revision();
