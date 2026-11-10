@@ -1,11 +1,13 @@
-# Live operator inspection, diagnosis and policy replay through the original Tower owner
+# Live operator inspection and receipt reconciliation through the original Tower owner
 
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
-`situation`, historical admission or completed-congress `explain`, and explicitly selected
-`policy-replay` capabilities to the running supervisor. Policy replay compares a
-candidate against the original owner's retained policy corpus without changing
-policy or issuing authority. The service keeps its original journal lock, source
+`situation`, historical admission or completed-congress `explain`, recorded
+`why-held` diagnosis and explicitly selected `policy-replay` capabilities to the
+running supervisor. A separately selected `resolution` grant connects native
+`next` and `resolve` to original endpoint receipt reconciliation. Policy replay
+compares a candidate against the original owner's retained policy corpus
+without changing policy or issuing authority. The service keeps its original journal lock, source
 admission, helper/human review, publication keys, independent Stop and cleanup path.
 
 ## Select the operator endpoint
@@ -84,7 +86,7 @@ precheck sidecar; it has a different admission-time disclosure lifetime.
 
 ## Public operator profile
 
-The profile fixes the peer identity and finite observation allowances. It contains no
+The profile fixes the peer identity and finite selected capability allowances. It contains no
 private supervisor configuration, source path, helper recipe or publication key.
 For example, replace the scope, paths and kernel identities with the actual
 deployment's values:
@@ -126,8 +128,8 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `hold_diagnosis`, `policy_replay` and `review_explanation` are
-independently optional; omitting one or setting it to `null` keeps that capability
+fields fail. `hold_diagnosis`, `policy_replay`, `review_explanation` and
+`resolution` are independently optional; omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
@@ -140,8 +142,8 @@ grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
-explanation, recorded-state diagnosis, completed-review explanation or policy
-replay must be enabled. For inspection only, set
+explanation, recorded-state diagnosis, completed-review explanation, policy
+replay or receipt reconciliation must be enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
 selects policy-literal and selected-witness disclosure, with a positive bounded
@@ -156,6 +158,26 @@ and admission-explanation counts to zero, keeps `explanation_disclosure` as
 `"none"`, and omits other optional disclosures. It acquires no policy-literal,
 witness, congress, source or publication authority. The original finite grant
 persists across reconnects, scheduled handoffs and terminal reply grace.
+
+Receipt reconciliation requires a separate explicit `resolution` member:
+
+```json
+"resolution": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "authority": "reconcile_existing_receipts"
+}
+```
+
+This optional object is closed. `queries` must be 1–1,024, `operations` 1–128,
+and `max_replay_events` 1–4,096, including the appended Reconcile event. All are unsigned JSON integers. The exact authority marker is required.
+Omission or `null` disables the grant. A resolution-only profile sets inspection
+and admission-explanation counts to zero, keeps `explanation_disclosure` as
+`"none"`, and omits the other optional capabilities. This explicitly permits
+recording an existing endpoint receipt in the original journal; it provides no
+publication key, fresh clock or evidence source. Learned operator commands
+reject any selected resolution object before startup.
 
 The independent `review_explanation` object requires `queries` (1–1,024),
 `max_replay_events` (1–4,096), and `disclosure: "policy_and_congress_trace"`.
@@ -314,6 +336,50 @@ reply ends the client exchange before output or a later request. Native Unknown
 and Capacity responses remain explicit native observations. The client performs
 no automatic poll, retry, recovery or follow-up action.
 See [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
+
+## Plan and reconcile an uncertain publication
+
+With `resolution` explicitly selected, send native `next` to the original
+external-request address using a prospective operation number:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "plan-reconciliation-701",
+  "address": "fa://1/attempt/request-3-2-4-5-701@41",
+  "verb": "next",
+  "arguments": {"operation": "9001"},
+  "idempotency_key": null
+}
+```
+
+Submit this file with `tower-operator-exchange`. A Known plan either names a
+typed block reason or returns one complete executable `resolve` request in
+`action`. Select that object unchanged into a new request file and submit it
+with a later explicit `tower-operator-exchange` invocation. The client validates
+the native subject, original basis and action before output; it does not execute
+a returned action automatically. An intervening owner transition can make the
+action stale, in which case a new operation is refused before native work.
+
+Resolve queries only the existing original endpoint receipt using the
+already-ready acknowledged clock. A real receipt can settle the original
+liability. Missing or expired receipts remain Unknown and charged; no send,
+seal, fabricated nonexecution receipt or deadline-based refund is introduced.
+Entered work invalidates the old one-use admission snapshot.
+
+Within the same live grant, an exact repeated Resolve returns its original
+historical result without another native call. A changed input under that
+operation number conflicts. That finite cache survives healthy reconnects,
+but is not durable across grant replacement or owner reopening. The client
+also validates the exact expected predecessor, before/after bases and native
+outcome before displaying an acknowledgment or sending any later request.
+Transport/output failure never proves that mutation did not commit.
+
+Costs, information gain, ranking and current publication eligibility remain
+Unknown. This exposes one connected operation and does not implement a general
+planner. Numerical histories require a different replay contract and remain
+unsupported for resolution. See [the native next and resolution contract](TOWER_RESOLUTION.md)
+for exact fields, authority, accounting, retry and qualification boundaries.
 
 ## Compare a candidate against the original retained policy corpus
 
@@ -597,36 +663,40 @@ remain separate from the required runtime and full repository gates.
 
 ## Lifetime and authority
 
-The service provisions the original native observational grants once and retains their
+The service provisions the original selected native grants once and retains their
 noncloneable custodians. One Tower session and its continuation state survive
 healthy reconnects. Reconnection, repeated operation labels, review transitions
-and reply grace cannot replenish query, candidate, connection or exchange work.
+and reply grace cannot replenish query, resolution-operation, candidate,
+connection or exchange work.
 The operator's elapsed lifetime is bounded by its profile, actor lifetime and
 the remaining wall lifetime of the original supervisor deadline.
 
 The host pumps at most one complete operator frame per cooperative checkpoint.
-Independent Stop runs first at active intake and execution checkpoints. Reads
-continue during helper/human review and the original observation-only terminal
-reply grace. Truncated, oversized or failed operator transport retires that
-sidecar without entering the publication workflow's mutation or Stop path.
-Every exit retires the sidecar before helper cleanup. The native read grants
-retain no strong owner or authority lock, and their original health/custody
-checks still apply to every query.
+Independent Stop runs first at active intake and execution checkpoints. Selected
+operator work remains available during helper/human review and terminal reply
+grace. Resolution requires its separate mutation grant and an eligible original
+request. Truncated, oversized or failed operator transport retires that sidecar
+without implicitly resubmitting work or entering Stop. A response failure does
+not roll back an already entered resolution. Every exit retires the sidecar
+before helper cleanup. The native grants retain no strong owner or authority
+lock, and their original health/custody checks still apply to every operation.
 
 Only the separate operator session receives operator access and its explicitly
 selected grants. Policy replay additionally selects `Experiment`; it does not
 grant `Permit`, a source callback, precheck disclosure, helper/human keys or a
-supervisor mutation capability. A proposal sent to it cannot acquire source
-evidence or create an action. The actor endpoint keeps its original grants and
+supervisor mutation capability. Resolution explicitly selects `Permit` through
+an operator constructor whose closed verb set refuses actor submission,
+cancellation, polling and precheck before native work. A proposal sent to either
+operator profile cannot acquire source evidence or create an action. The actor endpoint keeps its original grants and
 cannot obtain these reads by adding fields to a request. Opening an existing
 recorded request can provide historical operator reads without reacquiring
 source, launching helpers or repeating approval.
 
-These are cooperative observations of the original acknowledged state. Native
+These are cooperative operations on the original acknowledged state. Native
 synchronous source, journal and replay work is not preempted by this endpoint.
 The feature does not supply the full prospective `fa` CLI, a complete live
-publication-eligibility conjunction, ranked `next`, mutation verbs or deployment
-qualification. Recorded-state `why-held` exposes only the explicitly described
+publication-eligibility conjunction, ranked planning, general mutation commands
+or deployment qualification. Recorded-state `why-held` exposes only the explicitly described
 acknowledged facts. The policy-replay
 operator addition has nine authored regressions covering closed optional profile
 selection, authenticated reports, exact retries after owner advancement,
@@ -649,3 +719,9 @@ The public consumer has separate native-response coverage for stable captures,
 atomic rejection, exact enumeration and strict trace/Knowledge semantics.
 The live-service executable's runtime qualification and full canonical gate remain
 separate from targeted public-library policy-replay verification.
+
+The receipt-reconciliation addition has four service/profile, three client and
+one learned-startup regression functions covering real original receipts,
+explicit action selection, exact retries, stale and unknown outcomes, restricted
+authority and rejection of altered responses before later work. These new tests
+received source review; compilation and runtime execution remain unverified.

@@ -71,7 +71,7 @@ For the ordinary running Tower service, select an explicit
 `--operator-profile OPERATOR_PROFILE` alongside `--tower-generation` and use
 `supervise_publication tower-operator-exchange OPERATOR_PROFILE REQUEST_JSON`.
 This [separate operator endpoint](LIVE_TOWER_OPERATOR.md) authenticates its own
-peer and installs only the selected inspection and admission-explanation grants.
+peer and installs only the explicitly selected original capabilities.
 It keeps the original owner live through intake, review and terminal reply grace.
 An explicit request schedule retains the same read session, cursors and finite
 allowances across handoffs; a later request never renews spent operator work.
@@ -87,6 +87,18 @@ obstacles at one acknowledged cut; current evidence, approvals, clock and final
 eligibility remain Unknown. An Authorized observation does not authorize a
 follow-up effect, and Unknown liabilities stay charged. See
 [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
+
+For an original uncertain ordinary publication, separately select `resolution`
+with finite `queries`, `operations` and `max_replay_events`, and
+`authority: "reconcile_existing_receipts"`. Send `next` with
+`{"operation":"9001"}` to its original request address. When the Known plan
+offers an `action`, select that complete request unchanged for a later explicit
+`tower-operator-exchange` invocation. It reconciles the original endpoint
+receipt, preserves charged uncertainty on a miss and never resends the effect.
+Keep its expected basis and operation identity; exact retries belong to that
+same live grant, and owner progress may make a new operation stale. A learned
+observer refuses this mutation profile. See the
+[native action and authenticated workflow](TOWER_RESOLUTION.md).
 
 To enumerate a live owner's original situation capture, use
 `supervise_publication tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N`
@@ -233,6 +245,14 @@ publication still requires the original native and human review.
 1. `fa situation --scope run` lists it under unknown effects with its adapter's idempotency contract.
 2. If the adapter is `RemoteIdempotent`: `fa resolve <attempt> --reconcile` re-queries under the same key. If `NonIdempotent`: `fa resolve <attempt> --disposition <ConfirmedNotExecuted|Confirmed>` requires an independently established outcome and the authority to record it. Selecting `IrrecoverablyUnknown` instead records a permanent unresolved liability; it never establishes whether the effect executed.
 3. Never `propose` the same effect again to "make sure". Unknown and irrecoverably unknown effects retain their conservative charge; retention expiry alone never selects abandonment (plan §25.3).
+
+**Implemented original-receipt reconciliation.** An ordinary live Tower operator
+can select the independent `resolution` grant and use native `next` followed by
+its exact returned `resolve` request through `tower-operator-exchange`. This
+accepts no caller outcome: only an actual original endpoint receipt can settle
+the liability. Missing and expired receipts remain charged Unknown. The
+acknowledgment carries separate native before/after bases and a finite live-grant
+retry identity. See [the connected reconciliation contract](TOWER_RESOLUTION.md).
 
 **Implemented source-publication reference mapping.** The trusted supervisor may
 explicitly record that final unresolved disposition with

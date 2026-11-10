@@ -1,5 +1,7 @@
 //! Actual original owners and authenticated Unix sockets, without qualification
 //! claims about production deployment or independent model judgments.
+#[path = "tests/resolution.rs"]
+mod resolution;
 #[path = "tests/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "tests/policy_replay.rs"]
@@ -11,7 +13,7 @@ use super::super::{Config, PeerProfile};
 use super::*;
 use fa_reference::Snapshot;
 use fa_reference::action::ElapsedTick;
-use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+use fa_reference::action::consequence::delivery::persistent::observed::{FileHumanReviewer, FileOversight};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_QUERIES,
 };
@@ -65,6 +67,7 @@ struct Fixture {
     config: Config,
     actor: Profile,
     reviewer: PeerProfile,
+    human: FileHumanReviewer,
     settings: Settings,
     _root: Directory,
 }
@@ -133,7 +136,7 @@ impl Fixture {
         .unwrap();
         // This fixture selects the original native, unconfigured-source host;
         // end-to-end service tests exercise the separate source bootstrap path.
-        let (mut host, _) = FileOversight::create(&config.store, config.profile.clone()).unwrap();
+        let (mut host, human) = FileOversight::create(&config.store, config.profile.clone()).unwrap();
         host.observe_time(host.revision(), ElapsedTick(1_000))
             .unwrap();
         let (port, driver) = host.into_supervised_driver();
@@ -143,6 +146,7 @@ impl Fixture {
             config,
             actor,
             reviewer,
+            human,
             settings,
             _root: root,
         }

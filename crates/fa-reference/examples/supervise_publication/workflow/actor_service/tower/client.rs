@@ -25,6 +25,8 @@ mod hold_diagnosis;
 mod policy_replay;
 #[path = "client/review_explanation.rs"]
 mod review_explanation;
+#[path = "client/resolution.rs"]
+mod resolution;
 #[path = "client/situation.rs"]
 mod situation;
 
@@ -430,6 +432,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("hold-diagnosis"), Verb::WhyHeld) => {
             if !hold_diagnosis::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("resolution-next"), Verb::Next) | (Some("resolution"), Verb::Resolve) => {
+            if !resolution::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());
             }
         }

@@ -74,6 +74,13 @@ following identities and paths with the actual deployment's values:
 }
 ```
 
+The ordinary operator's optional `resolution` mutation grant is not accepted
+by learned observation. Omit that member or set it to `null`. Selecting it,
+including in a programmatically supplied profile, fails before clock/source
+acquisition, authority-store creation or listener setup. The learned facade
+retains its closed read-only verb set and cannot execute a `next` reconciliation
+action or `resolve` request.
+
 The complete scope and selected supervisor identity must match every selected
 actor. Operator identity remains independently configured. Actual Linux UID/GID
 and an optional PID are authenticated before reading protocol bytes. These are

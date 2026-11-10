@@ -101,7 +101,11 @@ Its restricted operator mount can settle an existing uncertain publication
 without resending, sealing or submitting another effect. Exact native
 predecessors, bounded replay and per-grant retry identity apply; missing receipts
 stay charged Unknown, while measured cost, ranking and publication eligibility
-remain unestablished. This source increment still requires execution qualification.
+remain unestablished. An explicit `resolution` operator profile now connects
+this path to the authenticated `tower-operator-exchange` client, which validates
+the returned action and native receipt before output or further work. Learned
+observation rejects the mutation profile before startup. These source increments
+still require execution qualification.
 
 A separately granted native [recorded-state `why-held`](docs/TOWER_HOLD_DIAGNOSIS.md)
 now diagnoses an original publication request's recorded Stop, suspension,

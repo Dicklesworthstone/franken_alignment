@@ -117,10 +117,9 @@ impl Selection {
         if generation == 0 {
             return Err(USAGE.into());
         }
-        Ok(Self {
-            settings: operator::Settings::read(path)?,
-            generation,
-        })
+        let settings = operator::Settings::read(path)?;
+        settings.check_learned_observer()?;
+        Ok(Self { settings, generation })
     }
 
     /// Admission inspects only selected names and host identities. It precedes
@@ -136,6 +135,7 @@ impl Selection {
         if self.generation == 0 {
             return Err(USAGE.into());
         }
+        self.settings.check_learned_observer()?;
         let extra = precheck
             .map(|settings| settings.socket_path())
             .into_iter()

@@ -1,5 +1,6 @@
-//! Separately authenticated native inspection and policy replay beside the owner.
-//! Observational grants never admit requests or enter the control path.
+//! Separately authenticated inspection and explicitly selected reconciliation.
+//! A restricted operator mount prevents reconciliation authority from admitting
+//! actor proposals, cancelling them or entering publication.
 #[path = "operator/profile.rs"]
 mod profile;
 pub(crate) use profile::Settings;
@@ -10,7 +11,7 @@ use super::{
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorHoldDiagnosisGrant,
     FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
-    FileSupervisorReviewExplanationGrant,
+    FileSupervisorReviewExplanationGrant, FileSupervisorResolutionGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
@@ -31,6 +32,7 @@ struct Active {
     inspection: Option<FileSupervisorInspectionGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
+    resolution: Option<FileSupervisorResolutionGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
 }
@@ -56,8 +58,8 @@ pub(super) struct Service {
 }
 
 impl Service {
-    /// Issue only selected original observational grants. No source, clock, snapshot,
-    /// helper input or journal mutation is needed to expose this endpoint.
+    /// Issue only the host-selected original grants. Setup reads no source or
+    /// clock and performs no journal mutation; resolution is separately opted in.
     pub(super) fn start(
         settings: &Settings,
         actor: &Profile,
@@ -66,8 +68,13 @@ impl Service {
         generation: u64,
         deadline: &Deadline,
     ) -> Result<Self, String> {
-        Self::start_with(settings, actor, driver, generation, deadline,
-            |mount, limits| PublicationTower::new(mount, port, limits))
+        Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
+            if settings.resolution.is_some() {
+                PublicationTower::new_reconciliation_operator(mount, port, limits)
+            } else {
+                PublicationTower::new(mount, port, limits)
+            }
+        })
     }
 
     /// Observe this exact learned owner without obtaining an ordinary actor
@@ -80,6 +87,7 @@ impl Service {
         generation: u64,
         deadline: &Deadline,
     ) -> Result<Self, String> {
+        settings.check_learned_observer()?;
         Self::start_with(settings, actor, driver, generation, deadline,
             |mount, limits| PublicationTower::new_learned_observer(mount, port, limits))
     }
@@ -146,6 +154,20 @@ impl Service {
         } else {
             None
         };
+        let resolution = if let Some(selected) = &settings.resolution {
+            let (port, custodian) = driver
+                .supervisor()
+                .resolution_port(
+                    selected.queries,
+                    selected.operations,
+                    selected.max_replay_events,
+                )
+                .map_err(debug)?;
+            tower.set_resolution(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
             let (port, custodian) = match selected.numerical_replay_events {
                 Some(events) => driver.supervisor().review_explanation_port_with_numerical_budget(
@@ -184,13 +206,16 @@ impl Service {
         } else {
             None
         };
-        // Experiment permits only the explicitly selected native comparison.
-        // It grants neither publication admission nor policy promotion.
-        let purposes = if policy_replay.is_some() {
-            vec![PurposeTag::Experiment]
-        } else {
-            Vec::new()
-        };
+        // The restricted reconciliation mount admits only its selected native
+        // Resolve path. Permit here cannot enable actor Propose or Hold.
+        // Experiment remains limited to the selected native policy comparison.
+        let mut purposes = Vec::new();
+        if policy_replay.is_some() {
+            purposes.push(PurposeTag::Experiment);
+        }
+        if resolution.is_some() {
+            purposes.push(PurposeTag::Permit);
+        }
         let access = TowerAccess::new(
             CallerScope {
                 caller_tenant: settings.scope.tenant.to_string(),
@@ -224,6 +249,7 @@ impl Service {
                 inspection,
                 explanation,
                 hold_diagnosis,
+                resolution,
                 review_explanation,
                 policy_replay,
             }),
@@ -341,7 +367,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -356,6 +382,10 @@ impl Service {
                 .hold_diagnosis
                 .as_ref()
                 .map(FileSupervisorHoldDiagnosisGrant::remaining_queries),
+            active
+                .resolution
+                .as_ref()
+                .map(|grant| (grant.remaining_queries(), grant.remaining_operations())),
             active
                 .review_explanation
                 .as_ref()

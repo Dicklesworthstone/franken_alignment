@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-10: serve authenticated original receipt reconciliation
+
+- Add a closed optional resolution profile with independent query, operation
+  and event-work limits, retaining original custody across operator reconnects.
+- Select the restricted Permit-capable operator constructor and reject the
+  mutation profile before learned observer startup.
+- Validate native Next actions and Resolve receipts through the existing
+  authenticated operator client before output or later explicit work.
+- Add four service/profile, three client and one learned-startup regressions,
+  including real receipts, exact retries, charged uncertainty, stale predecessors
+  and rejection of altered responses. Independent source review is complete;
+  new-code compilation, runtime and full RCH qualification remain unverified.
+
 ## 2026-11-10: add exact prechecks to resident learned publication
 
 - Add the closed version-two resident manifest with mandatory explicit per-entry

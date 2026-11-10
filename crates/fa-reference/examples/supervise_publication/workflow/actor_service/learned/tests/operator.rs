@@ -685,3 +685,44 @@ fn cached_stop_failure_is_reported_after_the_original_terminal_actor_reply_is_de
     assert!(!profile.socket.exists());
     assert_eq!(cleanup(driver, 1000, 1), 0);
 }
+
+
+#[test]
+fn receipt_resolution_profile_is_refused_before_learned_time_owner_or_listeners() {
+    let root = Root::new();
+    let config = configured(&root);
+    let recipe_path = fixture::write(&root, b"allow");
+    let loaded = recipe::load(&recipe_path, &config, true).unwrap();
+    let peers = fixture::peers(&root, &config);
+    let profile = actor_profile(&root, &config, 1);
+    let (path, mut selected) = selection(&root, &profile);
+    let document = fs::read_to_string(&path).unwrap().replacen(
+        '{',
+        "{\"resolution\":{\"queries\":1,\"operations\":1,\"max_replay_events\":4096,\"authority\":\"reconcile_existing_receipts\"},",
+        1,
+    );
+    selected.settings = crate::workflow::actor_service::operator::Settings::decode(
+        document.as_bytes(),
+    ).unwrap();
+    assert!(selected.settings.resolution.is_some());
+    fs::write(&path, document).unwrap();
+    assert!(live_operator::Selection::read(&path, GENERATION).is_err());
+    let store = config.store.clone();
+    assert!(!store.exists());
+    assert!(run_with_actor_services(
+        config,
+        loaded,
+        &peers,
+        false,
+        None,
+        None,
+        None,
+        Some(&profile),
+        None,
+        Some(&selected),
+        || panic!("resolution authority reached a learned clock or owner"),
+    ).is_err());
+    assert!(!store.exists());
+    assert!(!selected.settings.socket.exists());
+    assert_eq!(fs::read_dir(root.0.join("peers")).unwrap().count(), 0);
+}

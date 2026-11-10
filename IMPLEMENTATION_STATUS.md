@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: serve original next-to-resolve through the authenticated operator
+
+An explicitly selected `resolution` object now grants finite planning queries,
+entered reconciliation operations and retained-event work in the ordinary
+operator profile. Omitted/null selection keeps the capability disabled.
+Resolution-only profiles are valid. The original noncopyable custodian,
+operation-result cache and spent counters survive healthy reconnects, request
+handoffs and terminal reply grace.
+
+The service selects the restricted reconciliation constructor before adding
+Permit, preventing that purpose from enabling actor submission, cancellation
+or precheck. Its original independent socket identity, Stop order, selected
+disclosures and host lifecycle remain in force. Both learned selection paths
+and programmatic learned startup reject the mutation profile before source,
+clock, authority-store or listener setup.
+
+The existing `tower-operator-exchange` client accepts explicit native Next and
+Resolve documents. It validates exact registration, native request identity,
+operation, expected basis, complete returned action and before/after receipt
+relationship before output or any later explicit request. Unknown economics and
+publication eligibility remain Unknown. The client neither executes a returned
+action automatically nor retries ambiguous output; the same live-grant cache
+and historical acknowledgment rules remain visible.
+
+Four service/profile, three client and one learned-startup regressions exercise
+actual original publication receipts and authenticated Unix sockets, explicit
+next-to-resolve selection, cached acknowledgments, conflicts, stale predecessors,
+charged misses, admission snapshot custody, strict correlation and early learned
+refusal. These eight functions supplement the prior 28 native/decoder/public
+tests. Independent source review found no remaining blocker in this increment.
+
+The restored workspace still has no RCH runner or Rust toolchain. No new
+compilation, formatting, Clippy, doctest, runtime test or full RCH qualification
+is claimed. The ordinary reconciliation grant still refuses numerical histories,
+and its operation cache is not durable across owner/grant replacement. Complete
+ranked planning, broader mutation verbs and all original FA-138 acceptance
+conditions remain open. No Bead or production gate is closed.
+
+See [the authenticated reconciliation workflow](docs/TOWER_RESOLUTION.md#select-the-authenticated-ordinary-operator-service).
+
 ## 2026-11-10: select exact prechecks across resident learned releases
 
 `serve-learned-generated` now accepts the closed

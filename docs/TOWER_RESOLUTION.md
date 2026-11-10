@@ -164,6 +164,68 @@ outcomes. Relabeling the public outer envelope cannot repurpose it.
 The whole original response-size bound applies after native work, without
 refund or rollback on encoding refusal.
 
+## Select the authenticated ordinary operator service
+
+The ordinary Tower service exposes this same original grant when its public
+`fa.tower-operator-service/1` profile explicitly selects:
+
+```json
+"resolution": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "authority": "reconcile_existing_receipts"
+}
+```
+
+This is an optional member of the complete operator profile, not a standalone
+profile. Omission or `null` leaves reconciliation disabled. The closed object
+requires all four fields, the exact authority marker and positive bounded
+integers (at most 1,024 queries, 128 operations and 4,096 replay events);
+unknown fields and malformed selections fail before setup. A
+resolution-only service may set inspection and admission-explanation counts to
+zero, retain `explanation_disclosure: "none"`, and omit the other optional grants.
+
+The service retains one original custodian across healthy reconnects, request
+handoffs and terminal reply grace. Its selected Permit purpose is confined by
+the restricted operator constructor. Neither an actor request nor a different
+socket can acquire that grant. A learned actor or resident learned sequence
+rejects a selected resolution profile before clock/source acquisition, store
+creation or listener setup; its observer remains read-only.
+
+Start an ordinary service with both `--operator-profile OPERATOR_PROFILE` and
+`--tower-generation 41`, following the existing
+[live operator setup](LIVE_TOWER_OPERATOR.md#select-the-operator-endpoint).
+Save the explicit `next` request above as `NEXT_JSON`, then run:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE NEXT_JSON
+```
+
+When the returned Known plan has `can_reconcile: true`, select the complete
+`result.value.knowledge.value.action` object as the contents of `RESOLVE_JSON`
+and submit it explicitly:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE RESOLVE_JSON
+```
+
+Keep its address, operation number, idempotency key and full expected basis
+unchanged. Unknown/refused plans and null actions cannot supply a guessed
+predecessor. The two calls consume two connections; retain sufficient connection,
+exchange and lifetime allowance, and ensure both client processes match the
+selected operator UID/GID/PID policy. The command freezes its request files before connecting, so an action
+returned by one exchange must be selected for a later invocation. Neither the
+client nor `next` automatically extracts, executes, refreshes or retries it.
+
+The client validates the complete native subject, registration, operation,
+Knowledge basis and closed action profile before output. For Resolve it also
+checks the exact expected predecessor, native before/after relationship and
+endpoint outcome/stage. It preserves explicit Unknown cost, ranking and
+eligibility. An altered action, receipt or response is rejected before a later
+explicit request can run. The existing finite parser, response, elapsed, byte
+and I/O-attempt bounds still apply.
+
 ## Validation boundary
 
 Eighteen native, two decoder and eight public integration regression functions
@@ -173,8 +235,15 @@ checks, query/operation limits, original-result retries, custodian and owner
 loss, snapshot invalidation, numerical history refusal, wire correlation and
 the restricted operator constructor.
 
-The changes receive independent source review. The execution environment is
-unavailable and the restored environment had no RCH runner or Rust toolchain.
+Four service/profile, three authenticated-client and one learned-startup
+regression functions additionally cover the explicit optional selection, a real
+next-to-resolve acknowledgment and exact retry, stale/missing-receipt outcomes,
+rejected actor submission, preserved one-use admission custody, strict response
+correlation and refusal before learned startup. The socket cases use actual
+Unix peer authentication and original native receipts.
+
+The changes receive independent source review. The workspace was unavailable during part of implementation;
+the restored environment has no RCH runner or Rust toolchain.
 No compilation, formatter, Clippy, doctest, runtime test or full RCH gate pass
 is claimed for this increment. Source-manifest hashes identify submitted bytes.
 No full FA-138, production-activation or Bead acceptance gate is closed.

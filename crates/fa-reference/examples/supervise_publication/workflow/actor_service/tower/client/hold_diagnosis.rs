@@ -100,7 +100,7 @@ pub(super) fn matches(value: &Json, request: &TowerRequest) -> bool {
 
 // Tenant, principal, run, branch, authority and ORIGINAL external request.
 // A native request number is never interpreted as a ledger attempt number.
-fn request_scope(request: &TowerRequest) -> Option<[u64; 6]> {
+pub(super) fn request_scope(request: &TowerRequest) -> Option<[u64; 6]> {
     if request.address.kind != Noun::Attempt {
         return None;
     }
@@ -119,7 +119,7 @@ fn request_scope(request: &TowerRequest) -> Option<[u64; 6]> {
     (!scope.contains(&0)).then_some(scope)
 }
 
-fn bound_basis(basis: &Json, expected: &[u64; 6]) -> bool {
+pub(super) fn bound_basis(basis: &Json, expected: &[u64; 6]) -> bool {
     if !exact(
         basis,
         &[
@@ -226,22 +226,22 @@ fn report(value: &Json, basis: &Json) -> bool {
     true
 }
 
-fn unknown(value: &Json) -> bool {
+pub(super) fn unknown(value: &Json) -> bool {
     exact(value, &["state", "reason"])
         && value.get("state").and_then(Json::as_str) == Some("unknown")
         && value.get("reason").and_then(Json::as_str) == Some("controller_unavailable")
 }
 
-fn decimal(value: &Json) -> Option<u64> {
+pub(super) fn decimal(value: &Json) -> Option<u64> {
     decimal_text(value.as_str()?)
 }
 
-fn decimal_text(spelling: &str) -> Option<u64> {
+pub(super) fn decimal_text(spelling: &str) -> Option<u64> {
     let number = spelling.parse::<u64>().ok()?;
     (spelling == number.to_string()).then_some(number)
 }
 
-fn exact(value: &Json, names: &[&str]) -> bool {
+pub(super) fn exact(value: &Json, names: &[&str]) -> bool {
     value.as_object().is_some_and(|fields| {
         fields.len() == names.len() && names.iter().all(|name| fields.contains_key(*name))
     })

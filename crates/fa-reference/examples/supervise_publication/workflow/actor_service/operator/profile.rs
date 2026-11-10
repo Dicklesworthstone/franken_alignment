@@ -5,6 +5,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES,
     MAX_INSPECTION_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
     MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
+    MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
@@ -37,8 +38,52 @@ pub(crate) struct Settings {
     pub(crate) explanation_replay_events: usize,
     pub(crate) explanation_disclosure: String,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
+    pub(crate) resolution: Option<ResolutionSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+/// Explicit permission for one original owner's bounded receipt reconciliation.
+/// This is distinct from observation disclosure and never enables publication.
+#[derive(Clone, Debug)]
+pub(crate) struct ResolutionSettings {
+    pub(crate) queries: usize,
+    pub(crate) operations: usize,
+    pub(crate) max_replay_events: usize,
+    pub(crate) authority: String,
+}
+
+impl ResolutionSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            operations: usize::try_from(fields.number("operations")?).map_err(debug)?,
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_RESOLUTION_QUERIES
+            || self.operations == 0
+            || self.operations > MAX_RESOLUTION_OPERATIONS
+            || self.max_replay_events == 0
+            || self.max_replay_events > MAX_RESOLUTION_REPLAY_EVENTS
+            || self.authority != "reconcile_existing_receipts"
+        {
+            return Err(
+                "resolution requires explicit receipt-reconciliation authority and bounded reads, operations and replay"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -229,6 +274,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(HoldDiagnosisSettings::decode(value)?),
             },
+            resolution: match fields.optional("resolution") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(ResolutionSettings::decode(value)?),
+            },
             review_explanation: match fields.optional("review_explanation") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(ReviewExplanationSettings::decode(value)?),
@@ -296,6 +345,7 @@ impl Settings {
             || (self.inspection_queries == 0
                 && self.explanation_queries == 0
                 && self.hold_diagnosis.is_none()
+                && self.resolution.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none())
         {
@@ -321,6 +371,19 @@ impl Settings {
         }
         if let Some(selected) = &self.review_explanation {
             selected.validate()?;
+        }
+        if let Some(selected) = &self.resolution {
+            selected.validate()?;
+        }
+        Ok(())
+    }
+
+    /// Learned observation remains a closed read-only service. Check this before
+    /// clock/source acquisition, owner startup or listener creation.
+    pub(crate) fn check_learned_observer(&self) -> Result<(), String> {
+        self.validate()?;
+        if self.resolution.is_some() {
+            return Err("learned operator observation does not grant receipt reconciliation".into());
         }
         Ok(())
     }
