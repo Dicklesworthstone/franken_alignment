@@ -3,9 +3,8 @@ use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES,
-    MAX_INSPECTION_QUERIES,
-    MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES, MAX_REVIEW_EXPLANATION_EVENTS,
-    MAX_REVIEW_EXPLANATION_QUERIES,
+    MAX_INSPECTION_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
+    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
@@ -78,6 +77,9 @@ impl HoldDiagnosisSettings {
 pub(crate) struct ReviewExplanationSettings {
     pub(crate) queries: usize,
     pub(crate) max_replay_events: usize,
+    /// Cumulative original transitions for numerical histories. Each admitted
+    /// cut pays its full length; model work retains the original recipe limits.
+    pub(crate) numerical_replay_events: Option<usize>,
     pub(crate) disclosure: String,
 }
 
@@ -87,6 +89,11 @@ impl ReviewExplanationSettings {
         let selected = Self {
             queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
             max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
                 .map_err(debug)?,
             disclosure: fields.text("disclosure")?,
         };
@@ -103,6 +110,15 @@ impl ReviewExplanationSettings {
             || self.disclosure != "policy_and_congress_trace"
         {
             return Err("review explanation requires explicit policy-and-congress-trace disclosure and bounded replay".into());
+        }
+        if self.numerical_replay_events.is_some_and(|events| {
+            events == 0
+                || self
+                    .queries
+                    .checked_mul(self.max_replay_events)
+                    .is_none_or(|maximum| events > maximum)
+        }) {
+            return Err("numerical review replay requires a positive cumulative event budget within the selected query and replay bounds".into());
         }
         Ok(())
     }

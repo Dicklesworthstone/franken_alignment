@@ -168,8 +168,27 @@ inspection and policy replay share the same authenticated endpoint. A service
 may select review explanation alone. Its original custodian survives reconnects
 and scheduled request handoffs without replenishing work.
 
-Start an ordinary Tower service with its existing `--operator-profile` selection
-and send the explicit request above through:
+For an original decoder or action-predictor history, explicitly add the optional
+positive integer `numerical_replay_events` inside this object. For example:
+
+```json
+"review_explanation": {
+  "queries": 8,
+  "max_replay_events": 4096,
+  "numerical_replay_events": 8192,
+  "disclosure": "policy_and_congress_trace"
+}
+```
+
+This selects at most 8,192 cumulative original journal transitions, with each
+complete cut still limited to 4,096. It does not promise eight successful reads:
+each admitted numerical read reserves its full cut, including ordinary events.
+The total must not exceed `queries * max_replay_events`. Omission retains the
+default numerical Unknown; explicit null, zero, nonintegers, unknown or duplicate
+fields refuse during profile admission.
+
+Start an ordinary Tower service or a [live learned actor/resident sequence](LIVE_LEARNED_OPERATOR.md)
+with its existing `--operator-profile` selection and send the explicit request above through:
 
 ```sh
 supervise_publication tower-operator-exchange OPERATOR_PROFILE REVIEW_REQUEST_JSON

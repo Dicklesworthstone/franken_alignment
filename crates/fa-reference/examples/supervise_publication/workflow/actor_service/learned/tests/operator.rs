@@ -1,5 +1,8 @@
 //! Real learned inference, authenticated observation, separate human authority
 //! and independent Stop. Fixture weights establish protocol behavior only.
+#[path = "operator/review_explanation.rs"]
+mod review_explanation;
+
 use super::super::operator as live_operator;
 use super::peer_intake::{Behavior, actor, actor_profile, human};
 use super::*;

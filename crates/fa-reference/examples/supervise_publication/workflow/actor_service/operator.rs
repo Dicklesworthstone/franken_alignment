@@ -147,10 +147,20 @@ impl Service {
             None
         };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
-            let (port, custodian) = driver
-                .supervisor()
-                .review_explanation_port_with_budget(selected.queries, selected.max_replay_events)
-                .map_err(debug)?;
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().review_explanation_port_with_numerical_budget(
+                    selected.queries,
+                    selected.max_replay_events,
+                    events,
+                ),
+                None => driver
+                    .supervisor()
+                    .review_explanation_port_with_budget(
+                        selected.queries,
+                        selected.max_replay_events,
+                    ),
+            }
+            .map_err(debug)?;
             tower.set_review_explanation(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
@@ -331,7 +341,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; review_explanation_queries={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -350,6 +360,10 @@ impl Service {
                 .review_explanation
                 .as_ref()
                 .map(FileSupervisorReviewExplanationGrant::remaining_queries),
+            active
+                .review_explanation
+                .as_ref()
+                .and_then(FileSupervisorReviewExplanationGrant::remaining_numerical_replay_events),
             active
                 .policy_replay
                 .as_ref()

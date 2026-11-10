@@ -137,6 +137,10 @@ and payload bytes stay undisclosed, and current eligibility remains Unknown.
 The existing authenticated operator endpoint enables it through an explicit
 `review_explanation` profile and carries selected-round requests through
 `tower-operator-exchange`, retaining separate disclosure work across reconnects.
+An explicit `numerical_replay_events` allowance also enables original decoder
+and action-predictor histories through live learned and resident services.
+Each numerical read reserves the complete acknowledged journal cut before
+replay; reconnects and release handoffs do not replenish that allowance.
 
 The offline learned [`--audit-review` command](docs/ANCHORED_REVIEW_AUDIT.md#refinement-reports-through-the-existing-operator-command)
 now also reports completed evidence-refinement rounds. Its distinct

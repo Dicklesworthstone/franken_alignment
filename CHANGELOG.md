@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-10: serve explicitly budgeted learned congress explanations live
+
+- Accept a closed optional cumulative numerical replay allowance in the operator
+  profile and issue the selected native grant from the original shared service.
+- Preserve one allowance through ordinary/learned/resident service reconnects and
+  handoffs; expose remaining reservations at endpoint retirement.
+- Add profile/service and real learned actor/operator/client regressions for
+  omitted, short and exact budgets while preserving independent human approval.
+  New runtime qualification remains pending executor availability.
+
 ## 2026-11-10: execute original receipt reconciliation from native next actions
 
 - Add a separately granted native Next/Resolve path, exact request mapping,

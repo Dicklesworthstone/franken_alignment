@@ -20,6 +20,14 @@ fn selection(queries: usize, events: usize) -> String {
     )
 }
 
+fn numerical_selection(queries: usize, events: usize, numerical_events: &str) -> String {
+    selection(queries, events).replacen(
+        '{',
+        &format!("{{\"numerical_replay_events\":{numerical_events},"),
+        1,
+    )
+}
+
 fn fixture(queries: usize, events: usize, admission: usize) -> Fixture {
     let mut fixture = Fixture::configured(1, admission, |config| {
         let clock_domain = config.profile.delivery.clock_domain;
@@ -95,6 +103,7 @@ fn closed_review_profile_keeps_old_grants_separate_and_requires_bounded_explicit
     let grant = decoded.review_explanation.unwrap();
     assert_eq!(grant.queries, MAX_REVIEW_EXPLANATION_QUERIES);
     assert_eq!(grant.max_replay_events, MAX_REVIEW_EXPLANATION_EVENTS);
+    assert!(grant.numerical_replay_events.is_none());
     assert_eq!(grant.disclosure, "policy_and_congress_trace");
     for invalid in [
         "false".to_owned(),
@@ -120,6 +129,86 @@ fn closed_review_profile_keeps_old_grants_separate_and_requires_bounded_explicit
         Settings::decode(with_review(&profile_json(path, identity, 0, 0), "null").as_bytes())
             .is_err()
     );
+}
+
+#[test]
+fn numerical_review_replay_is_separately_selected_and_cumulatively_bounded() {
+    let identity = PeerPolicy::new(1, 2, Some(3)).unwrap();
+    let original = profile_json(Path::new("/operator/numerical-review.sock"), identity, 0, 0);
+    for numerical_events in [1, 20] {
+        let decoded = Settings::decode(
+            with_review(
+                &original,
+                &numerical_selection(2, 10, &numerical_events.to_string()),
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        let selected = decoded.review_explanation.unwrap();
+        assert_eq!(selected.numerical_replay_events, Some(numerical_events));
+        assert_eq!((selected.queries, selected.max_replay_events), (2, 10));
+        assert_eq!(
+            (decoded.inspection_queries, decoded.explanation_queries),
+            (0, 0)
+        );
+        assert!(decoded.policy_replay.is_none());
+        assert!(decoded.hold_diagnosis.is_none());
+    }
+    for invalid in [
+        "0",
+        "21",
+        "null",
+        "false",
+        "\"1\"",
+        "1.0",
+        "-1",
+        "18446744073709551615",
+    ] {
+        assert!(
+            Settings::decode(
+                with_review(&original, &numerical_selection(2, 10, invalid)).as_bytes()
+            )
+            .is_err(),
+            "accepted numerical replay budget {invalid}"
+        );
+    }
+    for invalid in [
+        numerical_selection(2, 10, "1").replace("numerical_replay_events", "numerical_work"),
+        numerical_selection(2, 10, "1").replacen('{', "{\"numerical_replay_events\":2,", 1),
+    ] {
+        assert!(Settings::decode(with_review(&original, &invalid).as_bytes()).is_err());
+    }
+}
+
+#[test]
+fn selected_numerical_custody_preserves_ordinary_review_disclosure_and_budget() {
+    let mut fixture = fixture(2, MAX_REVIEW_EXPLANATION_EVENTS, 2);
+    fixture
+        .settings
+        .review_explanation
+        .as_mut()
+        .unwrap()
+        .numerical_replay_events = Some(1);
+    fixture.submit(7);
+    complete(&mut fixture);
+    let before = fixture.files();
+    let owner = fixture.driver.supervisor().host().unwrap().inspect();
+    let mut service = fixture.start();
+    for expected in [1, 0] {
+        let response = fixture.query(&mut service, request(&fixture, ROUND));
+        known(&response, "review-explanation");
+        let grant = service
+            .active
+            .as_ref()
+            .unwrap()
+            .review_explanation
+            .as_ref()
+            .unwrap();
+        assert_eq!(grant.remaining_queries(), expected);
+        assert_eq!(grant.remaining_numerical_replay_events(), Some(1));
+    }
+    assert_eq!(fixture.files(), before);
+    assert_eq!(fixture.driver.supervisor().host().unwrap().inspect(), owner);
 }
 
 #[test]

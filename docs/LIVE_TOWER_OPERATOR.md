@@ -157,15 +157,22 @@ and admission-explanation counts to zero, keeps `explanation_disclosure` as
 witness, congress, source or publication authority. The original finite grant
 persists across reconnects, scheduled handoffs and terminal reply grace.
 
-The independent `review_explanation` object requires exactly `queries` (1–1,024),
+The independent `review_explanation` object requires `queries` (1–1,024),
 `max_replay_events` (1–4,096), and `disclosure: "policy_and_congress_trace"`.
+It additionally accepts the optional positive integer `numerical_replay_events`,
+bounded by `queries * max_replay_events`. This cumulative allowance reserves
+the complete original journal cut before numerical reconstruction; each transition
+retains its native model limits. Omission keeps numerical histories Unknown.
+Explicit null, zero, malformed or excessive numerical totals refuse.
+
 This grants original policy/congress/reducer and actual application/effect
 observations; ordinary admission explanation does not grant it. Unknown nested
 fields, duplicate fields, zero/excessive bounds, malformed numeric types and a
 different disclosure marker refuse before setup. A review-only endpoint may
 leave inspection and admission explanation disabled and omit policy replay.
 The original grant and spent work persist across reconnects, scheduled handoffs
-and terminal reply grace. See [completed-review explanations](TOWER_REVIEW_EXPLANATION.md).
+and terminal reply grace, including live learned and resident services.
+See [completed-review explanations](TOWER_REVIEW_EXPLANATION.md).
 
 Selecting `policy_replay` requires `queries`, `cases`, `input_bytes` and the exact
 disclosure marker `"policy_and_case_traces"`. This separately grants disclosure

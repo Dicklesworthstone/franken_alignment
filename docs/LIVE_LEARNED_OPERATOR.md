@@ -150,6 +150,41 @@ does not replenish diagnosis work or the reverse. Omission or `null` keeps this
 disclosure disabled. Diagnosis-only profiles retain the existing closed schema
 and set the other unselected read allowances to zero.
 
+## Explain the original learned congress
+
+The same endpoint can reconstruct a completed learned congress when the public
+operator profile explicitly selects both the historical disclosure and its
+independent numerical allowance:
+
+```json
+"review_explanation": {
+  "queries": 8,
+  "max_replay_events": 4096,
+  "numerical_replay_events": 8192,
+  "disclosure": "policy_and_congress_trace"
+}
+```
+
+Send an `explain` request with an explicit original round at the original request
+address through `tower-operator-exchange`; the full request and response contract
+is in [completed-review explanations](TOWER_REVIEW_EXPLANATION.md#explicit-request).
+The unchanged client checks the selected round, request, scope, registration and
+native historical cuts before emitting the closed response.
+
+The allowance counts cumulative original journal transitions under their
+retained model limits. Each numerical read reserves its entire acknowledged cut
+before replay begins, so 8,192 units do not necessarily fund all eight queries.
+Omitting the field preserves charged Unknown for numerical history; an
+insufficient positive allowance also returns Unknown without advancing the
+cursor. An admitted failure retains its reservation. Null, zero, malformed and
+excessive totals fail before service startup.
+
+The original grant is installed by the common live service and survives both
+reconnects and resident Message/Finish handoffs. Historical reconstruction
+observes the original policy, committee verdicts, reducer application and later
+effect linkage. It supplies neither current eligibility nor the still-required
+independent human publication key.
+
 ## Preserve cumulative work and independent control
 
 One service owns the socket, transport counters and native read custodians for
@@ -177,11 +212,12 @@ path and continues to derive release bytes from its original numerical owner.
 ## Historical and qualification boundaries
 
 Explicit historical explanation and policy-comparison selections keep their
-existing native work contracts. In particular, admission/completed-review grants
-without numerical replay budgets return charged Unknown for learned histories,
-including histories with a real completed congress. Repeated Unknown queries
-still spend the original allowance. Use the independently anchored learned audit
-when complete numerical historical reconstruction is needed.
+native work contracts. Completed-review explanations require the separate
+numerical allowance above for decoder or action-predictor histories. Admission
+explanation has no numerical grant and remains charged Unknown for those
+histories. Repeated Unknown queries still spend their original query allowance.
+Refinement-specific reports and independent retained-history anchoring remain
+available through the existing learned audit command.
 
 This integrates the registered situation and supervision capabilities toward
 FA-134/FA-136 and the learned publication workflow. Recorded-state `why-held`

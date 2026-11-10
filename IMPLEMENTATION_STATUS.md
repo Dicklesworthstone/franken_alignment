@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: connect numerical congress explanation to live operator profiles
+
+The closed `fa.tower-operator-service/1` profile now accepts an optional positive
+`review_explanation.numerical_replay_events` allowance. The shared ordinary,
+learned and resident service issues the matching grant from its original owner.
+Omission retains the previous numerical Unknown; null, zero, malformed,
+duplicate, unknown and excessive values refuse before service setup. Retirement
+reports the remaining original reservation count without reissuing custody.
+
+The existing selected-round client and sealed historical response are unchanged.
+The service retains one cumulative grant through reconnects, terminal grace and
+resident handoffs. Numerical history reconstruction cannot supply the independent
+human key, refresh admission evidence or mutate the journal.
+
+Two new profile/service regression functions cover closed selection and ordinary
+history compatibility. A real learned actor/operator/client regression runs
+absent, one-short and exact reservation scenarios with native helper commits and
+reveals, withheld human approval, separate authenticated connections, unchanged
+journal bytes, and later independently approved publication. These are authored
+regressions, not new runtime results. Independent source review accompanies the
+implementation; the executor remains unavailable for new compilation and
+execution. The baseline observations recorded by the preceding increment do not
+qualify these edits. FA-137 and repository execution gates remain open.
+
+See [live learned historical inspection](docs/LIVE_LEARNED_OPERATOR.md#explain-the-original-learned-congress)
+and the [completed-review profile contract](docs/TOWER_REVIEW_EXPLANATION.md#use-the-authenticated-operator-endpoint).
+
 ## 2026-11-10: connect an executable native next action to original receipt reconciliation
 
 A separate finite supervisor grant now plans and reconciles an exact original
