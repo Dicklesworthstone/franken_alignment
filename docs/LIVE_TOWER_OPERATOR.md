@@ -150,6 +150,23 @@ selects policy-literal and selected-witness disclosure, with a positive bounded
 replay-event allowance. It does not disclose the entire source, helper input
 or action payload.
 
+Numerical admission reconstruction requires its own optional top-level
+`explanation_numerical_replay_events` integer. It must be positive, admission
+explanation must be enabled, and the total must not exceed the checked product
+of `explanation_queries * explanation_replay_events`. Omission preserves the
+default numerical Unknown; explicit null, zero, malformed or excessive values
+refuse before startup. For example, two queries with a 4,096-event ceiling can
+select `"explanation_numerical_replay_events": 8192`.
+
+The shared service provisions this exact original admission grant. Every entered
+numerical reconstruction reserves the entire acknowledged cut before replay,
+under the retained immutable numerical limits. A short allowance spends the
+query without replay, and admitted work is not refunded on failure or output
+refusal. The same custody survives reconnects and resident handoffs; retirement
+reports its remaining reservations. Plain histories do not spend this numerical
+allowance. Completed-review and receipt-reconciliation work have independent
+grants and cannot fund admission reconstruction.
+
 The independent `hold_diagnosis` object requires exactly `queries` (1–1,024)
 and `disclosure: "recorded_publication_state"`. Unknown fields, duplicate
 fields, zero/excessive bounds, noninteger values and other disclosure markers

@@ -157,6 +157,36 @@ does not replenish diagnosis work or the reverse. Omission or `null` keeps this
 disclosure disabled. Diagnosis-only profiles retain the existing closed schema
 and set the other unselected read allowances to zero.
 
+## Explain the original learned admission
+
+An admission explanation can reconstruct the original exact policy decision
+before any congress exists, including a genuine policy denial. Explicitly
+select these top-level fields in the existing public operator profile:
+
+```json
+"explanation_queries": 8,
+"explanation_replay_events": 4096,
+"explanation_numerical_replay_events": 8192,
+"explanation_disclosure": "policy_and_selected_witnesses"
+```
+
+Send `explain` with `arguments: null` at the original request address through
+`tower-operator-exchange`. The existing admission response schema is unchanged:
+it carries the original policy, evaluation and selected witnesses, separate
+admission and ending cuts, and Unknown current eligibility. A historical
+admission cannot satisfy helper review or independent human approval.
+
+The numerical field is optional and independent of completed-review or
+reconciliation budgets. Its positive total must fit the checked product of the
+query count and event ceiling. Omission retains charged Unknown for numerical
+histories; null, zero, malformed and excessive totals refuse before startup.
+Each admitted numerical read reserves its complete acknowledged history before
+the original eager investigator executes. The same finite grant survives
+reconnects and resident Message/Finish handoffs. Short work returns Unknown
+without replay, while admitted failures and output refusal retain their charge.
+The original live source, clock, admission snapshot and numerical generation
+allowances are not consumed by this historical reconstruction.
+
 ## Explain the original learned congress
 
 The same endpoint can reconstruct a completed learned congress when the public
@@ -269,11 +299,10 @@ to derive release bytes from its original numerical owner.
 
 Explicit historical explanation and policy-comparison selections keep their
 native work contracts. Completed-review explanations require the separate
-numerical allowance above for decoder or action-predictor histories. The native
-admission port now has its own independently selected numerical allowance;
-the live operator's existing admission selection still uses the default
-event-only grant and returns charged Unknown for those histories. Repeated
-Unknown queries spend their original query allowance. Refinement-specific
+numerical allowance above for decoder or action-predictor histories. Admission
+explanation requires its independent top-level numerical selection above;
+omitting it retains the default charged Unknown. Repeated Unknown queries
+spend their original query allowance. Refinement-specific
 reports and independent retained-history anchoring remain available through the
 existing learned audit command.
 

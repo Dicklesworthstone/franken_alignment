@@ -129,10 +129,14 @@ A separately granted operator `explain` now reconstructs an original native
 request's exact-policy admission. It returns the original predicate graph and
 trace with separate admission and ending cuts, including denials that never
 reached helper review. Later holds and current eligibility remain Unknown;
-queries share bounded revocable custody and numerical histories require a
-separate replay budget. Existing actor and situation grants cannot obtain this
-policy disclosure. See the [native explanation contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
-Source review and syntax checks remain separate from pending RCH execution.
+queries share bounded revocable custody. Numerical histories can now select
+their own cumulative replay allowance through the native grant or the live
+operator's `explanation_numerical_replay_events` profile field. The original
+complete cut is reserved before reconstruction, including policy denial before
+any congress exists. Existing actor and situation grants cannot obtain this
+policy disclosure. See the [native explanation contract](docs/TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission)
+and [live learned admission](docs/LIVE_LEARNED_OPERATOR.md#explain-the-original-learned-admission).
+Source review remains separate from execution and full qualification.
 
 A separately granted [`explain` selection for a completed congress](docs/TOWER_REVIEW_EXPLANATION.md)
 now exposes the original policy trace, frozen member/cohort roster, missing and

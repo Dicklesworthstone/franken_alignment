@@ -1,0 +1,29 @@
+Source: 3d0a32f plus B and resident-precheck wire-error assertion correction. The preceding cargo rustc invocation emitted a linked test binary as well as metadata.
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/7d64693251e71859/out/supervise_publication-7d64693251e71859', 'workflow::actor_service::operator::tests::numerical_explanation', '--test-threads=1']
+
+running 2 tests
+test workflow::actor_service::operator::tests::numerical_explanation::numerical_admission_profile_requires_its_own_positive_cumulative_allowance ... ok
+test workflow::actor_service::operator::tests::numerical_explanation::selected_admission_numerical_custody_preserves_plain_explanations_and_source_work ... FAILED
+
+failures:
+
+---- workflow::actor_service::operator::tests::numerical_explanation::selected_admission_numerical_custody_preserves_plain_explanations_and_source_work stdout ----
+
+thread 'workflow::actor_service::operator::tests::numerical_explanation::selected_admission_numerical_custody_preserves_plain_explanations_and_source_work' (8) panicked at crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests.rs:168:10:
+called `Result::unwrap()` on an `Err` value: "Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    workflow::actor_service::operator::tests::numerical_explanation::selected_admission_numerical_custody_preserves_plain_explanations_and_source_work
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 1312 filtered out; finished in 0.01s
+
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/7d64693251e71859/out/supervise_publication-7d64693251e71859', 'workflow::actor_service::learned::tests::operator::admission_explanation', '--test-threads=1']
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1314 filtered out; finished in 0.00s
+
+
+exit_codes: [101, 0] elapsed_seconds: 0.04

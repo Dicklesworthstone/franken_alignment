@@ -1,5 +1,7 @@
 //! Actual original owners and authenticated Unix sockets, without qualification
 //! claims about production deployment or independent model judgments.
+#[path = "tests/numerical_explanation.rs"]
+mod numerical_explanation;
 #[path = "tests/resolution.rs"]
 mod resolution;
 #[path = "tests/hold_diagnosis.rs"]

@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: serve explicitly budgeted numerical admission explanations
+
+The public operator profile now accepts the independent top-level
+`explanation_numerical_replay_events` allowance. It is valid only with enabled
+admission disclosure, must be positive and cannot exceed the query/event product.
+The common ordinary, learned and resident service provisions the original native
+grant; omission retains the event-only default. Completed-review and receipt
+reconciliation retain their separate numerical selections and work custody.
+
+The original grant survives reconnects and resident handoffs and exposes its
+remaining numerical reservations at retirement. A historical read uses the
+original policy, evaluation and selected witnesses before any congress exists,
+including a real policy Denied result. The admission wire schema and independent
+helper/human publication keys remain unchanged.
+
+Two profile/plain-service regression functions cover closed selection, disabled
+and excessive budgets, retained legacy behavior and ordinary histories that do
+not spend selected numerical work. One actual learned actor/operator/client
+function covers Reviewing and Denied admissions under absent, short and exact
+allowances, exhausted reconnects, an unreadable live source and unchanged
+journal, numerical state, snapshot and source counters. Its allowed case then
+completes the original congress and independent human publication.
+
+Independent source review and immutable upload verification are complete. On
+qualified nightly-2026-09-08 with serial Cranelift code generation, all eleven
+learned-observation public tests passed, including the three new numerical
+admission cases. The complete operator example test harness compiled after
+correcting the earlier resident-precheck assertion to expect its wire error.
+The strict numerical-profile test passed; the ordinary service test was blocked
+at listener creation by the environment's Operation not permitted error.
+
+The learned service attempt exposed a second existing fixture defect: its root
+helper already creates the private directory, and the learned fixture tried to
+create it again. The duplicate creation is removed, preserving the helper's
+0700 permissions. That corrected service runtime remains unverified. An initial
+duplicate compiler flag, the inherited assertion failure and runtime attempts
+are retained with the successful checks. No full qualification or FA-137/bead
+closure is claimed.
+
 ## 2026-11-10: explain original numerical admissions with explicit work custody
 
 The original admission explanation port can now select a separate cumulative

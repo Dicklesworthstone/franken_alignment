@@ -137,13 +137,18 @@ impl Service {
             None
         };
         let explanation = if settings.explanation_queries != 0 {
-            let (port, custodian) = driver
-                .supervisor()
-                .explanation_port_with_budget(
+            let (port, custodian) = match settings.explanation_numerical_replay_events {
+                Some(events) => driver.supervisor().explanation_port_with_numerical_budget(
                     settings.explanation_queries,
                     settings.explanation_replay_events,
-                )
-                .map_err(debug)?;
+                    events,
+                ),
+                None => driver.supervisor().explanation_port_with_budget(
+                    settings.explanation_queries,
+                    settings.explanation_replay_events,
+                ),
+            }
+            .map_err(debug)?;
             tower.set_explanation(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
@@ -378,7 +383,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -389,6 +394,10 @@ impl Service {
                 .explanation
                 .as_ref()
                 .map(FileSupervisorExplanationGrant::remaining_queries),
+            active
+                .explanation
+                .as_ref()
+                .and_then(FileSupervisorExplanationGrant::remaining_numerical_replay_events),
             active
                 .hold_diagnosis
                 .as_ref()

@@ -36,6 +36,9 @@ pub(crate) struct Settings {
     pub(crate) inspection_queries: usize,
     pub(crate) explanation_queries: usize,
     pub(crate) explanation_replay_events: usize,
+    /// Cumulative original transitions reserved before numerical admission replay.
+    /// Omission keeps numerical admission replay disabled.
+    pub(crate) explanation_numerical_replay_events: Option<usize>,
     pub(crate) explanation_disclosure: String,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
@@ -289,6 +292,11 @@ impl Settings {
                 .map_err(debug)?,
             explanation_replay_events: usize::try_from(fields.number("explanation_replay_events")?)
                 .map_err(debug)?,
+            explanation_numerical_replay_events: fields
+                .optional_number("explanation_numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
+                .map_err(debug)?,
             explanation_disclosure: fields.text("explanation_disclosure")?,
             hold_diagnosis: match fields.optional("hold_diagnosis") {
                 None | Some(Json::Null) => None,
@@ -372,7 +380,10 @@ impl Settings {
             return Err("operator service work or lifetime limit is out of range".into());
         }
         if self.explanation_queries == 0 {
-            if self.explanation_replay_events != 0 || self.explanation_disclosure != "none" {
+            if self.explanation_replay_events != 0
+                || self.explanation_numerical_replay_events.is_some()
+                || self.explanation_disclosure != "none"
+            {
                 return Err(
                     "disabled explanation requires no replay work and disclosure none".into(),
                 );
@@ -382,6 +393,15 @@ impl Settings {
             || self.explanation_disclosure != "policy_and_selected_witnesses"
         {
             return Err("explanation requires explicit policy-and-selected-witness disclosure and bounded replay".into());
+        }
+        if self.explanation_numerical_replay_events.is_some_and(|events| {
+            events == 0
+                || self
+                    .explanation_queries
+                    .checked_mul(self.explanation_replay_events)
+                    .is_none_or(|maximum| events > maximum)
+        }) {
+            return Err("numerical admission explanation requires a positive cumulative event budget within the selected query and replay bounds".into());
         }
         if let Some(selected) = &self.policy_replay {
             selected.validate()?;

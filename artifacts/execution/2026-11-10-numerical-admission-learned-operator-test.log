@@ -1,0 +1,22 @@
+Source: 3d0a32f plus B and precheck wire-error assertion correction.
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/7d64693251e71859/out/supervise_publication-7d64693251e71859', 'real_learned_admission_and_exact_denial_are_explained_before_any_congress', '--test-threads=1']
+
+running 1 test
+test workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress ... FAILED
+
+failures:
+
+---- workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress stdout ----
+
+thread 'workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress' (7) panicked at crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/fixture.rs:34:57:
+called `Result::unwrap()` on an `Err` value: Os { code: 17, kind: AlreadyExists, message: "File exists" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1313 filtered out; finished in 0.00s
+
+
+exit_code: 101

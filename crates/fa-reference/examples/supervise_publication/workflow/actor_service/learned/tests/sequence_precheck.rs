@@ -5,10 +5,10 @@ use super::*;
 use super::super::super::precheck;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FilePrecheckOutcome,
-    precheck_wire::{PrecheckRequest, PrecheckWireResponse, client::PrecheckPeerClient},
+    precheck_wire::{PrecheckRequest, PrecheckWireError, PrecheckWireResponse, client::PrecheckPeerClient},
 };
 use fa_reference::action::consequence::oversight::{
-    actor::ActorError, actor_transport::DriveBudget, evidence_source::EvidenceIdentity,
+    actor_transport::DriveBudget, evidence_source::EvidenceIdentity,
 };
 use std::collections::BTreeMap;
 
@@ -86,7 +86,7 @@ fn poll(peers: &mut Peers, sockets: &[Option<PathBuf>; 3], journal: &Path,
                     // the same exhausted original grant, never re-disclose it.
                     let exhausted = query(&profile, &socket, release, index, 10);
                     assert_eq!(exhausted.query, Some(10));
-                    assert_eq!(exhausted.result, Err(ActorError::Capacity));
+                    assert_eq!(exhausted.result, Err(PrecheckWireError::Capacity));
                     assert_eq!(fs::read(&journal).unwrap(), original);
                     if let Some((path, bytes)) = changed { fs::write(path, bytes).unwrap(); }
                     peers::actor(profile, release, DUE[index], peers::Behavior::Observe).join().unwrap()

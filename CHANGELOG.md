@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-10: serve original numerical admission explanations live
+
+- Select the admission grant's independent cumulative numerical allowance from
+  the closed operator profile and retain its custody across reconnects/handoffs.
+- Preserve exact pre-congress denial, the existing admission wire schema and
+  independent completed-review, reconciliation and publication authority.
+- Add two profile/service regression functions and a real learned generation,
+  source-derived admission, authenticated-client and subsequent publication
+  regression. Correct inherited precheck wire-error and duplicate fixture-root
+  assertions uncovered while compiling/running the operator harness.
+- Execute all eleven public learned-observation regressions and the numerical
+  profile regression successfully; compile the operator test harness. Socket
+  execution and full qualification remain incomplete in this environment.
+
 ## 2026-11-10: explain original numerical policy admissions
 
 - Add an independent cumulative numerical allowance to the original admission

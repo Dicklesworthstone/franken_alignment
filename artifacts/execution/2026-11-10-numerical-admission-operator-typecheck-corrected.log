@@ -1,0 +1,41 @@
+Source: native main 3d0a32f plus B operator candidate and its registrations. Metadata only, no tests executed.
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'rustc', '--locked', '--offline', '-p', 'fa-reference', '--example', 'supervise_publication', '--profile', 'test', '--', '--emit=metadata']
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/tmp/fa_alignment_cf969907cc0d_next/crates/fa-reference)
+error[E0308]: mismatched types
+  --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_precheck.rs:89:50
+   |
+89 |                     assert_eq!(exhausted.result, Err(ActorError::Capacity));
+   |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Result<Knowledge<_, _>, _>`, found `Result<_, ActorError>`
+   |
+   = note: expected enum `Result<fa_ref...Basis>, PrecheckWireError>`
+              found enum `Result<_, ActorError>`
+   = note: the full name for the type has been written to '/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/7d64693251e71859/out/supervise_publication-7d64693251e71859.long-type-6091221642114082479.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+For more information about this error, try `rustc --explain E0308`.
+warning: `fa-reference` (example "supervise_publication" test) generated 1 warning
+error: could not compile `fa-reference` (example "supervise_publication" test) due to 1 previous error; 1 warning emitted
+
+exit_code: 101 elapsed_seconds: 15.52
