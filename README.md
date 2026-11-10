@@ -102,6 +102,11 @@ Each condition retains its native basis; fresh evidence, approvals, clock and
 final eligibility stay Unknown. Independent query custody, exact request
 mapping and original Unknown charges survive the read. New native and Tower
 regression sources are independently reviewed; execution remains unqualified.
+An explicit `hold_diagnosis` profile connects the same capability to the ordinary
+[tower operator endpoint](docs/LIVE_TOWER_OPERATOR.md#diagnose-an-original-requests-recorded-publication-conditions)
+and `tower-operator-exchange`, with closed response validation before output or
+any later request. The Rust learned-stream observer accepts the same original
+recorded-state grant without advancing generation or publication.
 
 A separately granted operator `explain` now reconstructs an original native
 request's exact-policy admission. It returns the original predicate graph and

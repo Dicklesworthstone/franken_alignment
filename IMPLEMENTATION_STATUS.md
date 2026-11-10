@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: connect recorded-state diagnosis to the authenticated operator
+
+The ordinary operator profile now accepts an optional explicit `hold_diagnosis`
+object with finite queries and the `recorded_publication_state` disclosure marker.
+Omission/null keeps it disabled; diagnosis-only endpoints are supported.
+Setup retains the original native grant, with independent query accounting
+across reconnects and scheduled handoffs and no additional purpose authority.
+
+The existing `tower-operator-exchange` client validates the distinct closed
+response profile before output or another explicit request. It binds request,
+full scope and mount, preserves request generation zero, checks all ten ordered
+conditions and identical predicate bases, and refuses invented live eligibility.
+The normal parser-work bound, framing, cumulative I/O and deadline rules remain
+unchanged. Malformed or unbound replies end the exchange without another request.
+
+The original learned observer also accepts the separately granted `why-held`
+read. Its closed operator-only verb set still rejects submission, ticket polling
+and mutation. An added public regression follows real learned Message generation,
+review, two-key publication and reconciliation, preserving numerical state and
+admission snapshots while live eligibility remains Unknown. This is the Rust
+observer API; the ordinary command line service retains its existing owner type.
+
+Four service/profile and three client/socket regression functions exercise real
+native reports, no source or authority mutation, preservation of one-use actor
+admission, deadline equality after acknowledged progress, independent grants,
+reconnect exhaustion and corrupted-subject termination. Independent source
+review found and corrected a potential RefMut borrow conflict in a test.
+The execution environment remains unavailable; no compilation, runtime test,
+formatting, Clippy or RCH qualification is claimed. Source binding updates
+identify submitted bytes, and all full packet/Bead gates remain open.
+
+See [the operator setup and request](docs/LIVE_TOWER_OPERATOR.md#diagnose-an-original-requests-recorded-publication-conditions).
+
 ## 2026-11-09: diagnose recorded publication conditions through the native Tower
 
 A separate finite, revocable supervisor capability now reads an exact original

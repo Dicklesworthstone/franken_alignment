@@ -15,7 +15,10 @@ use fa_reference::action::consequence::delivery::{
             FileHumanReviewer, FileOversight, FileOversightProfile,
             decoder::learned::FileLearnedConfig,
         },
-        requests::actor::{FileInspectionPage, FileLearnedTextStreamActorPort, LearnedTextRelease},
+        requests::actor::{
+            FileHoldCondition, FileHoldDiagnosis, FileInspectionPage,
+            FileLearnedTextStreamActorPort, LearnedTextRelease,
+        },
     },
     stream::StreamProfile,
 };
@@ -295,7 +298,7 @@ fn learned_observer_never_acquires_arbitrary_intake_even_with_broad_host_tags() 
         assert!(matches!(response.result, PublicationResult::Refused(_)));
     }
     for verb in Verb::ALL {
-        if !matches!(verb, Verb::Situation | Verb::Explain | Verb::PolicyReplay) {
+        if !matches!(verb, Verb::Situation | Verb::Explain | Verb::WhyHeld | Verb::PolicyReplay) {
             let response = facade.dispatch(&broad, TowerRequest::new("closed", mount(), verb));
             assert_eq!(
                 response.envelope.reason_code,
@@ -470,5 +473,171 @@ fn numerical_explanation_keeps_original_unknown_and_spent_work() {
             .unwrap(),
         state
     );
+    assert_eq!(image(&root), original);
+}
+
+
+fn diagnosed(response: &PublicationResponse) -> &FileHoldDiagnosis {
+    let PublicationResult::HoldDiagnosis(linked) = &response.result else {
+        panic!("expected original learned hold diagnosis: {response:?}");
+    };
+    let Ok(ActorKnowledge::Known { value, basis }) = linked.native() else {
+        panic!("expected a known recorded learned state: {response:?}");
+    };
+    assert_eq!(value.basis(), *basis);
+    assert_eq!(basis.scope, profile().delivery.scope);
+    assert_eq!(basis.request, 701);
+    assert_ne!(basis.attempt, 701);
+    assert_eq!(linked.query_address(), &response.envelope.address);
+    assert_eq!(linked.registration(), &mount());
+    assert_eq!(response.envelope.reason_code, None);
+    for condition in [
+        FileHoldCondition::CurrentSourceEvidence,
+        FileHoldCondition::CurrentApprovals,
+        FileHoldCondition::CurrentClock,
+        FileHoldCondition::FinalPublicationEligibility,
+    ] {
+        let predicate = value.predicates().iter()
+            .find(|predicate| predicate.condition() == condition).unwrap();
+        assert!(matches!(predicate.satisfied(), ActorKnowledge::Unknown { .. }));
+    }
+    value
+}
+
+#[test]
+fn learned_hold_diagnosis_observes_original_message_without_advancing_or_approving_it() {
+    let root = Directory::new();
+    let (actor, mut supervisor, reviewer) = create(&root);
+    let mut facade = tower(actor.clone());
+    let query = TowerRequest::new(
+        "learned-recorded-hold",
+        facade.request_address(701).unwrap(),
+        Verb::WhyHeld,
+    );
+    assert_eq!(
+        facade.dispatch(&access(true), query.clone()).envelope.reason_code,
+        Some(ReasonCode::CapabilityUnsupported)
+    );
+    let (port, grant) = supervisor.hold_diagnosis_port(5).unwrap();
+    facade.set_hold_diagnosis(Some(port)).unwrap();
+
+    // Real numerical execution produces the original cumulative Message bytes.
+    // Inspecting the not-yet-submitted request must leave both that learned
+    // state and the already supplied one-use source snapshot available.
+    generate(&mut supervisor);
+    observe(&mut supervisor);
+    let generation = supervisor.host().unwrap().learned_generation_inspection().unwrap();
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    let missing = facade.dispatch(&access(true), query.clone());
+    let PublicationResult::HoldDiagnosis(linked) = &missing.result else {
+        panic!("missing learned request did not use its native diagnosis");
+    };
+    assert!(matches!(linked.native(), Ok(ActorKnowledge::Unknown { .. })));
+    assert_eq!(grant.remaining_queries(), 4);
+    assert_eq!(image(&root), original);
+    assert_eq!(supervisor.host().unwrap().inspect(), state);
+    assert_eq!(
+        supervisor.host().unwrap().learned_generation_inspection().unwrap(),
+        generation
+    );
+    assert_eq!(
+        facade.dispatch(&access(false), query.clone()).envelope.reason_code,
+        Some(ReasonCode::DeniedByPolicy)
+    );
+    let broad = TowerAccess::new(
+        CallerScope::full_tenant_access("1"),
+        true,
+        vec![PurposeTag::Permit, PurposeTag::Experiment],
+        1024,
+    );
+    let mut poll = query.clone();
+    poll.verb = Verb::Get;
+    assert_eq!(
+        facade.dispatch(&broad, poll).envelope.reason_code,
+        Some(ReasonCode::CapabilityUnsupported)
+    );
+    assert_eq!(grant.remaining_queries(), 4);
+
+    let ticket = actor
+        .submit(701, LearnedTextRelease::Message, ElapsedTick(100))
+        .unwrap();
+    let generation = supervisor.host().unwrap().learned_generation_inspection().unwrap();
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    let pending = facade.exchange(&access(true), encode_request(&query).unwrap().as_bytes());
+    assert_eq!(diagnosed(&pending).stage(), ActionState::Reviewing);
+    assert_eq!(diagnosed(&pending).basis().request_generation, 0);
+    assert_eq!(actor.poll(&ticket), ActorKnowledge::Pending { request: 701 });
+    assert_eq!(image(&root), original);
+    assert_eq!(supervisor.host().unwrap().inspect(), state);
+    assert_eq!(
+        supervisor.host().unwrap().learned_generation_inspection().unwrap(),
+        generation
+    );
+
+    let keys = support::ready(&mut supervisor, &reviewer, 701);
+    let original = image(&root);
+    let authorized = facade.dispatch(&access(true), query.clone());
+    assert_eq!(diagnosed(&authorized).stage(), ActionState::Authorized);
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 0);
+    assert_eq!(image(&root), original);
+    {
+        let mut host = supervisor.host_mut().unwrap();
+        oversight::dispatch(&mut host, &keys);
+        let revision = host.revision();
+        let result = host
+            .publish_checked(
+                revision,
+                keys.automatic.attempt(),
+                Some(&keys.inputs),
+                snapshot(),
+                ElapsedTick(2),
+            )
+            .unwrap();
+        assert!(matches!(result.outcome, EndpointOutcome::Executed { .. }));
+        let revision = host.revision();
+        host.reconcile(revision, keys.automatic.attempt()).unwrap();
+    }
+    let generation = supervisor.host().unwrap().learned_generation_inspection().unwrap();
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    let completed = facade.dispatch(&access(true), query.clone());
+    assert_eq!(diagnosed(&completed).stage(), ActionState::Confirmed);
+    assert_eq!(state.executions, 1);
+    assert_eq!(state.control.ledger.charged, keys.action.spec().units);
+    assert_eq!(image(&root), original);
+    assert_eq!(supervisor.host().unwrap().inspect(), state);
+    assert_eq!(
+        supervisor.host().unwrap().learned_generation_inspection().unwrap(),
+        generation
+    );
+    assert!(matches!(
+        actor.poll(&ticket),
+        ActorKnowledge::Known { value: ActorOutcome::Executed, .. }
+    ));
+    assert_eq!(diagnosed(&pending).stage(), ActionState::Reviewing);
+    assert_eq!(grant.remaining_queries(), 1);
+    let json = completed.to_json().unwrap();
+    assert!(json.contains("\"schema\":\"fa.publication-hold-diagnosis/1\""));
+    assert!(json.contains("\"current_eligibility\":\"not_observed\""));
+    assert!(!json.contains("PRIVATE-SOURCE-BYTES"));
+
+    grant.revoke();
+    let revoked = facade.dispatch(&access(true), query.clone());
+    let PublicationResult::HoldDiagnosis(linked) = &revoked.result else {
+        panic!("revocation fell back to another observation");
+    };
+    assert!(matches!(linked.native(), Ok(ActorKnowledge::Withheld { .. })));
+    assert_eq!(image(&root), original);
+    let (port, retained_grant) = supervisor.hold_diagnosis_port(1).unwrap();
+    facade.set_hold_diagnosis(Some(port)).unwrap();
+    drop(supervisor);
+    let lost = facade.dispatch(&access(true), query);
+    let PublicationResult::HoldDiagnosis(linked) = &lost.result else {
+        panic!("owner loss fell back to another observation");
+    };
+    assert!(matches!(linked.native(), Ok(ActorKnowledge::Unknown { .. })));
+    assert_eq!(retained_grant.remaining_queries(), 1);
     assert_eq!(image(&root), original);
 }

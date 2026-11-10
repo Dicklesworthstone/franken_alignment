@@ -1,4 +1,4 @@
-# Live operator inspection and policy replay through the original Tower owner
+# Live operator inspection, diagnosis and policy replay through the original Tower owner
 
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
@@ -102,6 +102,10 @@ deployment's values:
   "explanation_queries": 8,
   "explanation_replay_events": 4096,
   "explanation_disclosure": "policy_and_selected_witnesses",
+  "hold_diagnosis": {
+    "queries": 32,
+    "disclosure": "recorded_publication_state"
+  },
   "review_explanation": {
     "queries": 8,
     "max_replay_events": 4096,
@@ -118,9 +122,9 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `policy_replay` and `review_explanation` are independently optional;
-omitting either or setting it to `null` keeps that capability disabled, so existing inspection/explanation profiles retain their
-behavior. Profile integers are unsigned JSON integers, as in the existing actor
+fields fail. `hold_diagnosis`, `policy_replay` and `review_explanation` are
+independently optional; omitting one or setting it to `null` keeps that capability
+disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
 allowance for this operator endpoint. Omitting it preserves the original
@@ -132,12 +136,22 @@ grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
-explanation, completed-review explanation or policy replay must be enabled. For inspection only, set
+explanation, recorded-state diagnosis, completed-review explanation or policy
+replay must be enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
 selects policy-literal and selected-witness disclosure, with a positive bounded
 replay-event allowance. It does not disclose the entire source, helper input
 or action payload.
+
+The independent `hold_diagnosis` object requires exactly `queries` (1–1,024)
+and `disclosure: "recorded_publication_state"`. Unknown fields, duplicate
+fields, zero/excessive bounds, noninteger values and other disclosure markers
+refuse before setup. A diagnosis-only endpoint sets all existing inspection
+and admission-explanation counts to zero, keeps `explanation_disclosure` as
+`"none"`, and omits other optional disclosures. It acquires no policy-literal,
+witness, congress, source or publication authority. The original finite grant
+persists across reconnects, scheduled handoffs and terminal reply grace.
 
 The independent `review_explanation` object requires exactly `queries` (1–1,024),
 `max_replay_events` (1–4,096), and `disclosure: "policy_and_congress_trace"`.
@@ -245,6 +259,50 @@ capture and preserve full request scope and registration generation. Default
 situation requests keep their existing v1 shape. A link can be supplied in a
 separate explanation request only when that endpoint already has the independent
 explanation grant. See [the request-link contract](TOWER_PUBLICATION.md#follow-captured-attempts-to-original-requests).
+
+## Diagnose an original request's recorded publication conditions
+
+Enable `hold_diagnosis` in the operator profile and submit an explicit
+`why-held` request through the existing authenticated client:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "diagnose-request-701",
+  "address": "fa://1/attempt/request-3-2-4-5-701@41",
+  "verb": "why-held",
+  "arguments": null,
+  "idempotency_key": null
+}
+```
+
+```sh
+supervise_publication tower-operator-exchange operator.json why-held.json
+```
+
+Replace the sample scope, original external request and registration with the
+actual native request address. The result carries the real acknowledged stage
+and recorded Stop/suspension, policy-epoch and deadline conditions. The four
+live-evidence/approval/time/permission conditions remain Unknown, even at an
+Authorized stage. Each entered query observes the then-acknowledged owner;
+repeating a document does not replay a free cached response or renew an allowance.
+No source read, new clock, helper execution, admission-snapshot consumption or
+journal mutation is performed.
+
+The client validates the separate `fa.publication-hold-diagnosis/1` profile,
+request namespace, full native scope, mount generation, request-local generation,
+all ten ordered conditions and their original bases before emitting a response
+or sending another explicit document. It preserves zero request generation,
+the deadline equality rule and all four Unknown live conditions. These checks
+establish response correlation and internal consistency, not independent
+verification of history or current permission. The ordinary 4,096-item parser
+limit and original frame, elapsed, I/O and output limits apply unchanged.
+
+An unexpected subject, changed predicate basis, invented permission or malformed
+reply ends the client exchange before output or a later request. Native Unknown
+and Capacity responses remain explicit native observations. The client performs
+no automatic poll, retry, recovery or follow-up action.
+See [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
 
 ## Compare a candidate against the original retained policy corpus
 
@@ -555,8 +613,10 @@ source, launching helpers or repeating approval.
 
 These are cooperative observations of the original acknowledged state. Native
 synchronous source, journal and replay work is not preempted by this endpoint.
-The feature does not supply the full prospective `fa` CLI, native current
-`why-held`/`next`, mutation verbs or deployment qualification. The policy-replay
+The feature does not supply the full prospective `fa` CLI, a complete live
+publication-eligibility conjunction, ranked `next`, mutation verbs or deployment
+qualification. Recorded-state `why-held` exposes only the explicitly described
+acknowledged facts. The policy-replay
 operator addition has nine authored regressions covering closed optional profile
 selection, authenticated reports, exact retries after owner advancement,
 cumulative reconnect work, kernel-identity rejection, absent disclosure,

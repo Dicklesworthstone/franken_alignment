@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-09: expose recorded-state diagnosis through the live operator
+
+- Add a closed optional `hold_diagnosis` selection, same-owner grant provisioning,
+  diagnosis-only services and cumulative query custody across reconnects.
+- Connect `why-held` to the existing authenticated operator client with strict
+  native request/scope/mount/predicate correlation before output or further work.
+- Connect the same recorded-state read to the original learned-stream observer,
+  with a real numerical-generation and two-key-publication regression preserving
+  the existing closed operator-only mutation boundary.
+- Add four real profile/service and three authenticated-client regressions for
+  unchanged authority, preserved actor admission, state advancement, bounded
+  grants and corrupted-response termination. Independent source review passed;
+  build/test execution and full RCH qualification remain unavailable.
+
 ## 2026-11-09: diagnose original recorded publication blockers
 
 - Add a separately granted, bounded native `why-held` read with exact original

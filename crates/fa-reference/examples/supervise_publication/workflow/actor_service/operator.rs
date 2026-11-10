@@ -8,7 +8,8 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileSupervisorExplanationGrant, FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
+    FileSupervisorExplanationGrant, FileSupervisorHoldDiagnosisGrant,
+    FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorReviewExplanationGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
@@ -29,6 +30,7 @@ struct Active {
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
+    hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
 }
@@ -113,6 +115,16 @@ impl Service {
         } else {
             None
         };
+        let hold_diagnosis = if let Some(selected) = &settings.hold_diagnosis {
+            let (port, custodian) = driver
+                .supervisor()
+                .hold_diagnosis_port(selected.queries)
+                .map_err(debug)?;
+            tower.set_hold_diagnosis(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
             let (port, custodian) = driver
                 .supervisor()
@@ -180,6 +192,7 @@ impl Service {
                 session,
                 inspection,
                 explanation,
+                hold_diagnosis,
                 review_explanation,
                 policy_replay,
             }),
@@ -297,7 +310,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; review_explanation_queries={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; hold_diagnosis_queries={:?}; review_explanation_queries={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -308,6 +321,10 @@ impl Service {
                 .explanation
                 .as_ref()
                 .map(FileSupervisorExplanationGrant::remaining_queries),
+            active
+                .hold_diagnosis
+                .as_ref()
+                .map(FileSupervisorHoldDiagnosisGrant::remaining_queries),
             active
                 .review_explanation
                 .as_ref()

@@ -44,12 +44,14 @@ or publication authority.
 
 `PublicationTower::new_learned_observer(mount, learned_port, limits)` mounts the
 original `FileLearnedTextStreamActorPort` for privileged observation. The
-supervisor separately issues and retains the same native inspection, explanation
-or policy-comparison grants used by the ordinary facade. A grant from another
+supervisor separately issues and retains the same native inspection, recorded
+hold-diagnosis, explanation or policy-comparison grants used by the ordinary
+facade. A grant from another
 owner is rejected even when every numeric scope field matches.
 
 This constructor has a closed, read-only dispatch profile: an authenticated
-operator may request `situation`, historical `explain`, or `policy-replay` under
+operator may request `situation`, recorded-state `why-held`, historical `explain`,
+or `policy-replay` under
 their independently selected native grants. Ordinary `propose`, request `get`,
 `precheck`, `capabilities` and every other verb are unavailable through this
 profile, including when a host supplies Permit or Experiment tags. Caller
@@ -62,6 +64,14 @@ awaiting review, and the original confirmed release with its charged units.
 They do not refresh evidence, advance numerical generation, consume an admission
 snapshot, write a journal event or approve a release. Captured pages retain their
 original cut when subsequent generation or publication advances the owner.
+
+The separately granted [recorded-state `why-held`](TOWER_HOLD_DIAGNOSIS.md)
+reads the exact original learned request and its acknowledged publication
+conditions. It reports actual Reviewing, Authorized and Confirmed stages without
+advancing numerical generation or publication. Source freshness, current
+approvals, current time and final eligibility remain Unknown. This observation
+requires no numerical replay; it does not extend the ordinary operator command
+line service to learned-stream control.
 
 The constructor does not expand any numerical-replay contract. Admission and
 completed-review explanation grants without numerical work allowances continue

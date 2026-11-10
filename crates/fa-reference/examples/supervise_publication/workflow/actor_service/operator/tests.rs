@@ -1,5 +1,7 @@
 //! Actual original owners and authenticated Unix sockets, without qualification
 //! claims about production deployment or independent model judgments.
+#[path = "tests/hold_diagnosis.rs"]
+mod hold_diagnosis;
 #[path = "tests/policy_replay.rs"]
 mod policy_replay;
 #[path = "tests/review_explanation.rs"]

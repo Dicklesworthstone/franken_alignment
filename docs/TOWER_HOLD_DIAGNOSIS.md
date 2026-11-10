@@ -130,12 +130,60 @@ The existing response limit applies to the whole report. A live native route
 remains reserved after refusal or owner loss; the shared router never falls back
 to imported snapshot evidence.
 
+## Observe a learned stream's original publication
+
+The Rust `PublicationTower::new_learned_observer` facade accepts this same
+separately issued grant for its original learned owner. Its operator-only
+`why-held` reads the actual source-derived request and publication machine.
+It preserves numerical generation, source snapshots, review keys and journal
+bytes; ordinary payload submission, ticket polling and mutations remain outside
+that observer's closed verb set. The four live conditions remain Unknown.
+
+This route needs no numerical replay. Historical admission and completed-review
+explanation grants retain their original replay limits and may still return
+Unknown for learned histories. The ordinary authenticated command line service
+below retains its existing ordinary-owner profile.
+
+## Use the authenticated ordinary operator endpoint
+
+The existing `--operator-profile` supports the optional explicit selection:
+
+```json
+"hold_diagnosis": {
+  "queries": 32,
+  "disclosure": "recorded_publication_state"
+}
+```
+
+Omission or null preserves existing profiles. The selected service provisions
+the same original grant and retains its noncopyable custodian across reconnects,
+scheduled handoffs and terminal reply grace. A diagnosis-only endpoint needs no
+inspection, policy, congress or experiment disclosure. Send the exact request
+above with `supervise_publication tower-operator-exchange operator.json why-held.json`.
+
+Before output or any later explicit request, the client validates the closed
+profile, original request/mount/scope, distinct native coordinates, all ten
+ordered conditions and every Known predicate basis. It also checks consistency
+of recorded stage, epoch and deadline predicates and refuses any replacement of
+the four Unknown live conditions with invented permission. Malformed or unbound
+responses terminate without automatic retry or another request. Existing byte,
+depth, item, I/O and elapsed limits are unchanged.
+
+See [operator setup and examples](LIVE_TOWER_OPERATOR.md#diagnose-an-original-requests-recorded-publication-conditions).
+
 ## Validation and remaining qualification
 
 Native unit and public integration regression sources exercise real original
 requests, congress and independent human approval, actual publication, clock
 and policy changes, Stop, revocation, source/snapshot conservation, storage and
 owner failures, charged Unknown abandonment and wire correlation.
+
+Four operator profile/service and three authenticated-client regression functions
+add actual socket coverage for explicit selection, preserved admission, live
+acknowledged advancement, shared reconnect budgets and corrupted-reply stopping.
+One additional learned-observer regression follows actual numerical generation,
+source-derived Message intake, original two-key publication and reconciliation
+through Reviewing, Authorized and Confirmed, including revocation and owner loss.
 
 These changes received independent source review. The execution environment
 became unavailable before implementation. No Rust compilation, runtime test,

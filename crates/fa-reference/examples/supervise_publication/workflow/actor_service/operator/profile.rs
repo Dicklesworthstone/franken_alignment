@@ -2,7 +2,8 @@
 use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_INSPECTION_QUERIES,
+    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES,
+    MAX_INSPECTION_QUERIES,
     MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES, MAX_REVIEW_EXPLANATION_EVENTS,
     MAX_REVIEW_EXPLANATION_QUERIES,
 };
@@ -36,8 +37,41 @@ pub(crate) struct Settings {
     pub(crate) explanation_queries: usize,
     pub(crate) explanation_replay_events: usize,
     pub(crate) explanation_disclosure: String,
+    pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct HoldDiagnosisSettings {
+    pub(crate) queries: usize,
+    pub(crate) disclosure: String,
+}
+
+impl HoldDiagnosisSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            disclosure: fields.text("disclosure")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_HOLD_DIAGNOSIS_QUERIES
+            || self.disclosure != "recorded_publication_state"
+        {
+            return Err(
+                "hold diagnosis requires explicit recorded-publication-state disclosure and bounded queries"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -175,6 +209,10 @@ impl Settings {
             explanation_replay_events: usize::try_from(fields.number("explanation_replay_events")?)
                 .map_err(debug)?,
             explanation_disclosure: fields.text("explanation_disclosure")?,
+            hold_diagnosis: match fields.optional("hold_diagnosis") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(HoldDiagnosisSettings::decode(value)?),
+            },
             review_explanation: match fields.optional("review_explanation") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(ReviewExplanationSettings::decode(value)?),
@@ -241,6 +279,7 @@ impl Settings {
             || self.explanation_queries > MAX_EXPLANATION_QUERIES
             || (self.inspection_queries == 0
                 && self.explanation_queries == 0
+                && self.hold_diagnosis.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none())
         {
@@ -259,6 +298,9 @@ impl Settings {
             return Err("explanation requires explicit policy-and-selected-witness disclosure and bounded replay".into());
         }
         if let Some(selected) = &self.policy_replay {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.hold_diagnosis {
             selected.validate()?;
         }
         if let Some(selected) = &self.review_explanation {

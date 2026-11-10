@@ -19,6 +19,8 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
+#[path = "client/hold_diagnosis.rs"]
+mod hold_diagnosis;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
 #[path = "client/review_explanation.rs"]
@@ -423,6 +425,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("explanation"), Verb::Explain) if request.arguments == ReadArguments::None => {}
         (Some("review-explanation"), Verb::Explain) => {
             if !review_explanation::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("hold-diagnosis"), Verb::WhyHeld) => {
+            if !hold_diagnosis::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());
             }
         }

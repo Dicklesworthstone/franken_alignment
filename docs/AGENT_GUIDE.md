@@ -78,6 +78,16 @@ allowances across handoffs; a later request never renews spent operator work.
 Explanation additionally requires explicit policy/selected-witness disclosure;
 it remains historical admission evidence, not current `why-held` or permission.
 
+For recorded publication blockers, explicitly select `hold_diagnosis` with
+bounded queries and `disclosure: "recorded_publication_state"` in that operator
+profile. Send `why-held` with null arguments to the original native request
+address using the same `tower-operator-exchange` command. Its ten conditions
+identify recorded Stop/suspension, epoch, deadline and authorization-state
+obstacles at one acknowledged cut; current evidence, approvals, clock and final
+eligibility remain Unknown. An Authorized observation does not authorize a
+follow-up effect, and Unknown liabilities stay charged. See
+[the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
+
 To enumerate a live owner's original situation capture, use
 `supervise_publication tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages N`
 with a canonical run address carrying its exact registration generation and an

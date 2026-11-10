@@ -182,8 +182,9 @@ impl PublicationTower {
     /// acquire a release ticket or retain the supervisor's authority lock.
     ///
     /// Only an operator may use this facade, even when the caller is otherwise
-    /// authorized for the same run. Situation and explicitly granted historical
-    /// explanation/policy comparison remain their original native operations.
+    /// authorized for the same run. Situation, recorded hold diagnosis and
+    /// explicitly granted historical explanation/policy comparison remain their
+    /// original native operations.
     /// Unsupported numerical replay stays Unknown under those grants' original
     /// work contracts. Permit/Experiment tags cannot enable ordinary submission,
     /// cancellation, precheck, request polling or any other mutation here.
@@ -284,7 +285,7 @@ impl PublicationTower {
             }
             if !matches!(
                 request.verb,
-                Verb::Situation | Verb::Explain | Verb::PolicyReplay
+                Verb::Situation | Verb::Explain | Verb::WhyHeld | Verb::PolicyReplay
             ) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
