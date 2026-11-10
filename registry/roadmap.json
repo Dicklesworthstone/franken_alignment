@@ -3546,7 +3546,12 @@
       "result_artifacts": [
         "crates/fa-reference/src/explain_affordances.rs",
         "crates/fa-reference/tests/proposal_retry_boundaries.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/TOWER_RESOLUTION.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/resolution.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/resolution/tests.rs",
+        "crates/fa-reference/src/tower/publication/resolution.rs",
+        "crates/fa-reference/tests/tower_resolution.rs"
       ],
       "founding_ideas": [
         "FI-A13",

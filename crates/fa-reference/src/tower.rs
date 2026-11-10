@@ -184,6 +184,19 @@ pub enum ReadArguments {
     Next {
         max_cost: u64,
     },
+    /// Inspect one native reconciliation candidate using a caller-selected
+    /// operation key. This read neither reserves the key nor performs its action.
+    #[cfg(unix)]
+    ResolutionNext {
+        operation: u64,
+    },
+    /// Reconcile exactly one original request at its complete acknowledged cut.
+    /// The independently installed native grant owns the mutation and retries.
+    #[cfg(unix)]
+    Resolve {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
+    },
     Replay {
         interventions: Vec<crate::action::consequence::experiment::Intervention>,
     },

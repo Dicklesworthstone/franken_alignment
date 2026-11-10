@@ -46,6 +46,23 @@ fn proposed() -> TowerRequest {
     result
 }
 
+
+#[cfg(unix)]
+const RESOLVE: &str = concat!(
+    "{\"schema_version\":\"fa.tower_request/1\",\"operation_id\":\"resolve-5009\",",
+    "\"address\":\"fa://1/attempt/request-3-2-4-5-701@41\",\"verb\":\"resolve\",",
+    "\"arguments\":{\"operation\":\"5009\",\"expected\":{",
+    "\"scope\":{\"tenant\":\"1\",\"principal\":\"2\",\"run\":\"3\",\"branch\":\"4\",\"authority\":\"5\",\"purpose\":\"effect\"},",
+    "\"origin\":\"acknowledged_owner\",\"request\":\"701\",\"request_generation\":\"0\",",
+    "\"attempt\":\"1\",\"journal_revision\":\"9\",\"control_sequence\":\"7\",\"recorded_at\":\"1\"}},",
+    "\"idempotency_key\":\"5009\"}"
+);
+
+#[cfg(unix)]
+fn resolution_request() -> TowerRequest {
+    decode_request(RESOLVE.as_bytes()).unwrap()
+}
+
 fn document(verb: &str, arguments: &str) -> String {
     READ.replace("\"get\"", &quote(verb))
         .replace("\"arguments\":null", &format!("\"arguments\":{arguments}"))
@@ -76,6 +93,8 @@ fn fixed_request_vector_is_stable_and_all_registered_verbs_are_recognized() {
         let mut value = request(verb, ReadArguments::None);
         match verb {
             Verb::Propose => value = proposed(),
+            #[cfg(unix)]
+            Verb::Resolve => value = resolution_request(),
             Verb::Precheck => {
                 value.arguments = ReadArguments::Precheck {
                     query: 1,
@@ -731,4 +750,62 @@ fn typed_encoding_cannot_bypass_shape_address_or_payload_admission() {
         )),
         Err(TowerDecodingError::Capacity)
     );
+}
+
+#[cfg(unix)]
+#[test]
+fn native_resolution_has_an_exact_wire_cut_and_separate_actionable_next_profile() {
+    let value = resolution_request();
+    assert_eq!(encode_request(&value).unwrap(), RESOLVE);
+    round_trip(&value);
+    let ReadArguments::Resolve { operation, expected } = value.arguments else {
+        panic!("native resolution arguments");
+    };
+    assert_eq!(operation, 5009);
+    assert_eq!(expected.request, 701);
+    assert_eq!(expected.attempt, 1);
+    assert_eq!(expected.request_generation, 0);
+    assert_eq!(expected.journal_revision, 9);
+    assert_eq!(expected.control_sequence, 7);
+    assert_eq!(expected.recorded_at, Some(ElapsedTick(1)));
+    let next = request(Verb::Next, ReadArguments::ResolutionNext { operation: u64::MAX });
+    round_trip(&next);
+    let mut keyed = next.clone();
+    keyed.idempotency_key = Some(u64::MAX.to_string());
+    round_trip(&keyed);
+    round_trip(&request(Verb::Next, ReadArguments::Next { max_cost: 0 }));
+    let mut absent_tick = resolution_request();
+    if let ReadArguments::Resolve { expected, .. } = &mut absent_tick.arguments {
+        expected.recorded_at = None;
+    }
+    round_trip(&absent_tick);
+}
+
+#[cfg(unix)]
+#[test]
+fn resolution_decoder_rejects_invented_clock_authority_and_inexact_identity_before_dispatch() {
+    for malformed in [
+        RESOLVE.replace("\"operation\":\"5009\"", "\"operation\":5009"),
+        RESOLVE.replace("\"operation\":\"5009\"", "\"operation\":\"05009\""),
+        RESOLVE.replace("\"operation\":\"5009\"", "\"operation\":\"0\""),
+        RESOLVE.replace("\"operation\":\"5009\"", "\"operation\":\"5009\",\"operation\":\"5009\""),
+        RESOLVE.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":null"),
+        RESOLVE.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":\"5010\""),
+        RESOLVE.replace("@41", ""),
+        RESOLVE.replace("\"recorded_at\":\"1\"", "\"recorded_at\":1"),
+        RESOLVE.replace("\"recorded_at\":\"1\"", "\"recorded_at\":\"1\",\"now\":\"2\""),
+        RESOLVE.replace("\"origin\":\"acknowledged_owner\"", "\"origin\":\"imported\""),
+        RESOLVE.replace("\"purpose\":\"effect\"", "\"purpose\":\"capture\""),
+        RESOLVE.replace("\"request\":\"701\"", "\"request\":\"0\""),
+        RESOLVE.replace("\"attempt\":\"1\"", "\"attempt\":\"0\""),
+    ] {
+        assert_eq!(decode_request(malformed.as_bytes()), Err(TowerDecodingError::MalformedRequest));
+    }
+    let next = request(Verb::Next, ReadArguments::ResolutionNext { operation: 1 });
+    let both_profiles = encode_request(&next).unwrap()
+        .replace("\"operation\":\"1\"", "\"operation\":\"1\",\"max_cost\":\"1\"");
+    assert_eq!(decode_request(both_profiles.as_bytes()), Err(TowerDecodingError::MalformedRequest));
+    let mut mismatched = next;
+    mismatched.idempotency_key = Some("2".to_owned());
+    assert_eq!(encode_request(&mismatched), Err(TowerDecodingError::MalformedRequest));
 }

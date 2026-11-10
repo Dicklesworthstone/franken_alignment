@@ -95,6 +95,14 @@ and keeps authentication, unseen-history completeness and external outcomes
 Unknown. Both inputs and all read attempts are bounded. This source increment
 and its binary regression tests still require execution qualification.
 
+A separately granted [native `next` and `resolve`](docs/TOWER_RESOLUTION.md)
+now returns an executable request for original endpoint receipt reconciliation.
+Its restricted operator mount can settle an existing uncertain publication
+without resending, sealing or submitting another effect. Exact native
+predecessors, bounded replay and per-grant retry identity apply; missing receipts
+stay charged Unknown, while measured cost, ranking and publication eligibility
+remain unestablished. This source increment still requires execution qualification.
+
 A separately granted native [recorded-state `why-held`](docs/TOWER_HOLD_DIAGNOSIS.md)
 now diagnoses an original publication request's recorded Stop, suspension,
 policy epoch, deadline and authorization stage at one acknowledged cut.

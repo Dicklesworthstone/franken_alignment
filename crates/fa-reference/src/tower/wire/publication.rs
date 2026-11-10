@@ -9,6 +9,7 @@ mod hold_diagnosis;
 mod inspection;
 mod policy_replay;
 mod review_explanation;
+mod resolution;
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
 use crate::action::consequence::delivery::persistent::requests::actor::{
@@ -104,6 +105,20 @@ impl PublicationResponse {
             PublicationResult::HoldDiagnosis(linked) => (
                 "hold-diagnosis",
                 hold_diagnosis::encode(linked, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::ResolutionNext(linked) => (
+                "resolution-next",
+                resolution::encode_next(
+                    linked, &self.envelope.address, &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(), &encoder,
+                )?,
+            ),
+            PublicationResult::Resolution(linked) => (
+                "resolution",
+                resolution::encode_resolution(
+                    linked, &self.envelope.address, &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(), &encoder,
+                )?,
             ),
             PublicationResult::ReviewExplanation(native) => (
                 "review-explanation",

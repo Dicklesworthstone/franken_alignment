@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: connect an executable native next action to original receipt reconciliation
+
+A separate finite supervisor grant now plans and reconciles an exact original
+external request. Native Next offers at most one executable Resolve request,
+bound to the original request/attempt and complete acknowledged predecessor.
+The caller supplies the prospective operation number; planning reserves no key.
+Costs, information gain, ranking and publication eligibility remain Unknown.
+
+Resolve invokes the original single-attempt Reconcile transition with the
+owner's already-ready clock. It accepts no caller tick or receipt and never
+publishes, resends, seals or abandons uncertainty. An actual original receipt
+can settle the liability; no receipt or expired retention stays charged Unknown.
+The operation invalidates the untagged one-use admission snapshot before native
+work. Numerical replay remains refused under this ordinary event-work contract.
+
+The native Tower connects both registered verbs, with strict request decoding,
+a full basis in the executable action and sealed correlated results. A dedicated
+reconciliation-operator constructor prevents its Permit tag from enabling actor
+submission or cancellation. Learned observers keep their existing read-only
+profile. Finite exact retries share the original grant's historical result;
+replacement grants and reopened owners do not inherit that cache.
+
+Eighteen native, two decoder and eight public regression functions use actual
+original review, independent human approval and endpoint outcomes, including
+charged uncertainty, real nonexecution receipts, stale cuts, replay limits,
+scope/custody failure and unavailable authority. Source review also corrects
+existing router expectations for newly connected native verbs and preserves
+non-Unix decoding.
+
+Independent source review is separate from execution qualification. The
+workspace disconnected during implementation; the restored environment had no
+RCH runner or Rust toolchain. No new Rust compilation, formatting, Clippy,
+doctest, runtime or full RCH gate pass is claimed. FA-138 stays in progress with
+all original acceptance conditions; no Bead or production gate is closed.
+
+See [the exact native next and resolution contract](docs/TOWER_RESOLUTION.md).
+
 ## 2026-11-10: explain original learned congresses with explicit numerical reservations
 
 An original supervisor can now issue

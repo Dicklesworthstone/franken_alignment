@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Write};
 
 pub(super) mod policy;
+#[cfg(unix)]
+pub(super) mod resolution;
 
 use super::{ReadArguments, TowerRequest, Verb, replay, validate_address};
 use crate::action::consequence::experiment::{Intervention, MAX_INTERVENTION_BYTES};
@@ -193,10 +195,25 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 round: decimal(args, "round")?,
             })
         }
+        #[cfg(unix)]
+        Verb::Next if args.contains_key("operation") => {
+            fields(args, &["operation"])?;
+            Ok(ReadArguments::ResolutionNext {
+                operation: decimal(args, "operation")?,
+            })
+        }
         Verb::Next => {
             fields(args, &["max_cost"])?;
             Ok(ReadArguments::Next {
                 max_cost: decimal(args, "max_cost")?,
+            })
+        }
+        #[cfg(unix)]
+        Verb::Resolve => {
+            fields(args, &["operation", "expected"])?;
+            Ok(ReadArguments::Resolve {
+                operation: decimal(args, "operation")?,
+                expected: resolution::decode_basis(field(args, "expected")?)?,
             })
         }
         Verb::Replay => {
@@ -301,6 +318,24 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
             validate_proposal(proposal)?;
         }
+        #[cfg(unix)]
+        (Verb::Next, ReadArguments::ResolutionNext { operation }) => {
+            if *operation == 0
+                || request.idempotency_key.as_ref().is_some_and(|key| key != &operation.to_string())
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (Verb::Resolve, ReadArguments::Resolve { operation, expected }) => {
+            resolution::validate_expected(*expected)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request.address.generation.is_none_or(|generation| generation == 0)
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
         (Verb::Precheck, ReadArguments::Precheck { query, proposal }) => {
             if *query == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
@@ -384,6 +419,10 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             Verb::Propose | Verb::Precheck | Verb::Capabilities | Verb::PolicyReplay,
             ReadArguments::None,
         ) => {
+            return Err(TowerDecodingError::MalformedRequest);
+        }
+        #[cfg(unix)]
+        (Verb::Resolve, ReadArguments::None) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -615,6 +654,15 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         ReadArguments::Next { max_cost } => {
             object_json(&[("max_cost", quote(&max_cost.to_string()))])
         }
+        #[cfg(unix)]
+        ReadArguments::ResolutionNext { operation } => {
+            object_json(&[("operation", quote(&operation.to_string()))])
+        }
+        #[cfg(unix)]
+        ReadArguments::Resolve { operation, expected } => object_json(&[
+            ("operation", quote(&operation.to_string())),
+            ("expected", resolution::encode_basis(*expected)),
+        ]),
         ReadArguments::Replay { interventions } => object_json(&[(
             "interventions",
             array_json(interventions.iter().map(encode_intervention)),

@@ -50,12 +50,13 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | `null` or `{"since_seq":"0","max_events":"64"}` |
-| `next` | `null` or `{"max_cost":"8"}` |
+| `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: exactly `{"operation":"9001"}` with a separately granted operator capability |
 | `replay` | `null` or `{"interventions":[...]}`; requires a nonempty idempotency key |
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
 | `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
 | `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`, optionally adding `"paged":true`; native page continuation uses exactly `{"campaign":"1","cursor":"17"}`. Requires separate native grants, canonical matching key and explicit nonzero mount generation |
+| `resolve` | On Unix, `{"operation":"9001","expected":{...}}` with the complete original native basis; requires the same canonical idempotency key and exact nonzero registration generation |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -73,6 +74,20 @@ current approvals, current time and final eligibility explicitly Unknown.
 The existing reference snapshot route retains its own original semantics.
 See [native diagnosis](TOWER_HOLD_DIAGNOSIS.md) for the exact address and wire
 profile; a successful response is not permission to publish.
+
+### Native next action and receipt reconciliation
+
+The [native reconciliation profile](TOWER_RESOLUTION.md) returns a complete
+`resolve` request from an exact original `next` observation. The caller selects
+the prospective operation number; planning reserves no key. The action carries
+its full native predecessor and remains data until explicitly selected.
+
+`resolve` accepts no caller clock or alleged endpoint receipt. The original
+owner must still be healthy, clock-ready and at the exact expected cut. Its
+finite grant reconciles only an existing original endpoint outcome and retains
+exact retries for that live grant's lifetime. The restricted operator
+constructor does not enable actor `propose` or `hold` through its Permit tag.
+The reference snapshot's `next` profile and learned observer remain unchanged.
 
 ### Native situation pages
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-10: execute original receipt reconciliation from native next actions
+
+- Add a separately granted native Next/Resolve path, exact request mapping,
+  full predecessor binding, finite event work and shared operation retry custody.
+- Return a complete executable reconciliation request without invented costs,
+  rankings or current publication permission.
+- Reconcile actual original endpoint receipts; preserve charges on misses and
+  expired retention, and never send, seal or accept a caller-supplied clock.
+- Add a restricted operator constructor that cannot submit or cancel actor
+  requests through its reconciliation Permit purpose.
+- Add eighteen native, two codec and eight public regressions and independently
+  review the source. Compilation, runtime execution and full RCH qualification
+  remain unverified.
+
 ## 2026-11-10: grant bounded numerical replay for original completed reviews
 
 - Add an explicitly selected cumulative original-transition allowance for native

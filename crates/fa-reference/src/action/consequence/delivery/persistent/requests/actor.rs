@@ -8,6 +8,14 @@ pub use explanation::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
 };
 mod host;
+mod resolution;
+pub use resolution::{
+    FileResolutionBlockReason, FileResolutionError, FileResolutionObservation,
+    FileResolutionPlan, FileResolutionPlanObservation, FileResolutionPlanResult,
+    FileResolutionReceipt, FileResolutionRequest, FileResolutionResult,
+    FileSupervisorResolutionGrant, FileSupervisorResolutionPort,
+    MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
+};
 mod hold_diagnosis;
 pub use hold_diagnosis::{
     FileHoldCondition, FileHoldDiagnosis, FileHoldDiagnosisBasis, FileHoldDiagnosisObservation,

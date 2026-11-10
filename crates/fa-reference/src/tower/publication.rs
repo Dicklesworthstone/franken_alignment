@@ -9,6 +9,8 @@
 mod capabilities;
 mod hold_diagnosis;
 pub use hold_diagnosis::LinkedHoldDiagnosis;
+mod resolution;
+pub use resolution::{LinkedResolution, LinkedResolutionNext};
 mod explanation;
 mod review_explanation;
 pub use review_explanation::LinkedReviewExplanation;
@@ -29,7 +31,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
     FileSupervisorExplanationPort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorReviewExplanationPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort, FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -44,7 +46,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 8] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 10] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
@@ -52,6 +54,8 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 8] = [
     Verb::Situation,
     Verb::Explain,
     Verb::WhyHeld,
+    Verb::Next,
+    Verb::Resolve,
     Verb::PolicyReplay,
 ];
 
@@ -84,7 +88,7 @@ impl PublicationLimits {
     }
 }
 
-/// Original observation-only responses preserve each native epistemic variant
+/// Original request and reconciliation responses preserve each native epistemic variant
 /// and basis. A request generation is not a supervisor situation's control cut.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PublicationResult {
@@ -95,6 +99,8 @@ pub enum PublicationResult {
     SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
     HoldDiagnosis(LinkedHoldDiagnosis),
+    ResolutionNext(LinkedResolutionNext),
+    Resolution(LinkedResolution),
     ReviewExplanation(LinkedReviewExplanation),
     PolicyReplay(LinkedPolicyReplay),
     PolicyReplayPage(LinkedPolicyReplayPage),
@@ -125,12 +131,15 @@ pub struct PublicationTower {
     // observation facade may bind original supervisor grants, but must never
     // turn the private weak gateway into ordinary payload intake or tickets.
     learned_observer: bool,
+    // Operator reconciliation grants never widen this service into actor intake.
+    reconciliation_operator: bool,
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
     inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
+    resolution: Option<FileSupervisorResolutionPort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
@@ -163,12 +172,14 @@ impl PublicationTower {
             mount,
             scope,
             learned_observer: false,
+            reconciliation_operator: false,
             wire: ActorWire::new(port),
             precheck: None,
             inspection: None,
             inspection_cursor: None,
             explanation: None,
             hold_diagnosis: None,
+            resolution: None,
             review_explanation: None,
             policy_replay: None,
             policy_replay_cursors: BTreeMap::new(),
@@ -195,6 +206,21 @@ impl PublicationTower {
     ) -> Result<Self, TowerInstallError> {
         let mut tower = Self::new(mount, port.into_tower_observation_port(), limits)?;
         tower.learned_observer = true;
+        Ok(tower)
+    }
+
+    /// Mount an ordinary owner for separately granted operator reconciliation.
+    /// Even Permit and Experiment purposes cannot enable actor submission,
+    /// cancellation, ticket polling or policy precheck through this facade.
+    /// The host must independently install and retain the finite resolution
+    /// grant. Learned observation constructors keep their closed read profile.
+    pub fn new_reconciliation_operator(
+        mount: Address,
+        port: FileActorPort<FileOversight>,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        let mut tower = Self::new(mount, port, limits)?;
+        tower.reconciliation_operator = true;
         Ok(tower)
     }
 
@@ -290,6 +316,18 @@ impl PublicationTower {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
         }
+        if self.reconciliation_operator {
+            if !access.operator {
+                return self.withheld(&request);
+            }
+            if !matches!(
+                request.verb,
+                Verb::Situation | Verb::Explain | Verb::WhyHeld | Verb::Next
+                    | Verb::Resolve | Verb::PolicyReplay
+            ) {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+        }
         if !CONNECTED_PUBLICATION_VERBS.contains(&request.verb) {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
         }
@@ -302,7 +340,7 @@ impl PublicationTower {
             .address
             .generation
             .is_some_and(|g| Some(g) != self.mount.generation)
-            || (matches!(request.verb, Verb::Propose | Verb::PolicyReplay)
+            || (matches!(request.verb, Verb::Propose | Verb::PolicyReplay | Verb::Resolve)
                 && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -320,6 +358,10 @@ impl PublicationTower {
 
         if request.verb == Verb::WhyHeld {
             return self.dispatch_hold_diagnosis(access, request);
+        }
+
+        if matches!(request.verb, Verb::Next | Verb::Resolve) {
+            return self.dispatch_resolution(access, request);
         }
 
         if request.verb == Verb::PolicyReplay {

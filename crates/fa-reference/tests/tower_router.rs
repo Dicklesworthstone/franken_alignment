@@ -35,7 +35,7 @@ use fa_reference::observation_algebra::{
 use fa_reference::round::{Verdict, commitment};
 use fa_reference::strict_json::{self, Json};
 use fa_reference::tower::publication::{
-    PublicationLimits, PublicationResponse, PublicationResult, PublicationTower,
+    CONNECTED_PUBLICATION_VERBS, PublicationLimits, PublicationResponse, PublicationResult, PublicationTower,
 };
 use fa_reference::tower::router::{RoutedResponse, TowerRouter};
 use fa_reference::tower::{
@@ -635,20 +635,20 @@ fn every_live_verb_and_generation_shadows_conflicting_snapshot_objects_without_f
                 );
                 let native = live(&result);
                 assert!(native.envelope.reason_code.is_some());
-                if ![
-                    Verb::Get,
-                    Verb::Propose,
-                    Verb::Precheck,
-                    Verb::Capabilities,
-                    Verb::Situation,
-                    Verb::Explain,
-                    Verb::PolicyReplay,
-                ]
-                .contains(&verb)
-                {
+                if !CONNECTED_PUBLICATION_VERBS.contains(&verb) {
                     assert_eq!(
                         native.envelope.reason_code,
                         Some(ReasonCode::CapabilityUnsupported)
+                    );
+                } else if matches!(verb, Verb::WhyHeld | Verb::Next | Verb::Resolve) {
+                    // These are connected native operations, but an ordinary
+                    // actor never gains their independently retained grants.
+                    // Mount staleness is checked before any native query.
+                    let stale = generation.is_some_and(|value| value != MOUNT_GENERATION)
+                        || (verb == Verb::Resolve && generation.is_none());
+                    assert_eq!(
+                        native.envelope.reason_code,
+                        Some(if stale { ReasonCode::StaleGeneration } else { ReasonCode::DeniedByPolicy })
                     );
                 }
             }

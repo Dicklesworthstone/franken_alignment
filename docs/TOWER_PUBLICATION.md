@@ -1,10 +1,11 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects eight
+On Unix, `fa_reference::tower::publication::PublicationTower` connects ten
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
-and separately granted recorded-state `why-held`.
+separately granted recorded-state `why-held`, and bounded original receipt
+planning/reconciliation through `next` and `resolve`.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -39,6 +40,21 @@ The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the newest native
 route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy
 or publication authority.
+
+## Plan and reconcile an original outcome
+
+The separately granted [native reconciliation contract](TOWER_RESOLUTION.md)
+connects an exact original request's `next` plan to an executable `resolve`
+request. The dedicated `new_reconciliation_operator` constructor limits its
+Permit purpose to receipt reconciliation and independently selected observation
+or comparison routes. It cannot submit or cancel actor requests.
+
+A retained original receipt can settle an uncertain dispatch. A miss remains
+charged Unknown; the operation never publishes, resends, seals or observes a
+caller-provided clock. Full predecessor checks and finite per-grant retry custody
+apply. Costs, information gain and publication eligibility remain Unknown.
+Numerical history requires a different replay contract, and the learned observer
+below keeps its existing closed read-only profile.
 
 ## Observe an original learned stream owner
 
