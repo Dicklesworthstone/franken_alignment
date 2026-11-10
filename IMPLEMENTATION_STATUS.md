@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: audit completed refinements through the learned operator
+
+The existing explicit `--audit-review ROUND HISTORY_ANCHOR` mode now consumes
+the original completion-aware cursor and emits `fa.refinement-audit/1` for a
+selected completed learned-sidecar refinement. Original applied reviews keep
+the byte-identical `fa.review-audit/1` renderer. The new report distinguishes the
+judged input from its newly refined revision, names the original residual group,
+and records application as not attempted.
+
+The same complete native effect audit supplies the attempt's historical stages
+and actual later authorization round. A subsequent two-key publication is never
+credited to the selected refinement. The report retains original policy/congress
+summary, anchor extent and replay work, with no payload, helper input, witness
+values or reveal salts. Original offline admission, numerical recipe binding,
+deadline checkpoints, 64 KiB pre-growth bound and output-failure behavior remain
+in force; the audit neither recovers an owner nor updates authority.
+
+Three new operator regression functions and two strengthened existing functions
+cover actual pending refinement, later publication, the original applied schema,
+wrong anchors/recipes, malformed history, cancellation and output failure.
+Independent review checked native API use, original report compatibility,
+versioned JSON structure and the real learned-fixture regression sources.
+The execution environment remains unavailable. No new Rust compilation,
+runtime test, rustfmt, Clippy, RCH gate or production qualification is claimed,
+and no bead or full packet is closed. Updated source bindings describe only
+the submitted code.
+
+See [the operator refinement report](docs/ANCHORED_REVIEW_AUDIT.md#refinement-reports-through-the-existing-operator-command).
+
 ## 2026-11-09: retain complete learned refinement reviews for independent audit
 
 Completed learned-sidecar refinements can now be inspected through an explicitly

@@ -604,6 +604,7 @@
       "result_artifacts": [
         "docs/ANCHORED_REVIEW_AUDIT.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/replay.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/audit.rs",
         "IMPLEMENTATION_STATUS.md"
       ]
     },

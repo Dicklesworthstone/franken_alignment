@@ -109,7 +109,8 @@ I/O, recipe construction, a single original event and output can block; the
 checkpoints do not claim kernel-level or strict wall-clock preemption. The audit
 uses no fresh logical-clock observation and cannot extend an action deadline.
 
-Only a completely verified suffix produces `fa.review-audit/1` JSON. All integral
+Only a completely verified suffix produces a complete audit. Applied reviews
+keep `fa.review-audit/1`; selected refinements use `fa.refinement-audit/1`. All integral
 identifiers and counts are strings to retain full precision. A `known` wrapper
 names the bounded historical-reference claim, independent prefix extent and
 remaining unanchored suffix; authentic source origin and truth are not asserted.
@@ -214,3 +215,50 @@ written. These new Rust tests, compilation, rustfmt, Clippy and the canonical
 RCH gate have not run. Independent source review and content-hash checks do not
 qualify execution, detector quality, model alignment or production deployment.
 No packet or bead is closed by this increment.
+
+
+## Refinement reports through the existing operator command
+
+The same explicit `--audit-review ROUND HISTORY_ANCHOR` mode above now accepts
+a selected completed refinement. It opts in on the original anchored,
+independently recipe-bound cursor before any event attempt. Original applied
+reviews retain their existing `fa.review-audit/1` output and renderer.
+
+A refinement returns `fa.refinement-audit/1` under the same historical
+`Knowledge::Known` wrapper. The two schemas distinguish an original attempted
+policy application from an original completed evidence refinement:
+
+| Field in the refinement report | Meaning |
+|---|---|
+| `input_revision` | Input actually judged by the selected congress, before refinement. |
+| `refinement.input_revision` | New original input revision created by the completed refinement. |
+| `refinement.group` | Exact layer, key/value side, position and head whose residual was acquired. |
+| `application.status` | `not_attempted`; no approval or failed application is invented. |
+| `application_inputs` | `not_applicable`; the new input was not applied by this round. |
+| `refinement.requires_fresh_review` | The refined input needed another independent review at this completion cut. |
+| `attempt_effects.stage_at_review` and `stage_at_journal_cut` | Original selected-attempt stages at the two distinct historical cuts. |
+| `attempt_effects.dispatch.authorization_round` | The actual later round associated with a dispatch, when one was recorded. |
+| `attempt_effects.selected_review_dispatched` | Whether the original effect trace attributes that dispatch to the selected round; a refinement does not authorize it. |
+
+The report also retains the original policy trace, congress membership and
+missing/abstaining distinctions, review timing, independent anchor extent,
+unanchored suffix extent, and verified/attempted replay work. Historical effect
+counts remain separate from the selected-attempt trace. An absent dispatch or
+an unrecorded terminal outcome does not establish nonexecution. A later review
+may already have approved the refined input; `requires_fresh_review` describes
+the selected refinement cut, not present eligibility.
+
+The original 64 KiB report limit applies before buffer growth. Raw payloads,
+helper input bytes, evidence values and reveal salts remain undisclosed. The
+same deadline checks cover historical reconstruction and output preparation;
+nothing is emitted before the full suffix verifies and the report fits.
+Cancellation, wrong anchors/recipes, malformed history and output failure
+produce no live recovery, helper call, publication retry or journal write.
+
+The operator regression source exercises an actual native coarse refinement,
+later independent publication, the new report schema, original applied output,
+anchor/recipe refusal, cancellation and output failure. The new command path
+has received independent source and format-literal review, but its Rust tests,
+compilation, formatting, Clippy and required RCH gate remain unexecuted because
+the execution environment is unavailable. The source review does not replace
+those checks or close production qualification.

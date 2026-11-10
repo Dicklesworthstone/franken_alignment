@@ -3,7 +3,8 @@ use super::{Config, FileOversight, Loaded, Path, anchors, debug, recipe};
 use fa_reference::action::consequence::delivery::persistent::observed::{
     guarded::anchored::FileHistoryAnchor,
     replay::{
-        FileReviewReplay, FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus,
+        FileReviewCompletion, FileReviewCompletionAudit, FileReviewReplay, FileReviewReplayCursor,
+        FileReviewReplayProgress, FileReviewReplayStatus,
     },
 };
 use fa_reference::action::consequence::gate::containment::session::policy::Predicate;
@@ -92,20 +93,33 @@ pub(super) fn run(
         ),
     }
     .map_err(debug)?;
-    let (replay, progress) = complete(cursor, checkpoint)?;
+    // Opt in on this same anchored, numerically bound reader before advancing.
+    // A completed refinement remains distinct from an applied policy decision.
+    let cursor = cursor.include_refinements().map_err(debug)?;
+    let (audit, progress) = complete(cursor, checkpoint)?;
+    let replay = audit.review();
     // Recheck using the original independent decision verifier, not display
     // heuristics. Its expected pre-vote material is reconstructed from the exact
     // externally anchored history, not independently authenticated as a source.
     let decision = replay.archive().verify(replay.anchor()).map_err(debug)?;
-    if let Ok(receipt) = replay.application() {
-        replay
-            .archive()
-            .verify_receipt(replay.anchor(), receipt)
-            .map_err(debug)?;
+    if let FileReviewCompletion::Applied(applied) = replay {
+        if let Ok(receipt) = applied.application() {
+            applied
+                .archive()
+                .verify_receipt(applied.anchor(), receipt)
+                .map_err(debug)?;
+        }
     }
     checkpoint()?;
-    let report = render(&replay, &decision, anchor.revision(), progress)
-        .map_err(|_| "audit summary exceeds its bounded output allowance".to_owned())?;
+    let report = match replay {
+        FileReviewCompletion::Applied(applied) => {
+            render(applied, &decision, anchor.revision(), progress)
+        }
+        FileReviewCompletion::Refined(refined) => {
+            refinement::render(refined, &decision, audit.effect(), anchor.revision(), progress)
+        }
+    }
+    .map_err(|_| "audit summary exceeds its bounded output allowance".to_owned())?;
     checkpoint()?;
     // Nothing reaches stdout until replay, suffix verification and rendering
     // finish. Output errors never trigger a replay, recovery, send or retry.
@@ -120,7 +134,7 @@ pub(super) fn run(
 fn complete(
     mut cursor: FileReviewReplayCursor,
     checkpoint: &mut impl FnMut() -> Result<(), String>,
-) -> Result<(FileReviewReplay, FileReviewReplayProgress), String> {
+) -> Result<(FileReviewCompletionAudit, FileReviewReplayProgress), String> {
     while cursor.progress().status == FileReviewReplayStatus::Replaying {
         checkpoint()?;
         cursor
@@ -129,7 +143,7 @@ fn complete(
     }
     checkpoint()?;
     let progress = cursor.progress();
-    Ok((cursor.finish().map_err(debug)?, progress))
+    Ok((cursor.finish_completion_with_effects().map_err(debug)?, progress))
 }
 
 struct Report(String);
@@ -288,3 +302,6 @@ mod boundary_tests {
 
 #[path = "audit/situation.rs"]
 mod situation;
+
+#[path = "audit/refinement.rs"]
+mod refinement;

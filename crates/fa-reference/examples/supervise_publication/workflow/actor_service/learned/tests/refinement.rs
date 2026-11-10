@@ -431,17 +431,42 @@ fn progressive_command_buys_exact_residual_then_fresh_native_and_human_keys_publ
         assert_eq!(audit.effect().dispatch().unwrap().authorization().round(), SECOND);
         host.history_anchor().unwrap()
     };
+    let original_refinement = history.history()[0].clone();
     assert_eq!(cleanup(driver, 1000, 1), 0); drop(history);
     fs::remove_file(root.0.join("evidence.json")).unwrap();
     fs::remove_file(root.0.join("native-roster.json")).unwrap();
     let before = fs::read(config.store.join("delivery.bin")).unwrap();
     let mut coarse = Vec::new();
-    assert_eq!(audit_command::run(&config, &loaded, FIRST, &anchor, &mut coarse,
-        &mut || Ok(())).unwrap_err(), "Contract(Incomplete)");
-    assert!(coarse.is_empty());
+    audit_command::run(&config, &loaded, FIRST, &anchor, &mut coarse, &mut || Ok(())).unwrap();
+    let report = historical_audit::assert_refinement_report(&coarse, &original_refinement);
+    let value = historical_audit::value(&report);
+    let effects = value.get("attempt_effects").unwrap();
+    assert_eq!(effects.get("stage_at_review").unwrap().as_str(), Some("Reviewing"));
+    assert_eq!(effects.get("stage_at_journal_cut").unwrap().as_str(), Some("Confirmed"));
+    assert_eq!(effects.get("selected_review_dispatched").unwrap().as_bool(), Some(false));
+    let dispatch = effects.get("dispatch").unwrap();
+    assert_eq!(dispatch.get("authorization_round").unwrap().as_str(), Some("102"));
+    assert_eq!(effects.get("terminal_outcome_recorded").unwrap().as_bool(), Some(true));
+    assert_eq!(effects.get("reconciliation_recorded").unwrap().as_bool(), Some(true));
+    assert_eq!(value.get("historical_effects").unwrap().get("executions_at_review")
+        .unwrap().as_str(), Some("0"));
+    assert_eq!(value.get("historical_effects").unwrap().get("executions_at_journal_cut")
+        .unwrap().as_str(), Some("1"));
+    let basis = report.get("knowledge").unwrap().get("basis").unwrap();
+    assert_eq!(basis.get("independent_history_through").unwrap().as_str(),
+        Some(anchor.revision().to_string().as_str()));
     let mut refined = Vec::new();
     audit_command::run(&config, &loaded, SECOND, &anchor, &mut refined, &mut || Ok(())).unwrap();
-    assert!(!refined.is_empty());
+    let applied = fa_reference::strict_json::parse(&refined,
+        fa_reference::strict_json::Limits::default()).unwrap();
+    assert_eq!(applied.get("schema").unwrap().as_str(), Some("fa.review-audit/1"));
+    let applied_value = historical_audit::value(&applied);
+    assert_eq!(applied_value.get("application").unwrap().get("status").unwrap().as_str(),
+        Some("applied"));
+    assert_eq!(dispatch.get("review_revision"), applied_value.get("completed_revision"));
+    assert_eq!(dispatch.get("input_revision"), applied_value.get("input_revision"));
+    assert_eq!(value.get("refinement").unwrap().get("input_revision"),
+        applied_value.get("input_revision"));
     assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), before);
     let outer = fs::read_to_string(root.0.join("recipe.json")).unwrap();
     fs::write(
@@ -872,3 +897,6 @@ fn progressive_authenticated_stop_retires_partial_successor_and_keeps_paid_refin
     assert_eq!(cleanup(driver, 1000, 1), 0);
     drop(handoff.review);
 }
+
+#[path = "refinement/audit.rs"]
+mod historical_audit;

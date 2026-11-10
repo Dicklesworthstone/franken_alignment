@@ -154,7 +154,7 @@ fn recorded(mode: Option<bool>, spelling: &[u8], publish: bool) -> Case {
         anchor,
     }
 }
-fn files(store: &Path) -> BTreeMap<String, Vec<u8>> {
+pub(super) fn files(store: &Path) -> BTreeMap<String, Vec<u8>> {
     fs::read_dir(store)
         .unwrap()
         .map(|entry| {
@@ -192,7 +192,7 @@ fn anchor_file(case: &Case) -> PathBuf {
     fs::write(&path, bytes).unwrap();
     path
 }
-fn write_config(root: &Root) -> PathBuf {
+pub(super) fn write_config(root: &Root) -> PathBuf {
     let text = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/fixtures/supervised_publication.json"
@@ -243,6 +243,7 @@ fn actual_cli_audits_all_original_modes_after_live_helper_and_evidence_removal()
         let mut output = Vec::new();
         audit_command::command(&args, &mut output).unwrap();
         let decoded = strict_json::parse(&output, Limits::default()).unwrap();
+        assert_eq!(decoded.get("schema").unwrap().as_str(), Some("fa.review-audit/1"));
         assert_eq!(decoded.get("authority").unwrap().as_str(), Some("none"));
         assert_eq!(
             value(&decoded).get("consequence").unwrap().as_str(),

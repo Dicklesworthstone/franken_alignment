@@ -116,6 +116,14 @@ The existing authenticated operator endpoint enables it through an explicit
 `review_explanation` profile and carries selected-round requests through
 `tower-operator-exchange`, retaining separate disclosure work across reconnects.
 
+The offline learned [`--audit-review` command](docs/ANCHORED_REVIEW_AUDIT.md#refinement-reports-through-the-existing-operator-command)
+now also reports completed evidence-refinement rounds. Its distinct
+`fa.refinement-audit/1` result retains the original K/V residual group, reviewed
+and new input revisions, and full historical cuts with application explicitly
+not attempted. The original effect trace attributes any later publication to
+its actual later approval round. New native and operator regression sources
+have received independent source review; execution qualification remains pending.
+
 Separately granted operator [`policy-replay`](docs/TOWER_POLICY_REPLAY.md) now
 compares a candidate policy against the original owner's complete retained
 current-policy corpus, including exact denials and applied reviews. It reports

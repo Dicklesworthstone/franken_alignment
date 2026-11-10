@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-09: expose completed refinements in the learned audit command
+
+- Connect the existing anchored `--audit-review` command to original completed
+  refinement outcomes; retain the existing applied-review output unchanged.
+- Add `fa.refinement-audit/1` with exact residual group, reviewed/new input
+  revisions and an explicit not-attempted application.
+- Attribute later publication using the original native effect trace, while
+  preserving full-suffix verification, bounded disclosure and output behavior.
+- Add three operator regression functions, strengthen two existing functions,
+  and independently review the complete change.
+  New Rust build/test execution and full RCH qualification remain unavailable.
+
 ## 2026-11-09: audit original completed refinement rounds
 
 - Add explicit completed-review outcomes that preserve original applied reviews
