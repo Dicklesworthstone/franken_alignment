@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: select exact prechecks across resident learned releases
+
+`serve-learned-generated` now accepts the closed
+`fa.learned-publication-sequence/2` manifest. Every entry explicitly selects an
+absolute normalized `precheck_profile` path or null. Version one remains closed
+and unchanged. Selected entries use the existing uncached exact-predicate
+release precheck; cached and full-policy disclosures refuse.
+
+All selected profiles and canonical future actor/reviewer/Stop/precheck paths,
+source/store custody, retained outputs and optional operator collisions are
+admitted before clock, owner or listener startup. Actual owner epochs are
+rechecked after qualification and before each entry's numerical work. The
+original intake bootstraps one bounded request-specific grant, preserves spent
+work across reconnects, and retires it before review or the next release.
+
+A later explicit grant does not refresh the numerical engine, cumulative source
+work, forecast observer, invocation-wide operator budget or publication keys.
+Message and Finish prechecks evaluate the original cumulative action. Submit
+still reacquires evidence and requires a fresh native/process congress plus an
+independent human permit. Source changes after a pass may deny admission; human
+rejection retains the distinct CancelledBeforeDispatch outcome. Either prevents
+successor admission without erasing prior confirmed publication or charges.
+
+Two new schema functions and eight resident integration/guard functions cover
+real native/process/native Message/Message/Finish in every predictor mode,
+explicit null, query exhaustion and reconnects, source changes, human rejection,
+later invalid profiles and canonical path/audience collisions, existing-file
+preservation, operator collisions and stale policy epoch before new draws.
+Independent source review is recorded separately from execution. The executor
+disconnected before compilation; source was recovered against verified base blobs,
+with the human-rejection assertion corrected to its original cancellation result.
+New compilation, runtime and full RCH qualification remain unclaimed. No roadmap
+packet or Bead is closed.
+
+See the [resident per-release precheck contract](docs/RESIDENT_LEARNED_PUBLICATION.md#exact-prechecks-for-independently-selected-releases).
+
 ## 2026-11-10: connect numerical congress explanation to live operator profiles
 
 The closed `fa.tower-operator-service/1` profile now accepts an optional positive

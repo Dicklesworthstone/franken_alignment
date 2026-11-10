@@ -504,7 +504,7 @@ fn resident_credentialed_messages_and_finish_keep_one_capability_after_provision
     let entries = [initial, second, last].into_iter().enumerate().map(|(index, loaded)| {
         let mut actor = peers::actor_profile(&root, &config, loaded.request);
         actor.socket = root.0.join(format!("peers/credential-actor-{}.sock", loaded.request));
-        resident::Entry { loaded, actor,
+        resident::Entry { loaded, actor, precheck: None,
             release: if index == 2 { LearnedTextRelease::Finish } else { LearnedTextRelease::Message } }
     }).collect::<Vec<_>>();
     let actors = entries.iter().map(|entry| entry.actor.clone()).collect::<Vec<_>>();
@@ -595,7 +595,7 @@ fn resident_credential_selection_cannot_change_policy_epoch_or_provisioning_path
         let entries = [initial, second].into_iter().map(|loaded| {
             let mut actor = peers::actor_profile(&root, &config, loaded.request);
             actor.socket = root.0.join(format!("peers/credential-actor-{}.sock", loaded.request));
-            resident::Entry { loaded, actor, release: LearnedTextRelease::Message }
+            resident::Entry { loaded, actor, precheck: None, release: LearnedTextRelease::Message }
         }).collect::<Vec<_>>();
         let reviewer = fixture::peers(&root, &config);
         let result = resident::run(configured(&root), entries, &reviewer, false, None, None,

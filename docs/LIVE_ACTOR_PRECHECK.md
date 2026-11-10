@@ -29,9 +29,9 @@ recorded selected request remains observation/reconciliation-only: requesting a
 new disclosure for it is refused, without a source read or new grant. Its existing
 open/recovery fence remains part of the ordinary owner contract.
 
-The single learned actor command has a separate release-specific integration,
-described below. It never enables the ordinary raw-proposal disclosure on a
-learned owner.
+Single learned actors and explicitly selected resident sequence entries have a
+separate release-specific integration, described below. It never enables the
+ordinary raw-proposal disclosure on a learned owner.
 
 The four ordinary single-request modes also accept an explicit
 `--tower-generation GENERATION` alongside `--precheck-profile`, in either option
@@ -89,9 +89,19 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PR
 
 The same option is available with an explicit generation continuation,
 `--after-message PREVIOUS_REQUEST`, or `--finish-after-message PREVIOUS_REQUEST`.
-An actor profile is required. Historical, receipt, maintenance, actorless and
-resident sequence commands cannot acquire this disclosure. The complete grammar
-is checked before any incompatible option can be stripped into another mode.
+An actor profile is required. Historical, receipt, maintenance and actorless
+commands cannot acquire this disclosure. The complete grammar is checked before
+any incompatible option can be stripped into another mode.
+
+A [resident learned sequence](RESIDENT_LEARNED_PUBLICATION.md#exact-prechecks-for-independently-selected-releases)
+selects the same capability per entry through
+`fa.learned-publication-sequence/2`. Each entry requires an explicit
+`precheck_profile` path or `null`; there is no invocation-wide precheck flag.
+Version one remains unchanged. Every future selection and canonical endpoint
+collision is checked before startup, and each selected actual owner epoch is
+checked before that entry begins numerical work. The grant belongs only to the
+original selected release and retires before its review. Reconnects cannot
+replenish that grant, and a null entry cannot inherit an earlier disclosure.
 
 Select the uncached `fa.actor-precheck-service/1` profile shown above. Learned
 release disclosure does not accept the cached or full-policy service schemas.

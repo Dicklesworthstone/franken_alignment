@@ -102,7 +102,7 @@ fn resident_identity_registration_and_fresh_check_sequence_are_admitted_before_t
             let entries = [first, second].into_iter().map(|loaded| {
                 let mut actor = peer_intake::actor_profile(&root, &config, loaded.request);
                 actor.socket = root.0.join(format!("peers/actor-{}.sock", loaded.request));
-                resident::Entry { loaded, actor, release: LearnedTextRelease::Message }
+                resident::Entry { loaded, actor, precheck: None, release: LearnedTextRelease::Message }
             }).collect();
             let peers = fixture::peers(&root, &config);
             let error = resident::run(configured(&root), entries, &peers, false, None, None,

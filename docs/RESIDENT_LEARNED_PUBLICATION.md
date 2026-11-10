@@ -87,6 +87,68 @@ custody or checkpoint outputs. Secondary entries with those selections refuse
 before startup. Unknown fields, missing actor profiles, changed generation,
 duplicate identities and misplaced Finish also refuse during admission.
 
+## Exact prechecks for independently selected releases
+
+Select `fa.learned-publication-sequence/2` to choose an exact-precheck profile
+for each entry. Every version-two entry must contain `precheck_profile` with
+either an absolute normalized profile path or explicit `null`:
+
+```json
+{
+  "schema": "fa.learned-publication-sequence/2",
+  "entries": [
+    {
+      "recipe": "/operator/message-1.json",
+      "actor_profile": "/operator/actor-1.json",
+      "release": "message",
+      "precheck_profile": "/operator/precheck-1.json"
+    },
+    {
+      "recipe": "/operator/message-2.json",
+      "actor_profile": "/operator/actor-2.json",
+      "release": "message",
+      "precheck_profile": null
+    },
+    {
+      "recipe": "/operator/finish-3.json",
+      "actor_profile": "/operator/actor-3.json",
+      "release": "finish",
+      "precheck_profile": "/operator/precheck-3.json"
+    }
+  ]
+}
+```
+
+The command is unchanged. Each selected document must use the existing uncached
+`fa.actor-precheck-service/1` schema with `policy_disclosure: "exact_predicates"`;
+cached and full-policy disclosure profiles refuse. The
+[learned release precheck contract](LIVE_ACTOR_PRECHECK.md#learned-actor-releases)
+defines its request encoding, public actor client, source capture and result.
+Version one remains closed and rejects the new field. Explicit null selects no
+disclosure for that release and cannot inherit a predecessor's grant.
+
+Admission loads every selected profile and checks all future endpoint names
+before the first clock observation, original owner or listener. Canonical
+precheck paths must be distinct from one another, all selected actor, human-review
+and Stop paths, the policy source, the entire authority-store subtree, retained
+history output, topology checkpoint output and the optional operator endpoint.
+Existing files and socket paths are never replaced. The actual original policy
+epoch is checked again after owner qualification and before that entry performs
+new numerical generation.
+
+Each release creates its own explicitly bounded, request-bound precheck grant
+during its original admission phase. Reconnecting to that endpoint does not
+replenish it, and it retires before helper/human review or the next release.
+Selecting a later grant does not replenish generation, source, predictor,
+publication or invocation-wide operator allowances.
+
+A pass evaluates the actual cumulative generated action for that Message or
+Finish. It acquires no actor ticket or publication permission. Submit still
+reacquires source evidence and requires that release's own helper congress and
+human approval. Changed evidence can deny a previously passing release, and
+human rejection can cancel it. Either ends the sequence before any successor;
+prior confirmed effects and their charged units remain recorded.
+
 ## Functional creation, campaign guards and the first generation checkpoint
 
 Fresh resident creation now accepts an explicitly declared `functional_restart`
@@ -295,6 +357,16 @@ first-entry-only selection, closed command/grade admission, and anchored
 after-message continuation with a checkpoint at its first new boundary. Their
 central RCH compilation and execution remain pending; authored assertions and
 syntax review are not qualification evidence.
+
+Two schema regression functions and eight resident integration/guard functions
+cover version-two selection, explicit null, real Message/Message/Finish across
+native/process/native review and all three predictor modes, query exhaustion
+across reconnects, source changes, separate human rejection, later path/audience
+conflicts, existing-file preservation, operator collision and stale-epoch refusal
+before new numerical work. These additions have independent source review but
+no new compiler or runtime qualification while the executor is unavailable.
+Human rejection is asserted as its original `CancelledBeforeDispatch` outcome;
+changed-source admission is asserted separately as `Denied`.
 
 Implementation:
 [`learned/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs),

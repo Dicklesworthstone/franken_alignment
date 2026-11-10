@@ -265,6 +265,12 @@ still requires fresh admission plus independent review on actual Submit.
 The matching `actor-precheck` command uses public profiles, one authenticated
 exchange and the original Knowledge response without submitting or retrying.
 The new integration and its regression tests remain pending execution qualification.
+[Resident learned sequences](docs/RESIDENT_LEARNED_PUBLICATION.md#exact-prechecks-for-independently-selected-releases)
+can now select the same exact release precheck independently for each Message or
+Finish through the closed version-two manifest. All future profiles and socket
+collisions are checked before startup; each grant remains tied to its original
+release, and fresh source admission plus separate helper/human approval remain
+mandatory.
 
 The [native worker also yields during input tokenization](docs/COOPERATIVE_NATIVE_INPUT.md)
 under its existing absolute deadline and process-step allowance, before starting

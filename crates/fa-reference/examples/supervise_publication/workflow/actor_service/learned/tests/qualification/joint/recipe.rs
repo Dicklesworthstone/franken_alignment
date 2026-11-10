@@ -102,7 +102,7 @@ fn resident_joint_policy_must_match_every_independently_selected_entry_before_an
             let entries = [first, next].into_iter().map(|loaded| {
                 let mut actor = peer_intake::actor_profile(&root, &config, loaded.request);
                 actor.socket = root.0.join(format!("peers/actor-{}.sock", loaded.request));
-                resident::Entry { loaded, actor, release: LearnedTextRelease::Message }
+                resident::Entry { loaded, actor, precheck: None, release: LearnedTextRelease::Message }
             }).collect();
             let peers = fixture::peers(&root, &config);
             let failure = resident::run(configured(&root), entries, &peers, false, None, None,

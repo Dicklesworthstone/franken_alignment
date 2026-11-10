@@ -26,6 +26,7 @@ use std::{collections::BTreeSet, io::Write, os::unix::net::UnixStream,
 
 #[path = "sequence/functional.rs"] mod functional;
 #[path = "sequence_operator.rs"] mod operator;
+#[path = "sequence_precheck.rs"] mod prechecks;
 
 const DUE: [ElapsedTick; 3] = [ElapsedTick(50_000), ElapsedTick(49_000), ElapsedTick(48_000)];
 
@@ -53,7 +54,7 @@ fn selected(root: &Root, mode: Option<bool>, predictions: Option<usize>)
     let entries = [initial, message, finish].into_iter().enumerate().map(|(index, loaded)| {
         let mut actor = peers::actor_profile(root, &config, loaded.request);
         actor.socket = root.0.join(format!("peers/actor-{}.sock", loaded.request));
-        resident::Entry { loaded, actor, release: if index == 2 {
+        resident::Entry { loaded, actor, precheck: None, release: if index == 2 {
             LearnedTextRelease::Finish
         } else { LearnedTextRelease::Message } }
     }).collect();
@@ -567,7 +568,7 @@ fn the_real_sequence_command_retains_one_final_topology_and_history_cut_for_all_
         let entries = [initial, message, finish].into_iter().enumerate().map(|(index, loaded)| {
             let mut actor = peers::actor_profile(&root, &config, loaded.request);
             actor.socket = root.0.join(format!("peers/actor-{}.sock", loaded.request));
-            resident::Entry { loaded, actor, release: if index == 2 {
+            resident::Entry { loaded, actor, precheck: None, release: if index == 2 {
                 LearnedTextRelease::Finish
             } else { LearnedTextRelease::Message } }
         }).collect::<Vec<_>>();

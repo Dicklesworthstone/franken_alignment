@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10: add exact prechecks to resident learned publication
+
+- Add the closed version-two resident manifest with mandatory explicit per-entry
+  precheck profile or null; preserve version-one admission.
+- Preflight every future disclosure and canonical socket/source/store/output
+  collision before startup, including the independent operator endpoint.
+- Attach original request-specific intake grants, check each actual owner epoch
+  before numerical work, and retire disclosures before review and handoff.
+- Add schema and real resident generation/review/publication regression sources
+  for exhaustion, null selection, stale epochs, source changes and human rejection.
+  New execution qualification remains pending.
+
 ## 2026-11-10: serve explicitly budgeted learned congress explanations live
 
 - Accept a closed optional cumulative numerical replay allowance in the operator

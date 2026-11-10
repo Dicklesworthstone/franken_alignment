@@ -245,7 +245,7 @@ fn a_resident_successor_cannot_select_another_effective_policy() {
     let entries = [first, second].into_iter().map(|loaded| {
         let mut actor = super::peer_intake::actor_profile(&root, &config, loaded.request);
         actor.socket = root.0.join(format!("peers/actor-{}.sock", loaded.request));
-        resident::Entry { loaded, actor, release: LearnedTextRelease::Message }
+        resident::Entry { loaded, actor, precheck: None, release: LearnedTextRelease::Message }
     }).collect();
     let peers = fixture::peers(&root, &config);
     let store = config.store.clone();

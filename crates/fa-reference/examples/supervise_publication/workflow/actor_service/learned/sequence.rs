@@ -2,6 +2,7 @@
 //! The plan selects every request and actor before startup. Each successor still
 //! needs its own original forecast, native/process congress and human permit.
 #[path = "sequence/profile.rs"] mod profile;
+#[path = "sequence/precheck.rs"] mod disclosure;
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
@@ -20,6 +21,7 @@ pub(super) struct Entry {
     pub loaded: Loaded,
     pub actor: Profile,
     pub release: LearnedTextRelease,
+    pub precheck: Option<super::precheck::Settings>,
 }
 
 pub(super) struct SequenceResult {
@@ -175,6 +177,7 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
             }
         }
     }
+    disclosure::check(config, entries, peers)?;
     Ok(())
 }
 
@@ -254,7 +257,7 @@ where F: FnMut() -> ElapsedTick {
         // independently selected actor, human-review and Stop socket names.
         // Admit all of them before sampling time or creating any owner/listener.
         for entry in &entries {
-            selected.check(&config, &entry.loaded, &entry.actor, peers, None)?;
+            selected.check(&config, &entry.loaded, &entry.actor, peers, entry.precheck.as_ref())?;
         }
     }
     if !continuing && (after_message.is_some() || credibility.is_some()) {
@@ -339,7 +342,11 @@ where F: FnMut() -> ElapsedTick {
                 Some(bound) => bound,
                 None => ingress::Bound::bind(&entry.actor)?,
             };
-            let intake = Some(bound.attach(port.clone(), entry.release, deadline.logical)?);
+            let mut intake = bound.attach(port.clone(), entry.release, deadline.logical)?;
+            if let Some(settings) = entry.precheck.as_ref() {
+                intake.select_precheck(settings, peers);
+            }
+            let intake = Some(intake);
             Ok::<_, String>((deadline, continuation, intake))
         })();
         let (mut deadline, message_continuation, mut intake) = match prepared {

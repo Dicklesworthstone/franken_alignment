@@ -54,7 +54,7 @@ fn resident_messages_and_finish_reacquire_witnesses_and_preserve_the_first_effec
         let entries = [initial, second, last].into_iter().enumerate().map(|(index, loaded)| {
             let mut actor = peers::actor_profile(&root, &config, loaded.request);
             actor.socket = root.0.join(format!("peers/checked-actor-{}.sock", loaded.request));
-            resident::Entry { loaded, actor,
+            resident::Entry { loaded, actor, precheck: None,
                 release: if index == 2 { LearnedTextRelease::Finish } else { LearnedTextRelease::Message } }
         }).collect::<Vec<_>>();
         let actors = entries.iter().map(|entry| entry.actor.clone()).collect::<Vec<_>>();
@@ -169,7 +169,7 @@ fn resident_publication_selection_cannot_be_removed_or_replaced_before_startup()
         let entries = [first, second].into_iter().map(|loaded| {
             let mut actor = peers::actor_profile(&root, &config, loaded.request);
             actor.socket = root.0.join(format!("peers/checked-actor-{}.sock", loaded.request));
-            resident::Entry { loaded, actor, release: LearnedTextRelease::Message }
+            resident::Entry { loaded, actor, precheck: None, release: LearnedTextRelease::Message }
         }).collect();
         let reviewer = fixture::peers(&root, &config);
         let failure = resident::run(configured(&root), entries, &reviewer, false, None, None,
