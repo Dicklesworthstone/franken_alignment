@@ -40,10 +40,12 @@ authorization, human-key, dispatch and reconciliation events. It does not infer
 execution from a favorable review or synthesize an application result.
 
 A selected learned-sidecar `Refined` round has not attempted policy application.
-The current `FileReviewReplay` application type cannot represent that distinction,
-so exporting that selected round returns `Incomplete` without a report or write.
-Earlier refinement rounds still replay normally before a later auditable `Applied`
-completion. Supporting standalone refinement reports remains a separate API task.
+The original `FileReviewReplay` API continues to return `Incomplete` for that
+selected outcome. Callers can explicitly enable completed refinement audits with
+`FileReviewReplayCursor::include_refinements()` before any event attempt, then
+export the distinct `FileReviewCompletion::Refined` result after the whole suffix
+verifies. Earlier refinement rounds still replay normally before a selected
+`Applied` completion. See [completed refinement rounds](#completed-refinement-rounds).
 
 ## Claims and costs
 
@@ -160,3 +162,55 @@ LLVM test harnesses with the official Cranelift native library; see the
 exact scope, failed attempts and the unchanged dependency-admission gate refusal.
 This update does not claim execution of every earlier native audit test or full
 release qualification.
+
+
+## Completed refinement rounds
+
+A helper congress may finish by asking the original learned-sidecar planner for
+more evidence. Its exact residual purchase changes the retained input revision,
+but it has not applied a policy consequence. This completed review is now
+auditable without manufacturing a failed application receipt or a permission.
+
+The same acknowledged-owner, canonical, anchored and independently recipe-bound
+readers construct the original `FileReviewReplayCursor`. Before the first event
+attempt, `include_refinements()` enables the additional completion kind. A late
+opt-in refuses; default cursors keep their original refusal at a selected
+refinement. The new `finish_completion()` and synchronous
+`complete_completion()` expose `FileReviewCompletion`:
+
+- `Applied(FileReviewReplay)` retains the existing archive and actual application
+  result, including an application that refused.
+- `Refined(FileRefinedReviewReplay)` retains the original pre-vote anchor,
+  independently verified decision archive, exact refined K/V group, new input
+  revision, and the state at completion and at the full journal cut. Its type
+  has no application receipt.
+
+The original machine still executes each historical transition once. The
+refinement record comes from its actual `FileLearnedSidecarFinish::Refined`
+result and must agree with the same one-shot archive captured from the original
+session. No later input, helper response or caller-supplied group can replace
+that record. Audit reconstruction does not purchase evidence in the live owner.
+
+`finish_completion_with_effects()` additionally returns the existing
+`ReviewEffectAudit` for the same attempt. A later applied review may authorize a
+real dispatch; its round identity remains attached to that dispatch. Selecting
+the earlier refinement cannot make `selected_review_dispatched()` true or
+attribute the later approval to the refinement.
+
+Every suffix transition must verify before either completion kind is exported.
+An exact external anchor must cover the selected complete Finish; a matching
+opening or vote prefix is insufficient. Recipe binding, acknowledged ending-state
+comparison, cancellation, poisoned-owner refusal and numerical witness checks
+are unchanged. `finish()`, `finish_with_effects()` and the legacy synchronous
+review APIs still return only applied-review records.
+
+### Qualification of this increment
+
+Native regression sources exercise genuine learned generation and sidecar
+refinement, original independent reviews, later two-key publication, frozen
+cuts, anchors, suffix rejection, cancellation and compatibility. The execution
+environment became unavailable during this session, before the new code was
+written. These new Rust tests, compilation, rustfmt, Clippy and the canonical
+RCH gate have not run. Independent source review and content-hash checks do not
+qualify execution, detector quality, model alignment or production deployment.
+No packet or bead is closed by this increment.

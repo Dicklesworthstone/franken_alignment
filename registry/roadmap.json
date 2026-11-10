@@ -584,7 +584,7 @@
       "id": "FA-020",
       "gate": "G2",
       "title": "Implement deterministic decision replay",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-008",
         "FA-016",
@@ -601,7 +601,11 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/ANCHORED_REVIEW_AUDIT.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/replay.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ]
     },
     {
       "id": "FA-021",

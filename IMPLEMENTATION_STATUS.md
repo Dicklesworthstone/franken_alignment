@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: retain complete learned refinement reviews for independent audit
+
+Completed learned-sidecar refinements can now be inspected through an explicitly
+selected `FileReviewCompletion::Refined` outcome. It retains the exact original
+K/V group, reviewed and newly refined input revisions, original decision anchor
+and archive, and distinct completion and journal cuts. The same original machine
+produces the record and verifies every suffix event; numerical recipes and exact
+independent history anchors keep their existing admission paths.
+
+The existing cursor remains application-only by default. A consuming
+`include_refinements()` must occur before any event attempt; it cannot salvage
+failed or partially replayed legacy inspection. New completion exports preserve
+the original applied-review record and its real application result, while a
+refinement has no application receipt. The optional complete effect audit keeps
+a later review's actual authorization and two-key dispatch attributed to that
+later round, even when the attempt is shared.
+
+Eight native regression functions and the implementation were reviewed independently
+against the original source-bound learned fixtures and replay contracts. The
+execution environment became unavailable before these edits, so compilation,
+runtime tests, doctests, rustfmt, Clippy and the required RCH gate have not run.
+Updated source hashes bind the submitted source; they are not execution evidence.
+FA-020 is in progress with its original dependencies and acceptance unchanged;
+no bead, production gate, detector-quality claim or full packet is closed.
+
+See [the completed refinement contract](docs/ANCHORED_REVIEW_AUDIT.md#completed-refinement-rounds).
+
 ## 2026-11-09: connect completed-review explanations to the authenticated operator
 
 The ordinary live Tower operator now accepts an independent optional

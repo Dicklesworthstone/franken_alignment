@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-09: audit original completed refinement rounds
+
+- Add explicit completed-review outcomes that preserve original applied reviews
+  and expose a distinct learned refinement with its exact K/V group, input
+  revisions, decision archive and full historical cuts.
+- Require refinement selection before any replay work; retain default legacy
+  refusal, independent recipe/anchor checks and complete-suffix verification.
+- Preserve the original effect audit so a later review's dispatch is never
+  credited to the selected refinement.
+- Add eight original learned-fixture regression functions and update the source-bound
+  manifest. The execution environment became unavailable before implementation;
+  new compilation, tests, formatting, Clippy and RCH qualification remain unrun.
+
 ## 2026-11-09: inspect completed reviews through the authenticated live operator
 
 - Add a separately selected bounded review-explanation disclosure object,

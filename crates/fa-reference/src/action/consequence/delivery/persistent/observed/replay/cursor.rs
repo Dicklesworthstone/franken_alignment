@@ -4,7 +4,8 @@ use super::super::super::MAX_JOURNAL_EVENTS;
 use super::super::Transition;
 use super::{
     CommitteeInput, Error, Event, FileDeliverySnapshot, FileOversight, FileOversightProfile,
-    FileReviewReplay, JournalError, Machine, ObservedDecisionArchive, ObservedReceipt,
+    FileRefinedReviewReplay, FileReviewCompletion, FileReviewCompletionAudit, FileReviewReplay,
+    JournalError, KvGroup, Machine, ObservedDecisionArchive, ObservedReceipt,
     ObservedReviewAnchor, Path, Snapshot, journal, storage,
 };
 use super::{DecoderEvent, FileLearnedSidecarFinish, LearnedEvent, SidecarEvent, finish_round};
@@ -33,11 +34,21 @@ pub struct FileReviewReplayProgress {
     pub status: FileReviewReplayStatus,
 }
 
+enum CompletedOutcome {
+    Applied {
+        application: Result<ObservedReceipt, Error>,
+        inputs: Option<CommitteeInput>,
+        snapshot: Snapshot,
+    },
+    Refined {
+        group: KvGroup,
+        input_revision: u64,
+    },
+}
+
 struct Completed {
     archive: ObservedDecisionArchive,
-    application: Result<ObservedReceipt, Error>,
-    inputs: Option<CommitteeInput>,
-    snapshot: Snapshot,
+    outcome: CompletedOutcome,
     state: FileDeliverySnapshot,
 }
 
@@ -69,6 +80,7 @@ pub struct FileReviewReplayCursor {
     anchor: Option<ObservedReviewAnchor>,
     capture: Option<Rc<OnceCell<ObservedDecisionArchive>>>,
     completed: Option<Completed>,
+    include_refinements: bool,
     acknowledged: Option<FileDeliverySnapshot>,
     effect: EffectTrace,
 }
@@ -185,9 +197,26 @@ impl FileReviewReplayCursor {
             anchor: None,
             capture: None,
             completed: None,
+            include_refinements: false,
             acknowledged,
             effect,
         })
+    }
+
+    /// Explicitly admit completed refinement outcomes before ANY event attempt.
+    /// Existing readers retain their application-only behavior unless selected.
+    /// The input image, independent anchor and numerical recipe bindings remain
+    /// unchanged; every suffix event must still verify before an outcome escapes.
+    /// This cannot salvage a failed, interrupted or already-started legacy audit.
+    pub fn include_refinements(mut self) -> Result<Self, JournalError> {
+        if self.status != FileReviewReplayStatus::Replaying
+            || self.replayed != 0
+            || self.attempted != 0
+        {
+            return Err(Error::WrongState.into());
+        }
+        self.include_refinements = true;
+        Ok(self)
     }
 
     pub fn progress(&self) -> FileReviewReplayProgress {
@@ -290,7 +319,7 @@ impl FileReviewReplayCursor {
                 .ok_or(Error::Incomplete)?;
             let anchor = self.anchor.as_ref().ok_or(Error::Incomplete)?;
             archive.verify(anchor)?;
-            let (application, inputs, snapshot) = match (event, transition) {
+            let outcome = match (event, transition) {
                 (Event::Finish(_, supplied, snapshot), Transition::Reviewed(application)) => {
                     let inputs = supplied
                         .as_ref()
@@ -302,11 +331,11 @@ impl FileReviewReplayCursor {
                             )
                         })
                         .transpose()?;
-                    (
-                        application.map(|receipt| *receipt),
+                    CompletedOutcome::Applied {
+                        application: application.map(|receipt| *receipt),
                         inputs,
-                        snapshot.clone(),
-                    )
+                        snapshot: snapshot.clone(),
+                    }
                 }
                 (
                     Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
@@ -316,43 +345,70 @@ impl FileReviewReplayCursor {
                     ))),
                     Transition::LearnedSidecarFinished(result),
                 ) => {
-                    let FileLearnedSidecarFinish::Applied {
-                        receipt,
-                        archive: original,
-                        ..
-                    } = *result
-                    else {
-                        // Refinement finished the review but never applied it.
-                        // Do not invent a refusal receipt or an approval for it.
-                        return Err(Error::Incomplete);
-                    };
-                    if original != archive {
-                        return Err(Error::Binding);
+                    match *result {
+                        FileLearnedSidecarFinish::Applied {
+                            receipt,
+                            archive: original,
+                            ..
+                        } => {
+                            if original != archive {
+                                return Err(Error::Binding);
+                            }
+                            // The original Applied path supplied its unchanged
+                            // packet. Read only the retained observation, without
+                            // a live-source check that could reject an applied denial.
+                            let inputs = self
+                                .machine
+                                .broker
+                                .current_inputs(*attempt)?
+                                .cloned()
+                                .ok_or(Error::Incomplete)?;
+                            if &inputs != archive.inputs.as_ref() {
+                                return Err(Error::Binding);
+                            }
+                            CompletedOutcome::Applied {
+                                application: receipt,
+                                inputs: Some(inputs),
+                                snapshot: snapshot.clone(),
+                            }
+                        }
+                        FileLearnedSidecarFinish::Refined {
+                            group,
+                            input_revision,
+                            archive: original,
+                        } => {
+                            // Preserve the old cursor's refusal at this event
+                            // unless the caller selected completion inspection
+                            // before the first event attempt.
+                            if !self.include_refinements {
+                                return Err(Error::Incomplete);
+                            }
+                            if original != archive {
+                                return Err(Error::Binding);
+                            }
+                            // Original Machine::apply already acquired and
+                            // validated the source-bound residual. The retained
+                            // archive reviewed the OLD input; do not compare it
+                            // to the newly refined packet or fabricate application.
+                            CompletedOutcome::Refined {
+                                group,
+                                input_revision,
+                            }
+                        }
                     }
-                    // The original Applied path supplied its unchanged packet.
-                    // Read only the retained observation, without a live-source
-                    // eligibility check that could reject an applied denial.
-                    let inputs = self
-                        .machine
-                        .broker
-                        .current_inputs(*attempt)?
-                        .cloned()
-                        .ok_or(Error::Incomplete)?;
-                    if &inputs != archive.inputs.as_ref() {
-                        return Err(Error::Binding);
-                    }
-                    (receipt, Some(inputs), snapshot.clone())
                 }
                 _ => return Err(Error::Binding),
             };
-            if let Ok(receipt) = &application {
+            if let CompletedOutcome::Applied {
+                application: Ok(receipt),
+                ..
+            } = &outcome
+            {
                 archive.verify_receipt(anchor, receipt)?;
             }
             self.completed = Some(Completed {
                 archive,
-                application,
-                inputs,
-                snapshot,
+                outcome,
                 state: self.machine.snapshot(self.replayed + 1),
             });
         }
@@ -369,6 +425,24 @@ impl FileReviewReplayCursor {
     /// chain. No outcome or consumed-approval link escapes an unverified suffix.
     /// This never obtains an endpoint receipt from outside the RAM-only replay.
     pub fn finish_with_effects(self) -> Result<FileReviewEffectReplay, JournalError> {
+        let FileReviewCompletionAudit { review, effect } = self.finish_completion_with_effects()?;
+        match review {
+            FileReviewCompletion::Applied(review) => Ok(FileReviewEffectReplay { review, effect }),
+            FileReviewCompletion::Refined(_) => Err(Error::Incomplete.into()),
+        }
+    }
+
+    /// Export the selected original completion after the ENTIRE cut verified.
+    /// A refinement is a distinct outcome, never a failed or successful policy
+    /// application. Polling callers opt in with include_refinements before work.
+    pub fn finish_completion(self) -> Result<FileReviewCompletion, JournalError> {
+        Ok(self.finish_completion_with_effects()?.review)
+    }
+
+    /// Preserve the original effect trace with either kind of completed review.
+    /// Later rounds may publish the same attempt; their dispatch cannot be
+    /// attributed to this refinement merely because the attempt is identical.
+    pub fn finish_completion_with_effects(self) -> Result<FileReviewCompletionAudit, JournalError> {
         match self.status {
             FileReviewReplayStatus::Ready => {}
             FileReviewReplayStatus::Failed(error) => return Err(error.into()),
@@ -378,17 +452,47 @@ impl FileReviewReplayCursor {
         let completed = self.completed.ok_or(Error::Incomplete)?;
         let journal = self.machine.snapshot(self.events.len());
         let effect = self.effect.finish(self.round, &completed.state, &journal)?;
-        let review = FileReviewReplay {
-            begin_revision: (self.begin + 1) as u64,
-            anchor: self.anchor.ok_or(Error::Incomplete)?,
-            archive: completed.archive,
-            application: completed.application,
-            application_inputs: completed.inputs,
-            application_snapshot: completed.snapshot,
-            completed: completed.state,
-            journal,
+        let anchor = self.anchor.ok_or(Error::Incomplete)?;
+        let begin_revision = (self.begin + 1) as u64;
+        let review = match completed.outcome {
+            CompletedOutcome::Applied { application, inputs, snapshot } => {
+                FileReviewCompletion::Applied(FileReviewReplay {
+                    begin_revision,
+                    anchor,
+                    archive: completed.archive,
+                    application,
+                    application_inputs: inputs,
+                    application_snapshot: snapshot,
+                    completed: completed.state,
+                    journal,
+                })
+            }
+            CompletedOutcome::Refined { group, input_revision } => {
+                FileReviewCompletion::Refined(FileRefinedReviewReplay {
+                    begin_revision,
+                    anchor,
+                    archive: completed.archive,
+                    group,
+                    input_revision,
+                    completed: completed.state,
+                    journal,
+                })
+            }
         };
-        Ok(FileReviewEffectReplay { review, effect })
+        Ok(FileReviewCompletionAudit { review, effect })
+    }
+
+    /// Synchronously select completed-outcome inspection and verify the full
+    /// original image. A previously started cursor must already have opted in;
+    /// this never changes a legacy cursor's behavior after any work occurred.
+    pub fn complete_completion(mut self) -> Result<FileReviewCompletion, JournalError> {
+        if !self.include_refinements {
+            self = self.include_refinements()?;
+        }
+        while self.status == FileReviewReplayStatus::Replaying {
+            self.advance(self.replayed, MAX_JOURNAL_EVENTS)?;
+        }
+        self.finish_completion()
     }
 
     /// Discard private reconstruction and report its work, not a refund. A prior

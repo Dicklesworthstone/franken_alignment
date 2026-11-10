@@ -336,3 +336,5 @@ fn storage_failure_never_updates_a_live_handle_or_exposes_an_unacknowledged_resi
         assert_eq!(host.inspect().executions, 0);
     }
 }
+
+mod replay;
