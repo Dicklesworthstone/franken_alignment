@@ -23,6 +23,8 @@ use std::path::Path;
 mod fence;
 #[path = "client/hold_diagnosis.rs"]
 mod hold_diagnosis;
+#[path = "client/journal_tail.rs"]
+mod journal_tail;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
 #[path = "client/refinement_explanation.rs"]
@@ -100,6 +102,11 @@ pub(crate) fn operator_command(args: &[String], output: &mut impl Write) -> Resu
 /// explicit page allowance and the original transport and server grants.
 pub(crate) fn situation_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
     situation::command(args, output)
+}
+
+/// Read one explicitly bounded suffix from the original native journal.
+pub(crate) fn journal_tail_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
+    journal_tail::command(args, output)
 }
 
 pub(crate) fn policy_replay_command(
@@ -432,6 +439,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("precheck"), Verb::Precheck) => {}
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
+        (Some("journal-tail"), Verb::Tail) => {
+            if !journal_tail::matches(&parsed, request) {
+                return Err(invalid());
+            }
+        }
         (Some("explanation"), Verb::Explain) if request.arguments == ReadArguments::None => {}
         (Some("review-explanation"), Verb::Explain) => {
             if !review_explanation::matches(result.get("value").ok_or_else(invalid)?, request) {

@@ -10,9 +10,9 @@ use super::{
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
-    FileSupervisorHoldDiagnosisGrant,
-    FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
-    FileSupervisorReviewExplanationGrant, FileSupervisorResolutionGrant,
+    FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
+    FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant, FileSupervisorResolutionGrant,
+    FileSupervisorReviewExplanationGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
@@ -31,6 +31,7 @@ struct Active {
     socket: BoundSocket,
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
+    journal_tail: Option<FileSupervisorJournalTailGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
     resolution: Option<FileSupervisorResolutionGrant>,
@@ -70,15 +71,22 @@ impl Service {
         generation: u64,
         deadline: &Deadline,
     ) -> Result<Self, String> {
-        Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
-            if settings.fence.is_some() {
-                PublicationTower::new_control_operator(mount, port, limits)
-            } else if settings.resolution.is_some() {
-                PublicationTower::new_reconciliation_operator(mount, port, limits)
-            } else {
-                PublicationTower::new(mount, port, limits)
-            }
-        })
+        Self::start_with(
+            settings,
+            actor,
+            driver,
+            generation,
+            deadline,
+            |mount, limits| {
+                if settings.fence.is_some() {
+                    PublicationTower::new_control_operator(mount, port, limits)
+                } else if settings.resolution.is_some() {
+                    PublicationTower::new_reconciliation_operator(mount, port, limits)
+                } else {
+                    PublicationTower::new(mount, port, limits)
+                }
+            },
+        )
     }
 
     /// Select the original learned observer, or an explicitly budgeted
@@ -92,15 +100,22 @@ impl Service {
         deadline: &Deadline,
     ) -> Result<Self, String> {
         settings.check_learned_operator()?;
-        Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
-            if settings.fence.is_some() {
-                PublicationTower::new_learned_control_operator(mount, port, limits)
-            } else if settings.resolution.is_some() {
-                PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
-            } else {
-                PublicationTower::new_learned_observer(mount, port, limits)
-            }
-        })
+        Self::start_with(
+            settings,
+            actor,
+            driver,
+            generation,
+            deadline,
+            |mount, limits| {
+                if settings.fence.is_some() {
+                    PublicationTower::new_learned_control_operator(mount, port, limits)
+                } else if settings.resolution.is_some() {
+                    PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
+                } else {
+                    PublicationTower::new_learned_observer(mount, port, limits)
+                }
+            },
+        )
     }
 
     fn start_with(
@@ -129,15 +144,29 @@ impl Service {
             Some(generation),
         )
         .map_err(debug)?;
-        let mut tower = build(mount, PublicationLimits {
-            max_response_bytes: settings.response_bytes,
-        }).map_err(debug)?;
+        let mut tower = build(
+            mount,
+            PublicationLimits {
+                max_response_bytes: settings.response_bytes,
+            },
+        )
+        .map_err(debug)?;
         let inspection = if settings.inspection_queries != 0 {
             let (port, custodian) = driver
                 .supervisor()
                 .inspection_port(settings.inspection_queries)
                 .map_err(debug)?;
             tower.set_inspection(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        let journal_tail = if let Some(selected) = &settings.journal_tail {
+            let (port, custodian) = driver
+                .supervisor()
+                .journal_tail_port(selected.queries, selected.events_per_page)
+                .map_err(debug)?;
+            tower.set_journal_tail(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
             None
@@ -192,10 +221,9 @@ impl Service {
         };
         let fence = if let Some(selected) = &settings.fence {
             let (port, custodian) = match selected.numerical_replay_events {
-                Some(events) => driver.supervisor().fence_port_with_numerical_budget(
-                    selected.max_replay_events,
-                    events,
-                ),
+                Some(events) => driver
+                    .supervisor()
+                    .fence_port_with_numerical_budget(selected.max_replay_events, events),
                 None => driver.supervisor().fence_port(selected.max_replay_events),
             }
             .map_err(debug)?;
@@ -206,17 +234,17 @@ impl Service {
         };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
             let (port, custodian) = match selected.numerical_replay_events {
-                Some(events) => driver.supervisor().review_explanation_port_with_numerical_budget(
-                    selected.queries,
-                    selected.max_replay_events,
-                    events,
-                ),
-                None => driver
+                Some(events) => driver
                     .supervisor()
-                    .review_explanation_port_with_budget(
+                    .review_explanation_port_with_numerical_budget(
                         selected.queries,
                         selected.max_replay_events,
+                        events,
                     ),
+                None => driver.supervisor().review_explanation_port_with_budget(
+                    selected.queries,
+                    selected.max_replay_events,
+                ),
             }
             .map_err(debug)?;
             tower.set_review_explanation(Some(port)).map_err(debug)?;
@@ -283,6 +311,7 @@ impl Service {
                 socket,
                 session,
                 inspection,
+                journal_tail,
                 explanation,
                 hold_diagnosis,
                 resolution,
@@ -404,13 +433,17 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
                 .inspection
                 .as_ref()
                 .map(FileSupervisorInspectionGrant::remaining_queries),
+            active
+                .journal_tail
+                .as_ref()
+                .map(FileSupervisorJournalTailGrant::remaining_queries),
             active
                 .explanation
                 .as_ref()
@@ -423,21 +456,15 @@ impl Service {
                 .hold_diagnosis
                 .as_ref()
                 .map(FileSupervisorHoldDiagnosisGrant::remaining_queries),
-            active
-                .resolution
-                .as_ref()
-                .map(|grant| (
-                    grant.remaining_queries(),
-                    grant.remaining_operations(),
-                    grant.remaining_numerical_replay_events(),
-                )),
-            active
-                .fence
-                .as_ref()
-                .map(|grant| (
-                    grant.remaining_operations(),
-                    grant.remaining_numerical_replay_events(),
-                )),
+            active.resolution.as_ref().map(|grant| (
+                grant.remaining_queries(),
+                grant.remaining_operations(),
+                grant.remaining_numerical_replay_events(),
+            )),
+            active.fence.as_ref().map(|grant| (
+                grant.remaining_operations(),
+                grant.remaining_numerical_replay_events(),
+            )),
             active
                 .review_explanation
                 .as_ref()

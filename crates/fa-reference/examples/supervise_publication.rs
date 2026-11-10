@@ -82,7 +82,7 @@ fn command_with_output(
     use peers::PeerProfile;
     use std::io::Write;
     use std::path::Path;
-    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE] [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-fleet FLEET_JSON\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication stop-admission CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication inspect CONFIG\n       supervise_publication situation CONFIG [--history-anchor INPUT] [--page-size 1..64] [--learned-recipe RECIPE]\n       supervise_publication situation --fleet FLEET_PROFILE\n       supervise_publication policy-replay CONFIG CANDIDATE_JSON\n       supervise_publication compare-learned-prompt PLAN\n       supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE\n       supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON\n       supervise_publication actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]\n       supervise_publication actor-precheck --capabilities|--policy ACTOR_PROFILE PRECHECK_PROFILE QUERY\n       supervise_publication shutdown-fleet create|recover|resume FLEET_PROFILE [--terminal-clocks | --admission-only | --drain-only] [--coordinator-anchor INPUT] [--retain-coordinator-anchor OUTPUT]\n       supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE]\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --topology-profile TOPOLOGY_PROFILE] [--operator-profile OPERATOR_PROFILE]\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE] [--operator-profile OPERATOR_PROFILE] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --topology-profile TOPOLOGY_PROFILE] [--operator-profile OPERATOR_PROFILE]\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE] [--operator-profile OPERATOR_PROFILE] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...]\n       supervise_publication tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...]\n       supervise_publication tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON --max-pages 1..1024\n       supervise_publication tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages 1..64 [--request-links]\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_JSON | --narrow-stream-checkpoint NARROW_JSON | --begin-stream-reset RESET_JSON) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset REQUEST_JSON --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE] [--stop-profile PEER_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stopped-stream-reset REQUEST_JSON STOP_OPERATION --history-anchor INPUT --retain-history-anchor NEW_OUTPUT --topology-profile TOPOLOGY_PROFILE";
+    let usage = "usage: supervise_publication create CONFIG SUBMIT_JSON [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE] [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume CONFIG SUBMIT_JSON [--guarded RECOVERY_PROFILE]\n       supervise_publication create-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--retain-history-anchor OUTPUT] [--reviewer-profile REVIEWER_JSON]\n       supervise_publication submit-checked CONFIG SUBMIT_JSON WITNESS_PROFILE [--reviewer-profile REVIEWER_JSON] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication resume-checked CONFIG SUBMIT_JSON WITNESS_PROFILE\n       supervise_publication review CONFIG REQUEST_ID\n       supervise_publication review-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-peer REVIEWER_JSON REQUEST_ID\n       supervise_publication stop-fleet FLEET_JSON\n       supervise_publication proposal CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS\n       supervise_publication proposal-next CONFIG REQUEST_ID PAYLOAD_FILE TTL_MS [--credibility-activation EVIDENCE_FILE]\n       supervise_publication recover-stop CONFIG OPERATION [--guarded RECOVERY_PROFILE]\n       supervise_publication stop-admission CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication drain-stopped CONFIG OPERATION [--retain-history-anchor NEW_FILE]\n       supervise_publication inspect CONFIG\n       supervise_publication situation CONFIG [--history-anchor INPUT] [--page-size 1..64] [--learned-recipe RECIPE]\n       supervise_publication situation --fleet FLEET_PROFILE\n       supervise_publication policy-replay CONFIG CANDIDATE_JSON\n       supervise_publication compare-learned-prompt PLAN\n       supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE\n       supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON\n       supervise_publication actor-precheck --batch|--first-pass ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON [PRECHECK_JSON ...]\n       supervise_publication actor-precheck --capabilities|--policy ACTOR_PROFILE PRECHECK_PROFILE QUERY\n       supervise_publication shutdown-fleet create|recover|resume FLEET_PROFILE [--terminal-clocks | --admission-only | --drain-only] [--coordinator-anchor INPUT] [--retain-coordinator-anchor OUTPUT]\n       supervise_publication explain-proposal CONFIG REQUEST_ID RECOVERY_PROFILE [--payload REPLACEMENT_FILE]\n       supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --topology-profile TOPOLOGY_PROFILE] [--operator-profile OPERATOR_PROFILE]\n       supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE] [--operator-profile OPERATOR_PROFILE] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --topology-profile TOPOLOGY_PROFILE] [--operator-profile OPERATOR_PROFILE]\n       supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE [--tower-generation GENERATION] [--requests KEYS | --precheck-profile PRECHECK_PROFILE | --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE] [--operator-profile OPERATOR_PROFILE] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication actor-submit ACTOR_PROFILE SUBMIT_JSON\n       supervise_publication tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...]\n       supervise_publication tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...]\n       supervise_publication tower-policy-replay OPERATOR_PROFILE TOWER_REQUEST_JSON --max-pages 1..1024\n       supervise_publication tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages 1..64 [--request-links]\n       supervise_publication tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision N --max-pages 1..1024\n       supervise_publication create-generated CONFIG GENERATION_RECIPE REVIEWER_PROFILE\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation]\n       supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--credibility-activation EVIDENCE_FILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --resume\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE (--capture-stream-checkpoint CHECKPOINT_JSON | --narrow-stream-checkpoint NARROW_JSON | --begin-stream-reset RESET_JSON) --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --complete-stream-reset REQUEST_JSON --history-anchor INPUT --retain-history-anchor NEW_OUTPUT [--topology-profile TOPOLOGY_PROFILE] [--stop-profile PEER_PROFILE]\n       supervise_publication create-learned-generated CONFIG LEARNED_RECIPE --recover-stopped-stream-reset REQUEST_JSON STOP_OPERATION --history-anchor INPUT --retain-history-anchor NEW_OUTPUT --topology-profile TOPOLOGY_PROFILE";
     // Role-specific and historical commands own the COMPLETE original argv.
     // Shared live-service options must not be stripped before these parsers can
     // reject them, and no supervisor Config is opened by the actor-only client.
@@ -103,19 +103,26 @@ fn command_with_output(
             #[cfg(target_os = "linux")]
             return workflow::actor_service::precheck_command(&args, output);
             #[cfg(not(target_os = "linux"))]
-            return Err("actor-precheck requires Linux peer credentials; no unchecked fallback".into());
+            return Err(
+                "actor-precheck requires Linux peer credentials; no unchecked fallback".into(),
+            );
         }
         Some("tower-exchange") => {
             #[cfg(target_os = "linux")]
             return workflow::actor_service::tower_exchange_command(&args, output);
             #[cfg(not(target_os = "linux"))]
-            return Err("Tower exchange requires Linux peer credentials; no unchecked fallback".into());
+            return Err(
+                "Tower exchange requires Linux peer credentials; no unchecked fallback".into(),
+            );
         }
         Some("tower-operator-exchange") => {
             #[cfg(target_os = "linux")]
             return workflow::actor_service::tower_operator_exchange_command(&args, output);
             #[cfg(not(target_os = "linux"))]
-            return Err("Tower operator exchange requires Linux peer credentials; no unchecked fallback".into());
+            return Err(
+                "Tower operator exchange requires Linux peer credentials; no unchecked fallback"
+                    .into(),
+            );
         }
         Some("tower-policy-replay") => {
             #[cfg(target_os = "linux")]
@@ -129,13 +136,23 @@ fn command_with_output(
             #[cfg(target_os = "linux")]
             return workflow::actor_service::tower_situation_command(&args, output);
             #[cfg(not(target_os = "linux"))]
-            return Err("Tower situation requires Linux peer credentials; no unchecked fallback".into());
+            return Err(
+                "Tower situation requires Linux peer credentials; no unchecked fallback".into(),
+            );
+        }
+        Some("tower-tail") => {
+            #[cfg(target_os = "linux")]
+            return workflow::actor_service::tower_tail_command(&args, output);
+            #[cfg(not(target_os = "linux"))]
+            return Err("Tower tail requires Linux peer credentials; no unchecked fallback".into());
         }
         Some("shutdown-fleet") => {
             #[cfg(target_os = "linux")]
             return workflow::actor_service::shutdown_fleet(&args[1..], output);
             #[cfg(not(target_os = "linux"))]
-            return Err("learned fleet shutdown requires the Linux operator profile; no fallback".into());
+            return Err(
+                "learned fleet shutdown requires the Linux operator profile; no fallback".into(),
+            );
         }
         Some("create-learned-generated")
             if args.iter().skip(3).any(|value| {
@@ -228,11 +245,7 @@ fn command_with_output(
     if args.first().is_some_and(|mode| mode == "submit")
         && args.iter().skip(3).any(|value| value == "--guarded")
     {
-        return workflow::continuation::guarded::command(
-            &args,
-            credibility.as_deref(),
-            output,
-        );
+        return workflow::continuation::guarded::command(&args, credibility.as_deref(), output);
     }
     let peer_profile = if (args.len() == 5
         && matches!(args[0].as_str(), "create" | "submit")
@@ -279,13 +292,7 @@ fn command_with_output(
     if mode == "resume" && args.len() == 5 {
         let document = read_regular(Path::new(&args[2]), MAX_FRAME_BYTES)?;
         let profile = recover_stop::guarded::ResumeProfile::read(Path::new(&args[4]))?;
-        return guarded_resume::run(
-            &config,
-            &profile,
-            &document,
-            workflow::clock,
-            output,
-        );
+        return guarded_resume::run(&config, &profile, &document, workflow::clock, output);
     }
     match mode {
         "create" | "submit" | "resume" | "create-checked" | "submit-checked" | "resume-checked" => {
@@ -383,20 +390,9 @@ fn command_with_output(
             let operation = args[2].parse::<u64>().map_err(debug)?;
             if args.len() == 5 {
                 let profile = recover_stop::guarded::Profile::read(Path::new(&args[4]))?;
-                recover_stop::guarded::run(
-                    &config,
-                    &profile,
-                    operation,
-                    workflow::clock,
-                    output,
-                )
+                recover_stop::guarded::run(&config, &profile, operation, workflow::clock, output)
             } else {
-                recover_stop::run(
-                    &config,
-                    operation,
-                    workflow::clock,
-                    output,
-                )
+                recover_stop::run(&config, operation, workflow::clock, output)
             }
         }
         "review" => {

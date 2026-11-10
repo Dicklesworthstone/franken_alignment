@@ -115,6 +115,18 @@ native diagnostic, valid earlier JSON lines remain output and the command fails;
 check its exit status before treating the enumeration as complete. It never
 recaptures automatically, and the result remains historical observation.
 
+To enumerate the original acknowledged journal, explicitly select
+`journal_tail` with finite `queries`, `events_per_page` and
+`disclosure: "redacted_journal_events"` in that same operator profile. Run
+`supervise_publication tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision N --max-pages N`
+with the exact registration generation. This is the implemented native use of
+the registered `tail` verb: `after_revision` selects an original journal ordinal,
+distinct from the prospective global `--since` sequence in playbook P0. The
+client pins one cut, validates every page before output and follows only its
+single-use continuations. Partial output and exhausted work remain incomplete;
+check the exit status. No page changes authority, proves an effect outcome or
+replays learned work. See [the exact contract](TOWER_JOURNAL_TAIL.md).
+
 For a new topology-enforced publication, the two Tower create modes accept
 `--topology-profile TOPOLOGY_PROFILE`, optionally with the separate operator
 endpoint. The original initial cut certification and final topology refresh

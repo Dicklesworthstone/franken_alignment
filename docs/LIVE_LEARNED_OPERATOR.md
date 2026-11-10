@@ -99,6 +99,16 @@ paths are never unlinked to make startup succeed.
 
 ## Read the original live situation
 
+The same original learned or resident owner also supports separately selected
+journal metadata. Add `journal_tail` with bounded `queries`, `events_per_page`
+and `disclosure: "redacted_journal_events"` to the public operator profile, then
+run `supervise_publication tower-tail OPERATOR_PROFILE fa://1/run/3@41 --after-revision 0 --max-pages 128`.
+This reads one acknowledged cut, including learned event kinds, without replaying
+numerical work or exposing inputs, tokens, model state, helper votes or salts.
+Its original grant and capture survive resident handoffs; the finite client
+checks every page before continuing. Tail supplies no approval or publication
+authority. See [the original journal-tail contract](TOWER_JOURNAL_TAIL.md).
+
 The existing clients need only the public profile and explicit requests:
 
 ```text

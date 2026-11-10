@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-10: follow native journal pages through authenticated operators
+
+- Add opt-in finite journal disclosure to ordinary, learned and resident
+  operator services, preserving original custody across reconnects and handoffs.
+- Preserve the concurrently landed live Fence control and cleanup integration;
+  keep Tail disclosure separate from its original mutation authority.
+- Add `tower-tail` for one authenticated, bounded original capture and strict
+  native Tail validation to explicit `tower-operator-exchange` requests.
+- Validate fixed basis, scope, registration, revision continuity and cursors
+  before output or further queries; never treat partial output as completion.
+- Add sixteen service/client/learned workflow regressions. Independent source
+  review and direct syntax/format checks pass; required RCH execution cannot
+  start because `rch` is absent, so build/runtime qualification remains open.
+- Document concrete profile/command usage and refresh source inventory without
+  changing dependency admission or closing full roadmap acceptance.
+
 ## 2026-11-10: seal original journal-tail request correlation
 
 - Bind native journal-tail observations to their original operation ID and optional

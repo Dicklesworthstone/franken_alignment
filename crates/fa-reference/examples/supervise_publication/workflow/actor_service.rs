@@ -53,39 +53,64 @@ const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFI
 // option and silently omit the requested disclosure boundary. No file is read
 // until the mode, position and exact ordinary-service arity have been checked.
 fn take_precheck_option(args: &[String]) -> Result<(&[String], Option<&Path>), String> {
-    let mut positions = args.iter().enumerate().filter(|(_, arg)| *arg == "--precheck-profile");
-    let Some((index, _)) = positions.next() else { return Ok((args, None)); };
+    let mut positions = args
+        .iter()
+        .enumerate()
+        .filter(|(_, arg)| *arg == "--precheck-profile");
+    let Some((index, _)) = positions.next() else {
+        return Ok((args, None));
+    };
     if positions.next().is_some() || index + 2 != args.len() {
         return Err("--precheck-profile requires exactly one final profile path".into());
     }
     let expected = match args.first().map(String::as_str) {
         Some("serve-create" | "serve-open") => 4,
         Some("serve-create-checked" | "serve-open-checked") => 5,
-        _ => return Err("precheck disclosure is supported only by ordinary single-request serve modes".into()),
+        _ => {
+            return Err(
+                "precheck disclosure is supported only by ordinary single-request serve modes"
+                    .into(),
+            );
+        }
     };
-    if index != expected || args[1..index].iter().any(|value| value.starts_with("--"))
-        || args[index + 1].is_empty() || args[index + 1].starts_with("--") {
+    if index != expected
+        || args[1..index].iter().any(|value| value.starts_with("--"))
+        || args[index + 1].is_empty()
+        || args[index + 1].starts_with("--")
+    {
         return Err("precheck disclosure cannot be combined with sequence, multi-peer, receipt, topology or generated service modes".into());
     }
     Ok((&args[..index], Some(Path::new(&args[index + 1]))))
 }
 
-pub(crate) fn shutdown_fleet(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+pub(crate) fn shutdown_fleet(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
     learned::fleet_command(args, output)
 }
 
 /// The experiment owns its entire argv before any production option is removed.
-pub(crate) fn prompt_counterfactual_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+pub(crate) fn prompt_counterfactual_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
     learned::prompt_counterfactual_command(args, output)
 }
 
 // The actor-only command owns its grammar before shared supervisor options are
 // stripped. It never opens Config or routes through ordinary Submit dispatch.
-pub(crate) fn precheck_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+pub(crate) fn precheck_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
     precheck::client::command(args, output)
 }
 
-pub(crate) fn tower_exchange_command(args: &[String], output: &mut impl std::io::Write) -> Result<(), String> {
+pub(crate) fn tower_exchange_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
     tower::client::command(args, output)
 }
 
@@ -101,6 +126,13 @@ pub(crate) fn tower_situation_command(
     output: &mut impl std::io::Write,
 ) -> Result<(), String> {
     tower::client::situation_command(args, output)
+}
+
+pub(crate) fn tower_tail_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
+    tower::client::journal_tail_command(args, output)
 }
 
 pub(crate) fn tower_policy_replay_command(
@@ -127,8 +159,13 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         return tower::command(args, credibility);
     }
     let (args, precheck_path) = take_precheck_option(args)?;
-    if args.iter().any(|arg| arg == "--topology-profile") { return topology::command(args, credibility); }
-    if args.iter().any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts")) {
+    if args.iter().any(|arg| arg == "--topology-profile") {
+        return topology::command(args, credibility);
+    }
+    if args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--receipts-only" | "--reconcile-receipts"))
+    {
         return receipts::command(args, credibility);
     }
     // A durable actor invocation owns its complete argument grammar before
@@ -141,8 +178,12 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     if args.first().is_some_and(|mode| mode == "create-generated") {
         return generated::command(args, credibility);
     }
-    if args.iter().any(|arg| arg == "--native-text") { return native::command(args, credibility); }
-    if args.iter().any(|arg| arg == "--peers") { return multi::command(args, credibility); }
+    if args.iter().any(|arg| arg == "--native-text") {
+        return native::command(args, credibility);
+    }
+    if args.iter().any(|arg| arg == "--peers") {
+        return multi::command(args, credibility);
+    }
     let (args, requests) = series::take_option(args)?;
     let mode = args.first().map(String::as_str).ok_or(USAGE)?;
     if mode == "actor-submit" {
@@ -178,11 +219,24 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let config = Config::read(Path::new(&args[1]))?;
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
-    let publication = if checked { Some(PublicationProfile::read(Path::new(&args[4]))?) } else { None };
+    let publication = if checked {
+        Some(PublicationProfile::read(Path::new(&args[4]))?)
+    } else {
+        None
+    };
     let precheck = precheck_path.map(precheck::Settings::read).transpose()?;
     if let Some(settings) = precheck.as_ref() {
-        return serve_selected_with_precheck(config, &actor, &reviewer, publication.as_ref(),
-            existing, credibility, None, Some(settings), super::clock);
+        return serve_selected_with_precheck(
+            config,
+            &actor,
+            &reviewer,
+            publication.as_ref(),
+            existing,
+            credibility,
+            None,
+            Some(settings),
+            super::clock,
+        );
     }
     if let Some(requests) = requests {
         return series::serve(
@@ -243,20 +297,54 @@ where
 
 /// Qualification belongs to this operator-owned lifetime, not an actor frame.
 /// Recorded requests remain observation/reconciliation-only, even with a path.
-fn serve_with_credibility<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>, time: F)
-    -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
-    serve_selected(config, actor, reviewer_profile, publication, open, credibility, None, time)
+fn serve_with_credibility<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    open: bool,
+    credibility: Option<&Path>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        open,
+        credibility,
+        None,
+        time,
+    )
 }
 
-pub(super) fn serve_selected<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
-    publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
-    topology: Option<super::continuation::creation::topology::Selection>, time: F)
-    -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
-    serve_selected_with_precheck(config, actor, reviewer_profile, publication, open,
-        credibility, topology, None, time)
+pub(super) fn serve_selected<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    open: bool,
+    credibility: Option<&Path>,
+    topology: Option<super::continuation::creation::topology::Selection>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected_with_precheck(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        open,
+        credibility,
+        topology,
+        None,
+        time,
+    )
 }
 
 fn serve_selected_with_precheck<F>(
@@ -273,8 +361,19 @@ fn serve_selected_with_precheck<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    serve_selected_ingress(config, actor, reviewer_profile, publication, open, credibility,
-        topology, precheck_settings, None, None, time)
+    serve_selected_ingress(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        open,
+        credibility,
+        topology,
+        precheck_settings,
+        None,
+        None,
+        time,
+    )
 }
 
 fn serve_selected_ingress<F>(
@@ -294,7 +393,8 @@ where
     F: FnMut() -> ElapsedTick,
 {
     if tower_generation.is_some_and(|generation| generation == 0)
-        || (operator_settings.is_some() && tower_generation.is_none()) {
+        || (operator_settings.is_some() && tower_generation.is_none())
+    {
         return Err("Tower ingress requires an explicit nonzero generation and the ordinary single-request profile".into());
     }
     // A selected precheck service keeps its independent native listener,
@@ -316,24 +416,41 @@ where
     let topology_publication = if topology.is_some() {
         publication.map(|profile| profile.simple_limits().map_err(|_|
             "topology-supervised checked creation requires the plain witness profile; feed, wait, snapshot and joint contracts are not downgraded".to_owned())).transpose()?
-    } else { None };
-    actor.check_host(&config)?; reviewer_profile.check_host(&config)?;
-    if let Some(settings) = precheck_settings { settings.check_host(&config, actor, reviewer_profile)?; }
+    } else {
+        None
+    };
+    actor.check_host(&config)?;
+    reviewer_profile.check_host(&config)?;
+    if let Some(settings) = precheck_settings {
+        settings.check_host(&config, actor, reviewer_profile)?;
+    }
     if let Some(settings) = operator_settings {
         let additional: Vec<_> = precheck_settings
             .into_iter()
             .map(|settings| settings.socket_path())
             .collect();
         settings.check_host(&config, actor, reviewer_profile, &additional)?;
-        if let Some(path) = topology.as_ref().and_then(|selection| selection.acknowledged_output()) {
+        if let Some(path) = topology
+            .as_ref()
+            .and_then(|selection| selection.acknowledged_output())
+        {
             // Retiring the read sidecar unlinks its endpoint before checkpoint
             // retention. The original create-new archive admission must not
             // turn that endpoint into a file, including through a parent alias.
             let output = super::continuation::checkpoint::AcknowledgedOutput::admit(&config, path)?;
-            let parent = std::fs::canonicalize(settings.socket.parent()
-                .ok_or("missing operator socket directory")?).map_err(debug)?;
-            let socket = parent.join(settings.socket.file_name()
-                .ok_or("missing operator socket filename")?);
+            let parent = std::fs::canonicalize(
+                settings
+                    .socket
+                    .parent()
+                    .ok_or("missing operator socket directory")?,
+            )
+            .map_err(debug)?;
+            let socket = parent.join(
+                settings
+                    .socket
+                    .file_name()
+                    .ok_or("missing operator socket filename")?,
+            );
             if output.path() == socket.as_path() {
                 return Err("topology checkpoint and operator socket must be distinct".into());
             }
@@ -372,7 +489,11 @@ where
     }
     let start = time();
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
-    let deadline = Deadline { logical: plus(start, runtime)?, started: Instant::now(), wall: Duration::from_millis(runtime) };
+    let deadline = Deadline {
+        logical: plus(start, runtime)?,
+        started: Instant::now(),
+        wall: Duration::from_millis(runtime),
+    };
     let mut prepared_topology = match topology {
         Some(selection) => Some(selection.prepare(&config, &mut || deadline.check(time()))?),
         None => None,
@@ -589,8 +710,11 @@ where
                 if let Some(service) = &mut operator {
                     service.checkpoint();
                 }
-                if early_control.as_mut().expect("original control")
-                    .native_stop(&mut driver, &mut time)? {
+                if early_control
+                    .as_mut()
+                    .expect("original control")
+                    .native_stop(&mut driver, &mut time)?
+                {
                     return Ok(());
                 }
                 if let Some(service) = &mut precheck {
@@ -702,7 +826,13 @@ where
             // its exact sealed recovery cut even after a disconnect or deadline;
             // legacy open paths keep their original reconciliation/stop behavior.
             Err(error) if recorded && owner_start == OwnerStart::Reconciled => Some(error),
-            Err(error) if early_control.as_ref().is_some_and(|control| control.native_cleanup_started()) => Some(error),
+            Err(error)
+                if early_control
+                    .as_ref()
+                    .is_some_and(|control| control.native_cleanup_started()) =>
+            {
+                Some(error)
+            }
             Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {
                 Ok(()) => error,
                 Err(stopping) => format!("{error}; stop/drain: {stopping}"),
@@ -866,9 +996,11 @@ fn prepare_host(
 
 // Exact deployment equality applies to ordinary AND mediated bootstraps. This
 // is an immutable check; it cannot install a missing guard or renew a reserve.
-fn check_deployment(config: &Config, host: &FileOversight, publication: Option<&PublicationProfile>)
-    -> Result<(), String>
-{
+fn check_deployment(
+    config: &Config,
+    host: &FileOversight,
+    publication: Option<&PublicationProfile>,
+) -> Result<(), String> {
     if host.publication_validation_profile().map_err(debug)? != publication.map(|p| p.limits)
         || host.file_source_status().map(|s| s.policy) != Some(config.source_policy)
         || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())

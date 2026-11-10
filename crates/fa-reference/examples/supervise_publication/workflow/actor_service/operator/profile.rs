@@ -3,10 +3,10 @@ use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
-    MAX_HOLD_DIAGNOSIS_QUERIES,
-    MAX_INSPECTION_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
-    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
+    MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS,
+    MAX_JOURNAL_TAIL_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
     MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
+    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
@@ -41,11 +41,50 @@ pub(crate) struct Settings {
     /// Omission keeps numerical admission replay disabled.
     pub(crate) explanation_numerical_replay_events: Option<usize>,
     pub(crate) explanation_disclosure: String,
+    pub(crate) journal_tail: Option<JournalTailSettings>,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
     pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+/// Explicit bounded disclosure of original journal event metadata. This does
+/// not disclose payloads, helper ballots, model inputs or current authority.
+#[derive(Clone, Debug)]
+pub(crate) struct JournalTailSettings {
+    pub(crate) queries: usize,
+    pub(crate) events_per_page: usize,
+    pub(crate) disclosure: String,
+}
+
+impl JournalTailSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            events_per_page: usize::try_from(fields.number("events_per_page")?).map_err(debug)?,
+            disclosure: fields.text("disclosure")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_JOURNAL_TAIL_QUERIES
+            || self.events_per_page == 0
+            || self.events_per_page > MAX_JOURNAL_TAIL_PAGE_EVENTS
+            || self.disclosure != "redacted_journal_events"
+        {
+            return Err(
+                "journal tail requires explicit redacted-journal-events disclosure and bounded queries and pages"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 /// One explicitly selected permanent admission stop in the original domain.
@@ -79,9 +118,9 @@ impl FenceSettings {
         if self.max_replay_events == 0
             || self.max_replay_events > MAX_FENCE_REPLAY_EVENTS
             || self.authority != "stop_original_admission"
-            || self.numerical_replay_events.is_some_and(|events| {
-                events == 0 || events > self.max_replay_events
-            })
+            || self
+                .numerical_replay_events
+                .is_some_and(|events| events == 0 || events > self.max_replay_events)
         {
             return Err(
                 "fence requires explicit original-admission-stop authority and bounded replay"
@@ -344,6 +383,10 @@ impl Settings {
                 .transpose()
                 .map_err(debug)?,
             explanation_disclosure: fields.text("explanation_disclosure")?,
+            journal_tail: match fields.optional("journal_tail") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(JournalTailSettings::decode(value)?),
+            },
             hold_diagnosis: match fields.optional("hold_diagnosis") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(HoldDiagnosisSettings::decode(value)?),
@@ -422,6 +465,7 @@ impl Settings {
             || self.explanation_queries > MAX_EXPLANATION_QUERIES
             || (self.inspection_queries == 0
                 && self.explanation_queries == 0
+                && self.journal_tail.is_none()
                 && self.hold_diagnosis.is_none()
                 && self.resolution.is_none()
                 && self.fence.is_none()
@@ -445,16 +489,22 @@ impl Settings {
         {
             return Err("explanation requires explicit policy-and-selected-witness disclosure and bounded replay".into());
         }
-        if self.explanation_numerical_replay_events.is_some_and(|events| {
-            events == 0
-                || self
-                    .explanation_queries
-                    .checked_mul(self.explanation_replay_events)
-                    .is_none_or(|maximum| events > maximum)
-        }) {
+        if self
+            .explanation_numerical_replay_events
+            .is_some_and(|events| {
+                events == 0
+                    || self
+                        .explanation_queries
+                        .checked_mul(self.explanation_replay_events)
+                        .is_none_or(|maximum| events > maximum)
+            })
+        {
             return Err("numerical admission explanation requires a positive cumulative event budget within the selected query and replay bounds".into());
         }
         if let Some(selected) = &self.policy_replay {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.journal_tail {
             selected.validate()?;
         }
         if let Some(selected) = &self.hold_diagnosis {

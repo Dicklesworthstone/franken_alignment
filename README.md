@@ -33,7 +33,11 @@ The [native journal-tail capability](docs/TOWER_JOURNAL_TAIL.md) now connects
 the original live journal to privileged Tower reads. Separately retained finite
 grants expose redacted event metadata through coherent pages pinned to one
 acknowledged revision, including learned history, without replaying numerical
-work or changing authority. Runtime qualification remains pending.
+work or changing authority. The authenticated ordinary, learned and resident
+operator services accept an explicit `journal_tail` profile selection;
+`supervise_publication tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision 0 --max-pages 128`
+follows one finite capture with strict page validation. Runtime qualification
+remains pending.
 
 The [reference Tower dispatcher](docs/TOWER_REFERENCE.md) connects `get`,
 `related`, `tail`, `situation`, `explain`, `why-held`, `next` and `replay-plan` through one Rust

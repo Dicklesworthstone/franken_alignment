@@ -3,7 +3,7 @@
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
 `situation`, historical admission or completed-congress `explain`, recorded
-`why-held` diagnosis and explicitly selected `policy-replay` capabilities to the
+`why-held` diagnosis, original journal `tail` and explicitly selected `policy-replay` capabilities to the
 running supervisor. A separately selected `resolution` grant connects native
 `next` and `resolve` to original endpoint receipt reconciliation. A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
@@ -109,6 +109,11 @@ deployment's values:
   "explanation_queries": 8,
   "explanation_replay_events": 4096,
   "explanation_disclosure": "policy_and_selected_witnesses",
+  "journal_tail": {
+    "queries": 128,
+    "events_per_page": 32,
+    "disclosure": "redacted_journal_events"
+  },
   "hold_diagnosis": {
     "queries": 32,
     "disclosure": "recorded_publication_state"
@@ -129,8 +134,9 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `hold_diagnosis`, `policy_replay`, `review_explanation` and
-`resolution` and `fence` are independently optional; omitting one or setting it to `null` keeps that capability
+fields fail. `journal_tail`, `hold_diagnosis`, `policy_replay`,
+`review_explanation`, `resolution` and `fence` are independently optional;
+omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
@@ -143,8 +149,9 @@ grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
-explanation, recorded-state diagnosis, completed-review explanation, policy
-replay, receipt reconciliation or original admission fencing must be enabled. For inspection only, set
+explanation, journal Tail, recorded-state diagnosis, completed-review explanation,
+policy replay, receipt reconciliation or original admission fencing must be
+enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
 selects policy-literal and selected-witness disclosure, with a positive bounded
@@ -167,6 +174,23 @@ refusal. The same custody survives reconnects and resident handoffs; retirement
 reports its remaining reservations. Plain histories do not spend this numerical
 allowance. Completed-review and receipt-reconciliation work have independent
 grants and cannot fund admission reconstruction.
+
+The optional `journal_tail` object requires exactly `queries` (1–1,024),
+`events_per_page` (1–64) and `disclosure: "redacted_journal_events"`. It exposes
+one acknowledged historical journal cut as closed event labels and directly
+recorded request/attempt/round links. It never discloses event payloads or
+replays numerical work. The original grant and pending capture survive
+authenticated reconnects and scheduled handoffs without renewed work. A
+Tail-only profile may disable all the other capabilities.
+
+Use `supervise_publication tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision 0 --max-pages 128`
+to follow one finite capture through its original continuations. The run address
+must carry the original registration generation. The client validates fixed
+basis, complete scope, contiguous rows and cursors before output or the next
+query. It returns success only for explicit enumeration completion; valid
+partial lines remain output on an incomplete failure. The existing authenticated
+`tower-operator-exchange` command also supports explicit native Tail documents.
+See [the native journal and command contract](TOWER_JOURNAL_TAIL.md).
 
 The independent `hold_diagnosis` object requires exactly `queries` (1–1,024)
 and `disclosure: "recorded_publication_state"`. Unknown fields, duplicate

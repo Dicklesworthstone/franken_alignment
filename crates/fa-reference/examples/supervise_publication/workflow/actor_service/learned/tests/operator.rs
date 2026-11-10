@@ -1,13 +1,15 @@
 //! Real learned inference, authenticated observation, separate human authority
 //! and independent Stop. Fixture weights establish protocol behavior only.
-#[path = "operator/fence.rs"]
-mod fence;
 #[path = "operator/admission_explanation.rs"]
 mod admission_explanation;
-#[path = "operator/review_explanation.rs"]
-mod review_explanation;
+#[path = "operator/fence.rs"]
+mod fence;
+#[path = "operator/journal_tail.rs"]
+mod journal_tail;
 #[path = "operator/resolution.rs"]
 mod resolution;
+#[path = "operator/review_explanation.rs"]
+mod review_explanation;
 
 use super::super::operator as live_operator;
 use super::peer_intake::{Behavior, actor, actor_profile, human};
@@ -692,7 +694,6 @@ fn cached_stop_failure_is_reported_after_the_original_terminal_actor_reply_is_de
     assert_eq!(cleanup(driver, 1000, 1), 0);
 }
 
-
 #[test]
 fn unbudgeted_receipt_resolution_is_refused_before_learned_time_owner_or_listeners() {
     let root = Root::new();
@@ -707,27 +708,29 @@ fn unbudgeted_receipt_resolution_is_refused_before_learned_time_owner_or_listene
         "{\"resolution\":{\"queries\":1,\"operations\":1,\"max_replay_events\":4096,\"authority\":\"reconcile_existing_receipts\"},",
         1,
     );
-    selected.settings = crate::workflow::actor_service::operator::Settings::decode(
-        document.as_bytes(),
-    ).unwrap();
+    selected.settings =
+        crate::workflow::actor_service::operator::Settings::decode(document.as_bytes()).unwrap();
     assert!(selected.settings.resolution.is_some());
     fs::write(&path, document).unwrap();
     assert!(live_operator::Selection::read(&path, GENERATION).is_err());
     let store = config.store.clone();
     assert!(!store.exists());
-    assert!(run_with_actor_services(
-        config,
-        loaded,
-        &peers,
-        false,
-        None,
-        None,
-        None,
-        Some(&profile),
-        None,
-        Some(&selected),
-        || panic!("unbudgeted resolution reached a learned clock or owner"),
-    ).is_err());
+    assert!(
+        run_with_actor_services(
+            config,
+            loaded,
+            &peers,
+            false,
+            None,
+            None,
+            None,
+            Some(&profile),
+            None,
+            Some(&selected),
+            || panic!("unbudgeted resolution reached a learned clock or owner"),
+        )
+        .is_err()
+    );
     assert!(!store.exists());
     assert!(!selected.settings.socket.exists());
     assert_eq!(fs::read_dir(root.0.join("peers")).unwrap().count(), 0);

@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: operate original journal tail through the authenticated service
+
+The ordinary, learned and resident operator services now accept an independently
+selected `journal_tail` profile member with finite queries, page size and the
+explicit `redacted_journal_events` disclosure. They install the native capability
+from the existing supervisor and retain the original grant and capture across
+authenticated reconnects and handoffs. Retirement drops its custody. Existing
+profiles keep Tail disabled unless selected, and a Tail-only learned observer
+requires no numerical replay grant.
+
+The concurrently landed live Fence service retains its distinct control grant,
+learned work reservation and original cleanup path. Tail-only profiles gain no
+Permit authority. Merged source and ordinary/learned control interactions were
+reviewed independently before the operator increment was committed.
+
+The new `tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision N --max-pages N`
+command follows one capture on one authenticated connection. It validates the
+closed native result, complete scope, sealed registration/query, fixed basis and
+lower bound, contiguous offsets and revisions, explicit completion and unique
+cursors before output or another request. Caller, profile, transport and native
+allowances bound work together. Valid partial output remains incomplete on
+exhaustion, owner loss, Unknown/Withheld or refusal; output failure cannot cause
+another query. The client never reconnects, retries or silently recaptures.
+Explicit `tower-operator-exchange` documents gain the same result validation.
+
+Sixteen additional tests were authored: three service/profile, twelve finite
+client/validation and one actual learned-publication workflow before and after
+independent human approval. The learned fixture accounts for numerical work
+that may precede actor admission. Independent source review and a direct
+installed-rustfmt syntax/format pass completed for all thirteen example files.
+Required focused RCH execution could not start because `rch` is absent. No
+compilation, runtime test, Clippy or full-gate success is claimed. Exact source
+inventory is refreshed and the Tower bead remains in progress for verification;
+FA-135's complete cross-layer event and replay acceptance remains open.
+
+See [the native grant and command contract](docs/TOWER_JOURNAL_TAIL.md) and
+[the operator profile](docs/LIVE_TOWER_OPERATOR.md). Native/Tower implementation
+landed separately in `9f44db7683cffbb9e3e3b7e4e8214426dd3c18bf`.
+
 ## 2026-11-10: seal original journal-tail request correlation
 
 Native journal-tail results now privately retain the originating operation ID

@@ -110,6 +110,59 @@ unavailable owner is explicit rather than a fabricated empty journal. Reads
 preserve pending admission snapshots, canonical journal bytes, numerical state,
 publication state, charged Unknown effects and every authority key.
 
+## Authenticated operator service and finite command
+
+On Linux, the existing ordinary, learned and resident operator services can
+select this capability in their `fa.tower-operator-service/1` profile:
+
+```json
+"journal_tail": {
+  "queries": 128,
+  "events_per_page": 32,
+  "disclosure": "redacted_journal_events"
+}
+```
+
+This is an optional member of the existing profile, not a complete profile.
+Its integers use the profile's JSON-number convention. Omission or null keeps
+Tail disabled; unknown fields, noninteger or excessive bounds and other
+disclosure markers refuse before setup. A Tail-only endpoint can set inspection
+and explanation counts/replay to zero, keep explanation disclosure `"none"`,
+and omit the other optional capabilities. It requires no numerical replay grant.
+
+The service installs the capability from the existing original supervisor and
+keeps the grant, cursor and remaining allowance across authenticated reconnects
+and scheduled or resident handoffs. Retirement drops disclosure custody. Actor,
+operator and independent human-review/Stop endpoints remain separately bound.
+
+With a verified executable and configured operator endpoint, run:
+
+```sh
+supervise_publication tower-tail OPERATOR_PROFILE fa://1/run/3@41 --after-revision 0 --max-pages 128
+```
+
+The run address must carry the actual nonzero registration generation. The
+command opens one authenticated connection and follows one native capture. It
+caps requests by the smallest of caller max-pages, selected Tail queries and
+the original transport exchange allowance. Existing cumulative byte, I/O and
+elapsed bounds also apply. No reconnect, retry, fresh capture or hidden
+follow-polling is performed. To observe later history, explicitly start another
+capture after the previous captured end using remaining service work.
+
+Every response is checked before output and before any subsequent request:
+closed schema and event labels, original registration/query, complete scope,
+fixed native basis, initial revision, contiguous offsets/rows, completion and
+nonrepeated cursors must agree. The command flushes each validated complete JSON
+response as one output line. Success means explicit complete enumeration of the
+captured suffix. A valid partial prefix remains output if a bound, missing
+continuation, Unknown, Withheld or native refusal stops the command, which
+returns a failure exit status. Check that status before treating the prefix as
+complete. Output failure cannot spend another native query.
+
+`tower-operator-exchange OPERATOR_PROFILE REQUEST_JSON` also validates native
+Tail responses for explicit request documents. It remains an explicit document
+exchange; only `tower-tail` performs bounded continuation over a captured suffix.
+
 ## Verification scope
 
 Native and public Tower regressions exercise real publication and learned
@@ -118,6 +171,14 @@ failures, malformed requests, sealed response tampering, output refusal,
 redaction and retained Unknown liability. See
 `crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/journal_tail/tests.rs`
 and `crates/fa-reference/tests/tower_journal_tail.rs`.
+
+Sixteen additional service/client tests exercise strict profile selection,
+original grant custody across reconnects, real authenticated pagination,
+altered or substituted captures, finite caller/profile/transport/native bounds,
+wrong peers, owner/output loss, and learned publication before and after its
+independent human approval. They are under the example's operator and client
+`journal_tail` test modules. Their source also passes the installed formatter's
+syntax check; execution remains pending for the same environment limitation.
 
 This session has no configured RCH executable or worker and lacks the qualified
 `nightly-2026-09-08` toolchain. Source review and permitted syntax-only checks do
