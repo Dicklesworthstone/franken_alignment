@@ -1,0 +1,20 @@
+Source: b0ac3feb plus formatted C; compile-only check after codegen SIGKILL
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'check', '--locked', '--offline', '-p', 'fa-reference', '--test', 'tower_learned_observation']
+    Checking fa-reference v0.2.0 (/tmp/fa_alignment_cf969907cc0d_next/crates/fa-reference)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+    Finished `dev` profile [unoptimized] target(s) in 15.69s
+
+exit_code: 0 elapsed_seconds: 15.71 maximum_rss_kib: 1466152

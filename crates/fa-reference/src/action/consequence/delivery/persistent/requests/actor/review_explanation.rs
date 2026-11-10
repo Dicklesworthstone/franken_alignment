@@ -7,11 +7,12 @@ use super::{
     Knowledge, OwnerRef, UnknownReason,
 };
 use crate::Error;
+use crate::action::consequence::activation::probe::learned::KvGroup;
 use crate::action::consequence::congress::CongressPolicy;
 use crate::action::consequence::delivery::persistent::MAX_JOURNAL_EVENTS;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::observed::replay::{
-    FileReviewEffectReplay, ReviewEffectAudit,
+    FileReviewCompletion, FileReviewCompletionAudit, FileReviewEffectReplay, ReviewEffectAudit,
 };
 use crate::action::consequence::gate::containment::session::policy::{Evaluation, Policy};
 use crate::action::consequence::gate::containment::session::transcript::CommitRecord;
@@ -29,7 +30,7 @@ pub const MAX_REVIEW_EXPLANATION_EVENTS: usize = MAX_JOURNAL_EVENTS;
 
 /// Three cuts of the same acknowledged history. The beginning coordinates are
 /// the original pre-vote anchor, the completed coordinates follow the actual
-/// application (including refusal), and the ending coordinates include the
+/// application (including refusal) or evidence refinement, and the ending coordinates include the
 /// entire later suffix. Recorded ticks are never fresh clock observations.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileReviewExplanationBasis {
@@ -213,6 +214,185 @@ impl FileReviewExplanation {
 pub type FileReviewExplanationObservation =
     Knowledge<FileReviewExplanation, FileReviewExplanationBasis>;
 pub type FileReviewExplanationResult = Result<FileReviewExplanationObservation, ActorError>;
+
+/// A completed original evidence-refinement congress, without an application.
+/// The original abstentions and exact group promotion remain observable, but a
+/// fresh review over the new input revision is still required. Later dispatch
+/// observations retain their actual authorizing review, never this refinement.
+///
+/// This sealed projection shares one native replay across clones and exposes no
+/// retained helper inputs, source snapshot, action bytes or live owner.
+///
+/// ```compile_fail,E0308
+/// use fa_reference::action::consequence::delivery::persistent::{FilePermit,
+///     requests::actor::FileRefinementExplanation};
+/// fn no_approval(value: FileRefinementExplanation) -> FilePermit { value }
+/// ```
+///
+/// ```compile_fail,E0599
+/// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileRefinementExplanation;
+/// fn no_application(value: FileRefinementExplanation) { value.application(); }
+/// ```
+///
+/// ```compile_fail,E0599
+/// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileRefinementExplanation;
+/// fn no_helper_inputs(value: FileRefinementExplanation) { value.archive(); }
+/// ```
+#[derive(Clone, PartialEq, Eq)]
+pub struct FileRefinementExplanation {
+    basis: FileReviewExplanationBasis,
+    replay: Rc<FileReviewCompletionAudit>,
+    group: KvGroup,
+    refined_input_revision: u64,
+    completed_state: ActionState,
+    ending_state: ActionState,
+}
+
+impl fmt::Debug for FileRefinementExplanation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("FileRefinementExplanation")
+            .field("basis", &self.basis)
+            .field("group", &self.group)
+            .field("reviewed_input_revision", &self.reviewed_input_revision())
+            .field("refined_input_revision", &self.refined_input_revision)
+            .field("completed_state", &self.completed_state)
+            .field("ending_state", &self.ending_state)
+            .finish_non_exhaustive()
+    }
+}
+
+impl FileRefinementExplanation {
+    pub fn group(&self) -> KvGroup {
+        self.group
+    }
+    pub fn reviewed_input_revision(&self) -> u64 {
+        self.input_revision()
+    }
+    pub fn refined_input_revision(&self) -> u64 {
+        self.refined_input_revision
+    }
+    pub fn basis(&self) -> FileReviewExplanationBasis {
+        self.basis
+    }
+    pub fn policy(&self) -> &Policy {
+        &self.replay.review().anchor().policy.policy
+    }
+    pub fn evaluation(&self) -> &Evaluation {
+        &self.replay.review().archive().policy.evaluation
+    }
+    pub fn congress(&self) -> &CongressPolicy {
+        &self.replay.review().anchor().policy.congress
+    }
+    pub fn decision(&self) -> &Decision {
+        &self.replay.review().archive().policy.decision
+    }
+    pub fn tally(&self) -> &Reduction {
+        &self.replay.review().archive().policy.tally
+    }
+    pub fn missing(&self) -> &[String] {
+        &self.replay.review().archive().policy.missing
+    }
+    pub fn abstained(&self) -> &[String] {
+        &self.replay.review().archive().policy.abstained
+    }
+    pub fn commits(&self) -> &[CommitRecord] {
+        &self.replay.review().archive().policy.transcript.commits
+    }
+    pub fn commit_times(&self) -> &[ElapsedTick] {
+        &self.replay.review().archive().commit_times
+    }
+    /// Original acceptance order, without the retained reveal salts.
+    pub fn reveals(&self) -> impl ExactSizeIterator<Item = (&str, Verdict, ElapsedTick)> {
+        let archive = self.replay.review().archive();
+        archive
+            .policy
+            .transcript
+            .reveals
+            .iter()
+            .zip(&archive.reveal_times)
+            .map(|(record, at)| (record.member.as_str(), record.verdict, *at))
+    }
+    pub fn window(&self) -> ReviewWindow {
+        self.replay.review().anchor().window
+    }
+    pub fn input_revision(&self) -> u64 {
+        self.replay.review().anchor().input_revision
+    }
+    pub fn evidence_root(&self) -> [u8; 32] {
+        self.replay.review().anchor().policy.evidence_root
+    }
+    pub fn reveals_opened_at(&self) -> ElapsedTick {
+        self.replay.review().archive().reveals_opened_at
+    }
+    pub fn review_completed_at(&self) -> ElapsedTick {
+        self.replay.review().archive().completed_at
+    }
+    pub fn contradiction(&self) -> bool {
+        self.replay.review().anchor().policy.contradiction
+    }
+    pub fn expected_control_sequence(&self) -> u64 {
+        self.replay
+            .review()
+            .anchor()
+            .policy
+            .expected_control_sequence
+    }
+    pub fn proposal_policy_epoch(&self) -> u64 {
+        self.replay
+            .review()
+            .anchor()
+            .policy
+            .action
+            .spec()
+            .policy_epoch
+    }
+    pub fn semantic_epoch(&self) -> u64 {
+        self.replay.review().anchor().policy.snapshot_semantic_epoch
+    }
+    pub fn target(&self) -> Option<ResolvedTarget> {
+        self.replay.review().anchor().policy.action.spec().target
+    }
+    pub fn units(&self) -> u64 {
+        self.replay.review().anchor().policy.action.spec().units
+    }
+    pub fn payload_bytes(&self) -> usize {
+        self.replay
+            .review()
+            .anchor()
+            .policy
+            .action
+            .spec()
+            .payload
+            .len()
+    }
+    pub fn completed_state(&self) -> ActionState {
+        self.completed_state
+    }
+    pub fn ending_state(&self) -> ActionState {
+        self.ending_state
+    }
+    /// Original selected-attempt linkage. Missing observations do not prove absence.
+    pub fn effect(&self) -> &ReviewEffectAudit {
+        self.replay.effect()
+    }
+}
+
+pub type FileRefinementExplanationObservation =
+    Knowledge<FileRefinementExplanation, FileReviewExplanationBasis>;
+pub type FileRefinementExplanationResult = Result<FileRefinementExplanationObservation, ActorError>;
+
+/// The original completion kind stays explicit. Refinement never masquerades as
+/// a successful or refused application and cannot supply a control receipt.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FileCompletedReviewExplanation {
+    Applied(FileReviewExplanation),
+    Refined(FileRefinementExplanation),
+}
+
+pub type FileCompletedReviewExplanationObservation =
+    Knowledge<FileCompletedReviewExplanation, FileReviewExplanationBasis>;
+pub type FileCompletedReviewExplanationResult =
+    Result<FileCompletedReviewExplanationObservation, ActorError>;
 
 struct Grant {
     remaining: Cell<usize>,
@@ -421,6 +601,57 @@ impl FileSupervisorReviewExplanationPort {
     /// refresh. All queries share custody and accounting across port clones;
     /// later encoding/output failure does not refund the entered query.
     pub fn explain_review(&self, request: u64, round: u64) -> FileReviewExplanationResult {
+        Ok(match self.explain_completion(request, round, false)? {
+            Knowledge::Known {
+                value: FileCompletedReviewExplanation::Applied(value),
+                basis,
+            } => Knowledge::Known { value, basis },
+            Knowledge::Known {
+                value: FileCompletedReviewExplanation::Refined(_),
+                ..
+            } => Knowledge::Unknown {
+                reason: UnknownReason::ControllerUnavailable,
+            },
+            Knowledge::Pending { request } => Knowledge::Pending { request },
+            Knowledge::Unknown { reason } => Knowledge::Unknown { reason },
+            Knowledge::Withheld { authority_required } => {
+                Knowledge::Withheld { authority_required }
+            }
+            Knowledge::Stale {
+                generation,
+                current,
+            } => Knowledge::Stale {
+                generation,
+                current,
+            },
+            Knowledge::Absent {
+                closed_domain,
+                frontier,
+            } => Knowledge::Absent {
+                closed_domain,
+                frontier,
+            },
+        })
+    }
+
+    /// Explain either an original application or a completed evidence refinement.
+    /// This uses the SAME finite grant, whole-cut numerical reservation and single
+    /// original replay as the application-only method. It never runs helpers
+    /// again or attributes a later application's authority to a refinement.
+    pub fn explain_review_completion(
+        &self,
+        request: u64,
+        round: u64,
+    ) -> FileCompletedReviewExplanationResult {
+        self.explain_completion(request, round, true)
+    }
+
+    fn explain_completion(
+        &self,
+        request: u64,
+        round: u64,
+        include_refinements: bool,
+    ) -> FileCompletedReviewExplanationResult {
         if request == 0 || round == 0 {
             return Err(ActorError::MalformedProposal);
         }
@@ -467,6 +698,12 @@ impl FileSupervisorReviewExplanationPort {
         let Ok(mut cursor) = owner.host.begin_review_replay(round) else {
             return Ok(unknown());
         };
+        if include_refinements {
+            let Ok(including) = cursor.include_refinements() else {
+                return Ok(unknown());
+            };
+            cursor = including;
+        }
         if numerical {
             let events = cursor.progress().total_events;
             if events as u64 != owner.host.revision() || events > grant.max_replay_events {
@@ -487,7 +724,7 @@ impl FileSupervisorReviewExplanationPort {
         if cursor.advance(0, grant.max_replay_events).is_err() {
             return Ok(unknown());
         }
-        let Ok(replay) = cursor.finish_with_effects() else {
+        let Ok(replay) = cursor.finish_completion_with_effects() else {
             return Ok(unknown());
         };
         let review = replay.review();
@@ -528,15 +765,28 @@ impl FileSupervisorReviewExplanationPort {
             control_sequence: ending.control.sequence,
             recorded_at: ending.control.ledger.elapsed,
         };
-        Ok(Knowledge::Known {
-            value: FileReviewExplanation {
+        let value = match replay.into_applied() {
+            Ok(replay) => FileCompletedReviewExplanation::Applied(FileReviewExplanation {
                 basis,
                 replay: Rc::new(replay),
                 completed_state,
                 ending_state: stage,
-            },
-            basis,
-        })
+            }),
+            Err(replay) => {
+                let FileReviewCompletion::Refined(review) = replay.review() else {
+                    return Ok(unknown());
+                };
+                FileCompletedReviewExplanation::Refined(FileRefinementExplanation {
+                    basis,
+                    group: review.group(),
+                    refined_input_revision: review.input_revision(),
+                    replay: Rc::new(replay),
+                    completed_state,
+                    ending_state: stage,
+                })
+            }
+        };
+        Ok(Knowledge::Known { value, basis })
     }
 }
 

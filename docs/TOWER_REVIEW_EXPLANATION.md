@@ -44,6 +44,35 @@ callers and stale mount generations refuse before native expenditure. Reads do
 not refresh source evidence, sample time, consume admission snapshots, acquire
 either publication key or write journal events.
 
+## Native completed refinement explanations
+
+The same original port also exposes
+`explain_review_completion(request, round)`. A Known result explicitly contains
+`FileCompletedReviewExplanation::Applied` or `::Refined`. The existing
+`explain_review` method retains its application-only type and behavior, including
+Unknown when its selected round completed an evidence refinement.
+
+The completion selector enables the existing native cursor's refinement mode
+before the first event and finishes one complete replay with its original effect
+audit. It uses the same query custody and numerical reservations; it performs no
+second replay, archive copy, helper judgment or replacement reduction.
+
+`FileRefinementExplanation` is a sealed shared projection of that original audit.
+It exposes the policy evaluation, frozen congress and ballots, tally, decision,
+three historical cuts, states and actual effect observations. Its `group()` names
+the exact retained K/V residual acquired by the refinement.
+`reviewed_input_revision()` and the common `input_revision()` identify the input
+the congress judged; `refined_input_revision()` identifies the resulting input.
+The latter requires a fresh review at the refinement cut. A later review may
+already have happened, so this is not a current eligibility judgment.
+
+The refinement projection has no `application()` method, permit conversion,
+whole-archive accessor or payload/helper-input disclosure through Debug. A later
+Applied review and independent human approval keep their own effect lineage;
+they never make the selected refinement an authorizing review. The Tower round
+selector's wire contract below remains the application-only profile until the
+separate refinement response is installed.
+
 ## Explicit numerical history allowance
 
 An original supervisor can select

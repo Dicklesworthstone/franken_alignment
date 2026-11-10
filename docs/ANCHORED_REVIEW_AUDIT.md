@@ -217,6 +217,21 @@ qualify execution, detector quality, model alignment or production deployment.
 No packet or bead is closed by this increment.
 
 
+## Live native refinement projection
+
+An original live supervisor can separately grant the bounded completed-review
+port and use `explain_review_completion(request, round)` to inspect the same
+native Applied/Refined distinction from acknowledged retained history. Its
+sealed `FileRefinementExplanation` reports the original exact group, reviewed
+and refined input revisions, congress trace and effect lineage without an
+application receipt. It shares the grant's finite query and numerical work
+allowances and performs one complete original replay.
+
+This live observation does not supply an independent retained-history anchor or
+replace the offline audit's anchoring requirements. The application-only native
+selector remains compatible. See the
+[native completion contract](TOWER_REVIEW_EXPLANATION.md#native-completed-refinement-explanations).
+
 ## Refinement reports through the existing operator command
 
 The same explicit `--audit-review ROUND HISTORY_ANCHOR` mode above now accepts

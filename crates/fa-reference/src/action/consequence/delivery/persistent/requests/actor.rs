@@ -10,11 +10,11 @@ pub use explanation::{
 mod host;
 mod resolution;
 pub use resolution::{
-    FileResolutionBlockReason, FileResolutionError, FileResolutionObservation,
-    FileResolutionPlan, FileResolutionPlanObservation, FileResolutionPlanResult,
-    FileResolutionReceipt, FileResolutionRequest, FileResolutionResult,
-    FileSupervisorResolutionGrant, FileSupervisorResolutionPort,
-    MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
+    FileResolutionBlockReason, FileResolutionError, FileResolutionObservation, FileResolutionPlan,
+    FileResolutionPlanObservation, FileResolutionPlanResult, FileResolutionReceipt,
+    FileResolutionRequest, FileResolutionResult, FileSupervisorResolutionGrant,
+    FileSupervisorResolutionPort, MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES,
+    MAX_RESOLUTION_REPLAY_EVENTS,
 };
 mod hold_diagnosis;
 pub use hold_diagnosis::{
@@ -24,10 +24,13 @@ pub use hold_diagnosis::{
 };
 mod review_explanation;
 pub use review_explanation::{
-    FileReviewApplication, FileReviewExplanation, FileReviewExplanationBasis,
-    FileReviewExplanationObservation, FileReviewExplanationResult,
-    FileSupervisorReviewExplanationGrant, FileSupervisorReviewExplanationPort,
-    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
+    FileCompletedReviewExplanation, FileCompletedReviewExplanationObservation,
+    FileCompletedReviewExplanationResult, FileRefinementExplanation,
+    FileRefinementExplanationObservation, FileRefinementExplanationResult, FileReviewApplication,
+    FileReviewExplanation, FileReviewExplanationBasis, FileReviewExplanationObservation,
+    FileReviewExplanationResult, FileSupervisorReviewExplanationGrant,
+    FileSupervisorReviewExplanationPort, MAX_REVIEW_EXPLANATION_EVENTS,
+    MAX_REVIEW_EXPLANATION_QUERIES,
 };
 mod inspection;
 pub use inspection::{

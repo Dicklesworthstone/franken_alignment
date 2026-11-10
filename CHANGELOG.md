@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10: expose completed native evidence refinements
+
+- Add the original port's explicit Applied/Refined completion selector while
+  retaining the existing application-only method and shared work custody.
+- Project the original congress, exact residual group, input revisions and
+  effect lineage without inventing an application or publication key.
+- Add five native, two public learned and three compile-fail controls around
+  real refinement and later independent publication. Source review, targeted
+  formatting and library/public-target checks pass; runtime code generation was
+  killed, so runtime and full qualification remain incomplete.
+
 ## 2026-11-10: serve original numerical admission explanations live
 
 - Select the admission grant's independent cumulative numerical allowance from

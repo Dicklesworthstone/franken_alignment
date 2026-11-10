@@ -2,23 +2,36 @@
 //! No provider, helper, human endpoint, writer, or external effect is invoked.
 
 mod anchored;
-pub mod situation;
 mod cursor;
 mod effect;
 mod learned;
-pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
+pub mod situation;
 #[cfg(test)]
 pub(crate) use cursor::review_replay_event_attempts;
-pub use effect::{AuditedAuthorization, AuditedDispatch, AuditedOutcome, AuditedReconciliation,
-    FileReviewEffectReplay, ReviewEffectAudit};
+pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
+pub use effect::{
+    AuditedAuthorization, AuditedDispatch, AuditedOutcome, AuditedReconciliation,
+    FileReviewEffectReplay, ReviewEffectAudit,
+};
 
-use super::{FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
-    journal::{self, Event}, machine::Machine, storage};
-use super::decoder::{DecoderEvent, learned::{LearnedEvent,
-    sidecar::{FileLearnedSidecarFinish, SidecarEvent}}};
-use crate::action::consequence::oversight::replay::{ObservedDecisionArchive, ObservedReviewAnchor};
-use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt};
+use super::decoder::{
+    DecoderEvent,
+    learned::{
+        LearnedEvent,
+        sidecar::{FileLearnedSidecarFinish, SidecarEvent},
+    },
+};
+use super::{
+    FileDeliverySnapshot, FileOversight, FileOversightProfile, JournalError,
+    journal::{self, Event},
+    machine::Machine,
+    storage,
+};
 use crate::action::consequence::activation::probe::learned::KvGroup;
+use crate::action::consequence::oversight::replay::{
+    ObservedDecisionArchive, ObservedReviewAnchor,
+};
+use crate::action::consequence::oversight::{CommitteeInput, ObservedReceipt};
 use crate::{Error, Snapshot};
 use std::path::Path;
 
@@ -183,6 +196,17 @@ impl FileReviewCompletionAudit {
     pub fn effect(&self) -> &ReviewEffectAudit {
         &self.effect
     }
+
+    /// Preserve the original application-only audit without cloning its archive
+    /// or replaying a second time. A refinement returns its entire original audit
+    /// so callers can retain the distinct completion kind and effect lineage.
+    pub fn into_applied(self) -> Result<FileReviewEffectReplay, Self> {
+        let Self { review, effect } = self;
+        match review {
+            FileReviewCompletion::Applied(review) => Ok(FileReviewEffectReplay { review, effect }),
+            review @ FileReviewCompletion::Refined(_) => Err(Self { review, effect }),
+        }
+    }
 }
 
 // Both variants consume the ORIGINAL observed session. This selects a candidate
@@ -190,8 +214,10 @@ impl FileReviewCompletionAudit {
 fn finish_round(event: &Event) -> Option<u64> {
     match event {
         Event::Finish(round, ..) => Some(*round),
-        Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(
-            SidecarEvent::Finish { round, .. }))) => Some(*round),
+        Event::Decoder(DecoderEvent::Learned(LearnedEvent::Sidecar(SidecarEvent::Finish {
+            round,
+            ..
+        }))) => Some(*round),
         _ => None,
     }
 }

@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: expose original completed refinements through the native read grant
+
+The existing completed-review port now exposes an explicit Applied/Refined
+completion selector. It enables the original replay cursor's refinement mode
+before advancing, shares the same finite query and numerical work custody, and
+finishes one complete audit. A consuming conversion preserves the existing
+application-only projection without cloning its archive or replaying again.
+
+The sealed refinement projection carries the original policy evaluation,
+congress, ballots, tally, decision, exact K/V residual group and reviewed/refined
+input revisions. It has no application receipt, permit conversion, archive
+access or retained helper/payload disclosure. The existing application-only
+method and its result type remain compatible. Later fresh review and human
+approval retain the actual publication lineage; the refinement never acquires
+selected-review dispatch attribution.
+
+Five native and two public regressions use actual learned decoding, a fitted
+codec, original sidecar refinement, real commit/reveal congresses and later
+two-key publication. Controls cover default/short/exact numerical work, actual
+private replay counts, shared custody, wrong request, later faults, revocation
+and legacy selection. Three compile-fail examples protect the new projection's
+authority and disclosure boundaries. Independent source review and targeted
+rustfmt are complete. The library and public learned-observation target compile
+under the qualified nightly's `cargo check`. The attempted runtime build was
+killed during library code generation; no refinement runtime or doctest pass is
+claimed for this increment. Both attempts are retained. This does not close
+FA-137 or a bead.
+
 ## 2026-11-10: serve explicitly budgeted numerical admission explanations
 
 The public operator profile now accepts the independent top-level
