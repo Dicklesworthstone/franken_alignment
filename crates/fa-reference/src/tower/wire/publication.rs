@@ -5,6 +5,7 @@
 //! a global Tower generation, control sequence, or proof of effect admission.
 
 mod explanation;
+mod hold_diagnosis;
 mod inspection;
 mod policy_replay;
 mod review_explanation;
@@ -99,6 +100,10 @@ impl PublicationResponse {
             PublicationResult::Explanation(native) => (
                 "explanation",
                 explanation::encode(native, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::HoldDiagnosis(linked) => (
+                "hold-diagnosis",
+                hold_diagnosis::encode(linked, &self.envelope.address, &encoder)?,
             ),
             PublicationResult::ReviewExplanation(native) => (
                 "review-explanation",

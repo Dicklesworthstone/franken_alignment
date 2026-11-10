@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: diagnose recorded publication conditions through the native Tower
+
+A separate finite, revocable supervisor capability now reads an exact original
+external request through its durable request-to-attempt mapping and one immutable
+owner borrow. It reports the acknowledged stage, recorded Stop/suspension,
+policy epoch and deadline conditions, while fresh evidence, current approvals,
+current time and final publication eligibility remain explicitly Unknown.
+No source, clock, numerical replay, helper, admission snapshot or authority
+mutation is consumed. Unknown and abandoned effects keep their original charge.
+
+The native Tower connects the registered `why-held` verb through that exact
+owner and a sealed `fa.publication-hold-diagnosis/1` result. Its query,
+registration, request-local generation, attempt and native cut remain distinct.
+Foreign replacement withdraws the older installation; operator/grant/namespace
+and generation checks precede work. Reads share finite allowances across clones,
+return current acknowledged facts on each entered query, and never refund a
+whole-output refusal or fall back to an imported snapshot.
+
+Native unit and nine public integration regression functions cover actual review,
+independent approval and publication, distinct request/attempt identities,
+recorded clock and policy transitions, preservation of one-use admission and
+unknown charges, grant revocation, owner/storage failure and wire relabeling.
+Independent source review is complete. The workspace became unavailable before
+implementation; no Rust compilation, runtime execution, doctest, formatting,
+Clippy or RCH qualification is claimed. FA-137 is in progress with all original
+acceptance and dependencies unchanged. No Bead or production gate is closed.
+Source-manifest bindings identify submitted bytes rather than execution.
+
+See [the scoped native diagnosis contract](docs/TOWER_HOLD_DIAGNOSIS.md).
+
 ## 2026-11-09: observe the original learned owner through the native Tower
 
 `PublicationTower::new_learned_observer` connects the original learned stream

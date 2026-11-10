@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-09: diagnose original recorded publication blockers
+
+- Add a separately granted, bounded native `why-held` read with exact original
+  request mapping, one acknowledged cut and shared revocable query custody.
+- Expose recorded Stop, suspension, epoch, deadline and authorization conditions;
+  retain four explicit Unknown live conditions and all original effect charges.
+- Connect the existing Tower verb and sealed bounded response without source,
+  clock, approval or publication work, or fallback to an imported snapshot.
+- Add native and nine public regression functions using original durable
+  lifecycle fixtures, and independently review the source. The workspace is
+  unavailable; compilation, tests, formatting, Clippy and RCH remain unexecuted.
+
 ## 2026-11-09: observe the original learned stream through Tower
 
 - Add a sealed operator-only Tower constructor over the original learned stream

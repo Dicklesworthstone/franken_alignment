@@ -7,6 +7,8 @@
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+mod hold_diagnosis;
+pub use hold_diagnosis::LinkedHoldDiagnosis;
 mod explanation;
 mod review_explanation;
 pub use review_explanation::LinkedReviewExplanation;
@@ -26,8 +28,8 @@ use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
-    FileSupervisorExplanationPort, FileSupervisorInspectionPort, FileSupervisorPolicyReplayPort,
-    FileSupervisorReviewExplanationPort,
+    FileSupervisorExplanationPort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -42,13 +44,14 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 7] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 8] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
     Verb::Capabilities,
     Verb::Situation,
     Verb::Explain,
+    Verb::WhyHeld,
     Verb::PolicyReplay,
 ];
 
@@ -91,6 +94,7 @@ pub enum PublicationResult {
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
     Explanation(FileExplanationResult),
+    HoldDiagnosis(LinkedHoldDiagnosis),
     ReviewExplanation(LinkedReviewExplanation),
     PolicyReplay(LinkedPolicyReplay),
     PolicyReplayPage(LinkedPolicyReplayPage),
@@ -126,6 +130,7 @@ pub struct PublicationTower {
     inspection: Option<FileSupervisorInspectionPort>,
     inspection_cursor: Option<FileInspectionCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
+    hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
@@ -163,6 +168,7 @@ impl PublicationTower {
             inspection: None,
             inspection_cursor: None,
             explanation: None,
+            hold_diagnosis: None,
             review_explanation: None,
             policy_replay: None,
             policy_replay_cursors: BTreeMap::new(),
@@ -309,6 +315,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Explain {
             return self.dispatch_explanation(access, request);
+        }
+
+        if request.verb == Verb::WhyHeld {
+            return self.dispatch_hold_diagnosis(access, request);
         }
 
         if request.verb == Verb::PolicyReplay {

@@ -64,6 +64,16 @@ The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
 page limit can be smaller. Omitted optional read arguments retain their original
 typed defaults. An unknown or retired verb is not silently treated as a read.
 
+### Native recorded-state diagnosis
+
+At an original publication request address, `why-held` with null arguments
+uses a separately installed supervisor diagnosis grant. It returns the recorded
+necessary conditions at one acknowledged native cut, with source freshness,
+current approvals, current time and final eligibility explicitly Unknown.
+The existing reference snapshot route retains its own original semantics.
+See [native diagnosis](TOWER_HOLD_DIAGNOSIS.md) for the exact address and wire
+profile; a successful response is not permission to publish.
+
 ### Native situation pages
 
 A separately granted operator inspection can continue beyond the first 16

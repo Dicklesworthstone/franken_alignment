@@ -3492,7 +3492,7 @@
       "id": "FA-137",
       "gate": "G2",
       "title": "Explain trees and why-held",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-020",
         "FA-104",
@@ -3509,7 +3509,15 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/TOWER_HOLD_DIAGNOSIS.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/hold_diagnosis.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/hold_diagnosis/tests.rs",
+        "crates/fa-reference/src/tower/publication/hold_diagnosis.rs",
+        "crates/fa-reference/src/tower/wire/publication/hold_diagnosis.rs",
+        "crates/fa-reference/tests/tower_hold_diagnosis.rs",
+        "IMPLEMENTATION_STATUS.md"
+      ],
       "founding_ideas": [
         "FI-A06",
         "FI-I18"

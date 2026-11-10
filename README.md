@@ -95,6 +95,14 @@ and keeps authentication, unseen-history completeness and external outcomes
 Unknown. Both inputs and all read attempts are bounded. This source increment
 and its binary regression tests still require execution qualification.
 
+A separately granted native [recorded-state `why-held`](docs/TOWER_HOLD_DIAGNOSIS.md)
+now diagnoses an original publication request's recorded Stop, suspension,
+policy epoch, deadline and authorization stage at one acknowledged cut.
+Each condition retains its native basis; fresh evidence, approvals, clock and
+final eligibility stay Unknown. Independent query custody, exact request
+mapping and original Unknown charges survive the read. New native and Tower
+regression sources are independently reviewed; execution remains unqualified.
+
 A separately granted operator `explain` now reconstructs an original native
 request's exact-policy admission. It returns the original predicate graph and
 trace with separate admission and ending cuts, including denials that never

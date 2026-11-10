@@ -8,6 +8,12 @@ pub use explanation::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
 };
 mod host;
+mod hold_diagnosis;
+pub use hold_diagnosis::{
+    FileHoldCondition, FileHoldDiagnosis, FileHoldDiagnosisBasis, FileHoldDiagnosisObservation,
+    FileHoldDiagnosisResult, FileHoldPredicate, FileSupervisorHoldDiagnosisGrant,
+    FileSupervisorHoldDiagnosisPort, MAX_HOLD_DIAGNOSIS_QUERIES,
+};
 mod review_explanation;
 pub use review_explanation::{
     FileReviewApplication, FileReviewExplanation, FileReviewExplanationBasis,

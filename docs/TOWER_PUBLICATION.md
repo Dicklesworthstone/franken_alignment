@@ -1,9 +1,10 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects seven
+On Unix, `fa_reference::tower::publication::PublicationTower` connects eight
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
-historical admission or separately granted completed-review `explain`, and candidate `policy-replay`.
+historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
+and separately granted recorded-state `why-held`.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -408,7 +409,7 @@ native schema `fa.publication-explanation/1`. Its scope is explicitly
 `historical_exact_policy_admission`; current eligibility is not observed and
 current hold reason remains Unknown. This explains an exact-policy denial even
 when no congress occurred. A satisfied original admission does not explain a
-later hold or establish permission to publish. `why-held` and `next` still need
+later hold or establish permission to publish. The complete dispatch `why-held` conjunction and ranked `next` still need
 their own complete current predicates and are not inferred from these stages.
 
 The canonical body encodes the original predicate graph and retains full-width
@@ -435,6 +436,16 @@ return Unknown without cached-result or disk fallback. A reopened owner needs
 its own separately issued capability. The ordinary actor service still grants
 no operator role or explanation port. An independently provisioned operator
 connection can carry this profile through the same bounded peer and client.
+
+## Diagnose the original request's recorded publication conditions
+
+A separate `hold_diagnosis_port` and `set_hold_diagnosis` installation connect
+operator `why-held` at the exact native request address. One immutable owner
+borrow supplies the current acknowledged lifecycle, Stop/suspension, policy
+epoch and deadline relative to recorded time. The ten typed conditions retain
+one basis; fresh source, approvals, clock and final publication eligibility
+remain Unknown. Query work and revocation are independent of inspection and
+historical explanation. See [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
 
 ## Compare a candidate with the original retained policy corpus
 
