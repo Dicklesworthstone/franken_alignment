@@ -25,6 +25,7 @@ use std::{collections::BTreeSet, io::Write, os::unix::net::UnixStream,
     path::{Path, PathBuf}, thread::{self, JoinHandle}};
 
 #[path = "sequence/functional.rs"] mod functional;
+#[path = "sequence_operator.rs"] mod operator;
 
 const DUE: [ElapsedTick; 3] = [ElapsedTick(50_000), ElapsedTick(49_000), ElapsedTick(48_000)];
 

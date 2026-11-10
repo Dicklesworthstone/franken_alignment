@@ -70,8 +70,9 @@ reads the exact original learned request and its acknowledged publication
 conditions. It reports actual Reviewing, Authorized and Confirmed stages without
 advancing numerical generation or publication. Source freshness, current
 approvals, current time and final eligibility remain Unknown. This observation
-requires no numerical replay; it does not extend the ordinary operator command
-line service to learned-stream control.
+requires no numerical replay. The separately authenticated
+[live learned operator](LIVE_LEARNED_OPERATOR.md) uses the same grant for single
+releases and resident sequences without acquiring publication control.
 
 The constructor does not expand any numerical-replay contract. Admission and
 completed-review explanation grants without numerical work allowances continue

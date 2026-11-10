@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-10: serve live learned operator inspection across resident releases
+
+- Add authenticated original-owner Tower observation to live learned actor and
+  resident learned sequence commands with an explicit paired selection.
+- Service bounded reads through generation, helper/human review, publication
+  and terminal response grace, with independent Stop taking priority.
+- Preserve concurrent recorded-state diagnosis and its explicit optional profile;
+  provision its original grant through the shared learned/ordinary service path.
+- Retain one operator endpoint and cumulative grant/transport allowances across
+  every resident Message/Finish; validate all scheduled identities and canonical
+  socket/output collisions before startup.
+- Preserve the original terminal actor response after a cached Stop exchange
+  failure, while still returning that Stop error and retiring the session.
+- Add ten real-protocol regression functions and a complete operator contract.
+  The production code compiles and the full example harness typechecks to
+  metadata; runtime and full qualification remain separately recorded in status.
+
 ## 2026-11-09: expose recorded-state diagnosis through the live operator
 
 - Add a closed optional `hold_diagnosis` selection, same-owner grant provisioning,

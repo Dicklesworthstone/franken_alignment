@@ -5,7 +5,7 @@
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
-    anchors, campaigns, checkpoint_on_generation, topology, prediction, identity,
+    anchors, campaigns, checkpoint_on_generation, topology, prediction, identity, operator,
     ingress, process, request_preflight, execute_request};
 use super::super::Profile;
 use fa_reference::action::{ActionState, consequence::delivery::{EndpointOutcome,
@@ -14,7 +14,7 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT]";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -34,7 +34,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 
 pub(super) fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    let (args, checkpoint_path) = checkpoint_on_generation::take_option(args)?;
+    // The operator pair owns the complete live grammar before another option
+    // parser can erase an incompatible historical or maintenance selection.
+    let (args, operator_path) = operator::take_option(args)?;
+    let (args, checkpoint_path) = checkpoint_on_generation::take_option(&args)?;
     let (args, campaign_path) = campaigns::take_option(&args)?;
     let (args, anchors) = anchors::take_options(&args)?;
     let (args, topology_path) = topology::take_option(&args)?;
@@ -68,7 +71,10 @@ where F: FnMut() -> ElapsedTick {
     anchors.admit(&config, &mut entries[0].loaded, continuing)?;
     topology::admit(&config, &mut entries[0].loaded, topology_path.as_deref(),
         if continuing { topology::Mode::Live } else { topology::Mode::Create })?;
-    let result = run(config, entries, &peers, continuing, after, credibility, time)?;
+    let operator = operator_path.map(|(path, generation)| operator::Selection::read(&path, generation))
+        .transpose()?;
+    let result = run_with_operator(config, entries, &peers, continuing, after, credibility,
+        operator.as_ref(), time)?;
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -205,12 +211,14 @@ fn confirmed(driver: &FileSupervisedDriver, request: u64, response: &WireRespons
 /// cleanup can be stopped and reported; it never grants the next cohort a slot.
 fn retire<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
     process: &mut Option<process::ProcessHistory>, request: u64, config: &Config,
-    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<bool, String>
+    control: &mut Control, deadline: &Deadline, operator: &mut Option<operator::Service>,
+    time: &mut F) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
     let started = Instant::now();
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+        if let Some(service) = operator.as_mut() { service.checkpoint(); }
         if let Some(history) = process.as_mut() { history.reap(); }
         let direct = driver.retire_completed_request(request).map_err(debug)?;
         if direct && process.as_ref().is_none_or(|history| history.pending() == 0) {
@@ -224,11 +232,31 @@ where F: FnMut() -> ElapsedTick {
     }
 }
 
-pub(super) fn run<F>(mut config: Config, entries: Vec<Entry>, peers: &PeerProfile,
-    continuing: bool, after_message: Option<u64>, credibility: Option<&Path>, mut time: F)
+#[cfg(test)]
+pub(super) fn run<F>(config: Config, entries: Vec<Entry>, peers: &PeerProfile,
+    continuing: bool, after_message: Option<u64>, credibility: Option<&Path>, time: F)
+    -> Result<SequenceResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_operator(config, entries, peers, continuing, after_message, credibility, None, time)
+}
+
+/// One independently provisioned operator session follows the original owner,
+/// including every helper handoff. New messages never reissue its grants or
+/// replenish its query, connection, framing or elapsed allowance.
+pub(super) fn run_with_operator<F>(mut config: Config, entries: Vec<Entry>, peers: &PeerProfile,
+    continuing: bool, after_message: Option<u64>, credibility: Option<&Path>,
+    selected_operator: Option<&operator::Selection>, mut time: F)
     -> Result<SequenceResult, String>
 where F: FnMut() -> ElapsedTick {
     validate(&config, &entries, peers)?;
+    if let Some(selected) = selected_operator {
+        // The first entry owns retained outputs; every entry contributes its
+        // independently selected actor, human-review and Stop socket names.
+        // Admit all of them before sampling time or creating any owner/listener.
+        for entry in &entries {
+            selected.check(&config, &entry.loaded, &entry.actor, peers, None)?;
+        }
+    }
     if !continuing && (after_message.is_some() || credibility.is_some()) {
         return Err("sequence predecessor and credibility activation require explicit live recovery".into());
     }
@@ -269,6 +297,8 @@ where F: FnMut() -> ElapsedTick {
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     topology::attach(&mut driver, source)?;
+    let mut operator = selected_operator.map(|selected|
+        selected.start(&first.actor, port.clone(), &driver, &global)).transpose()?;
     let mut wire = ActorWire::new(port.clone());
     let mut responses = Vec::with_capacity(entries.len());
     let mut histories = Vec::with_capacity(entries.len());
@@ -279,7 +309,7 @@ where F: FnMut() -> ElapsedTick {
     for (index, entry) in entries.iter().enumerate() {
         if index != 0 {
             match retire(&mut driver, &reviewer, &mut process, previous.unwrap(),
-                &config, &mut control, &global, &mut time) {
+                &config, &mut control, &global, &mut operator, &mut time) {
                 Ok(true) => {},
                 Ok(false) => { terminal = Some("learned sequence stopped before its next request".into()); break; }
                 Err(error) => { failure = Some(error); break; }
@@ -318,7 +348,7 @@ where F: FnMut() -> ElapsedTick {
         let cycle = execute_request(driver, &mut config, &entry.loaded,
             RequestServices { peers, reviewer: &reviewer, prediction: &mut prediction,
                 identity: &mut identity, credential: &mut credential,
-                intake: &mut intake, wire: &mut wire, finishing, message_continuation,
+                intake: &mut intake, operator: &mut operator, wire: &mut wire, finishing, message_continuation,
                 credibility: if index == 0 { credibility } else { None },
                 stop_operation: first.loaded.request },
             &mut control, &mut deadline, &mut time);
@@ -342,6 +372,9 @@ where F: FnMut() -> ElapsedTick {
         }
         previous = Some(entry.loaded.request);
     }
+    // The observational endpoint ends with this finite service. Retirement
+    // revokes its original custodians, not publication rights or receipts.
+    if let Some(service) = operator.as_mut() { service.retire(); }
     if let Some(error) = failure.take() {
         let already_stopped = driver.supervisor().host().ok()
             .is_some_and(|host| host.inspect().stop.is_some());

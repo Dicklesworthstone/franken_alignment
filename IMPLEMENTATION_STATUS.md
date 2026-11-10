@@ -1,5 +1,77 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: inspect live and resident learned publication through the original owner
+
+Both `create-learned-generated` with an explicit actor profile and
+`serve-learned-generated` now accept the paired `--operator-profile` and
+`--tower-generation` selection. The separately authenticated service binds the
+original learned stream owner through the sealed observation adapter. Native
+situation reads remain available during numerical generation, actor waiting,
+native/process helper review, independent human review, publication and bounded
+terminal actor response service. No additional owner, source lease, publication
+key or arbitrary-payload intake is introduced.
+
+One resident operator service and its original custodians survive every scheduled
+Message/Finish handoff. Reconnection and later entries cannot refresh its query,
+transport or elapsed allowances. The complete paired grammar, original scope,
+supervisor identity and canonical socket/output collisions for every entry are
+checked before the first clock sample or owner/listener creation. Independent
+Stop is serviced first; an exhausted or failed observation transport retires
+without changing publication authority. Terminal grace retains a failed Stop
+exchange while still flushing the actor's original terminal response, including
+the actor-only path when no operator was selected.
+
+Ten new regression functions exercise original native/process publication,
+live request/execution cuts, transport failure, partial-frame Stop priority,
+cached Stop failure and terminal reply, pre-start grammar/identity/path refusal,
+three-entry resident observation, cumulative read exhaustion and the actual
+resident command grammar. Numerical historical explanation remains charged
+Unknown under grants without numerical replay work, even after a completed
+learned congress; this service does not invent a known historical judgment.
+
+Before integration with concurrent main, the complete production library and
+example compiled on the qualified
+`nightly-2026-09-08` toolchain with Cranelift and debug information disabled.
+The entire existing example test harness, including all new tests, subsequently
+typechecked to metadata with one frontend/backend worker. Typechecking caught a
+private wire-module import in the new failure fixture; the peer now supplies
+the complete invalid 104-byte protocol frame directly without exposing that
+module. Earlier runtime compilation attempts were killed under shared memory
+pressure. A subsequent metadata attempt exhausted workspace capacity; after
+removing only this task's reproducible incremental cache and recovering the
+execution environment, the full metadata check passed. A final runtime-codegen
+retry was also killed after reaching approximately 3.3 GiB peak compiler RSS.
+Runtime execution of these ten new functions and full RCH qualification are not
+established by the metadata check. Actual local evidence is retained in
+`artifacts/execution/2026-11-10-live-learned-operator-*.log`.
+
+The frozen canonical `cargo run --locked -p xtask -- check` verified all 2,375
+source files, the exact compiler, both admitted targets, registries and founding
+concordance. It stopped at the same three pre-existing playbook mappings for
+`compare-learned-prompt`, `serve-learned-generated` and `stop-fleet`. No gate was
+weakened or work item closed to turn that refusal into a pass.
+
+Concurrent commits `b5481c97` and `ec3d7c3d` added recorded hold diagnosis and
+its authenticated profile/client. This increment preserves both and provisions
+the explicit optional diagnosis grant in the common original-owner service.
+Learned single releases and resident handoffs therefore retain its separate
+finite custodian without acquiring mutation or numerical replay authority.
+
+The canonical gate on the intermediate merged 2,382-file source passed compiler,
+source closure, target admission, registries and concordance before the same
+three playbook refusals. Its integrated production compilation attempt was
+killed under shared resource pressure. Both outputs remain in the evidence logs.
+After the second concurrent increment, the execution environment became
+unavailable again. The final 2,385-file source binding was rebuilt from
+the captured reviewed feature and verified incoming Git objects; no final
+integrated compilation, runtime or canonical-gate pass is claimed. The retained
+five-test learned-observer log applies to `d8bd89cc`, before the concurrent
+sixth test and whitelist extension. Full packet and RCH qualification stay open.
+
+FA-134 and FA-136 remain in progress. Recorded-state diagnosis does not establish
+complete current eligibility or ranked `next`. No new numerical audit allowance,
+production activation or full packet closure is claimed. See [the live learned operator contract](docs/LIVE_LEARNED_OPERATOR.md).
+
 ## 2026-11-09: connect recorded-state diagnosis to the authenticated operator
 
 The ordinary operator profile now accepts an optional explicit `hold_diagnosis`

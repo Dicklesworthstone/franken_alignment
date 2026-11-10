@@ -8,7 +8,7 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileSupervisorExplanationGrant, FileSupervisorHoldDiagnosisGrant,
+    FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorHoldDiagnosisGrant,
     FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorReviewExplanationGrant,
 };
@@ -21,7 +21,7 @@ use fa_reference::address_resolver::{Address, CallerScope, Noun, ResolverPlane};
 use fa_reference::observation_algebra::AuthorityKind;
 use fa_reference::tower::publication::peer::PublicationPeerSession;
 use fa_reference::tower::publication::{PublicationLimits, PublicationTower};
-use fa_reference::tower::{MAX_REQUEST_BYTES, TowerAccess};
+use fa_reference::tower::{MAX_REQUEST_BYTES, TowerAccess, TowerInstallError};
 use fa_reference::typestate_cx::PurposeTag;
 use std::collections::BTreeSet;
 
@@ -66,6 +66,32 @@ impl Service {
         generation: u64,
         deadline: &Deadline,
     ) -> Result<Self, String> {
+        Self::start_with(settings, actor, driver, generation, deadline,
+            |mount, limits| PublicationTower::new(mount, port, limits))
+    }
+
+    /// Observe this exact learned owner without obtaining an ordinary actor
+    /// port. The native facade permanently refuses effectful Tower operations.
+    pub(super) fn start_learned(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileLearnedTextStreamActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
+        Self::start_with(settings, actor, driver, generation, deadline,
+            |mount, limits| PublicationTower::new_learned_observer(mount, port, limits))
+    }
+
+    fn start_with(
+        settings: &Settings,
+        actor: &Profile,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+        build: impl FnOnce(Address, PublicationLimits) -> Result<PublicationTower, TowerInstallError>,
+    ) -> Result<Self, String> {
         settings.check_actor(actor)?;
         settings.check_unbound()?;
         if generation == 0 {
@@ -84,14 +110,9 @@ impl Service {
             Some(generation),
         )
         .map_err(debug)?;
-        let mut tower = PublicationTower::new(
-            mount,
-            port,
-            PublicationLimits {
-                max_response_bytes: settings.response_bytes,
-            },
-        )
-        .map_err(debug)?;
+        let mut tower = build(mount, PublicationLimits {
+            max_response_bytes: settings.response_bytes,
+        }).map_err(debug)?;
         let inspection = if settings.inspection_queries != 0 {
             let (port, custodian) = driver
                 .supervisor()

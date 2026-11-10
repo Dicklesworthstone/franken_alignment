@@ -1,0 +1,26 @@
+error[E0603]: module `wire` is private
+ --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator.rs:8:41
+  |
+8 |     peer::control::{StopClientProgress, wire::OFFER_BYTES},
+  |                                         ^^^^  ----------- constant `OFFER_BYTES` is not publicly re-exported
+  |                                         |
+  |                                         private module
+  |
+note: the module `wire` is defined here
+ --> crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control.rs:6:1
+  |
+6 | mod wire;
+  | ^^^^^^^^
+
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error: aborting due to 1 previous error; 1 warning emitted
+
+For more information about this error, try `rustc --explain E0603`.
+exit_code: 1 elapsed_seconds: 38.72 maximum_rss_kib: 1267788

@@ -25,7 +25,11 @@ operator endpoint, including a request schedule. Both open modes can compose
 explicit guarded mediated recovery with an exact v2 source checkpoint, a request
 schedule and the operator endpoint. An operator profile requires an explicit
 Tower generation.
-Multi-peer, native-text and learned service modes do not consume it. Unsupported combinations
+Live learned actor and resident sequence commands also accept the explicitly
+paired operator/generation selection through their own closed grammar; see
+[live learned observation](LIVE_LEARNED_OPERATOR.md). Their facade preserves
+source-derived intake and the original numerical-replay limits. Multi-peer and
+ordinary native-text service modes do not consume it. Unsupported combinations
 fail before reading configuration.
 
 An optional `--precheck-profile PRECHECK_PROFILE` retains its separate actor

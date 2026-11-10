@@ -1,0 +1,56 @@
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `actor_service::profile::Profile` is more private than the item `actor_service::serve_selected`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs:253:1
+    |
+253 | / pub(super) fn serve_selected<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+254 | |     publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+255 | |     topology: Option<super::continuation::creation::topology::Selection>, time: F)
+256 | |     -> Result<(), String>
+257 | | where F: FnMut() -> ElapsedTick {
+    | |_______________________________^ function `actor_service::serve_selected` is reachable at visibility `pub(in crate::workflow)`
+    |
+note: but type `actor_service::profile::Profile` is only usable at visibility `pub(in crate::workflow::actor_service)`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/profile.rs:16:1
+    |
+ 16 | pub(super) struct Profile {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `workflow::Deadline` is more private than the item `recover`
+   --> crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs:179:1
+    |
+179 | / pub(crate) fn recover<F>(
+180 | |     config: &Config,
+181 | |     profile: &SubmitProfile,
+182 | |     custody: &Custody,
+...   |
+189 | | where
+190 | |     F: FnMut() -> ElapsedTick,
+    | |______________________________^ function `recover` is reachable at visibility `pub(crate)`
+    |
+note: but type `workflow::Deadline` is only usable at visibility `pub(self)`
+   --> crates/fa-reference/examples/supervise_publication/workflow.rs:57:1
+    |
+ 57 | struct Deadline {
+    | ^^^^^^^^^^^^^^^
+
+warning: function `check_live` is never used
+  --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/prediction.rs:31:15
+   |
+31 | pub(super) fn check_live(
+   |               ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+error: couldn't create a temp dir: No space left on device (os error 28) at path "/workspace/scratch/cf969907cc0d/verification/rmetaeZxCXR"
+
+error: aborting due to 1 previous error; 4 warnings emitted
+
+exit_code: 1 elapsed_seconds: 16.07 maximum_rss_kib: 1311424

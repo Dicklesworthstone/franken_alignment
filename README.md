@@ -102,11 +102,12 @@ Each condition retains its native basis; fresh evidence, approvals, clock and
 final eligibility stay Unknown. Independent query custody, exact request
 mapping and original Unknown charges survive the read. New native and Tower
 regression sources are independently reviewed; execution remains unqualified.
-An explicit `hold_diagnosis` profile connects the same capability to the ordinary
+An explicit `hold_diagnosis` profile connects the same capability to the
 [tower operator endpoint](docs/LIVE_TOWER_OPERATOR.md#diagnose-an-original-requests-recorded-publication-conditions)
-and `tower-operator-exchange`, with closed response validation before output or
-any later request. The Rust learned-stream observer accepts the same original
-recorded-state grant without advancing generation or publication.
+and the [live learned operator](docs/LIVE_LEARNED_OPERATOR.md), with closed
+`tower-operator-exchange` response validation before output or later requests.
+Single learned releases and resident sequences retain the original finite grant
+without advancing generation or publication.
 
 A separately granted operator `explain` now reconstructs an original native
 request's exact-policy admission. It returns the original predicate graph and
@@ -230,6 +231,15 @@ original supervised owner through a bounded sequence of Messages and Finish,
 with fresh actor, native or process, and human review at every release.
 Its original numerical, forecast and source allowances remain cumulative;
 the new command and regression source remain pending execution qualification.
+
+Single live learned actors and resident sequences now expose an optional
+[authenticated Tower operator endpoint](docs/LIVE_LEARNED_OPERATOR.md).
+It reads the original acknowledged situation during generation, native/process
+and human review, publication and terminal reply grace. One service retains its
+native read grants and spent transport/query budgets through message handoffs
+and reconnects. Independent Stop remains first; observer failure retires only
+that endpoint. The learned facade cannot admit arbitrary actor payloads, and
+historical numerical replay retains its existing explicit work limits.
 
 The [live fleet Stop command](docs/LIVE_FLEET_STOP.md) connects authenticated
 stop-only peers to active supervisors while they own their journals, with a

@@ -188,19 +188,34 @@ where F: FnMut() -> ElapsedTick {
         deadline, time, intake, publication, None)
 }
 
-pub(super) fn run_serviced_checked_with_credential<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+pub(super) fn run_serviced_checked_with_credential<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
     credential: Option<&FileCredentialPermit>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked_with_operator(driver, config, loaded, reviewer, control,
+        deadline, time, intake, publication, credential, &mut None)
+}
+
+pub(super) fn run_serviced_checked_with_operator<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
+    credential: Option<&FileCredentialPermit>, operator: &mut Option<super::operator::Service>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
     if loaded.publication.is_some() != publication.is_some() {
         return Reviewed { driver, history: None, process: None, stop_requested: false,
             failure: Some("learned review requires its original selected publication source".into()) };
     }
     if loaded.process.is_some() {
-        return super::process::run_serviced_checked_with_credential(driver, config, loaded, reviewer,
-            control, deadline, time, intake, publication, credential);
+        return super::process::run_serviced_checked_with_operator(driver, config, loaded, reviewer,
+            control, deadline, time, intake, publication, credential, operator);
     }
+    match control.checkpoint(&mut driver, reviewer, deadline, time) {
+        Ok(false) => {},
+        result => return Reviewed { driver, history: None, process: None,
+            stop_requested: matches!(result, Ok(true)), failure: result.err() },
+    }
+    super::operator::checkpoint(operator);
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
         result => return Reviewed { driver, history: None, process: None,
@@ -221,6 +236,7 @@ where F: FnMut() -> ElapsedTick {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
+            super::operator::checkpoint(operator);
             if ingress::observe(intake, run.supervisor_mut())? {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
@@ -243,8 +259,8 @@ where F: FnMut() -> ElapsedTick {
             let after = run.review().records().get(&round)
                 .map(|record| (record.members.clone(), record.workers.clone()));
             if run.review().status() == NativeReviewStatus::Running && before == after {
-                let stopped = if intake.is_some() {
-                    wait_for_phase_serviced(&mut run, control, config.timing.poll_ms, deadline, time, intake)?
+                let stopped = if intake.is_some() || operator.is_some() {
+                    wait_for_phase_serviced(&mut run, control, config.timing.poll_ms, deadline, time, intake, operator)?
                 } else { wait_for_phase(&mut run, control, config.timing.poll_ms, deadline, time)? };
                 if stopped { stop_requested = true; break; }
                 // Request-local cancellation may retire the review while the
@@ -291,11 +307,12 @@ where F: FnMut() -> ElapsedTick {
 pub(super) fn wait_for_phase<F>(run: &mut FileNativeSupervisedDriver, control: &mut Control,
     poll_ms: u64, deadline: &Deadline, time: &mut F) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
-    wait_for_phase_serviced(run, control, poll_ms, deadline, time, &mut None)
+    wait_for_phase_serviced(run, control, poll_ms, deadline, time, &mut None, &mut None)
 }
 
 fn wait_for_phase_serviced<F>(run: &mut FileNativeSupervisedDriver, control: &mut Control,
-    poll_ms: u64, deadline: &Deadline, time: &mut F, intake: &mut Option<Intake>) -> Result<bool, String>
+    poll_ms: u64, deadline: &Deadline, time: &mut F, intake: &mut Option<Intake>,
+    operator: &mut Option<super::operator::Service>) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
     let due = run.next_review_deadline().ok_or("running native review has no original phase deadline")?;
     loop {
@@ -305,6 +322,7 @@ where F: FnMut() -> ElapsedTick {
             run.cancel(run.review().revision()).map_err(debug)?;
             return Ok(true);
         }
+        super::operator::checkpoint(operator);
         if ingress::observe(intake, run.supervisor_mut())? {
             run.cancel(run.review().revision()).map_err(debug)?;
             // Request cancellation is already recorded by its original gateway;

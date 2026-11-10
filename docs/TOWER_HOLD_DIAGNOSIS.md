@@ -141,8 +141,11 @@ that observer's closed verb set. The four live conditions remain Unknown.
 
 This route needs no numerical replay. Historical admission and completed-review
 explanation grants retain their original replay limits and may still return
-Unknown for learned histories. The ordinary authenticated command line service
-below retains its existing ordinary-owner profile.
+Unknown for learned histories. The [live learned operator](LIVE_LEARNED_OPERATOR.md)
+accepts the same explicit `hold_diagnosis` profile for a single learned release
+or a resident sequence. Its shared service retains one original diagnosis grant
+through handoffs, reconnects and terminal response grace. The ordinary endpoint
+below keeps its existing profile and behavior.
 
 ## Use the authenticated ordinary operator endpoint
 

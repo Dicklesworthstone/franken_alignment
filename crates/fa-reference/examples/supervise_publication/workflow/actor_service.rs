@@ -111,6 +111,13 @@ pub(crate) fn tower_policy_replay_command(
 }
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    // Learned services own their complete grammar, including a selected
+    // observational Tower endpoint. Ordinary option parsers cannot consume it.
+    match args.first().map(String::as_str) {
+        Some("serve-learned-generated") => return learned::sequence_command(args, credibility),
+        Some("create-learned-generated") => return learned::command(args, credibility),
+        _ => {}
+    }
     // The selected wire format owns its complete ordinary-service grammar.
     // No other profile can consume this option and silently run actor JSON.
     if args
@@ -118,13 +125,6 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         .any(|arg| matches!(arg.as_str(), "--tower-generation" | "--operator-profile"))
     {
         return tower::command(args, credibility);
-    }
-    // Learned services own their complete grammar. Ordinary precheck, topology
-    // and receipt parsers cannot strip or reject a selected learned operation.
-    match args.first().map(String::as_str) {
-        Some("serve-learned-generated") => return learned::sequence_command(args, credibility),
-        Some("create-learned-generated") => return learned::command(args, credibility),
-        _ => {}
     }
     let (args, precheck_path) = take_precheck_option(args)?;
     if args.iter().any(|arg| arg == "--topology-profile") { return topology::command(args, credibility); }

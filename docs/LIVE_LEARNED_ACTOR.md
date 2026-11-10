@@ -9,6 +9,11 @@ endpoint in addition to the separate human reviewer:
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE --actor-profile ACTOR_PROFILE
 ```
 
+Add `--operator-profile OPERATOR_PROFILE --tower-generation GENERATION` for
+[separately authenticated live Tower observation](LIVE_LEARNED_OPERATOR.md).
+The read-only endpoint follows this original owner through generation, review
+and publication while preserving source-derived actor intake and both keys.
+
 The same selection can accompany one existing live continuation choice:
 
 ```text

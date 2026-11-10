@@ -1,0 +1,8 @@
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+

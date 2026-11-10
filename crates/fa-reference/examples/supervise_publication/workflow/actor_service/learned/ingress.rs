@@ -135,9 +135,17 @@ impl Intake {
 
     /// New admission exists only here, AFTER original generation or explicit
     /// finish preparation. Every source read remains on the native scoped gate.
+    #[cfg(test)]
     pub(super) fn admit<F>(&mut self, driver: &mut FileSupervisedDriver, config: &mut Config,
         reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F)
         -> Result<bool, String>
+    where F: FnMut() -> ElapsedTick {
+        self.admit_serviced(driver, config, reviewer, control, deadline, time, &mut None)
+    }
+
+    pub(super) fn admit_serviced<F>(&mut self, driver: &mut FileSupervisedDriver, config: &mut Config,
+        reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+        operator: &mut Option<super::operator::Service>) -> Result<bool, String>
     where F: FnMut() -> ElapsedTick {
         let mut precheck = None;
         if let Some(selected) = self.precheck.take() {
@@ -145,12 +153,14 @@ impl Intake {
             // explicit Finish preparation. Stop wins before its source capture.
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+            super::operator::checkpoint(operator);
             precheck = Some(super::precheck::Service::start_learned(&selected.settings,
                 &self.profile, &selected.reviewer, config, driver, deadline, time, self.release)?);
         }
         let result = (|| loop {
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
+            super::operator::checkpoint(operator);
             if let Some(service) = &mut precheck { service.checkpoint(driver, time()); }
             self.accept()?;
             deadline.check(time())?;
@@ -226,6 +236,7 @@ impl Intake {
     /// Bounded final observation service inside the ORIGINAL lifetime, not a
     /// fresh admission or a peer-delivery acknowledgement. No failure resends an
     /// effect or erases the operator's original final response.
+    #[cfg(test)]
     pub(super) fn finish<F>(&mut self, supervisor: &mut Supervisor, deadline: &Deadline,
         time: &mut F) -> Result<(), String>
     where F: FnMut() -> ElapsedTick {
@@ -243,6 +254,42 @@ impl Intake {
         }
         self.session.revoke();
         Ok(())
+    }
+
+    /// Terminal grace keeps both original observation endpoints available.
+    /// Stop is checked first, including after an already acknowledged Stop; no
+    /// result can restart numerical work, review, admission or an effect.
+    pub(super) fn finish_serviced<F>(&mut self, driver: &mut FileSupervisedDriver,
+        reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+        operator: &mut Option<super::operator::Service>) -> Result<(), String>
+    where F: FnMut() -> ElapsedTick {
+        let started = Instant::now();
+        let window = Duration::from_millis(self.profile.reply_ms);
+        let mut failure = None;
+        while started.elapsed() < window && deadline.check(time()).is_ok() {
+            if let Err(error) = control.checkpoint(driver, reviewer, deadline, time) {
+                // The original one-use Stop service retains its first failed
+                // outcome. Keep reporting it without suppressing the actor's
+                // original terminal result, including ControllerUnavailable
+                // from a quarantined owner. This phase admits no new work.
+                failure.get_or_insert(error);
+            }
+            super::operator::checkpoint(operator);
+            if let Err(error) = self.observe_transport(driver.supervisor_mut()) {
+                failure = Some(match failure {
+                    Some(original) => format!("{original}; actor response transport: {error}"),
+                    None => error,
+                });
+                break;
+            }
+            let remaining = window.saturating_sub(started.elapsed());
+            let pause = self.profile.poll_ms.min(50)
+                .min(u64::try_from(remaining.as_millis()).unwrap_or(u64::MAX));
+            if pause == 0 { break; }
+            crate::workflow::pause(pause);
+        }
+        self.session.revoke();
+        failure.map_or(Ok(()), Err)
     }
 }
 impl Drop for Intake { fn drop(&mut self) { self.session.revoke(); } }

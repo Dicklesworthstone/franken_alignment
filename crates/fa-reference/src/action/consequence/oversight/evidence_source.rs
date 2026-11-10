@@ -400,6 +400,11 @@ impl FileEvidenceSource {
             },
         })
     }
+    /// The selected source pathname, for host-side resource collision checks.
+    /// Inspecting it performs no read and changes no source observation or floor.
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
     pub fn scope(&self) -> Scope {
         self.scope
     }

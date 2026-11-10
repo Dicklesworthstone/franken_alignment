@@ -1,0 +1,72 @@
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/workspace/scratch/cf969907cc0d/verification/live/crates/fa-reference)
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `actor_service::profile::Profile` is more private than the item `actor_service::serve_selected`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs:253:1
+    |
+253 | / pub(super) fn serve_selected<F>(config: Config, actor: &Profile, reviewer_profile: &PeerProfile,
+254 | |     publication: Option<&PublicationProfile>, open: bool, credibility: Option<&Path>,
+255 | |     topology: Option<super::continuation::creation::topology::Selection>, time: F)
+256 | |     -> Result<(), String>
+257 | | where F: FnMut() -> ElapsedTick {
+    | |_______________________________^ function `actor_service::serve_selected` is reachable at visibility `pub(in crate::workflow)`
+    |
+note: but type `actor_service::profile::Profile` is only usable at visibility `pub(in crate::workflow::actor_service)`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/profile.rs:16:1
+    |
+ 16 | pub(super) struct Profile {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `workflow::Deadline` is more private than the item `recover`
+   --> crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs:179:1
+    |
+179 | / pub(crate) fn recover<F>(
+180 | |     config: &Config,
+181 | |     profile: &SubmitProfile,
+182 | |     custody: &Custody,
+...   |
+189 | | where
+190 | |     F: FnMut() -> ElapsedTick,
+    | |______________________________^ function `recover` is reachable at visibility `pub(crate)`
+    |
+note: but type `workflow::Deadline` is only usable at visibility `pub(self)`
+   --> crates/fa-reference/examples/supervise_publication/workflow.rs:57:1
+    |
+ 57 | struct Deadline {
+    | ^^^^^^^^^^^^^^^
+
+warning: function `check_live` is never used
+  --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/prediction.rs:31:15
+   |
+31 | pub(super) fn check_live(
+   |               ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `fa-reference` (example "supervise_publication" test) generated 4 warnings
+error: could not compile `fa-reference` (example "supervise_publication" test); 4 warnings emitted
+
+Caused by:
+  process didn't exit successfully: `rustc --crate-name supervise_publication --edition=2024 crates/fa-reference/examples/supervise_publication.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --emit=dep-info,link -C embed-bitcode=no '--warn=clippy::all' '--allow=clippy::zombie_processes' '--allow=clippy::write_with_newline' '--allow=clippy::useless_vec' --forbid=unsafe_code '--allow=clippy::unnecessary_unwrap' '--allow=clippy::too_many_arguments' '--allow=clippy::sliced_string_as_bytes' '--allow=clippy::single_range_in_vec_init' '--allow=clippy::single_match' '--allow=clippy::result_large_err' '--allow=clippy::redundant_closure' '--allow=clippy::op_ref' '--allow=clippy::needless_bool' '--allow=clippy::module_inception' '--allow=clippy::map_clone' '--allow=clippy::manual_range_patterns' '--allow=clippy::manual_is_multiple_of' '--allow=clippy::manual_div_ceil' '--allow=clippy::manual_clamp' '--allow=clippy::large_enum_variant' '--allow=clippy::field_reassign_with_default' '--allow=clippy::duplicated_attributes' '--allow=clippy::duplicate_mod' '--allow=clippy::drop_non_drop' '--allow=clippy::derivable_impls' '--allow=clippy::collapsible_match' '--allow=clippy::collapsible_if' '--allow=clippy::clone_on_copy' '--allow=clippy::chunks_exact_to_as_chunks' '--allow=clippy::bool_assert_comparison' --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=0779d9f8b51c9f6f -C extra-filename=-51885360026d805f --out-dir /workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/51885360026d805f/out -C strip=debuginfo --extern fa_reference=/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/7d6845c4874144db/out/libfa_reference-7d6845c4874144db.rlib --extern fa_reference=/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/7d6845c4874144db/out/libfa_reference-7d6845c4874144db.rmeta -Zcodegen-backend=cranelift -Zunstable-options --jobs-frontend=1 --jobs-backend=1 --force-warn=unused_crate_dependencies` (signal: 9, SIGKILL: kill)
+exit_code: 101 elapsed_seconds: 56.42 maximum_rss_kib: 3414544

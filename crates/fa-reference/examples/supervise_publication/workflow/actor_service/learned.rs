@@ -16,6 +16,7 @@
 #[path = "learned/process.rs"] mod process;
 #[path = "learned/ingress.rs"] mod ingress;
 #[path = "learned/precheck.rs"] mod precheck;
+#[path = "learned/operator.rs"] mod operator;
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
@@ -59,7 +60,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]";
 
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
@@ -83,6 +84,10 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    // Operator selection owns the whole argv before an offline mode or another
+    // option parser can discard it and silently omit its endpoint.
+    let (args, operator_path) = operator::take_option(args)?;
+    let args = args.as_slice();
     // Preparation owns its complete fresh-only grammar before live option
     // extraction can discard an incompatible selection.
     if args.iter().any(|arg| arg == "--prepare-stream-checkpoint") {
@@ -197,11 +202,18 @@ where F: FnMut() -> ElapsedTick {
     topology::admit(&config, &mut loaded, topology_path.as_deref(),
         if live_continuation { topology::Mode::Live } else { topology::Mode::Create })?;
     loaded.checkpoint_on_generation = checkpoint_path.map(checkpoint_on_generation::Selection::read).transpose()?;
-    let result = match actor.as_ref() {
-        Some(actor) => run_with_actor_precheck(config, loaded, &peers, live_continuation,
-            finishing, after_message, credibility, Some(actor), precheck.as_ref(), time)?,
-        None => run_qualified(config, loaded, &peers, live_continuation,
-            finishing, after_message, credibility, time)?,
+    let operator = operator_path.map(|(path, generation)| operator::Selection::read(&path, generation))
+        .transpose()?;
+    let result = if let Some(operator) = operator.as_ref() {
+        run_with_actor_services(config, loaded, &peers, live_continuation, finishing,
+            after_message, credibility, actor.as_ref(), precheck.as_ref(), Some(operator), time)?
+    } else {
+        match actor.as_ref() {
+            Some(actor) => run_with_actor_precheck(config, loaded, &peers, live_continuation,
+                finishing, after_message, credibility, Some(actor), precheck.as_ref(), time)?,
+            None => run_qualified(config, loaded, &peers, live_continuation,
+                finishing, after_message, credibility, time)?,
+        }
     };
     emit(result, &mut std::io::stdout().lock())
 }
@@ -306,10 +318,19 @@ where F: FnMut() -> ElapsedTick {
         credibility, actor, None, time)
 }
 
-fn run_with_actor_precheck<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+fn run_with_actor_precheck<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
     finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
-    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>, mut time: F)
+    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>, time: F)
     -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_actor_services(config, loaded, peers, continuing, finishing, after_message,
+        credibility, actor, precheck, None, time)
+}
+
+fn run_with_actor_services<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
+    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>,
+    selected_operator: Option<&operator::Selection>, mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     if credibility.is_some() && !continuing {
         return Err(
@@ -319,6 +340,10 @@ where F: FnMut() -> ElapsedTick {
     peers.check_host(&config)?;
     if let Some(actor) = actor { ingress::check(&config, &loaded, peers, actor)?; }
     if let Some(settings) = precheck { precheck::check(settings, &config, actor, peers)?; }
+    if let Some(selected) = selected_operator {
+        selected.check(&config, &loaded, actor.ok_or("learned operator observation requires an actor profile")?,
+            peers, precheck)?;
+    }
     if let Some(selected) = loaded.checkpoint_on_generation {
         if finishing.is_some() { return Err("Finish cannot capture an active numerical checkpoint".into()); }
         selected.check(&config, &loaded)?;
@@ -364,13 +389,16 @@ where F: FnMut() -> ElapsedTick {
     }
     let mut driver = FileSupervisedDriver::new(supervisor);
     topology::attach(&mut driver, topology_source)?;
+    let mut operator = selected_operator.map(|selected| selected.start(
+        actor.expect("operator actor was validated before startup"), port.clone(), &driver, &deadline)).transpose()?;
     let mut wire = ActorWire::new(port);
     let RequestCycle { driver, response, failure, history, process } = execute_request(
         driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,
             prediction: &mut prediction, identity: &mut identity, credential: &mut credential,
-            intake: &mut intake, wire: &mut wire,
+            intake: &mut intake, wire: &mut wire, operator: &mut operator,
             finishing, message_continuation, credibility, stop_operation: loaded.request },
         &mut control, &mut deadline, &mut time);
+    if let Some(service) = &mut operator { service.retire(); }
     // The anchor exporter preserves incoming errors while still trying its own
     // output; retain source custody first so either output can survive the other.
     let failure = topology::retain(topology_output.as_ref(), &driver, failure);
@@ -446,6 +474,7 @@ struct RequestServices<'a> {
     credential: &'a mut credential::Session,
     intake: &'a mut Option<ingress::Intake>,
     wire: &'a mut ActorWire<FileLearnedTextStreamActorPort>,
+    operator: &'a mut Option<operator::Service>,
     finishing: Option<u64>,
     message_continuation: Option<MessageContinuation>,
     credibility: Option<&'a Path>,
@@ -467,10 +496,12 @@ fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
     loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
     deadline: &mut Deadline, time: &mut F) -> RequestCycle
 where F: FnMut() -> ElapsedTick {
-    let RequestServices { peers, reviewer, prediction, identity, credential, intake, wire, finishing,
+    let RequestServices { peers, reviewer, prediction, identity, credential, intake, wire, operator, finishing,
         message_continuation, credibility, stop_operation } = services;
     let mut publication = None;
     let prepared = (|| {
+        if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
+        operator::checkpoint(operator);
         // Bind only to this genuinely created/recovered owner. A resident run
         // retains this same permit; retries never reload secrets or renew it.
         credential.bind(loaded, &*driver.supervisor().host().map_err(debug)?)?;
@@ -498,14 +529,14 @@ where F: FnMut() -> ElapsedTick {
             }
             if !identity::prepare(&mut driver, config, loaded, identity,
                 (&mut *control, reviewer, deadline), time)? { return Ok(false); }
-            if !generate_with_checkpoint(&mut driver, reviewer, config, control,
-                deadline, time, (prediction.as_mut(), loaded.checkpoint_on_generation))? {
+            if !generate_with_checkpoint_serviced(&mut driver, reviewer, config, control,
+                deadline, time, (prediction.as_mut(), loaded.checkpoint_on_generation), operator)? {
                 return Ok(false);
             }
             LearnedTextRelease::Message
         };
         if let Some(intake) = intake.as_mut() {
-            if !intake.admit(&mut driver, config, reviewer, control, deadline, time)? {
+            if !intake.admit_serviced(&mut driver, config, reviewer, control, deadline, time, operator)? {
                 return Ok(false);
             }
             let accepted_deadline = intake.observe_original(&driver, wire, release, finishing)?;
@@ -523,6 +554,7 @@ where F: FnMut() -> ElapsedTick {
             else { return Ok(false); };
         if let Some(selected) = &loaded.publication {
             if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
+            operator::checkpoint(operator);
             deadline.check(time())?;
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             // Capture the independently selected ORIGINAL image against this
@@ -539,8 +571,8 @@ where F: FnMut() -> ElapsedTick {
         Err(error) => failure = Some(error),
         Ok(false) => {}
         Ok(true) => {
-            let reviewed = review::run_serviced_checked_with_credential(driver, config, loaded, reviewer,
-                control, deadline, time, intake, publication.as_ref(), credential.permit());
+            let reviewed = review::run_serviced_checked_with_operator(driver, config, loaded, reviewer,
+                control, deadline, time, intake, publication.as_ref(), credential.permit(), operator);
             driver = reviewed.driver;
             history = reviewed.history;
             process = reviewed.process;
@@ -551,8 +583,12 @@ where F: FnMut() -> ElapsedTick {
                         cancel_unspent(&mut driver, loaded.request)?;
                         return Ok(());
                     }
-                    let mut actor_ingress = |driver: &mut FileSupervisedDriver|
-                        ingress::observe(intake, driver.supervisor_mut());
+                    let mut actor_ingress = |driver: &mut FileSupervisedDriver| {
+                        // LiveControl checks the independent Stop owner before
+                        // it invokes either observational transport.
+                        operator::checkpoint(operator);
+                        ingress::observe(intake, driver.supervisor_mut())
+                    };
                     let mut live = LiveControl { stop: control.share(), ingress: &mut actor_ingress };
                     let approval = human_review(&mut driver, reviewer, config,
                         loaded.request, deadline, (Some(peers), &mut live), time)?;
@@ -609,7 +645,7 @@ where F: FnMut() -> ElapsedTick {
     // Receipt delivery cannot restart generation, review, reconciliation or an
     // effect. Preserve transport failure alongside the original actor outcome.
     if let Some(intake) = intake.as_mut() {
-        if let Err(error) = intake.finish(driver.supervisor_mut(), deadline, time) {
+        if let Err(error) = intake.finish_serviced(&mut driver, reviewer, control, deadline, time, operator) {
             let error = format!("learned actor response service failed: {error}; no effect retry was sent");
             failure = Some(match failure { Some(original) => format!("{original}; {error}"), None => error });
         }
@@ -642,13 +678,22 @@ where F: FnMut() -> ElapsedTick {
     generate_with_checkpoint(driver, reviewer, config, control, deadline, time, (prediction, None))
 }
 
+#[cfg(test)]
 fn generate_with_checkpoint<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
     config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
     selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>))
     -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
-    match drive_generation(driver, reviewer, config, control, deadline, time,
-        (selection.0, selection.1, GenerationGoal::Message))? {
+    generate_with_checkpoint_serviced(driver, reviewer, config, control, deadline, time, selection, &mut None)
+}
+
+fn generate_with_checkpoint_serviced<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
+    selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>),
+    operator: &mut Option<operator::Service>) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    match drive_generation_serviced(driver, reviewer, config, control, deadline, time,
+        (selection.0, selection.1, GenerationGoal::Message), operator)? {
         GenerationOutcome::Message => Ok(true),
         GenerationOutcome::Stopped => Ok(false),
         GenerationOutcome::CheckpointCaptured => Err("message generation ended at a maintenance checkpoint".into()),
@@ -664,6 +709,14 @@ fn drive_generation<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanRe
     selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>, GenerationGoal))
     -> Result<GenerationOutcome, String>
 where F: FnMut() -> ElapsedTick {
+    drive_generation_serviced(driver, reviewer, config, control, deadline, time, selection, &mut None)
+}
+
+fn drive_generation_serviced<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+    config: &mut Config, control: &mut Control, deadline: &Deadline, time: &mut F,
+    selection: (Option<&mut prediction::Session>, Option<checkpoint_on_generation::Selection>, GenerationGoal),
+    operator: &mut Option<operator::Service>) -> Result<GenerationOutcome, String>
+where F: FnMut() -> ElapsedTick {
     let (mut prediction, mut checkpoint, goal) = selection;
     if matches!(goal, GenerationGoal::Checkpoint) && checkpoint.is_none() {
         return Err("checkpoint preparation requires an explicit original boundary".into());
@@ -673,6 +726,7 @@ where F: FnMut() -> ElapsedTick {
     }
     prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
+    operator::checkpoint(operator);
     refresh(driver, config, deadline, time)?;
     {
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
@@ -693,6 +747,7 @@ where F: FnMut() -> ElapsedTick {
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
+        operator::checkpoint(operator);
         let current = driver.supervisor().host().map_err(debug)?
             .learned_generation_inspection().map_err(debug)?;
         if !current.numerical.status.is_active() {

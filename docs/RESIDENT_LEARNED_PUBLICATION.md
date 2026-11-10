@@ -7,6 +7,14 @@ same admitted numerical generation, forecast observer and topology source, and
 requires fresh actor ingress, native or process review and independent human
 approval for each release.
 
+An explicit `--operator-profile OPERATOR_PROFILE --tower-generation GENERATION`
+selection exposes the [original live owner through Tower](LIVE_LEARNED_OPERATOR.md).
+One authenticated service and its native disclosure custodians survive all
+message handoffs and reconnects; spent read and transport allowances are never
+renewed. Every scheduled actor/reviewer/Stop path and retained output is checked
+for collision before startup. Operator traffic cannot approve or advance a
+release, and independent Stop retains priority.
+
 This is scoped implementation toward FA-027 and plan sections 8.5, 8.7, 9.3,
 9.11, 11.2 and 16.4. Compilation and execution qualification remain pending.
 The full roadmap packet, including long-horizon and isolated-branch acceptance,

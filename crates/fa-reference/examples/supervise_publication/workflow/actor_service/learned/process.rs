@@ -141,15 +141,30 @@ where F: FnMut() -> ElapsedTick {
         deadline, time, intake, publication, None)
 }
 
-pub(super) fn run_serviced_checked_with_credential<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+pub(super) fn run_serviced_checked_with_credential<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
     reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
     intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
     credential: Option<&FileCredentialPermit>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
+    run_serviced_checked_with_operator(driver, config, loaded, reviewer, control,
+        deadline, time, intake, publication, credential, &mut None)
+}
+
+pub(super) fn run_serviced_checked_with_operator<F>(mut driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, publication: Option<&PreparedPublication<'_>>,
+    credential: Option<&FileCredentialPermit>, operator: &mut Option<super::operator::Service>) -> Reviewed
 where F: FnMut() -> ElapsedTick {
     if loaded.publication.is_some() != publication.is_some() {
         return Reviewed { driver, history: None, process: None, stop_requested: false,
             failure: Some("learned process review requires its original selected publication source".into()) };
     }
+    match control.checkpoint(&mut driver, reviewer, deadline, time) {
+        Ok(false) => {},
+        result => return Reviewed { driver, history: None, process: None,
+            stop_requested: matches!(result, Ok(true)), failure: result.err() },
+    }
+    super::operator::checkpoint(operator);
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
         result => return Reviewed { driver, history: None, process: None,
@@ -170,6 +185,7 @@ where F: FnMut() -> ElapsedTick {
                 if active(run.review().status()) { run.cancel(run.review().revision()).map_err(debug)?; }
                 break;
             }
+            super::operator::checkpoint(operator);
             if ingress::observe(intake, run.supervisor_mut())? {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;

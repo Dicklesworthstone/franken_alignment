@@ -134,7 +134,13 @@ fn operator_selection_owns_its_entire_grammar_before_configuration_reads() {
         .into_iter()
         .map(str::to_owned)
         .collect();
-        let expected = Arguments::parse(&args).err().unwrap();
+        let expected = if matches!(mode, "create-learned-generated" | "serve-learned-generated") {
+            // Learned services own their optional observation endpoint. The
+            // incomplete pair still refuses before touching any input path.
+            super::super::super::learned::command(&args, None).unwrap_err()
+        } else {
+            Arguments::parse(&args).err().unwrap()
+        };
         assert_eq!(
             super::super::super::command(&args, None).unwrap_err(),
             expected
