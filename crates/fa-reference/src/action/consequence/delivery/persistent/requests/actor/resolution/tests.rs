@@ -337,3 +337,4 @@ fn request_mapping_never_resolves_a_direct_attempt_or_unadmitted_request() {
 
 mod boundaries;
 mod numerical;
+mod numerical_budget;

@@ -1,8 +1,8 @@
 # Plan and reconcile an original publication outcome
 
 The native publication Tower connects `next` and `resolve` to a separately
-granted, bounded receipt-reconciliation operation on the original ordinary
-owner. An uncertain dispatch can have a real executed or nonexecuted receipt
+granted, bounded receipt-reconciliation operation on the original owner.
+Numerical histories additionally require an explicit cumulative replay allowance. An uncertain dispatch can have a real executed or nonexecuted receipt
 that its ledger has not yet accepted. This path lets an authorized operator
 request that original reconciliation without obtaining a publication key,
 resending a message or inventing a nonexecution result.
@@ -53,6 +53,49 @@ contract. The learned observer retains its existing read-only verb set and
 does not accept these new commands. No existing observation grant creates a
 resolution grant.
 
+## Reserve numerical history work explicitly
+
+The default `resolution_port` retains the ordinary-only work contract. To
+reconcile an original decoder, learned predictor or raw-frame predictor history,
+the trusted host must instead select:
+
+```rust
+let (resolution, custodian) =
+    supervisor.resolution_port_with_numerical_budget(32, 8, 4096, 8192)?;
+```
+
+The final parameter is a positive cumulative allowance bounded by
+`operations * max_replay_events`. It reserves original journal transitions under
+their retained native numerical limits. It is not measured scalar products,
+CPU time, memory, or a new live generation budget.
+
+A first numerical Resolve reserves the entire acknowledged history plus its
+single proposed Reconcile event: `journal_revision + 1`. The selected per-operation
+event ceiling must also contain that cut. The reservation is conservative even
+when the original owner's private replay continuation can avoid repeating part
+of the history. It is spent before entering the existing native reconciliation
+transaction and is not refunded by failure, cheaper cached replay or lost output.
+
+Next checks the original allowance without reserving it or invoking replay.
+An absent numerical grant produces `numerical_replay_unsupported`; an insufficient
+selected cumulative allowance produces `numerical_replay_limit`. A direct Resolve
+in the latter case returns Capacity before changing the operation cache,
+operation counter, journal or admission snapshot. An exact already-entered retry
+returns its original cached result without another numerical reservation.
+
+Every clone shares the same optional numerical counter, available through
+`custodian.remaining_numerical_replay_events()`. Ordinary histories do not spend
+it. Revocation, owner failure and the finite live-grant retry boundary remain
+unchanged.
+
+For a learned owner, the trusted host can explicitly select
+`PublicationTower::new_learned_reconciliation_operator(mount, learned_actor, limits)`
+and install that owner's independent resolution port. This constructor uses the
+existing private learned owner bridge and the restricted operator vocabulary.
+It grants no work by itself. The original `new_learned_observer` remains read-only,
+even if a resolution port is installed, and neither constructor exposes
+ordinary payload intake or publication keys.
+
 ## Ask for a concrete action
 
 Use the original external-request address, not a ledger attempt number.
@@ -81,8 +124,9 @@ Request generation zero is valid and remains distinct from journal revision,
 control sequence and Tower registration generation.
 
 A plan can offer reconciliation only for an actual Dispatching or Unknown
-request, with a ready original clock, supported ordinary history, unused
-operation identity and sufficient selected operation/replay allowance.
+request, with a ready original clock, unused operation identity and sufficient
+selected operation/replay allowance. Numerical histories additionally require
+the separate complete-cut reservation described above.
 Other recorded states and limits return no action with a typed block reason.
 This is coverage of one connected native operation, not proof that no other
 useful action exists.
@@ -252,6 +296,13 @@ next-to-resolve acknowledgment and exact retry, stale/missing-receipt outcomes,
 rejected actor submission, preserved one-use admission custody, strict response
 correlation and refusal before learned startup. The socket cases use actual
 Unix peer authentication and original native receipts.
+
+Six additional native and seven public learned regressions exercise actual generated
+Messages, original congress and independent human approval, executed and missing
+receipts, exact/short/default numerical allowances, shared retry custody and
+the unchanged observer boundary. A successful reconciliation advances only
+the original receipt transition; it does not generate another token, publish
+another message or sample new evidence.
 
 The changes receive independent source review. The workspace was unavailable during part of implementation;
 the restored environment has no RCH runner or Rust toolchain.

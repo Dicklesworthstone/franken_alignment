@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: reconcile original learned receipts under explicit numerical work custody
+
+The original native resolution grant can now explicitly select a cumulative
+numerical replay allowance for decoder and action-predictor histories. The
+default ordinary grant continues to refuse those histories, including raw-frame
+predictors covered by the preceding fix. Selected work reserves the complete
+acknowledged cut plus the new Reconcile event before entering the existing native
+transaction. Every original numerical transition keeps its immutable recipe
+limits; this is logical event accounting, not a measured CPU/product metric.
+
+Next checks that allowance without replay or reservation. A one-short allowance
+offers no action, and direct Resolve refuses before operation spending, cache
+entry, snapshot invalidation or journal change. Entered operations retain their
+reservation on failure; exact retries reuse the same live grant's historical
+result without another debit. Ordinary histories do not consume numerical work.
+
+A new explicit learned reconciliation Tower constructor uses the original
+private owner bridge and the restricted operator vocabulary. The original
+learned observer stays read-only even with a real resolution grant installed.
+Both routes retain original scope, role, purpose, custody and registration checks.
+No source read, new clock, publication, seal or learned generation is introduced.
+
+Six native and seven public regression sources cover actual numerical generation, real
+original congress and human approval, existing endpoint receipts, missing-receipt
+liabilities, complete-cut accounting and old observation boundaries. Independent
+source review accompanies this increment. Required compilation and execution
+remain unavailable because RCH and the Rust toolchain are absent. No full FA-138,
+production or Bead acceptance gate is closed.
+
+See [the explicit numerical reconciliation contract](docs/TOWER_RESOLUTION.md#reserve-numerical-history-work-explicitly).
+
 ## 2026-11-10: close raw-predictor replay in event-only receipt reconciliation
 
 Integration review of concurrent native Next/Resolve found that the original

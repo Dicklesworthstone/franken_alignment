@@ -224,6 +224,24 @@ impl PublicationTower {
         Ok(tower)
     }
 
+    /// Mount the ORIGINAL learned stream owner for explicitly granted receipt
+    /// reconciliation. This does not expose its private ordinary actor gateway:
+    /// the operator profile admits only the same closed observation vocabulary
+    /// and Next/Resolve, under their separate native grants and caller purpose.
+    ///
+    /// The constructor supplies no resolution authority or numerical work.
+    /// Learned history requires an independently retained numerical resolution
+    /// grant; the ordinary grant keeps its original refusal. Reconciliation
+    /// observes an already dispatched effect through its original endpoint. It
+    /// never generates, submits, publishes, seals or abandons an effect.
+    pub fn new_learned_reconciliation_operator(
+        mount: Address,
+        port: FileLearnedTextStreamActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        Self::new_reconciliation_operator(mount, port.into_tower_observation_port(), limits)
+    }
+
     pub fn mount_address(&self) -> &Address {
         &self.mount
     }

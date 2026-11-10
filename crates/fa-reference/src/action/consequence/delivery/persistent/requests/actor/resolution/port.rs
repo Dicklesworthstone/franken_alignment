@@ -19,13 +19,63 @@ impl FileActorSupervisor<FileOversight> {
         (FileSupervisorResolutionPort, FileSupervisorResolutionGrant),
         JournalError,
     > {
-        if queries == 0 || operations == 0 || max_replay_events == 0 {
+        self.resolution_port_with_limits(queries, operations, max_replay_events, None)
+    }
+
+    /// Permit original numerical-history reconciliation with a separate shared
+    /// cumulative reservation. This includes raw-frame action predictors even
+    /// when no decoder or learned K/V predictor is installed.
+    ///
+    /// Before each new native Resolve, reserve every event in the acknowledged
+    /// history plus its proposed Reconcile event. Warm replay may execute fewer
+    /// historical events, but never refunds this conservative reservation. Every
+    /// original transition still enforces its immutable recipe's numerical
+    /// limits; these are event reservations, not products, CPU, memory or time.
+    ///
+    /// Next only checks availability. Exact same-grant cached retries reserve
+    /// nothing further. A short reservation refuses before the operation key,
+    /// mutation allowance, admission snapshot or native replay is consumed.
+    /// Entered failures and unwinds retain their complete reservation. No caller
+    /// recipe, fresh clock, replacement source or publication key is accepted.
+    pub fn resolution_port_with_numerical_budget(
+        &self,
+        queries: usize,
+        operations: usize,
+        max_replay_events: usize,
+        numerical_replay_events: usize,
+    ) -> Result<
+        (FileSupervisorResolutionPort, FileSupervisorResolutionGrant),
+        JournalError,
+    > {
+        self.resolution_port_with_limits(
+            queries, operations, max_replay_events, Some(numerical_replay_events),
+        )
+    }
+
+    fn resolution_port_with_limits(
+        &self,
+        queries: usize,
+        operations: usize,
+        max_replay_events: usize,
+        numerical_replay_events: Option<usize>,
+    ) -> Result<
+        (FileSupervisorResolutionPort, FileSupervisorResolutionGrant),
+        JournalError,
+    > {
+        if queries == 0 || operations == 0 || max_replay_events == 0
+            || numerical_replay_events == Some(0)
+        {
             return Err(Error::InvalidInput.into());
         }
         if queries > MAX_RESOLUTION_QUERIES
             || operations > MAX_RESOLUTION_OPERATIONS
             || max_replay_events > MAX_RESOLUTION_REPLAY_EVENTS
         {
+            return Err(Error::Limit.into());
+        }
+        let possible_replay_events = operations.checked_mul(max_replay_events)
+            .ok_or(Error::Overflow)?;
+        if numerical_replay_events.is_some_and(|events| events > possible_replay_events) {
             return Err(Error::Limit.into());
         }
         let owner = self
@@ -39,6 +89,7 @@ impl FileActorSupervisor<FileOversight> {
             queries: Cell::new(queries),
             operations: Cell::new(operations),
             max_replay_events,
+            remaining_numerical_replay_events: numerical_replay_events.map(Cell::new),
             records: RefCell::new(BTreeMap::new()),
         });
         Ok((
@@ -157,6 +208,7 @@ impl FileSupervisorResolutionPort {
         if let Some(reason) = blocked(&owner.host, &grant, &before) {
             return Err(match reason {
                 FileResolutionBlockReason::ReplayLimit
+                | FileResolutionBlockReason::NumericalReplayLimit
                 | FileResolutionBlockReason::OperationLimit => FileResolutionError::Capacity,
                 FileResolutionBlockReason::ClockUnavailable => FileResolutionError::Unavailable,
                 FileResolutionBlockReason::NotDispatched
@@ -169,6 +221,17 @@ impl FileSupervisorResolutionPort {
                     FileResolutionError::IdempotencyConflict
                 }
             });
+        }
+        // A complete cut, including the proposed Reconcile, is reserved before
+        // the first native replay even if its private warm cache can do less.
+        // All prerequisite and exact-retry checks above are read-only.
+        if numerical(&owner.host) {
+            let events = replay_events(&before).ok_or(FileResolutionError::Capacity)?;
+            let allowance = grant.remaining_numerical_replay_events.as_ref()
+                .ok_or(FileResolutionError::Unsupported)?;
+            let remaining = allowance.get().checked_sub(events)
+                .ok_or(FileResolutionError::Capacity)?;
+            allowance.set(remaining);
         }
         grant.operations.set(grant.operations.get() - 1);
         records.insert(
@@ -271,20 +334,35 @@ fn blocked(host: &FileOversight, grant: &Grant, cut: &Cut) -> Option<FileResolut
     if !host.clock_ready() {
         return Some(ClockUnavailable);
     }
-    // Raw-frame predictors also execute their original kernels during the
-    // native transaction's historical replay; an event-only grant cannot admit it.
-    if host.decoder_required() || host.action_consistency_required() {
+    let numerical = numerical(host);
+    if numerical && grant.remaining_numerical_replay_events.is_none() {
         return Some(NumericalReplayUnsupported);
     }
-    if cut.basis.journal_revision.checked_add(1)
-        .is_none_or(|events| events > grant.max_replay_events as u64)
-    {
+    let Some(events) = replay_events(cut) else {
+        return Some(ReplayLimit);
+    };
+    if events > grant.max_replay_events {
         return Some(ReplayLimit);
     }
     if grant.operations.get() == 0 {
         return Some(OperationLimit);
     }
+    if numerical && grant.remaining_numerical_replay_events.as_ref()
+        .is_none_or(|allowance| allowance.get() < events)
+    {
+        return Some(NumericalReplayLimit);
+    }
     None
+}
+
+fn numerical(host: &FileOversight) -> bool {
+    // Raw-frame predictors also execute their original kernels during the
+    // native transaction's historical replay; an event-only grant cannot admit it.
+    host.decoder_required() || host.action_consistency_required()
+}
+
+fn replay_events(cut: &Cut) -> Option<usize> {
+    usize::try_from(cut.basis.journal_revision).ok()?.checked_add(1)
 }
 
 fn outcome_stage(outcome: Reconciliation) -> ActionState {

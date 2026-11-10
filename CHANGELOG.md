@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-10: grant bounded original numerical receipt reconciliation
+
+- Add an independently selected cumulative numerical allowance to native
+  reconciliation, reserving the complete original cut plus Reconcile before work.
+- Preserve the ordinary-only default, all raw-predictor refusals, finite shared
+  custody, exact retries and charged uncertainty on missing/expired receipts.
+- Add a restricted learned reconciliation Tower constructor while preserving
+  the existing observer's read-only contract and all publication boundaries.
+- Add six native and seven public learned regression sources with actual original
+  generation, review, human approval and endpoint receipts. Independent source
+  review is complete; compilation and runtime qualification remain outstanding.
+
 ## 2026-11-10: prevent ungranted raw-predictor work during receipt resolution
 
 - Include raw-frame action predictors in native Next/Resolve's numerical-history

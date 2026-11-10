@@ -1,7 +1,9 @@
 //! Finite original-owner plans and receipt reconciliation for existing requests.
 //! Next is a read; Resolve invokes only the native Reconcile transition. Neither
 //! can publish, resend, seal nonexecution, abandon uncertainty or mint a key.
-//! Numerical histories need another replay-work contract and are refused here.
+//! Numerical histories require an explicit cumulative original-event reservation.
+//! Each retained recipe keeps its own numerical limits; event units are not CPU,
+//! arithmetic-products, memory or elapsed-time estimates.
 
 mod port;
 use super::{FileHoldDiagnosisBasis, Knowledge, OwnerRef};
@@ -46,6 +48,7 @@ pub enum FileResolutionBlockReason {
     IrrecoverablyUnknown,
     ClockUnavailable,
     NumericalReplayUnsupported,
+    NumericalReplayLimit,
     ReplayLimit,
     OperationLimit,
     OperationAlreadyUsed,
@@ -197,6 +200,7 @@ struct Grant {
     queries: Cell<usize>,
     operations: Cell<usize>,
     max_replay_events: usize,
+    remaining_numerical_replay_events: Option<Cell<usize>>,
     records: RefCell<BTreeMap<u64, Record>>,
 }
 
@@ -227,6 +231,13 @@ impl FileSupervisorResolutionGrant {
         self.grant.max_replay_events
     }
 
+    /// Remaining reservations shared by every clone of this grant's port.
+    /// None means numerical reconstruction was not granted. These units cover
+    /// original journal transitions, not products, CPU time or model quality.
+    pub fn remaining_numerical_replay_events(&self) -> Option<usize> {
+        self.grant.remaining_numerical_replay_events.as_ref().map(Cell::get)
+    }
+
     pub fn revoke(self) {
         drop(self);
     }
@@ -238,6 +249,7 @@ impl fmt::Debug for FileSupervisorResolutionGrant {
             .field("remaining_queries", &self.remaining_queries())
             .field("remaining_operations", &self.remaining_operations())
             .field("max_replay_events", &self.max_replay_events())
+            .field("remaining_numerical_replay_events", &self.remaining_numerical_replay_events())
             .finish_non_exhaustive()
     }
 }

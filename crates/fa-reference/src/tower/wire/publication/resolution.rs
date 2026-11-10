@@ -238,6 +238,7 @@ fn block_reason(reason: FileResolutionBlockReason) -> &'static str {
         FileResolutionBlockReason::IrrecoverablyUnknown => "irrecoverably_unknown",
         FileResolutionBlockReason::ClockUnavailable => "clock_unavailable",
         FileResolutionBlockReason::NumericalReplayUnsupported => "numerical_replay_unsupported",
+        FileResolutionBlockReason::NumericalReplayLimit => "numerical_replay_limit",
         FileResolutionBlockReason::ReplayLimit => "replay_limit",
         FileResolutionBlockReason::OperationLimit => "operation_limit",
         FileResolutionBlockReason::OperationAlreadyUsed => "operation_already_used",
