@@ -7,6 +7,8 @@
 mod numerical;
 #[path = "support/file_oversight_actor.rs"]
 mod support;
+#[path = "tower_learned_observation/admission_explanation.rs"]
+mod admission_explanation;
 #[path = "tower_learned_observation/review_explanation.rs"]
 mod review_explanation;
 

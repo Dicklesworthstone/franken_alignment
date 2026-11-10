@@ -19,8 +19,8 @@ use std::rc::{Rc, Weak};
 
 pub const MAX_EXPLANATION_QUERIES: usize = 1024;
 /// A query replays at most this many retained original events. Operators may
-/// grant a smaller bound. Numerical decoder and action-predictor profiles
-/// require a separate numerical-work contract and are not replayed by this read.
+/// grant a smaller bound. Numerical decoder and action-predictor histories also
+/// require an explicitly selected cumulative numerical-transition allowance.
 pub const MAX_EXPLANATION_EVENTS: usize = MAX_JOURNAL_EVENTS;
 
 /// Two historical cuts of the same acknowledged owner. The admission policy
@@ -108,6 +108,7 @@ pub type FileExplanationResult = Result<FileExplanationObservation, ActorError>;
 struct Grant {
     remaining: Cell<usize>,
     max_replay_events: usize,
+    remaining_numerical_replay_events: Option<Cell<usize>>,
 }
 
 /// Noncopyable host custody for policy-and-witness disclosure. Dropping or
@@ -130,6 +131,15 @@ impl FileSupervisorExplanationGrant {
     pub fn max_replay_events(&self) -> usize {
         self.grant.max_replay_events
     }
+    /// Shared original-history transition reservations. None means numerical
+    /// reconstruction was not granted; Some(0) means the selected work was spent.
+    /// These units are not arithmetic products, CPU time, memory or wall time.
+    pub fn remaining_numerical_replay_events(&self) -> Option<usize> {
+        self.grant
+            .remaining_numerical_replay_events
+            .as_ref()
+            .map(Cell::get)
+    }
     pub fn revoke(self) {
         drop(self);
     }
@@ -140,6 +150,10 @@ impl fmt::Debug for FileSupervisorExplanationGrant {
         f.debug_struct("FileSupervisorExplanationGrant")
             .field("remaining_queries", &self.remaining_queries())
             .field("max_replay_events", &self.max_replay_events())
+            .field(
+                "remaining_numerical_replay_events",
+                &self.remaining_numerical_replay_events(),
+            )
             .finish_non_exhaustive()
     }
 }
@@ -194,6 +208,7 @@ impl FileActorSupervisor<FileOversight> {
 
     /// As `explanation_port`, with a smaller maximum original history per query.
     /// Exceeding this bound yields charged Unknown, never a prefix explanation.
+    /// Numerical replay remains disabled unless explicitly selected separately.
     pub fn explanation_port_with_budget(
         &self,
         queries: usize,
@@ -205,10 +220,65 @@ impl FileActorSupervisor<FileOversight> {
         ),
         JournalError,
     > {
-        if queries == 0 || max_replay_events == 0 {
+        self.explanation_port_with_limits(queries, max_replay_events, None)
+    }
+
+    /// Reconstruct ORIGINAL decoder and action-predictor admissions, including
+    /// exact policy denials, under a separate cumulative work allowance. Raw
+    /// frame predictors require this selection too; no caller recipe is accepted.
+    ///
+    /// One unit reserves one original journal transition. The entire acknowledged
+    /// cut, including nonnumerical events, is reserved before reconstruction.
+    /// Bootstrap, prediction, refinement and later events retain their original
+    /// immutable numerical limits. This is not an arithmetic-products, CPU,
+    /// memory or wall-clock bound.
+    ///
+    /// An insufficient allowance spends the entered query without replay. Once
+    /// admitted, reconstruction, attribution, unwind or output failure cannot
+    /// refund the complete reservation. Missing/unadmitted requests spend only
+    /// the query. Clones share both counters; other grants and live numerical
+    /// allowances are independent. Provisioning reads no source, clock or history.
+    pub fn explanation_port_with_numerical_budget(
+        &self,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: usize,
+    ) -> Result<
+        (
+            FileSupervisorExplanationPort,
+            FileSupervisorExplanationGrant,
+        ),
+        JournalError,
+    > {
+        self.explanation_port_with_limits(
+            queries,
+            max_replay_events,
+            Some(numerical_replay_events),
+        )
+    }
+
+    fn explanation_port_with_limits(
+        &self,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: Option<usize>,
+    ) -> Result<
+        (
+            FileSupervisorExplanationPort,
+            FileSupervisorExplanationGrant,
+        ),
+        JournalError,
+    > {
+        if queries == 0 || max_replay_events == 0 || numerical_replay_events == Some(0) {
             return Err(Error::InvalidInput.into());
         }
         if queries > MAX_EXPLANATION_QUERIES || max_replay_events > MAX_EXPLANATION_EVENTS {
+            return Err(Error::Limit.into());
+        }
+        let possible_replay_events = queries
+            .checked_mul(max_replay_events)
+            .ok_or(Error::Overflow)?;
+        if numerical_replay_events.is_some_and(|events| events > possible_replay_events) {
             return Err(Error::Limit.into());
         }
         let owner = self
@@ -221,6 +291,7 @@ impl FileActorSupervisor<FileOversight> {
         let grant = Rc::new(Grant {
             remaining: Cell::new(queries),
             max_replay_events,
+            remaining_numerical_replay_events: numerical_replay_events.map(Cell::new),
         });
         Ok((
             FileSupervisorExplanationPort {
@@ -246,9 +317,10 @@ impl FileSupervisorExplanationPort {
     /// event bound. The original investigation reconstructs historical inputs
     /// in memory; it does not read disk, refresh a source, sample time, consume
     /// the supervisor's one-use snapshot or run a counterfactual experiment.
-    /// Numerical decoder/action-predictor histories are Unknown because this
-    /// read grants no numerical-work allowance. Missing/unadmitted requests and
-    /// reconstruction failures are also Unknown, never proved absence.
+    /// Numerical decoder/action-predictor histories require a separately selected
+    /// cumulative allowance. The full acknowledged cut is reserved before the
+    /// original investigator executes any event. Missing/unadmitted requests and
+    /// reconstruction failures are Unknown, never proved absence.
     ///
     /// Every entered query spends once before lookup/replay, including unknown
     /// results and repeated requests through another clone. There is no refund
@@ -279,11 +351,14 @@ impl FileSupervisorExplanationPort {
             return Err(ActorError::Capacity);
         }
         grant.remaining.set(remaining - 1);
-        if owner.host.revision() > grant.max_replay_events as u64
+        let revision = owner.host.revision();
+        if revision > grant.max_replay_events as u64
             || owner.host.actor_explanation_scope() != self.scope
-            || owner.host.decoder_required()
-            || owner.host.action_consistency_required()
         {
+            return Ok(unknown());
+        }
+        let numerical = owner.host.decoder_required() || owner.host.action_consistency_required();
+        if numerical && grant.remaining_numerical_replay_events.is_none() {
             return Ok(unknown());
         }
         let Ok(status) = owner.host.request_status(request) else {
@@ -295,6 +370,23 @@ impl FileSupervisorExplanationPort {
         let Ok(scope) = InterventionScope::new(request, false, false, false, &[]) else {
             return Ok(unknown());
         };
+        if numerical {
+            // revision() is the exact retained event count. The same immutable
+            // owner borrow pins that cut through the original single-pass replay.
+            let Ok(events) = usize::try_from(revision) else {
+                return Ok(unknown());
+            };
+            let allowance = grant
+                .remaining_numerical_replay_events
+                .as_ref()
+                .expect("checked numerical explanation grant");
+            let Some(remaining) = allowance.get().checked_sub(events) else {
+                return Ok(unknown());
+            };
+            // This must precede investigator construction: its eager native
+            // replay can execute numerical kernels from the first Enable event.
+            allowance.set(remaining);
+        }
         let Ok(investigation) = owner.host.investigate_proposal(attempt, scope) else {
             return Ok(unknown());
         };

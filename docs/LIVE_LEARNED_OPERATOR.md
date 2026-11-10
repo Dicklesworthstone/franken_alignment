@@ -269,11 +269,13 @@ to derive release bytes from its original numerical owner.
 
 Explicit historical explanation and policy-comparison selections keep their
 native work contracts. Completed-review explanations require the separate
-numerical allowance above for decoder or action-predictor histories. Admission
-explanation has no numerical grant and remains charged Unknown for those
-histories. Repeated Unknown queries still spend their original query allowance.
-Refinement-specific reports and independent retained-history anchoring remain
-available through the existing learned audit command.
+numerical allowance above for decoder or action-predictor histories. The native
+admission port now has its own independently selected numerical allowance;
+the live operator's existing admission selection still uses the default
+event-only grant and returns charged Unknown for those histories. Repeated
+Unknown queries spend their original query allowance. Refinement-specific
+reports and independent retained-history anchoring remain available through the
+existing learned audit command.
 
 This integrates the registered situation and supervision capabilities toward
 FA-134/FA-136 and the learned publication workflow. Recorded-state `why-held`

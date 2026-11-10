@@ -450,11 +450,32 @@ coordinates, costs and affordances remain Unknown.
 
 A grant allows 1–1,024 shared queries and a maximum of 1–4,096 retained events
 per query. The complete history must fit; no prefix explanation is returned.
-Decoder and learned-consistency histories return Unknown because this grant
-contains no numerical-replay budget. Missing or unadmitted requests,
-unreconstructable histories and exceeded replay bounds also remain Unknown,
-never proved absence. Clones, reconnects and repeated operation/idempotency
-labels spend the same finite allowance; output refusal does not refund it.
+The existing constructors leave numerical replay unselected and return charged
+Unknown for decoder and action-predictor histories, including raw-frame
+predictors. The original supervisor can instead explicitly select
+`explanation_port_with_numerical_budget(queries, max_replay_events,
+numerical_replay_events)`. Its positive cumulative allowance must not exceed
+the checked product of the query count and per-query event ceiling.
+
+For a numerical admission, the port reserves the entire acknowledged event
+count before entering the original eager investigator. One unit reserves one
+original journal transition, including nonnumerical transitions; numerical
+events retain their original immutable recipe limits. This is not a CPU,
+arithmetic-product, memory or elapsed-time measurement. The same immutable owner
+borrow pins the cut, and replay uses retained bindings without reopening the
+journal or reading a live source. The resulting explanation includes genuine
+exact-policy denial even when no congress was opened.
+
+Missing or unadmitted requests, unreconstructable histories and exceeded replay
+bounds remain Unknown, never proved absence. Missing/unadmitted requests and
+insufficient event or numerical allowances spend the entered query without
+reserving or executing numerical replay. Once admitted, the complete reservation
+remains spent after replay, attribution, unwind or output failure. Plain
+histories do not consume a selected numerical allowance. Clones, reconnects and
+repeated operation/idempotency labels share the same finite counters; the
+custodian exposes `remaining_numerical_replay_events()` as None for unselected
+work and Some(0) for an exhausted selection. This allowance is independent of
+completed-review explanation, reconciliation and live numerical execution.
 
 Reads acquire no source or clock, consume no admission snapshot, write no
 journal event, run no counterfactual and issue no review or publication key.

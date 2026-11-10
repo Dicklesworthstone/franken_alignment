@@ -21,6 +21,18 @@ use crate::action::consequence::oversight::replay::ObservedReviewAnchor;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+// Unit tests measure actual private replay entry, not only unchanged live-owner
+// counters. A per-thread observation isolates independently executed fixtures.
+#[cfg(test)]
+std::thread_local! {
+    static PROPOSAL_EVENT_ATTEMPTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn proposal_replay_event_attempts() -> usize {
+    PROPOSAL_EVENT_ATTEMPTS.with(std::cell::Cell::get)
+}
+
 /// Data at TWO cuts. The initial Reviewing/Denied admission must not be confused
 /// with a later cancellation, authorization, dispatch or terminal outcome.
 /// The proposal includes the original policy and its actual compiled witnesses.
@@ -315,6 +327,8 @@ impl Selection {
                 _ => None,
             }
         } else { None };
+        #[cfg(test)]
+        PROPOSAL_EVENT_ATTEMPTS.with(|count| count.set(count.get() + 1));
         let transition = machine.apply(event)?;
         if let Some((request, snapshot)) = source {
             let attempt = match self.identity {

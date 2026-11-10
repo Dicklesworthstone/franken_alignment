@@ -78,11 +78,14 @@ committee's commitments and verdicts; it does not ask helpers for fresh judgment
 The sealed historical response and its current-eligibility Unknowns are unchanged.
 
 Raw-frame action predictors also perform numerical work. Completed-review reads
-now require this explicit selection for those histories as well. Admission
-explanations have no corresponding numerical grant and therefore return charged
-Unknown for all decoder or action-predictor histories, including the raw-only
-case previously missed by the learned-only guard. Plain histories retain their
-existing known explanations without spending a selected numerical allowance.
+require this explicit selection for those histories as well. Original admission
+explanations have their own independent
+`explanation_port_with_numerical_budget` selection, described in the
+[admission contract](TOWER_PUBLICATION.md#explain-the-original-exact-policy-admission).
+A completed-review grant never funds admission reconstruction, and the default
+admission constructors still return charged Unknown for decoder or
+action-predictor histories. Plain histories retain their existing known
+explanations without spending a selected numerical allowance.
 
 ## Explicit request
 

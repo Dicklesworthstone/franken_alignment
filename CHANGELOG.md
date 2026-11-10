@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-10: explain original numerical policy admissions
+
+- Add an independent cumulative numerical allowance to the original admission
+  explanation grant, reserving the complete cut before eager reconstruction.
+- Preserve real pre-congress policy denial, original bindings, shared custody,
+  default numerical Unknown and all independent publication approvals.
+- Add five native and three public regression functions and strengthen two
+  existing native checks with actual private replay-event counters.
+  Source review is complete; new-code execution remains unverified.
+
 ## 2026-11-10: serve budgeted learned receipt reconciliation
 
 - Admit explicit numerical resolution budgets in the ordinary/learned operator

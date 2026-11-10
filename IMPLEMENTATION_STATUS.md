@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: explain original numerical admissions with explicit work custody
+
+The original admission explanation port can now select a separate cumulative
+numerical replay allowance. It reconstructs actual decoder and action-predictor
+admission policy, selected witnesses and evaluation from retained original
+bindings, including exact-policy denial before any congress exists. Existing
+constructors preserve charged Unknown for numerical histories.
+
+The complete acknowledged event cut is reserved before the eager investigator
+executes its first transition. Query and numerical counters remain shared across
+clones; failures and output refusal do not refund admitted work. Missing or
+unadmitted requests and insufficient allowances execute no replay. The same
+immutable owner borrow pins the cut without acquiring a source, clock, disk
+fallback, admission snapshot or effect authority. The allowance counts original
+transitions under immutable numerical limits, not measured CPU or products.
+
+Five new native regression functions, two strengthened native checks and three
+new public learned regressions cover real generation, Reviewing and Denied
+admissions, default/short/exact budgets, private replay-event counts, equal
+request/attempt distinctions, advanced cuts, foreign canonical bytes and output
+refusal. A later original congress and independent human publication preserve
+the original historical admission.
+
+Source review and immutable upload verification are complete. The executor is
+unavailable: compilation, formatting, runtime tests, doctests and the full
+qualification gate have not run for this increment. These changes advance
+FA-137; they do not close its broader acceptance conditions or any bead.
+
 ## 2026-11-10: connect budgeted learned reconciliation to the authenticated operator
 
 The closed resolution profile now accepts an independent positive cumulative
