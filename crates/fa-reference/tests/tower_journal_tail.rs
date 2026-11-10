@@ -858,7 +858,7 @@ fn malformed_wire_inputs_and_retired_snapshot_arguments_never_spend_a_native_que
 }
 
 #[test]
-fn sealed_results_reject_relabelled_registration_and_output_limits_do_not_renew_work() {
+fn sealed_results_reject_relabelled_registration_correlation_and_output_limits_do_not_renew_work() {
     let f = completed_publication();
     let (mut facade, _port, grant) = install(f.actor, &f.supervisor, 2, 2);
     let original = capture(&mut facade, 0);
@@ -867,13 +867,17 @@ fn sealed_results_reject_relabelled_registration_and_output_limits_do_not_renew_
     };
     assert_eq!(linked.registration(), facade.mount_address());
     assert_eq!(linked.query_address(), &original.envelope.address);
+    assert_eq!(linked.query_operation_id(), original.envelope.operation_id);
+    assert_eq!(linked.query_idempotency_key(), None);
     check_wire(&original);
-    for mutation in 0..3 {
+    for mutation in 0..5 {
         let mut altered = original.clone();
         match mutation {
             0 => altered.envelope.address.generation = None,
             1 => altered.envelope.address.id.push('9'),
-            _ => altered.envelope.address.tenant = "2".to_owned(),
+            2 => altered.envelope.address.tenant = "2".to_owned(),
+            3 => altered.envelope.operation_id = "another-tail-query".to_owned(),
+            _ => altered.envelope.idempotency_key = Some("invented-read-label".to_owned()),
         }
         assert_eq!(altered.to_json(), Err(TowerEncodingError::InvalidKnowledge));
     }
@@ -883,4 +887,70 @@ fn sealed_results_reject_relabelled_registration_and_output_limits_do_not_renew_
     assert_eq!(grant.remaining_queries(), 1);
     check_wire(&continuation(&mut facade, cursor(&original)));
     assert_eq!(grant.remaining_queries(), 0);
+}
+
+#[test]
+fn labeled_tail_preserves_original_correlation_and_single_use_progress() {
+    let f = completed_publication();
+    let (mut facade, _port, grant) = install(f.actor, &f.supervisor, 3, 2);
+    let state = f.supervisor.host().unwrap().inspect();
+    let image = files(&f.root);
+    let mut request = capture_request(&facade, 0);
+    request.address.generation = None;
+    request.operation_id = "labeled-original-tail".to_owned();
+    request.idempotency_key = Some("read-correlation-only".to_owned());
+    let original = exchange(&mut facade, request.clone());
+    let PublicationResult::JournalTail(linked) = &original.result else {
+        panic!("tail result");
+    };
+    assert_eq!(linked.query_address(), &request.address);
+    assert_eq!(linked.query_operation_id(), request.operation_id);
+    assert_eq!(
+        linked.query_idempotency_key(),
+        request.idempotency_key.as_deref()
+    );
+    assert_eq!(original.envelope.operation_id, request.operation_id);
+    assert_eq!(original.envelope.idempotency_key, request.idempotency_key);
+    check_wire(&original);
+    let encoded = original.to_json().unwrap();
+    for mutation in 0..3 {
+        let mut altered = original.clone();
+        match mutation {
+            0 => altered.envelope.operation_id = "another-tail-query".to_owned(),
+            1 => altered.envelope.idempotency_key = None,
+            _ => altered.envelope.idempotency_key = Some("another-read-label".to_owned()),
+        }
+        assert_eq!(altered.to_json(), Err(TowerEncodingError::InvalidKnowledge));
+    }
+    assert_eq!(original.to_json().unwrap(), encoded);
+    assert_eq!(grant.remaining_queries(), 2);
+
+    // Encoding/refusing a public response cannot consume the retained native
+    // cursor. Its actual successful continuation still spends exactly one read.
+    let pending = cursor(&original);
+    let continued = continuation(&mut facade, pending);
+    assert_eq!(page(&continued).basis(), page(&original).basis());
+    assert_eq!(page(&continued).offset(), 2);
+    check_wire(&continued);
+    conflict(&continuation(&mut facade, pending));
+    assert_eq!(grant.remaining_queries(), 1);
+    assert_eq!(original.to_json().unwrap(), encoded);
+
+    // The seal also covers honest diagnostic observations, including a future
+    // revision's charged Unknown. It is not conditional on a Known payload.
+    let mut future = capture_request(&facade, u64::MAX);
+    future.operation_id = "labeled-unobserved-future".to_owned();
+    future.idempotency_key = Some("future-read-label".to_owned());
+    let future = exchange(&mut facade, future);
+    unknown(&future);
+    assert!(future.to_json().is_ok());
+    let mut altered = future.clone();
+    altered.envelope.operation_id = request.operation_id;
+    assert_eq!(altered.to_json(), Err(TowerEncodingError::InvalidKnowledge));
+    altered = future;
+    altered.envelope.idempotency_key = None;
+    assert_eq!(altered.to_json(), Err(TowerEncodingError::InvalidKnowledge));
+    assert_eq!(grant.remaining_queries(), 0);
+    assert_eq!(f.supervisor.host().unwrap().inspect(), state);
+    assert_eq!(files(&f.root), image);
 }

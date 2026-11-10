@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: seal original journal-tail request correlation
+
+Native journal-tail results now privately retain the originating operation ID
+and optional idempotency label. Encoding checks both alongside the original
+query address and registration, so editing a public response envelope cannot
+relabel historical metadata or an honest diagnostic as another read. The wire
+schema, native disclosure, pagination and charging contracts are unchanged.
+
+A positive labeled original capture and valid continuation are paired with
+operation/label tampering, consumed-cursor refusal and a charged future-revision
+Unknown. Existing address and output-bound regressions remain. Source review,
+installed dated rustfmt syntax processing and diff checks are complete; the
+required RCH executable remains unavailable, so no new compilation, runtime
+execution or qualification is claimed. Authenticated operator integration is
+being composed with the concurrently landed live admission-fence workflow.
+
 ## 2026-11-10: serve native admission fencing and original cleanup live
 
 The closed operator profile now accepts an independently selected `fence`

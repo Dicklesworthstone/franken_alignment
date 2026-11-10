@@ -64,7 +64,10 @@ The sixteen-field Tower envelope contains a `journal-tail` result with schema
 `fa.publication-journal-tail/1`. Its closed wrapper binds the original run
 registration and exact query address, marks the result `historical: true`,
 states `current_eligibility: "not_observed"`, and names the disclosure
-`redacted_journal_events`. Public envelope edits cannot relabel the native result.
+`redacted_journal_events`. The original operation ID and optional idempotency label are also sealed.
+Public envelope edits cannot relabel the native result, including an Unknown
+or error. An idempotency label correlates a read; it does not refund or replay
+spent native query work.
 
 A Known result carries the original scope, journal revision, control sequence
 and recorded elapsed observation in `FileSituationBasis`. Its origin is

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-10: seal original journal-tail request correlation
+
+- Bind native journal-tail observations to their original operation ID and optional
+  idempotency label as well as the original query address and registration.
+- Refuse public-envelope relabeling before encoding Known or diagnostic results;
+  preserve the wire schema and the original cursor and query accounting.
+- Add paired labeled-read, tampering, continuation and charged-Unknown regressions.
+  Source review and syntax checks do not constitute pending RCH qualification.
+
 ## 2026-11-10: carry admission fencing through authenticated live workflows
 
 - Add the independent closed fence profile and retained native custodian to

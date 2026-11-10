@@ -19,6 +19,8 @@ pub struct LinkedJournalTail {
     native: FileJournalTailResult,
     registration: Address,
     query_address: Address,
+    query_operation_id: String,
+    query_idempotency_key: Option<String>,
 }
 
 impl LinkedJournalTail {
@@ -32,6 +34,14 @@ impl LinkedJournalTail {
 
     pub fn query_address(&self) -> &Address {
         &self.query_address
+    }
+
+    pub fn query_operation_id(&self) -> &str {
+        &self.query_operation_id
+    }
+
+    pub fn query_idempotency_key(&self) -> Option<&str> {
+        self.query_idempotency_key.as_deref()
     }
 }
 
@@ -131,6 +141,8 @@ impl PublicationTower {
                 native,
                 registration: self.mount.clone(),
                 query_address: request.address.clone(),
+                query_operation_id: request.operation_id.clone(),
+                query_idempotency_key: request.idempotency_key.clone(),
             }),
             reason,
             true,

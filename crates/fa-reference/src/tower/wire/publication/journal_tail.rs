@@ -15,10 +15,14 @@ use crate::tower::publication::LinkedJournalTail;
 pub(super) fn encode(
     linked: &LinkedJournalTail,
     address: &Address,
+    operation_id: &str,
+    idempotency_key: Option<&str>,
     encoder: &Encoder,
 ) -> Result<String, TowerEncodingError> {
     let registration = linked.registration();
     if address != linked.query_address()
+        || operation_id != linked.query_operation_id()
+        || idempotency_key != linked.query_idempotency_key()
         || address.without_generation() != registration.without_generation()
         || registration.kind != Noun::Run
         || registration.generation.is_none_or(|value| value == 0)
