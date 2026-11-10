@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: close raw-predictor replay in event-only receipt reconciliation
+
+Integration review of concurrent native Next/Resolve found that the original
+Reconcile transaction can reconstruct retained raw ForecastRequest events via
+`replay_control_candidate` and `Machine::replay`. Raw-only owners have neither a
+decoder nor the learned replay cache, so a learned-only guard admitted numerical
+work under an ordinary event allowance.
+
+The guard now covers every original action predictor. Next reports
+NumericalReplayUnsupported and Resolve refuses before spending an operation,
+invalidating an admission snapshot or entering the native transaction. This
+preserves the existing explicit limitation; no numerical resolution grant or
+caller-controlled recipe/clock is introduced.
+
+A paired native regression creates original raw-predictor and plain owners,
+runs their real congress and independent human key through Dispatching, and also
+checks native AwaitingResolution/Unknown. Raw direct and cloned calls preserve
+journal, forecast, authority, snapshot and liability; plain calls retain working
+reconciliation, charged uncertainty and no-write exact retries. Independent
+source review accompanies the fix. Compilation and execution remain unclaimed
+while the executor is unavailable. Concurrent Next/Resolve functionality and
+all prior live numerical/resident-precheck changes are preserved.
+
 ## 2026-11-10: serve original next-to-resolve through the authenticated operator
 
 An explicitly selected `resolution` object now grants finite planning queries,

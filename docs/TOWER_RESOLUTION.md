@@ -28,7 +28,10 @@ The three bounds are independent: entered `next` reads, entered `resolve`
 operations and the maximum retained history including the new Reconcile event.
 The maximums are 1,024 queries, 128 operations and the existing native journal
 event ceiling. The selected event ceiling does not supply a numerical replay
-budget. Decoder and learned-consistency histories are refused before mutation.
+budget. Decoder and all action-predictor histories, including raw-frame
+predictors, are refused before mutation. The original reconciliation transaction
+can replay retained predictor events even when no decoder or learned-predictor
+cache exists, so an ordinary event ceiling cannot authorize that numerical work.
 
 Retain the noncopyable custodian. Every port clone shares the original counters
 and operation-result cache. Dropping or revoking the custodian withdraws all
@@ -234,6 +237,14 @@ nonexecution receipts, missing/expired receipt liabilities, full predecessor
 checks, query/operation limits, original-result retries, custodian and owner
 loss, snapshot invalidation, numerical history refusal, wire correlation and
 the restricted operator constructor.
+
+A further paired regression covers raw-predictor and plain owners in both
+Dispatching and Unknown states after real original congress and two-key dispatch.
+Raw histories report `NumericalReplayUnsupported` and refuse direct/cloned Resolve
+before operation spending or admission-snapshot invalidation. Journal, forecast,
+authority and existing liability remain unchanged. The plain controls still
+reconcile a missing receipt to charged Unknown and preserve exact retry custody.
+This regression is authored and source-reviewed, with new execution pending.
 
 Four service/profile, three authenticated-client and one learned-startup
 regression functions additionally cover the explicit optional selection, a real

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-10: prevent ungranted raw-predictor work during receipt resolution
+
+- Include raw-frame action predictors in native Next/Resolve's numerical-history
+  refusal before operation spending, snapshot invalidation or replay.
+- Add a paired actual two-key Dispatching/Unknown regression that preserves
+  ordinary reconciliation, charged uncertainty and exact retry custody.
+  New compiler/runtime qualification remains pending.
+
 ## 2026-11-10: serve authenticated original receipt reconciliation
 
 - Add a closed optional resolution profile with independent query, operation

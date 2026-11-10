@@ -271,7 +271,9 @@ fn blocked(host: &FileOversight, grant: &Grant, cut: &Cut) -> Option<FileResolut
     if !host.clock_ready() {
         return Some(ClockUnavailable);
     }
-    if host.decoder_required() || host.learned_action_consistency_required() {
+    // Raw-frame predictors also execute their original kernels during the
+    // native transaction's historical replay; an event-only grant cannot admit it.
+    if host.decoder_required() || host.action_consistency_required() {
         return Some(NumericalReplayUnsupported);
     }
     if cut.basis.journal_revision.checked_add(1)
