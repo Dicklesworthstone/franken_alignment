@@ -1,0 +1,45 @@
+Source: 01d208de plus D; native unit-test crate compile only, code generation disabled
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'rustc', '--locked', '--offline', '-p', 'fa-reference', '--lib', '--profile', 'test', '--', '-Zno-codegen']
+   Compiling fa-reference v0.2.0 (/tmp/fa_alignment_cf969907cc0d_next/crates/fa-reference)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: unused `FileAdmissionStoppedHistory` that must be used
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/tests/recovery/stopped/phases.rs:142:13
+    |
+142 |             open(&root, &p, &config).finish_admission_stop(stop).unwrap();
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: Admission stopped does not mean all external obligations drained.
+    = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+    |
+142 |             let _ = open(&root, &p, &config).finish_admission_stop(stop).unwrap();
+    |             +++++++
+
+warning: unused `FileAdmissionStoppedHistory` that must be used
+   --> crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/tests/recovery/stopped/phases.rs:169:20
+    |
+169 |         if drain { run.finish_admission_stop(stop).unwrap(); } else { drop(run); }
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: Admission stopped does not mean all external obligations drained.
+help: use `let _ = ...` to ignore the resulting value
+    |
+169 |         if drain { let _ = run.finish_admission_stop(stop).unwrap(); } else { drop(run); }
+    |                    +++++++
+
+warning: `fa-reference` (lib test) generated 3 warnings (run `cargo fix --lib -p fa-reference --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized] target(s) in 36.59s
+
+exit_code: 0 elapsed_seconds: 36.61 maximum_rss_kib: 2593760

@@ -23,10 +23,12 @@ use std::path::Path;
 mod hold_diagnosis;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
-#[path = "client/review_explanation.rs"]
-mod review_explanation;
+#[path = "client/refinement_explanation.rs"]
+mod refinement_explanation;
 #[path = "client/resolution.rs"]
 mod resolution;
+#[path = "client/review_explanation.rs"]
+mod review_explanation;
 #[path = "client/situation.rs"]
 mod situation;
 
@@ -427,6 +429,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("explanation"), Verb::Explain) if request.arguments == ReadArguments::None => {}
         (Some("review-explanation"), Verb::Explain) => {
             if !review_explanation::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("refinement-explanation"), Verb::Explain) => {
+            if !refinement_explanation::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());
             }
         }

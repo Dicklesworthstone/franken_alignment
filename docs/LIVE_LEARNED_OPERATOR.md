@@ -222,6 +222,16 @@ observes the original policy, committee verdicts, reducer application and later
 effect linkage. It supplies neither current eligibility nor the still-required
 independent human publication key.
 
+A completed evidence refinement uses the same round selector and grant. The
+endpoint returns `refinement-explanation` with its original congress and exact
+K/V group, the reviewed and refined input revisions, and application
+`not_attempted`. A later publication remains attributed to the separate fresh
+review and consumed human approval. The authenticated client validates these
+bindings and stops before output or another request if a response attributes
+dispatch to the refinement. Applied rounds retain their existing response kind;
+Unknown and refusals do not disclose an unobserved completion kind. See the
+[refinement response](TOWER_REVIEW_EXPLANATION.md#the-historical-refinement-response).
+
 ## Reconcile an original learned publication
 
 An uncertain learned Message may already have an original endpoint receipt
@@ -302,9 +312,10 @@ native work contracts. Completed-review explanations require the separate
 numerical allowance above for decoder or action-predictor histories. Admission
 explanation requires its independent top-level numerical selection above;
 omitting it retains the default charged Unknown. Repeated Unknown queries
-spend their original query allowance. Refinement-specific
-reports and independent retained-history anchoring remain available through the
-existing learned audit command.
+spend their original query allowance. Original completed refinements are also
+available through the live completed-review selector. Independent retained-history
+anchoring remains available through the existing learned audit command and is
+not supplied by a live acknowledged-owner observation.
 
 This integrates the registered situation and supervision capabilities toward
 FA-134/FA-136 and the learned publication workflow. Recorded-state `why-held`

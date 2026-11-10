@@ -1,0 +1,34 @@
+Source: 01d208de plus D; new refinement authority/disclosure compile-fail examples
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'test', '--locked', '--offline', '-p', 'fa-reference', '--doc', 'FileRefinementExplanation', '--', '--test-threads=1']
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+    Finished `test` profile [unoptimized] target(s) in 0.00s
+   Doc-tests fa_reference
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+
+running 3 tests
+test crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/review_explanation.rs - action::consequence::delivery::persistent::requests::actor::review_explanation::FileRefinementExplanation (line 226) - compile fail ... ok
+test crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/review_explanation.rs - action::consequence::delivery::persistent::requests::actor::review_explanation::FileRefinementExplanation (line 232) - compile fail ... ok
+test crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/review_explanation.rs - action::consequence::delivery::persistent::requests::actor::review_explanation::FileRefinementExplanation (line 237) - compile fail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 431 filtered out; finished in 0.16s
+
+all doctests ran in 0.42s; merged doctests compilation took 0.26s
+
+exit_code: 0 elapsed_seconds: 2.48 maximum_rss_kib: 521956

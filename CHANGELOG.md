@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-10: explain completed refinements through Tower and its client
+
+- Route the existing explicit round selector to original Applied/Refined
+  completion, preserving the existing Applied and unavailable result schemas.
+- Add a sealed refinement response with the exact original residual group,
+  input revisions, application not attempted and separate later effect lineage.
+- Validate the new completion through the authenticated client before emission
+  or later explicit work, retaining finite original grants and parser bounds.
+- Add three public and three client regressions around actual learned refinement,
+  subsequent independent publication, budgets, tampering and transport refusal.
+- Correct the shared fixture to request its original final audited K/V position.
+  Execute all 16 learned-observation tests, 12 existing review tests, two focused
+  operator/client tests and three compile-fail checks successfully. The full
+  operator harness builds; socket execution remains blocked by the environment.
+  The complete gate verifies source/admission/concordance, then stops at existing
+  playbook coverage gaps; no full qualification is claimed.
+
 ## 2026-11-10: expose completed native evidence refinements
 
 - Add the original port's explicit Applied/Refined completion selector while

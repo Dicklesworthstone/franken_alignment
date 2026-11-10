@@ -227,6 +227,12 @@ The original grant and spent work persist across reconnects, scheduled handoffs
 and terminal reply grace, including live learned and resident services.
 See [completed-review explanations](TOWER_REVIEW_EXPLANATION.md).
 
+The same round selector also serves original completed refinements with a
+distinct `refinement-explanation` response. It reports the original residual
+group and input revisions with application `not_attempted`; any later dispatch
+keeps its separate authorizing review. The existing client validates both
+completion kinds under the same bounded parser and independently selected grant.
+
 Selecting `policy_replay` requires `queries`, `cases`, `input_bytes` and the exact
 disclosure marker `"policy_and_case_traces"`. This separately grants disclosure
 of the previous and candidate policies, including their literal values, and the

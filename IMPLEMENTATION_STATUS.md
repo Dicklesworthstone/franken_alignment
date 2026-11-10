@@ -1,5 +1,67 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: carry completed refinements through Tower and the authenticated client
+
+The existing explicit-round Explain path now calls the native completion
+selector once. Original Known refinements receive a separately sealed result
+and `fa.publication-refinement-explanation/1`; Applied responses keep their
+existing schema and Unknown/Withheld/errors retain the review response. The
+same finite query and numerical grant funds the single complete original replay.
+The learned receipt-reconciliation constructor added concurrently is preserved.
+
+The new projection retains the original policy, congress, tally, decision,
+timing and three-cut basis. It names the exact K/V residual group and the
+reviewed/refined input revisions with application explicitly not attempted.
+Later dispatch must belong to a different original review over the refined or
+newer input; no later automatic or human authority is attributed to the selected
+refinement. Current eligibility, unobserved effects and global coordinates keep
+their existing Unknown semantics, and hidden inputs and salts remain undisclosed.
+
+The authenticated client validates the closed completion shape, native request
+and round correlation, disclosure flags, canonical group coordinates, increasing
+input revisions and separate dispatch lineage before output or another explicit
+request. It preserves the existing Applied validator and finite byte, parser,
+I/O and lifetime bounds. These are correlation checks, not a new reducer or
+independent authentication of helper judgments.
+
+Three public Tower regressions and three client regressions use the shared
+actual learned refinement and later two-key publication fixture. They cover
+original Known results, default/short/exact work, shared exhaustion, owner loss,
+sealed registration tampering, Applied compatibility, malformed metadata and
+transport termination before output or a later send. Independent source review
+and targeted formatting are complete.
+
+The runtime run exposed a fixture error before sidecar construction: the full
+learned generation audits its stop token and retains K/V position 3, whereas the
+shorter native fixture retains position 1. The shared public fixture now selects
+the actual retained group and asserts its original numerical position before
+starting the sidecar. Real residual acquisition and publication assertions are
+unchanged; wire expectations and the malformed-position mutation use that group.
+
+Executed with qualified nightly-2026-09-08 and serial Cranelift code generation:
+
+- All 16 `tower_learned_observation` tests pass, including original numerical
+  admission, native refinement and refinement wire before/after real publication.
+- All 12 existing `tower_review_explanation` tests pass, preserving Applied
+  responses, real refusal, output bounds, custody and sealed registration.
+- The new genuine-refinement client validation test and the independent
+  numerical-admission profile test pass.
+- All three new refinement authority/disclosure compile-fail examples pass.
+- The full operator example test harness compiles. The native unit-test crate
+  also type-checks with code generation disabled; its tests were not executed.
+
+The corrected learned service test reaches listener creation and is blocked by
+the environment's Operation not permitted error, as is the ordinary service
+socket test. Authenticated socket regressions are compiled but not qualified.
+The complete `cargo run --locked -p xtask -- check` attempt verifies all 2,416
+source files, both admitted metadata target inventories, registries and founding
+concordance, then stops at three pre-existing playbook coverage gaps for
+`compare-learned-prompt`, `serve-learned-generated` and `stop-fleet`. The relevant
+vocabulary, playbook and checker files are unchanged from the session base. The
+full gate does not reach formatting, Clippy or its complete test phase. Successful
+and failed attempts are retained under `artifacts/execution/2026-11-10-refinement-*`.
+No full qualification, production claim, FA-137 closure or bead closure is made.
+
 ## 2026-11-10: expose original completed refinements through the native read grant
 
 The existing completed-review port now exposes an explicit Applied/Refined

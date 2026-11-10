@@ -1,10 +1,12 @@
 //! Real operator-profile transport, with grants fixed by the original server.
-#[path = "operator/resolution.rs"]
-mod resolution;
 #[path = "operator/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "operator/policy_replay.rs"]
 mod policy_replay;
+#[path = "operator/refinement_explanation.rs"]
+mod refinement_explanation;
+#[path = "operator/resolution.rs"]
+mod resolution;
 #[path = "operator/review_explanation.rs"]
 mod review_explanation;
 

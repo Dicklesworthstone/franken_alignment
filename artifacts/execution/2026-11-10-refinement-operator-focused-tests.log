@@ -1,0 +1,36 @@
+Source: 01d208de plus D, corrected retained group and learned fixture root.
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/51885360026d805f/out/supervise_publication-51885360026d805f', 'genuine_refinement_requires_exact_input_lineage_and_observes_later_independent_publication', '--test-threads=1']
+
+running 1 test
+test workflow::actor_service::tower::client::tests::operator::refinement_explanation::genuine_refinement_requires_exact_input_lineage_and_observes_later_independent_publication ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1316 filtered out; finished in 0.10s
+
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/51885360026d805f/out/supervise_publication-51885360026d805f', 'numerical_admission_profile_requires_its_own_positive_cumulative_allowance', '--test-threads=1']
+
+running 1 test
+test workflow::actor_service::operator::tests::numerical_explanation::numerical_admission_profile_requires_its_own_positive_cumulative_allowance ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1316 filtered out; finished in 0.00s
+
+Command: ['/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/51885360026d805f/out/supervise_publication-51885360026d805f', 'real_learned_admission_and_exact_denial_are_explained_before_any_congress', '--test-threads=1']
+
+running 1 test
+test workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress ... FAILED
+
+failures:
+
+---- workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress stdout ----
+
+thread 'workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress' (11) panicked at crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/admission_explanation.rs:150:90:
+called `Result::unwrap()` on an `Err` value: "Os { code: 1, kind: PermissionDenied, message: \"Operation not permitted\" }"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    workflow::actor_service::learned::tests::operator_tests::admission_explanation::real_learned_admission_and_exact_denial_are_explained_before_any_congress
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1316 filtered out; finished in 0.05s
+
+
+exit_codes: [0, 0, 101] elapsed_seconds: 0.20

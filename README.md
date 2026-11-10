@@ -154,6 +154,14 @@ and action-predictor histories through live learned and resident services.
 Each numerical read reserves the complete acknowledged journal cut before
 replay; reconnects and release handoffs do not replenish that allowance.
 
+The same live selector now reports a completed evidence refinement through its
+distinct `refinement-explanation` result. It preserves the original congress,
+exact residual group and input revision change, with application explicitly
+`not_attempted`. A later publication keeps its actual fresh-review identity.
+The client checks that separation before output or another request; the existing
+Applied and Unknown responses remain compatible. See the
+[live refinement contract](docs/TOWER_REVIEW_EXPLANATION.md#the-historical-refinement-response).
+
 The offline learned [`--audit-review` command](docs/ANCHORED_REVIEW_AUDIT.md#refinement-reports-through-the-existing-operator-command)
 now also reports completed evidence-refinement rounds. Its distinct
 `fa.refinement-audit/1` result retains the original K/V residual group, reviewed

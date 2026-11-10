@@ -70,8 +70,10 @@ The refinement projection has no `application()` method, permit conversion,
 whole-archive accessor or payload/helper-input disclosure through Debug. A later
 Applied review and independent human approval keep their own effect lineage;
 they never make the selected refinement an authorizing review. The Tower round
-selector's wire contract below remains the application-only profile until the
-separate refinement response is installed.
+selector uses this completion method and returns the distinct refinement
+response below only for an original Known refinement. Unknown, Withheld and
+capacity results retain the existing review response because the completion
+kind has not been observed.
 
 ## Explicit numerical history allowance
 
@@ -138,7 +140,7 @@ overflowing values refuse. `arguments: null` retains the original admission
 explanation and its existing wire schema. An imported `ReferenceTower` refuses
 this native selector before spending its unrelated logical read allowance.
 
-## The historical response
+## The historical Applied response
 
 The unchanged sixteen-field envelope carries result kind `review-explanation`
 and schema `fa.publication-review-explanation/1`. The projection binds its
@@ -180,6 +182,57 @@ The original durable replay checks consistency under its existing host, clock,
 source and reference commitment assumptions. This projection is not an
 independent cryptographic verification, proof that helpers were honest, or proof
 that a chosen policy was sound. No returned data can mint a permit.
+
+## The historical refinement response
+
+The same explicit round selector can identify an original completed evidence
+refinement. Its unchanged sixteen-field envelope then carries result kind
+`refinement-explanation`, schema `fa.publication-refinement-explanation/1` and
+scope `historical_completed_refinement`. It remains a historical read under the
+same completed-review disclosure and numerical allowances; no new verb or
+operator authority is introduced.
+
+The sealed Known body preserves the original policy, evaluation, frozen
+congress, verdicts, tally, decision, timing, evidence root and effect audit. Its
+three native cuts refer to the pre-vote anchor, the completed refinement and the
+end of the acknowledged journal. The additional `refinement` member identifies
+the exact original residual acquisition. This is a body excerpt:
+
+```json
+{
+  "application": {"state": "not_attempted"},
+  "input_revision": "1",
+  "refinement": {
+    "kind": "kv_exact_residual",
+    "group": {"layer": "1", "side": "value", "position": "3", "head": "0"},
+    "reviewed_input_revision": "1",
+    "refined_input_revision": "2",
+    "requires_fresh_review": true
+  }
+}
+```
+
+All coordinates and revisions use canonical unsigned decimal strings. The
+common `input_revision` equals `reviewed_input_revision`; the refined revision
+must be greater. `application` is exactly `not_attempted`, rather than an
+invented refusal or successful application. The fresh-review requirement
+describes the selected refinement cut. A later review may already have approved
+the new input, so current eligibility and the current hold reason stay Unknown.
+
+Unobserved effects remain Unknown. If the acknowledged suffix includes a later
+dispatch, its `selected_review` flag is false: the automatic authorization must
+name a different original round and an input revision at least as new as the
+refinement. Consumed human approval and endpoint observations retain their own
+original lineage. Re-encoding or rebuilding outer response fields cannot move
+the sealed refinement to another request, scope or registration.
+
+The authenticated client accepts the new kind only for an explicit completed
+round selector. It checks the existing historical/disclosure flags and native
+basis, the closed refinement shape, exact `not_attempted` application, increasing
+input revisions, canonical group coordinates and independent dispatch lineage
+before output or another explicit request. The original Applied schema and
+Unknown/Withheld/error responses remain compatible. These checks do not rerun a
+reducer or independently authenticate the original congress.
 
 ## Use the authenticated operator endpoint
 
@@ -233,7 +286,7 @@ before output. A mismatched response stops before any later request or output;
 there is no automatic retry or reconnect. These are correlation and bounded
 shape checks, not independent verification of the congress decision.
 
-The selected completed-review reply has its own finite 262,144-item parser
+Both selected completed-review kinds have their own finite 262,144-item parser
 allowance within the original 1 MiB frame ceiling, depth, string and cumulative
 I/O/deadline limits. Ordinary admission explanation keeps its previous 4,096-item
 parser limit. A large policy/committee requires an explicitly sufficient server
@@ -248,7 +301,8 @@ does not truncate the roster, erase a dissent, retry replay or repay work.
 Cloned native results share one immutable original replay. Wire projection
 indexes the accepted member events once without recomputing the reducer.
 
-The public integration target is `tower_review_explanation`; native custody and
-storage-failure tests accompany the port. Exact executed validation and remaining
+The public integration targets are `tower_review_explanation` and
+`tower_learned_observation`; native custody and storage-failure tests accompany
+the port. Exact executed validation and remaining
 repository qualification are recorded in `IMPLEMENTATION_STATUS.md`. No Bead,
 full roadmap packet or production profile is closed by this increment.

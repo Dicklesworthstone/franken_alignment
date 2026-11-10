@@ -232,6 +232,12 @@ replace the offline audit's anchoring requirements. The application-only native
 selector remains compatible. See the
 [native completion contract](TOWER_REVIEW_EXPLANATION.md#native-completed-refinement-explanations).
 
+The authenticated Tower endpoint now carries this live result through the
+existing `explain` round selector as `fa.publication-refinement-explanation/1`.
+Its separate schema preserves application `not_attempted` and the actual
+authorizing round of any later dispatch. The offline anchored report below
+continues to use `fa.refinement-audit/1` and its independent anchor contract.
+
 ## Refinement reports through the existing operator command
 
 The same explicit `--audit-review ROUND HISTORY_ANCHOR` mode above now accepts

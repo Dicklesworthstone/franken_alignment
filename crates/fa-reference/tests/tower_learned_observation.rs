@@ -9,6 +9,8 @@ mod admission_explanation;
 mod numerical;
 #[path = "tower_learned_observation/refinement_explanation.rs"]
 mod refinement_explanation;
+#[path = "tower_learned_observation/refinement_wire.rs"]
+mod refinement_wire;
 #[path = "tower_learned_observation/review_explanation.rs"]
 mod review_explanation;
 #[path = "support/file_oversight_actor.rs"]

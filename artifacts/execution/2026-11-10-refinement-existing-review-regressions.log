@@ -1,0 +1,38 @@
+Source: 01d208de plus D; unchanged Applied profile and original review boundary regressions
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'test', '--locked', '--offline', '-p', 'fa-reference', '--test', 'tower_review_explanation', '--', '--test-threads=1']
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/tmp/fa_alignment_cf969907cc0d_next/crates/fa-reference)
+    Finished `test` profile [unoptimized] target(s) in 0.77s
+     Running tests/tower_review_explanation.rs (/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/e558dcb7c52087c2/out/tower_review_explanation-e558dcb7c52087c2)
+
+running 12 tests
+test boundaries::clone_aliases_and_repeated_labels_spend_one_shared_grant_and_revocation_withholds ... ok
+test boundaries::closed_round_grammar_and_exact_request_mount_refuse_before_native_spending ... ok
+test boundaries::exact_owner_installation_and_owner_loss_prevent_history_transfer ... ok
+test boundaries::missing_unfinished_and_another_requests_completed_round_are_charged_unknown ... ok
+test boundaries::operator_and_separate_review_grant_precede_disclosure_or_work ... ok
+test boundaries::whole_history_bound_yields_charged_unknown_and_nearby_grant_reads_the_real_review ... ok
+test completed_congress_and_actual_two_key_publication_keep_three_distinct_cuts ... ok
+test missing_and_abstaining_members_remain_distinct_original_reducer_inputs ... ok
+test replayable_continue_does_not_hide_an_original_stale_application ... ok
+test wire::complete_output_refusal_keeps_spent_work_and_larger_bound_returns_the_real_policy ... ok
+test wire::review_selector_never_falls_back_to_a_valid_imported_explanation_or_spends_its_budget ... ok
+test wire::sealed_known_unknown_withheld_and_exhausted_results_cannot_be_rebound ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+
+exit_code: 0 elapsed_seconds: 0.89 maximum_rss_kib: 227220

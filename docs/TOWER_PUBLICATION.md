@@ -94,8 +94,10 @@ The constructor does not expand any numerical-replay contract. Admission and
 completed-review explanation grants without numerical work allowances continue
 to return charged Unknown for learned histories. An operator must not interpret
 that response as a missing congress, a current hold explanation or permission.
-The existing separately budgeted offline learned audit remains the way to
-inspect those complete numerical histories.
+Explicit numerical grants now enable original admission and completed
+Applied/Refined congress explanations through the same live owner. The existing
+separately budgeted offline learned audit retains its independent history-anchor
+contract.
 
 All port clones and facades share their original finite grants. Revocation
 removes disclosure, owner loss makes reads unavailable, and the weak observer
@@ -392,8 +394,9 @@ remote compilation and runtime gate.
 
 A distinct `FileSupervisorExplanationPort` discloses the original policy and its
 actual admission trace. It is issued only by the original supervisor through
-`explanation_port(queries)` or `explanation_port_with_budget(queries,
-max_replay_events)`. Retain the noncloneable `FileSupervisorExplanationGrant`
+`explanation_port(queries)`, `explanation_port_with_budget(queries,
+max_replay_events)` or the explicit numerical selection described below.
+Retain the noncloneable `FileSupervisorExplanationGrant`
 custodian and install its weak port with `PublicationTower::set_explanation`.
 Existing actor, precheck and situation-inspection grants do not confer this
 stronger disclosure. Replacement withdraws the previous installation even when

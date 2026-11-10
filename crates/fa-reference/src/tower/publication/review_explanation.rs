@@ -5,7 +5,8 @@ use super::{
     ReadArguments, ReasonCode, TowerInstallError, TowerRequest,
 };
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileReviewExplanationResult, FileSupervisorReviewExplanationPort,
+    FileCompletedReviewExplanation, FileRefinementExplanationResult, FileReviewExplanationResult,
+    FileSupervisorReviewExplanationPort,
 };
 use crate::action::consequence::oversight::actor::ActorError;
 use crate::address_resolver::Address;
@@ -28,6 +29,27 @@ impl LinkedReviewExplanation {
         self.round
     }
     pub fn native(&self) -> &FileReviewExplanationResult {
+        &self.native
+    }
+}
+
+/// A completed refinement sealed to the same original request and round.
+/// Its retained judgment did not apply a consequence or supply publication keys.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LinkedRefinementExplanation {
+    registration: Address,
+    round: u64,
+    native: FileRefinementExplanationResult,
+}
+
+impl LinkedRefinementExplanation {
+    pub fn registration(&self) -> &Address {
+        &self.registration
+    }
+    pub fn round(&self) -> u64 {
+        self.round
+    }
+    pub fn native(&self) -> &FileRefinementExplanationResult {
         &self.native
     }
 }
@@ -66,7 +88,34 @@ impl PublicationTower {
         let Some(port) = &self.review_explanation else {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, true);
         };
-        let native = port.explain_review(key, round);
+        let native = match port.explain_review_completion(key, round) {
+            Ok(ActorKnowledge::Known {
+                value: FileCompletedReviewExplanation::Refined(value),
+                basis,
+            }) => {
+                let linked = LinkedRefinementExplanation {
+                    registration: request.address.clone(),
+                    round,
+                    native: Ok(ActorKnowledge::Known { value, basis }),
+                };
+                return self.bounded_response(self.response(
+                    &request,
+                    PublicationResult::RefinementExplanation(linked),
+                    None,
+                    true,
+                ));
+            }
+            Ok(ActorKnowledge::Known {
+                value: FileCompletedReviewExplanation::Applied(value),
+                basis,
+            }) => Ok(ActorKnowledge::Known { value, basis }),
+            Ok(ActorKnowledge::Unknown { reason }) => Ok(ActorKnowledge::Unknown { reason }),
+            Ok(ActorKnowledge::Withheld { authority_required }) => {
+                Ok(ActorKnowledge::Withheld { authority_required })
+            }
+            Err(error) => Err(error),
+            Ok(_) => return self.refusal(&request, ReasonCode::IntegrityFailure, true),
+        };
         let reason = review_reason(&native);
         let linked = LinkedReviewExplanation {
             registration: request.address.clone(),

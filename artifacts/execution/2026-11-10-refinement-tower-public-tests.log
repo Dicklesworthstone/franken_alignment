@@ -1,0 +1,79 @@
+Source: 01d208de plus formatted D facade/wire/client/public tests; learned reconciliation constructor preserved
+Command: ['/workspace/scratch/cf969907cc0d/verification/rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/cargo', 'test', '--locked', '--offline', '-p', 'fa-reference', '--test', 'tower_learned_observation', '--', '--test-threads=1']
+   Compiling fa-reference v0.2.0 (/tmp/fa_alignment_cf969907cc0d_next/crates/fa-reference)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+    Finished `test` profile [unoptimized] target(s) in 28.61s
+     Running tests/tower_learned_observation.rs (/tmp/fa_alignment_cf969907cc0d_next_target/debug/build/fa-reference/2b24d354d2b789c1/out/tower_learned_observation-2b24d354d2b789c1)
+
+running 16 tests
+test admission_explanation::learned_admission_and_actual_policy_denial_require_the_complete_explicit_cut ... ok
+test admission_explanation::learned_admission_output_loss_keeps_the_original_numerical_reservation_spent ... ok
+test admission_explanation::learned_admission_reads_preserve_original_intake_then_independent_two_key_publication ... ok
+test learned_hold_diagnosis_observes_original_message_without_advancing_or_approving_it ... ok
+test learned_observer_binds_read_grants_to_original_allocation_and_registration ... ok
+test learned_observer_follows_original_numerical_intake_and_two_key_publication ... ok
+test learned_observer_never_acquires_arbitrary_intake_even_with_broad_host_tags ... ok
+test learned_observers_share_original_read_work_and_revoke_without_retaining_owner ... ok
+test numerical_explanation_keeps_original_unknown_and_spent_work ... ok
+test refinement_explanation::original_learned_owner_exposes_refinement_and_attributes_later_actual_effect_to_fresh_review ... FAILED
+test refinement_explanation::public_refinement_disclosure_requires_numerical_consent_and_shared_custody ... FAILED
+test refinement_wire::original_refinement_wire_retains_judgment_and_attributes_publication_to_the_fresh_review ... FAILED
+test refinement_wire::refinement_wire_requires_operator_access_and_complete_shared_numerical_allowance ... FAILED
+test refinement_wire::sealed_refinement_and_unknown_results_cannot_be_rebound_to_another_registration ... FAILED
+test review_explanation::learned_review_default_and_one_short_stay_unknown_while_exact_cut_succeeds ... ok
+test review_explanation::numerical_allowance_explains_original_learned_congress_and_later_effect_without_owning_either ... ok
+
+failures:
+
+---- refinement_explanation::original_learned_owner_exposes_refinement_and_attributes_later_actual_effect_to_fresh_review stdout ----
+
+thread 'refinement_explanation::original_learned_owner_exposes_refinement_and_attributes_later_actual_effect_to_fresh_review' (92) panicked at crates/fa-reference/tests/tower_learned_observation/../support/learned_refinement_explanation.rs:153:10:
+called `Result::unwrap()` on an `Err` value: Contract(Missing)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- refinement_explanation::public_refinement_disclosure_requires_numerical_consent_and_shared_custody stdout ----
+
+thread 'refinement_explanation::public_refinement_disclosure_requires_numerical_consent_and_shared_custody' (93) panicked at crates/fa-reference/tests/tower_learned_observation/../support/learned_refinement_explanation.rs:153:10:
+called `Result::unwrap()` on an `Err` value: Contract(Missing)
+
+---- refinement_wire::original_refinement_wire_retains_judgment_and_attributes_publication_to_the_fresh_review stdout ----
+
+thread 'refinement_wire::original_refinement_wire_retains_judgment_and_attributes_publication_to_the_fresh_review' (94) panicked at crates/fa-reference/tests/tower_learned_observation/../support/learned_refinement_explanation.rs:153:10:
+called `Result::unwrap()` on an `Err` value: Contract(Missing)
+
+---- refinement_wire::refinement_wire_requires_operator_access_and_complete_shared_numerical_allowance stdout ----
+
+thread 'refinement_wire::refinement_wire_requires_operator_access_and_complete_shared_numerical_allowance' (95) panicked at crates/fa-reference/tests/tower_learned_observation/../support/learned_refinement_explanation.rs:153:10:
+called `Result::unwrap()` on an `Err` value: Contract(Missing)
+
+---- refinement_wire::sealed_refinement_and_unknown_results_cannot_be_rebound_to_another_registration stdout ----
+
+thread 'refinement_wire::sealed_refinement_and_unknown_results_cannot_be_rebound_to_another_registration' (96) panicked at crates/fa-reference/tests/tower_learned_observation/../support/learned_refinement_explanation.rs:153:10:
+called `Result::unwrap()` on an `Err` value: Contract(Missing)
+
+
+failures:
+    refinement_explanation::original_learned_owner_exposes_refinement_and_attributes_later_actual_effect_to_fresh_review
+    refinement_explanation::public_refinement_disclosure_requires_numerical_consent_and_shared_custody
+    refinement_wire::original_refinement_wire_retains_judgment_and_attributes_publication_to_the_fresh_review
+    refinement_wire::refinement_wire_requires_operator_access_and_complete_shared_numerical_allowance
+    refinement_wire::sealed_refinement_and_unknown_results_cannot_be_rebound_to_another_registration
+
+test result: FAILED. 11 passed; 5 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+error: test failed, to rerun pass `-p fa-reference --test tower_learned_observation`
+
+exit_code: 101 elapsed_seconds: 28.83 maximum_rss_kib: 1871488

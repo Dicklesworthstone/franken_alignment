@@ -3,18 +3,22 @@
 //! bound observation; it never evaluates policy or tallies votes a second time.
 
 mod effect;
+mod refinement;
+pub(super) use refinement::encode as encode_refinement;
 
 use super::policy_replay::{bounded_array, evaluation, target};
 use super::{Encoder, TowerEncodingError, object_json, quote};
 use crate::Error;
-use crate::action::Purpose;
+use crate::action::consequence::congress::CongressPolicy;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileReviewExplanation, FileReviewExplanationBasis,
 };
+use crate::action::consequence::gate::containment::session::transcript::CommitRecord;
 use crate::action::consequence::oversight::actor::{ActorError, Knowledge, UnknownReason};
-use crate::action::consequence::{Consequence, Restriction, Rule};
+use crate::action::consequence::{Consequence, Decision, Restriction, Rule};
+use crate::action::{ElapsedTick, Purpose};
 use crate::address_resolver::{Address, Noun};
-use crate::reducer::Outcome;
+use crate::reducer::{Outcome, Reduction};
 use crate::round::Verdict;
 use crate::tower::publication::LinkedReviewExplanation;
 use crate::tower::request::policy;
@@ -117,8 +121,22 @@ fn known(
             "evaluation",
             evaluation(value.evaluation(), value.policy(), encoder)?,
         ),
-        ("congress", congress(value, encoder)?),
-        ("decision", decision(value, encoder)?),
+        (
+            "congress",
+            congress(
+                CongressView {
+                    policy: value.congress(),
+                    tally: value.tally(),
+                    commits: value.commits(),
+                    commit_times: value.commit_times(),
+                    reveals: value.reveals(),
+                    missing: value.missing(),
+                    abstained: value.abstained(),
+                },
+                encoder,
+            )?,
+        ),
+        ("decision", decision(value.decision(), encoder)?),
         ("application", application(value)),
         ("effect", effect::encode(value.effect(), encoder)?),
         ("input_revision", number(value.input_revision())),
@@ -183,21 +201,31 @@ fn basis_json(basis: FileReviewExplanationBasis) -> String {
     ])
 }
 
-fn congress(
-    value: &FileReviewExplanation,
+struct CongressView<'a, R> {
+    policy: &'a CongressPolicy,
+    tally: &'a Reduction,
+    commits: &'a [CommitRecord],
+    commit_times: &'a [ElapsedTick],
+    reveals: R,
+    missing: &'a [String],
+    abstained: &'a [String],
+}
+
+fn congress<'a>(
+    value: CongressView<'a, impl Iterator<Item = (&'a str, Verdict, ElapsedTick)>>,
     encoder: &Encoder,
 ) -> Result<String, TowerEncodingError> {
-    let policy = value.congress();
-    let tally = value.tally();
+    let policy = value.policy;
+    let tally = value.tally;
     // Index original accepted events once; no per-member scan or re-reduction.
     let commits: BTreeMap<_, _> = value
-        .commits()
+        .commits
         .iter()
-        .zip(value.commit_times())
+        .zip(value.commit_times)
         .map(|(record, at)| (record.member.as_str(), *at))
         .collect();
     let reveals: BTreeMap<_, _> = value
-        .reveals()
+        .reveals
         .map(|(member, verdict, at)| (member, (verdict, at)))
         .collect();
     let members = bounded_array(
@@ -245,7 +273,7 @@ fn congress(
     encoder.bounded(object_json(&[
         ("generation", number(policy.generation)),
         ("member_count", number(policy.members.len())),
-        ("commit_count", number(value.commits().len())),
+        ("commit_count", number(value.commits.len())),
         ("reveal_count", number(reveals.len())),
         ("members", members),
         ("cohorts", cohorts),
@@ -281,23 +309,16 @@ fn congress(
         ),
         (
             "missing",
-            bounded_array(value.missing().iter().map(|name| Ok(quote(name))), encoder)?,
+            bounded_array(value.missing.iter().map(|name| Ok(quote(name))), encoder)?,
         ),
         (
             "abstained",
-            bounded_array(
-                value.abstained().iter().map(|name| Ok(quote(name))),
-                encoder,
-            )?,
+            bounded_array(value.abstained.iter().map(|name| Ok(quote(name))), encoder)?,
         ),
     ]))
 }
 
-fn decision(
-    value: &FileReviewExplanation,
-    encoder: &Encoder,
-) -> Result<String, TowerEncodingError> {
-    let decision = value.decision();
+fn decision(decision: &Decision, encoder: &Encoder) -> Result<String, TowerEncodingError> {
     let requires = decision.consequence.requires();
     encoder.bounded(object_json(&[
         ("consequence", quote(consequence(decision.consequence))),

@@ -8,8 +8,8 @@ mod explanation;
 mod hold_diagnosis;
 mod inspection;
 mod policy_replay;
-mod review_explanation;
 mod resolution;
+mod review_explanation;
 
 use super::{Encoder, KnowledgeKind, TowerEncodingError, object_json, quote};
 use crate::action::consequence::delivery::persistent::requests::actor::{
@@ -109,20 +109,30 @@ impl PublicationResponse {
             PublicationResult::ResolutionNext(linked) => (
                 "resolution-next",
                 resolution::encode_next(
-                    linked, &self.envelope.address, &self.envelope.operation_id,
-                    self.envelope.idempotency_key.as_deref(), &encoder,
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
                 )?,
             ),
             PublicationResult::Resolution(linked) => (
                 "resolution",
                 resolution::encode_resolution(
-                    linked, &self.envelope.address, &self.envelope.operation_id,
-                    self.envelope.idempotency_key.as_deref(), &encoder,
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
                 )?,
             ),
             PublicationResult::ReviewExplanation(native) => (
                 "review-explanation",
                 review_explanation::encode(native, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::RefinementExplanation(native) => (
+                "refinement-explanation",
+                review_explanation::encode_refinement(native, &self.envelope.address, &encoder)?,
             ),
             PublicationResult::PolicyReplay(native) => (
                 "policy-replay",

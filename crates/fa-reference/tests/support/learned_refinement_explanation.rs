@@ -42,7 +42,9 @@ pub fn group() -> KvGroup {
         row: KvRow {
             layer: 1,
             side: KvSide::Value,
-            position: 1,
+            // The original generator audits PP, O, K and END. Its retained
+            // sidecar source covers the latest accepted token, including END.
+            position: 3,
         },
         head: 0,
     }
@@ -127,11 +129,9 @@ pub fn prepared(root: &Directory) -> Prepared {
     let sidecar = {
         let mut host = supervisor.host_mut().unwrap();
         let attempt = support::attempt(&host, REQUEST);
-        let actor_revision = host
-            .learned_generation_inspection()
-            .unwrap()
-            .numerical
-            .actor_revision;
+        let numerical = host.learned_generation_inspection().unwrap().numerical;
+        assert_eq!(numerical.position, group().row.position + 1);
+        let actor_revision = numerical.actor_revision;
         let revision = host.revision();
         host.begin_learned_sidecar_plan(
             revision,

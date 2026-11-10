@@ -13,7 +13,7 @@ mod resolution;
 pub use resolution::{LinkedResolution, LinkedResolutionNext};
 mod explanation;
 mod review_explanation;
-pub use review_explanation::LinkedReviewExplanation;
+pub use review_explanation::{LinkedRefinementExplanation, LinkedReviewExplanation};
 mod inspection;
 pub use inspection::LinkedSituation;
 #[cfg(target_os = "linux")]
@@ -31,7 +31,8 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
     FileSupervisorExplanationPort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort, FileSupervisorReviewExplanationPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort,
+    FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -102,6 +103,7 @@ pub enum PublicationResult {
     ResolutionNext(LinkedResolutionNext),
     Resolution(LinkedResolution),
     ReviewExplanation(LinkedReviewExplanation),
+    RefinementExplanation(LinkedRefinementExplanation),
     PolicyReplay(LinkedPolicyReplay),
     PolicyReplayPage(LinkedPolicyReplayPage),
     Refused(Knowledge<()>),
@@ -340,8 +342,12 @@ impl PublicationTower {
             }
             if !matches!(
                 request.verb,
-                Verb::Situation | Verb::Explain | Verb::WhyHeld | Verb::Next
-                    | Verb::Resolve | Verb::PolicyReplay
+                Verb::Situation
+                    | Verb::Explain
+                    | Verb::WhyHeld
+                    | Verb::Next
+                    | Verb::Resolve
+                    | Verb::PolicyReplay
             ) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -358,8 +364,10 @@ impl PublicationTower {
             .address
             .generation
             .is_some_and(|g| Some(g) != self.mount.generation)
-            || (matches!(request.verb, Verb::Propose | Verb::PolicyReplay | Verb::Resolve)
-                && request.address.generation.is_none())
+            || (matches!(
+                request.verb,
+                Verb::Propose | Verb::PolicyReplay | Verb::Resolve
+            ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
             response.envelope.would_change_this = vec![self.mount.clone()];
