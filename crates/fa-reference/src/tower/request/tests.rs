@@ -95,6 +95,8 @@ fn fixed_request_vector_is_stable_and_all_registered_verbs_are_recognized() {
             Verb::Propose => value = proposed(),
             #[cfg(unix)]
             Verb::Resolve => value = resolution_request(),
+            #[cfg(unix)]
+            Verb::Fence => value = fence_request(),
             Verb::Precheck => {
                 value.arguments = ReadArguments::Precheck {
                     query: 1,
@@ -808,4 +810,61 @@ fn resolution_decoder_rejects_invented_clock_authority_and_inexact_identity_befo
     let mut mismatched = next;
     mismatched.idempotency_key = Some("2".to_owned());
     assert_eq!(encode_request(&mismatched), Err(TowerDecodingError::MalformedRequest));
+}
+
+#[cfg(unix)]
+const FENCE: &str = concat!(
+    "{\"schema_version\":\"fa.tower_request/1\",\"operation_id\":\"fence-5009\",",
+    "\"address\":\"fa://1/run/3@41\",\"verb\":\"fence\",",
+    "\"arguments\":{\"operation\":\"5009\",\"expected\":{",
+    "\"scope\":{\"tenant\":\"1\",\"principal\":\"2\",\"run\":\"3\",\"branch\":\"4\",\"authority\":\"5\",\"purpose\":\"effect\"},",
+    "\"journal_revision\":\"9\",\"control_sequence\":\"7\",\"authority_epoch\":\"0\"}},",
+    "\"idempotency_key\":\"5009\"}"
+);
+
+#[cfg(unix)]
+fn fence_request() -> TowerRequest {
+    decode_request(FENCE.as_bytes()).unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn native_fence_vector_preserves_full_width_identity_and_the_complete_predecessor() {
+    let request = fence_request();
+    assert_eq!(encode_request(&request).unwrap(), FENCE);
+    round_trip(&request);
+    let full = FENCE.replace("5009", "18446744073709551615")
+        .replace("\"journal_revision\":\"9\"", "\"journal_revision\":\"18446744073709551615\"");
+    let parsed = decode_request(full.as_bytes()).unwrap();
+    assert_eq!(encode_request(&parsed).unwrap(), full);
+    let ReadArguments::Fence { operation, expected } = parsed.arguments else { panic!("fence"); };
+    assert_eq!(operation, u64::MAX);
+    assert_eq!(expected.journal_revision, u64::MAX);
+    assert_eq!(expected.authority_epoch, 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn native_fence_requires_exact_scope_predecessor_key_and_canonical_numeric_syntax() {
+    for malformed in [
+        FENCE.replace("\"operation\":\"5009\"", "\"operation\":0"),
+        FENCE.replace("\"operation\":\"5009\"", "\"operation\":\"05009\""),
+        FENCE.replace("\"operation\":\"5009\"", "\"operation\":\"0\""),
+        FENCE.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":null"),
+        FENCE.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":\"5010\""),
+        FENCE.replace("fa://1/run/3@41", "fa://1/run/3"),
+        FENCE.replace("fa://1/run/3@41", "fa://1/run/4@41"),
+        FENCE.replace("fa://1/run/3@41", "fa://2/run/3@41"),
+        FENCE.replace("fa://1/run/3@41", "fa://1/attempt/3@41"),
+        FENCE.replace("\"principal\":\"2\"", "\"principal\":\"0\""),
+        FENCE.replace("\"purpose\":\"effect\"", "\"purpose\":\"experiment\""),
+        FENCE.replace("\"authority_epoch\":\"0\"", "\"authority_epoch\":\"00\""),
+        FENCE.replace("\"control_sequence\":\"7\"", "\"control_sequence\":\"7\",\"control_sequence\":\"7\""),
+        FENCE.replace("\"authority_epoch\":\"0\"", "\"authority_epoch\":\"0\",\"grant\":true"),
+    ] {
+        assert!(decode_request(malformed.as_bytes()).is_err(), "{malformed}");
+    }
+    let mut missing = fence_request();
+    missing.arguments = ReadArguments::None;
+    assert_eq!(encode_request(&missing), Err(TowerDecodingError::MalformedRequest));
 }

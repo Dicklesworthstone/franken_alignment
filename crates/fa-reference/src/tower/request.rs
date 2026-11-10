@@ -10,6 +10,8 @@ use std::fmt::{self, Write};
 pub(super) mod policy;
 #[cfg(unix)]
 pub(super) mod resolution;
+#[cfg(unix)]
+pub(super) mod fence;
 
 use super::{ReadArguments, TowerRequest, Verb, replay, validate_address};
 use crate::action::consequence::experiment::{Intervention, MAX_INTERVENTION_BYTES};
@@ -216,6 +218,14 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 expected: resolution::decode_basis(field(args, "expected")?)?,
             })
         }
+        #[cfg(unix)]
+        Verb::Fence => {
+            fields(args, &["operation", "expected"])?;
+            Ok(ReadArguments::Fence {
+                operation: decimal(args, "operation")?,
+                expected: fence::decode_basis(field(args, "expected")?)?,
+            })
+        }
         Verb::Replay => {
             fields(args, &["interventions"])?;
             let edits = field(args, "interventions")?
@@ -336,6 +346,19 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
+        #[cfg(unix)]
+        (Verb::Fence, ReadArguments::Fence { operation, expected }) => {
+            fence::validate_expected(*expected)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.address.tenant != expected.scope.tenant.to_string()
+                || request.address.id != expected.scope.run.to_string()
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
         (Verb::Precheck, ReadArguments::Precheck { query, proposal }) => {
             if *query == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
@@ -422,7 +445,7 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             return Err(TowerDecodingError::MalformedRequest);
         }
         #[cfg(unix)]
-        (Verb::Resolve, ReadArguments::None) => {
+        (Verb::Resolve | Verb::Fence, ReadArguments::None) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -662,6 +685,11 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         ReadArguments::Resolve { operation, expected } => object_json(&[
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::Fence { operation, expected } => object_json(&[
+            ("operation", quote(&operation.to_string())),
+            ("expected", fence::encode_basis(*expected)),
         ]),
         ReadArguments::Replay { interventions } => object_json(&[(
             "interventions",

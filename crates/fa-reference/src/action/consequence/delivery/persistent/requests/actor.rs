@@ -8,6 +8,11 @@ pub use explanation::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
 };
 mod host;
+mod stopping;
+pub use stopping::{
+    FileFenceBasis, FileFenceError, FileFenceObservation, FileFenceReceipt, FileFenceRequest,
+    FileFenceResult, FileSupervisorFenceGrant, FileSupervisorFencePort, MAX_FENCE_REPLAY_EVENTS,
+};
 mod resolution;
 pub use resolution::{
     FileResolutionBlockReason, FileResolutionError, FileResolutionObservation, FileResolutionPlan,

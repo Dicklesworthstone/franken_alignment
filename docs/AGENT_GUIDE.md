@@ -328,6 +328,14 @@ store nor registers a confirmatory protocol in an external ledger.
 2. `fa get <fence>` → the acknowledgment frontier: which domains fenced at which sequence, which are unacknowledged, which are under a partition lease and fence at expiry.
 3. Post-fence effects in unacknowledged domains appear in the reconciliation report; treat them as effects, not as hypotheticals.
 
+The bounded native Tower profile now connects a **single original owner's
+permanent admission stop** through `fence`, under its separately retained
+supervisor grant and exact predecessor. It raises that owner's original floor
+and preserves unresolved charges. It does not implement the full fleet sequence
+above, accept an arbitrary floor, acknowledge endpoint drain or establish actor
+termination. See [the native fence contract](TOWER_FENCE.md) and its explicit
+qualification boundary.
+
 ### P9. Handing off
 
 `fa handoff <run|incident>` → a `Handoff` with the situation report, open affordances, annotations, rehearsals and the control sequence it is current to. Write it before you stop, even mid-playbook; the next agent's first step is to read it.

@@ -197,6 +197,13 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
     },
+    /// Permanently stop admission in one original native domain. This carries
+    /// data only; an independently retained supervisor grant owns the mutation.
+    #[cfg(unix)]
+    Fence {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileFenceBasis,
+    },
     Replay {
         interventions: Vec<crate::action::consequence::experiment::Intervention>,
     },

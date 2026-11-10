@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: connect one original admission fence to Tower
+
+The original publication supervisor can now grant a single, separately revocable
+admission-fence operation. Its weak port binds the complete native scope,
+journal revision, control sequence and authority epoch before entering the
+existing durable Stop. Exact same-grant retries retain the original
+acknowledgment; stale predecessors preserve the operation and unused snapshot.
+Entered failures and numerical history retain their full work reservations.
+
+Tower `fence` connects this owner through strict typed/JSON requests and a sealed
+`fa.publication-fence/1` result. Explicit control mounts keep actor intake closed;
+legacy observer and reconciliation mounts retain their original vocabularies.
+Only undispatched reservations are refunded. Dispatched and unknown effects
+remain charged, endpoint drain is separate, and fleet/process termination stays
+Unknown. The profile is one permanent native admission stop, not the complete
+distributed fence playbook or an arbitrary-floor operation.
+
+The increment adds thirteen native and six public Tower regression functions,
+two strict request-codec tests and three compile-fail ownership examples.
+Independent source review corrected a public fixture whose payload exceeded
+its original declared units before it could reach the positive case.
+Two baseline library checks with qualified nightly were killed before compiler
+diagnostics; the workspace subsequently became unavailable. No new compilation,
+formatting, Clippy or runtime pass is claimed. Exact source inventory/binding
+refresh preserves admission checks; no dependency rule, target, compiler
+qualification, acceptance condition or bead status was weakened or closed.
+See [the original admission-fence contract](docs/TOWER_FENCE.md).
+
 ## 2026-11-10: carry completed refinements through Tower and the authenticated client
 
 The existing explicit-round Explain path now calls the native completion

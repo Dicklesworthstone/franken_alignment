@@ -5,6 +5,7 @@
 //! a global Tower generation, control sequence, or proof of effect admission.
 
 mod explanation;
+mod fence;
 mod hold_diagnosis;
 mod inspection;
 mod policy_replay;
@@ -119,6 +120,16 @@ impl PublicationResponse {
             PublicationResult::Resolution(linked) => (
                 "resolution",
                 resolution::encode_resolution(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::Fence(linked) => (
+                "fence",
+                fence::encode(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

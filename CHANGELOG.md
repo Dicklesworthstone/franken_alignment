@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-10: fence one original publication owner through Tower
+
+- Connect a separately retained one-operation grant to the original durable
+  admission Stop with exact predecessor, original-owner custody and exact retry.
+- Preserve charged unknown effects, terminal recovery reserve and independent
+  numerical work; return the original local acknowledgment without claiming
+  endpoint drain, actor termination or a fleet-wide fence.
+- Add restricted operator mounts, the bounded Fence request codec and sealed
+  native response; keep legacy observer/reconciliation surfaces unchanged.
+- Author thirteen native, six public Tower, two codec and three compile-fail
+  cases. Complete independent source review and correct an overlong positive
+  fixture payload. Compilation and runtime qualification remain blocked after
+  baseline SIGKILLs and loss of the execution workspace.
+
 ## 2026-11-10: explain completed refinements through Tower and its client
 
 - Route the existing explicit round selector to original Applied/Refined

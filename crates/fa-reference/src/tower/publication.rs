@@ -7,6 +7,8 @@
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+mod fence;
+pub use fence::LinkedFence;
 mod hold_diagnosis;
 pub use hold_diagnosis::LinkedHoldDiagnosis;
 mod resolution;
@@ -31,7 +33,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
     FileSupervisorExplanationPort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort, FileSupervisorFencePort,
     FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
@@ -47,7 +49,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 10] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 11] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
@@ -57,6 +59,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 10] = [
     Verb::WhyHeld,
     Verb::Next,
     Verb::Resolve,
+    Verb::Fence,
     Verb::PolicyReplay,
 ];
 
@@ -102,6 +105,7 @@ pub enum PublicationResult {
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
     Resolution(LinkedResolution),
+    Fence(LinkedFence),
     ReviewExplanation(LinkedReviewExplanation),
     RefinementExplanation(LinkedRefinementExplanation),
     PolicyReplay(LinkedPolicyReplay),
@@ -135,6 +139,9 @@ pub struct PublicationTower {
     learned_observer: bool,
     // Operator reconciliation grants never widen this service into actor intake.
     reconciliation_operator: bool,
+    // Explicit original-domain control mount; legacy observation and
+    // reconciliation constructors never gain the fence route implicitly.
+    control_operator: bool,
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
@@ -142,6 +149,7 @@ pub struct PublicationTower {
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
+    fence: Option<FileSupervisorFencePort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
@@ -175,6 +183,7 @@ impl PublicationTower {
             scope,
             learned_observer: false,
             reconciliation_operator: false,
+            control_operator: false,
             wire: ActorWire::new(port),
             precheck: None,
             inspection: None,
@@ -182,6 +191,7 @@ impl PublicationTower {
             explanation: None,
             hold_diagnosis: None,
             resolution: None,
+            fence: None,
             review_explanation: None,
             policy_replay: None,
             policy_replay_cursors: BTreeMap::new(),
@@ -242,6 +252,30 @@ impl PublicationTower {
         limits: PublicationLimits,
     ) -> Result<Self, TowerInstallError> {
         Self::new_reconciliation_operator(mount, port.into_tower_observation_port(), limits)
+    }
+
+    /// Mount one original owner for explicitly granted control operations.
+    /// Ordinary actor intake stays closed even when Permit is allowed. This
+    /// constructor supplies no fence or reconciliation grant of its own.
+    pub fn new_control_operator(
+        mount: Address,
+        port: FileActorPort<FileOversight>,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        let mut tower = Self::new_reconciliation_operator(mount, port, limits)?;
+        tower.control_operator = true;
+        Ok(tower)
+    }
+
+    /// The original learned owner with the same restricted operator surface.
+    /// A separate finite numerical grant is required to enter a learned fence;
+    /// neither this mount nor a caller's payload can drive generation.
+    pub fn new_learned_control_operator(
+        mount: Address,
+        port: FileLearnedTextStreamActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        Self::new_control_operator(mount, port.into_tower_observation_port(), limits)
     }
 
     pub fn mount_address(&self) -> &Address {
@@ -348,7 +382,7 @@ impl PublicationTower {
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) {
+            ) && !(self.control_operator && request.verb == Verb::Fence) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
         }
@@ -366,7 +400,7 @@ impl PublicationTower {
             .is_some_and(|g| Some(g) != self.mount.generation)
             || (matches!(
                 request.verb,
-                Verb::Propose | Verb::PolicyReplay | Verb::Resolve
+                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence
             ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -388,6 +422,10 @@ impl PublicationTower {
 
         if matches!(request.verb, Verb::Next | Verb::Resolve) {
             return self.dispatch_resolution(access, request);
+        }
+
+        if request.verb == Verb::Fence {
+            return self.dispatch_fence(access, request);
         }
 
         if request.verb == Verb::PolicyReplay {
