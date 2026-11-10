@@ -6,6 +6,7 @@ mod cursor;
 mod effect;
 mod learned;
 pub mod situation;
+pub mod tail;
 #[cfg(test)]
 pub(crate) use cursor::review_replay_event_attempts;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};

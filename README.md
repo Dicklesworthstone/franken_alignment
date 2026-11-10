@@ -29,6 +29,12 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The [native journal-tail capability](docs/TOWER_JOURNAL_TAIL.md) now connects
+the original live journal to privileged Tower reads. Separately retained finite
+grants expose redacted event metadata through coherent pages pinned to one
+acknowledged revision, including learned history, without replaying numerical
+work or changing authority. Runtime qualification remains pending.
+
 The [reference Tower dispatcher](docs/TOWER_REFERENCE.md) connects `get`,
 `related`, `tail`, `situation`, `explain`, `why-held`, `next` and `replay-plan` through one Rust
 API and the common sixteen-field response envelope. Complete typed evidence,

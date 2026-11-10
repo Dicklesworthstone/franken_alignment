@@ -7,11 +7,11 @@
 use std::collections::BTreeMap;
 use std::fmt::{self, Write};
 
+#[cfg(unix)]
+pub(super) mod fence;
 pub(super) mod policy;
 #[cfg(unix)]
 pub(super) mod resolution;
-#[cfg(unix)]
-pub(super) mod fence;
 
 use super::{ReadArguments, TowerRequest, Verb, replay, validate_address};
 use crate::action::consequence::experiment::{Intervention, MAX_INTERVENTION_BYTES};
@@ -165,6 +165,18 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             Ok(ReadArguments::Related { relation })
         }
         Verb::Tail => {
+            if args.contains_key("after_revision") {
+                fields(args, &["after_revision"])?;
+                return Ok(ReadArguments::JournalTail {
+                    after_revision: decimal(args, "after_revision")?,
+                });
+            }
+            if args.contains_key("cursor") {
+                fields(args, &["cursor"])?;
+                return Ok(ReadArguments::JournalTailPage {
+                    cursor: decimal(args, "cursor")?,
+                });
+            }
             fields(args, &["since_seq", "max_events"])?;
             Ok(ReadArguments::Tail {
                 since_seq: decimal(args, "since_seq")?,
@@ -331,27 +343,48 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         #[cfg(unix)]
         (Verb::Next, ReadArguments::ResolutionNext { operation }) => {
             if *operation == 0
-                || request.idempotency_key.as_ref().is_some_and(|key| key != &operation.to_string())
+                || request
+                    .idempotency_key
+                    .as_ref()
+                    .is_some_and(|key| key != &operation.to_string())
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
         #[cfg(unix)]
-        (Verb::Resolve, ReadArguments::Resolve { operation, expected }) => {
+        (
+            Verb::Resolve,
+            ReadArguments::Resolve {
+                operation,
+                expected,
+            },
+        ) => {
             resolution::validate_expected(*expected)?;
             if *operation == 0
                 || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
-                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
         #[cfg(unix)]
-        (Verb::Fence, ReadArguments::Fence { operation, expected }) => {
+        (
+            Verb::Fence,
+            ReadArguments::Fence {
+                operation,
+                expected,
+            },
+        ) => {
             fence::validate_expected(*expected)?;
             if *operation == 0
                 || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
-                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
                 || request.address.kind != crate::address_resolver::Noun::Run
                 || request.address.tenant != expected.scope.tenant.to_string()
                 || request.address.id != expected.scope.run.to_string()
@@ -436,6 +469,12 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             // than this existing maximum configurable page size.
             if *max_events == 0 || *max_events > 128 {
                 return Err(TowerDecodingError::Capacity);
+            }
+        }
+        (Verb::Tail, ReadArguments::JournalTail { .. }) => {}
+        (Verb::Tail, ReadArguments::JournalTailPage { cursor }) => {
+            if *cursor == 0 {
+                return Err(TowerDecodingError::MalformedRequest);
             }
         }
         (
@@ -661,6 +700,12 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("since_seq", quote(&since_seq.to_string())),
             ("max_events", quote(&max_events.to_string())),
         ]),
+        ReadArguments::JournalTail { after_revision } => {
+            object_json(&[("after_revision", quote(&after_revision.to_string()))])
+        }
+        ReadArguments::JournalTailPage { cursor } => {
+            object_json(&[("cursor", quote(&cursor.to_string()))])
+        }
         ReadArguments::SituationPage { cursor } => {
             object_json(&[("cursor", quote(&cursor.to_string()))])
         }
@@ -682,12 +727,18 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             object_json(&[("operation", quote(&operation.to_string()))])
         }
         #[cfg(unix)]
-        ReadArguments::Resolve { operation, expected } => object_json(&[
+        ReadArguments::Resolve {
+            operation,
+            expected,
+        } => object_json(&[
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
-        ReadArguments::Fence { operation, expected } => object_json(&[
+        ReadArguments::Fence {
+            operation,
+            expected,
+        } => object_json(&[
             ("operation", quote(&operation.to_string())),
             ("expected", fence::encode_basis(*expected)),
         ]),

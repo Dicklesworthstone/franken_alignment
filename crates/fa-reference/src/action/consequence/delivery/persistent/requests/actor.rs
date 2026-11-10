@@ -43,6 +43,13 @@ pub use inspection::{
     FileSupervisorInspectionGrant, FileSupervisorInspectionPort, MAX_INSPECTION_ATTEMPTS,
     MAX_INSPECTION_QUERIES,
 };
+mod journal_tail;
+pub use journal_tail::{
+    FileJournalEventKind, FileJournalTailCursor, FileJournalTailEvent, FileJournalTailObservation,
+    FileJournalTailPage, FileJournalTailResult, FileSupervisorJournalTailGrant,
+    FileSupervisorJournalTailPort, MAX_JOURNAL_TAIL_CAPTURE_EVENTS, MAX_JOURNAL_TAIL_PAGE_EVENTS,
+    MAX_JOURNAL_TAIL_QUERIES,
+};
 mod policy_replay;
 pub use policy_replay::{
     FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayCursor, FilePolicyReplayObservation,

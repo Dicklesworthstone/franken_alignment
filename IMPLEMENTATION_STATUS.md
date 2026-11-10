@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: enumerate the original live journal through native Tower tail
+
+The registered `tail` read now has an original-owner native capability and
+strict Tower request/response projection. A separately retained supervisor
+grant bounds both total queries and page size. It captures one acknowledged
+journal suffix as metadata, keeps its original cut across pages while the owner
+advances, and discloses only closed event labels and directly recorded
+request/attempt/round correlations. Ordinary and learned mounts can install the
+same original capability. The concurrently landed native Fence route is retained.
+
+Tail never clones or replays raw events, opens another owner, reads source
+bytes, samples a clock, consumes an admission snapshot, or changes authority.
+Opaque single-use continuations share one finite grant and cannot skip or
+restart history. Revocation, owner loss, storage failure, conflicting borrowing
+and host replacement invalidate retained progress. Exhausted or unavailable
+history is never represented as an observed complete empty suffix. Typed and
+wire results preserve original journal/control coordinates while keeping global
+Tower coordinates and current eligibility explicitly unobserved.
+
+Six native tests and thirteen public Tower tests were authored around actual
+publication, original learned decoding, retained Unknown liability, fixed-cut
+pagination, private-data exclusion, bounds, owner/grant custody, malformed
+requests, output failure and sealed response correlation. Independent source
+review and a direct syntax/format pass with installed rustfmt 1.12.0-nightly
+(ac8310ba64, 2026-11-09) completed. The required focused RCH test attempt exited
+127 because `rch` is absent; the qualified nightly is also unavailable. No
+compilation, runtime, Clippy, full gate, bead closure or new qualification is
+claimed. Source inventory is refreshed separately from execution evidence.
+
+See [the exact native tail contract](docs/TOWER_JOURNAL_TAIL.md). This scoped
+metadata read advances FA-135/FA-134 and the open Tower dispatcher bead; full
+cross-layer event schemas, source-frontier accounting and decision replay remain
+open. Authenticated service and command integration follow this native increment.
+
 ## 2026-11-10: connect one original admission fence to Tower
 
 The original publication supervisor can now grant a single, separately revocable

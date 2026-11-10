@@ -49,7 +49,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `explain` | `null` for the existing explanation; `{"round":"801"}` selects a separately granted original completed congress at a native request address |
 | `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
-| `tail` | `null` or `{"since_seq":"0","max_events":"64"}` |
+| `tail` | Snapshot: `null` or `{"since_seq":"0","max_events":"64"}`. Native: exactly `{"after_revision":"0"}` or `{"cursor":"17"}`, with a separately granted original journal disclosure |
 | `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: exactly `{"operation":"9001"}` with a separately granted operator capability |
 | `replay` | `null` or `{"interventions":[...]}`; requires a nonempty idempotency key |
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
@@ -61,7 +61,7 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
 `provenance`, `thought_graph_edge`, `support_set_member` and `annotation_target`.
-`tail` accepts 1 through 128 events at the syntax boundary; the host's actual
+Snapshot `tail` accepts 1 through 128 events at the syntax boundary; the host's actual
 page limit can be smaller. Omitted optional read arguments retain their original
 typed defaults. An unknown or retired verb is not silently treated as a read.
 

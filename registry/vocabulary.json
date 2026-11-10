@@ -158,7 +158,7 @@
       "idempotency": "n/a",
       "cost_class": "streaming",
       "response": "Stream<Event>",
-      "note": ""
+      "note": "Snapshot since_seq tail remains separate. Native original-owner metadata uses after_revision and single-use cursors, explicit finite supervisor disclosure, and sealed fa.publication-journal-tail/1; journal ordinals do not become global control sequences or effect receipts."
     },
     {
       "verb": "propose",

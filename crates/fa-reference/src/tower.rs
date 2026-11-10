@@ -165,6 +165,18 @@ pub enum ReadArguments {
         since_seq: u64,
         max_events: usize,
     },
+    /// Capture the original live publication journal after a native record
+    /// revision. A journal revision is not a global Tower control sequence.
+    /// The separately granted host capability fixes the page and query bounds.
+    JournalTail {
+        after_revision: u64,
+    },
+    /// Continue one original acknowledged journal capture. This process-local
+    /// scalar selects an issued native cursor; it cannot construct a cursor,
+    /// choose an offset, recapture history or grant disclosure authority.
+    JournalTailPage {
+        cursor: u64,
+    },
     /// Continue the original native inspection capture using its returned,
     /// session-scoped cursor. This is never an offset into a fresh situation.
     SituationPage {
@@ -630,6 +642,10 @@ impl ReferenceTower {
                 Verb::Situation,
                 ReadArguments::SituationPage { .. } | ReadArguments::SituationLinks { .. }
             ) | (Verb::Explain, ReadArguments::ReviewExplanation { .. })
+                | (
+                    Verb::Tail,
+                    ReadArguments::JournalTail { .. } | ReadArguments::JournalTailPage { .. }
+                )
         ) {
             // Native capture cursors and completed-review selectors cannot
             // read an imported snapshot or spend its unrelated read allowance.

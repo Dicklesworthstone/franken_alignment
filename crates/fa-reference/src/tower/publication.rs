@@ -18,6 +18,8 @@ mod review_explanation;
 pub use review_explanation::{LinkedRefinementExplanation, LinkedReviewExplanation};
 mod inspection;
 pub use inspection::LinkedSituation;
+mod journal_tail;
+pub use journal_tail::LinkedJournalTail;
 #[cfg(target_os = "linux")]
 pub mod peer;
 mod policy_replay;
@@ -31,9 +33,10 @@ use super::{
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
-    FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
-    FileSupervisorExplanationPort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort, FileSupervisorFencePort,
+    FileInspectionResult, FileJournalTailCursor, FileLearnedTextStreamActorPort,
+    FilePolicyReplayCursor, FileSupervisorExplanationPort, FileSupervisorFencePort,
+    FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
@@ -49,12 +52,13 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 11] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 12] = [
     Verb::Propose,
     Verb::Get,
     Verb::Precheck,
     Verb::Capabilities,
     Verb::Situation,
+    Verb::Tail,
     Verb::Explain,
     Verb::WhyHeld,
     Verb::Next,
@@ -101,6 +105,7 @@ pub enum PublicationResult {
     Capabilities(PrecheckCapabilitiesResponse),
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
+    JournalTail(LinkedJournalTail),
     Explanation(FileExplanationResult),
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
@@ -146,6 +151,8 @@ pub struct PublicationTower {
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
     inspection_cursor: Option<FileInspectionCursor>,
+    journal_tail: Option<FileSupervisorJournalTailPort>,
+    journal_tail_cursor: Option<FileJournalTailCursor>,
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
@@ -188,6 +195,8 @@ impl PublicationTower {
             precheck: None,
             inspection: None,
             inspection_cursor: None,
+            journal_tail: None,
+            journal_tail_cursor: None,
             explanation: None,
             hold_diagnosis: None,
             resolution: None,
@@ -365,7 +374,7 @@ impl PublicationTower {
             }
             if !matches!(
                 request.verb,
-                Verb::Situation | Verb::Explain | Verb::WhyHeld | Verb::PolicyReplay
+                Verb::Situation | Verb::Tail | Verb::Explain | Verb::WhyHeld | Verb::PolicyReplay
             ) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -377,12 +386,14 @@ impl PublicationTower {
             if !matches!(
                 request.verb,
                 Verb::Situation
+                    | Verb::Tail
                     | Verb::Explain
                     | Verb::WhyHeld
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) && !(self.control_operator && request.verb == Verb::Fence) {
+            ) && !(self.control_operator && request.verb == Verb::Fence)
+            {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
         }
@@ -410,6 +421,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Situation {
             return self.dispatch_situation(access, request);
+        }
+
+        if request.verb == Verb::Tail {
+            return self.dispatch_journal_tail(access, request);
         }
 
         if request.verb == Verb::Explain {

@@ -8,6 +8,7 @@ mod explanation;
 mod fence;
 mod hold_diagnosis;
 mod inspection;
+mod journal_tail;
 mod policy_replay;
 mod resolution;
 mod review_explanation;
@@ -98,6 +99,10 @@ impl PublicationResponse {
             PublicationResult::SituationLinks(linked) => (
                 "situation",
                 inspection::encode_linked(linked, &self.envelope.address, &encoder)?,
+            ),
+            PublicationResult::JournalTail(linked) => (
+                "journal-tail",
+                journal_tail::encode(linked, &self.envelope.address, &encoder)?,
             ),
             PublicationResult::Explanation(native) => (
                 "explanation",

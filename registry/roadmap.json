@@ -3449,7 +3449,11 @@
       "result_artifacts": [
         "crates/fa-reference/src/event_journal.rs",
         "crates/fa-reference/tests/event_journal_boundaries.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/journal_tail.rs",
+        "crates/fa-reference/src/tower/publication/journal_tail.rs",
+        "crates/fa-reference/tests/tower_journal_tail.rs",
+        "docs/TOWER_JOURNAL_TAIL.md"
       ],
       "founding_ideas": [
         "FI-A02",

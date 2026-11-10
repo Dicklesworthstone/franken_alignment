@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-10: read the original live journal through Tower tail
+
+- Add a separately revocable supervisor grant for bounded original journal
+  metadata, with shared query quotas and opaque single-use page continuations.
+- Keep one coherent historical cut across owner advancement; preserve private
+  payloads, pending admission snapshots, numerical state and charged Unknowns.
+- Connect native `tail` to ordinary and learned Tower mounts through explicit
+  journal-revision arguments and a sealed, closed response projection.
+- Preserve the concurrently landed native Fence implementation and existing
+  snapshot-tail semantics. Add six native and thirteen public regressions.
+- Complete independent source review and an installed-toolchain syntax/format
+  pass. Required RCH tests could not start (`rch` absent, exit 127); compilation,
+  runtime and full qualification remain unverified. Refresh source inventory.
+
 ## 2026-11-10: fence one original publication owner through Tower
 
 - Connect a separately retained one-operation grant to the original durable
