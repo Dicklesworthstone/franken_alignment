@@ -1,0 +1,95 @@
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/workspace/scratch/cf969907cc0d/verification/core/crates/fa-reference)
+    Finished `test` profile [unoptimized] target(s) in 31.89s
+     Running tests/tower_inspection.rs (/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/39f9dc787ab090f4/out/tower_inspection-39f9dc787ab090f4)
+
+running 24 tests
+test borrow_fault_owner_loss_and_reopen_never_fall_back_to_a_cached_or_disk_situation ... ok
+test grants_bound_repeated_reads_and_clones_and_revocation_cannot_be_reconnected_away ... ok
+test canonical_encoding_preserves_native_basis_and_refuses_reconstructed_provenance ... ok
+test foreign_owner_replacement_withdraws_previous_inspection_without_spending_either_grant ... ok
+test links::malformed_or_unprivileged_link_requests_do_not_spend_native_inspection ... ok
+test links::generationless_queries_keep_sealed_registered_links_and_reject_envelope_rebinding ... ok
+test links::decoded_request_link_reaches_original_explanation_only_with_separate_custody ... ok
+test links::explicit_links_preserve_legacy_bytes_and_pair_original_keys_with_nullable_addresses ... ok
+test bounded_first_page_retains_full_cut_counts_and_never_claims_full_enumeration ... ok
+test operator_identity_mount_and_argument_checks_precede_native_inspection_spending ... ok
+test native_unknown_and_abandonment_remain_charged_unresolved_liabilities ... ok
+test links::linked_continuations_keep_original_mapping_after_owner_advance_and_reject_foreign_cursors ... ok
+test original_live_situations_follow_real_review_and_publication_without_consuming_admission ... ok
+test pagination::borrowed_and_faulted_owners_invalidate_retained_pages_without_spending_more_work ... ok
+test pagination::empty_and_exactly_full_pages_are_complete_without_a_continuation ... ok
+test pagination::malformed_stale_and_unissued_scalars_preserve_the_original_pending_page ... ok
+test pagination::final_query_reports_incomplete_enumeration_without_an_unusable_cursor_or_budget_renewal ... ok
+test pagination::owner_loss_and_reopening_do_not_revive_old_continuations ... ok
+test links::linked_output_bound_refuses_atomically_without_refunding_or_renewing_original_pages ... ok
+test pagination::revoked_or_dropped_custody_withholds_a_previously_issued_continuation ... ok
+test pagination::facade_and_grant_replacements_cannot_rebind_an_observed_scalar_to_another_capture ... ok
+test pagination::native_clone_progress_spends_the_same_allowance_and_invalidates_the_facade_cursor ... ok
+test pagination::new_captures_and_successful_pages_retire_old_cursors_without_retiring_the_current_one ... ok
+test pagination::byte_continuations_enumerate_one_original_cut_while_the_live_owner_changes ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+
+     Running tests/tower_publication.rs (/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/0d3f3a0fbdcc9c19/out/tower_publication-0d3f3a0fbdcc9c19)
+
+running 11 tests
+test mount_is_bound_to_native_identity_and_bounded_registration_before_any_request ... ok
+test native_not_admitted_is_a_retained_terminal_observation_not_a_permit ... ok
+test actor_grants_are_checked_again_on_retries_and_reads_need_no_permit_purpose ... ok
+test full_width_identity_and_original_exact_binding_survive_session_reconnection ... ok
+test borrowed_or_dropped_original_owner_remains_unavailable_without_stale_cached_success ... ok
+test failed_native_durable_replacement_never_creates_a_speculative_request_ticket ... ok
+test request_admission_rejects_wrong_keys_generations_and_shapes_before_consuming_snapshot ... ok
+test complete_common_envelope_preserves_native_knowledge_without_private_review_data ... ok
+test recovering_an_unexecuted_request_cannot_restore_the_original_publication_keys ... ok
+test exact_durable_retry_after_reopen_recovers_only_the_current_sessions_ticket ... ok
+test real_review_and_both_keys_publish_while_every_poll_observes_current_native_state ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/tower_review_explanation.rs (/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/ca8075d214c30766/out/tower_review_explanation-ca8075d214c30766)
+
+running 12 tests
+test boundaries::clone_aliases_and_repeated_labels_spend_one_shared_grant_and_revocation_withholds ... ok
+test missing_and_abstaining_members_remain_distinct_original_reducer_inputs ... ok
+test wire::review_selector_never_falls_back_to_a_valid_imported_explanation_or_spends_its_budget ... ok
+test boundaries::whole_history_bound_yields_charged_unknown_and_nearby_grant_reads_the_real_review ... ok
+test boundaries::exact_owner_installation_and_owner_loss_prevent_history_transfer ... ok
+test boundaries::closed_round_grammar_and_exact_request_mount_refuse_before_native_spending ... ok
+test wire::sealed_known_unknown_withheld_and_exhausted_results_cannot_be_rebound ... ok
+test boundaries::operator_and_separate_review_grant_precede_disclosure_or_work ... ok
+test replayable_continue_does_not_hide_an_original_stale_application ... ok
+test boundaries::missing_unfinished_and_another_requests_completed_round_are_charged_unknown ... ok
+test wire::complete_output_refusal_keeps_spent_work_and_larger_bound_returns_the_real_policy ... ok
+test completed_congress_and_actual_two_key_publication_keep_three_distinct_cuts ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running tests/tower_source_admission.rs (/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/743b159d36afd846/out/tower_source_admission-743b159d36afd846)
+
+running 8 tests
+test complete_tower_and_native_typed_validation_precede_source_clock_and_journal_work ... ok
+test missing_source_withdraws_old_snapshot_and_keeps_private_failure_in_host_report ... ok
+test acknowledged_source_preparation_is_distinct_from_failed_durable_submission ... ok
+test same_scope_foreign_owner_refuses_before_any_source_or_original_owner_change ... ok
+test selected_request_and_observation_modes_cannot_consume_an_unrelated_or_new_snapshot ... ok
+test exact_read_start_expiry_refuses_without_admitting_then_fresh_capture_recovers ... ok
+test exact_conflicting_and_new_session_retries_do_not_reopen_missing_source ... ok
+test cold_tower_submission_reaches_original_file_review_two_keys_and_one_execution ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+

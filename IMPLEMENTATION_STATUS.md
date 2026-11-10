@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-09: observe the original learned owner through the native Tower
+
+`PublicationTower::new_learned_observer` connects the original learned stream
+gateway to the existing separately granted native situation and historical
+observation routes. Its sealed operator-only dispatch refuses ordinary payload
+submission and every non-observation operation before source admission, even
+with host-supplied Permit tags. The internal weak owner binding is never exposed
+as a public ordinary actor port. Existing ordinary mounts retain their behavior.
+
+Five new public integration tests execute actual learned numerical generation,
+source-derived intake and original two-key checked publication. They verify
+unchanged source snapshots, journal bytes and numerical state during reads;
+shared query exhaustion, revocation, scope/allocation binding and owner loss;
+and charged Unknown for numerical explanations even after a real congress has
+completed. An initial test compilation exposed a RefMut borrow-order error in
+the fixture, repaired by retaining the original revision before the mutable
+call. The complete new target then passed on the qualified
+`nightly-2026-09-08` compiler with Cranelift and debug information disabled.
+The four existing public targets `tower_publication`, `tower_source_admission`,
+`tower_inspection` and `tower_review_explanation` also passed on that same
+frozen library source. This is local execution evidence, not the full RCH gate.
+The frozen canonical `cargo run --locked -p xtask -- check` passed compiler,
+source-closure, target-admission, registry and concordance checks, then stopped
+at the three pre-existing missing playbook mappings for `compare-learned-prompt`,
+`serve-learned-generated` and `stop-fleet`. No gate was weakened. The actual
+initial test compile failure, 60 passing new/existing tests and canonical-gate
+output are retained in `artifacts/execution/2026-11-09-learned-observer-*.log`.
+
+This increment supplies a reusable native adapter; the command/service wiring
+is separate. No new numerical-replay allowance, source refresh, permit, effect,
+production activation or full packet closure is inferred. FA-134 and FA-136
+remain in progress. See [learned observer custody](docs/TOWER_PUBLICATION.md#observe-an-original-learned-stream-owner).
+
 ## 2026-11-09: audit completed refinements through the learned operator
 
 The existing explicit `--audit-review ROUND HISTORY_ANCHOR` mode now consumes

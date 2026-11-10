@@ -39,6 +39,43 @@ route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy
 or publication authority.
 
+## Observe an original learned stream owner
+
+`PublicationTower::new_learned_observer(mount, learned_port, limits)` mounts the
+original `FileLearnedTextStreamActorPort` for privileged observation. The
+supervisor separately issues and retains the same native inspection, explanation
+or policy-comparison grants used by the ordinary facade. A grant from another
+owner is rejected even when every numeric scope field matches.
+
+This constructor has a closed, read-only dispatch profile: an authenticated
+operator may request `situation`, historical `explain`, or `policy-replay` under
+their independently selected native grants. Ordinary `propose`, request `get`,
+`precheck`, `capabilities` and every other verb are unavailable through this
+profile, including when a host supplies Permit or Experiment tags. Caller
+payloads cannot become learned release bytes. These checks precede the shared
+source-admission callback, ticket acquisition and native query work.
+
+Live situation observations come from the actual learned owner's acknowledged
+journal. They can show an empty ledger before intake, the source-derived Message
+awaiting review, and the original confirmed release with its charged units.
+They do not refresh evidence, advance numerical generation, consume an admission
+snapshot, write a journal event or approve a release. Captured pages retain their
+original cut when subsequent generation or publication advances the owner.
+
+The constructor does not expand any numerical-replay contract. Admission and
+completed-review explanation grants without numerical work allowances continue
+to return charged Unknown for learned histories. An operator must not interpret
+that response as a missing congress, a current hold explanation or permission.
+The existing separately budgeted offline learned audit remains the way to
+inspect those complete numerical histories.
+
+All port clones and facades share their original finite grants. Revocation
+removes disclosure, owner loss makes reads unavailable, and the weak observer
+does not keep the authority lock alive. Reopening the same journal creates a
+different owner and requires its own explicitly issued grants. This connects the
+existing L4 situation projection and L8 observation contracts; it adds no new
+verb, authority type or execution guarantee.
+
 ## Acquire fresh evidence at native intake
 
 For a source-backed live owner, use

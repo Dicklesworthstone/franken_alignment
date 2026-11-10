@@ -1,0 +1,26 @@
+   Compiling fa-reference v0.2.0 (/workspace/scratch/cf969907cc0d/verification/core/crates/fa-reference)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+error[E0502]: cannot borrow `host` as immutable because it is also borrowed as mutable
+  --> crates/fa-reference/tests/tower_learned_observation.rs:97:41
+   |
+97 |         host.advance_learned_generation(host.revision(), state.actor_revision, state.position)
+   |         ---- -------------------------- ^^^^ immutable borrow occurs here
+   |         |    |
+   |         |    mutable borrow later used by call
+   |         mutable borrow occurs here
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `fa-reference` (test "tower_learned_observation") due to 1 previous error

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-09: observe the original learned stream through Tower
+
+- Add a sealed operator-only Tower constructor over the original learned stream
+  port, preserving weak owner identity and separately retained native grants.
+- Keep arbitrary-payload submission, request tickets and source admission
+  unavailable through that observer, even with broader host purpose tags.
+- Connect original learned situation reads without changing generation, review,
+  publication, charged liabilities or numerical-replay qualification.
+- Exercise real learned generation and two-key publication, disclosure quotas,
+  revocation, owner replacement and numerical Unknown boundaries in five new
+  public integration tests.
+
 ## 2026-11-09: expose completed refinements in the learned audit command
 
 - Connect the existing anchored `--audit-review` command to original completed

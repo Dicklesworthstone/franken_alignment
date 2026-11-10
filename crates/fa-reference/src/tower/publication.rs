@@ -25,8 +25,8 @@ use super::{
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
-    FileInspectionResult, FilePolicyReplayCursor, FileSupervisorExplanationPort,
-    FileSupervisorInspectionPort, FileSupervisorPolicyReplayPort,
+    FileInspectionResult, FileLearnedTextStreamActorPort, FilePolicyReplayCursor,
+    FileSupervisorExplanationPort, FileSupervisorInspectionPort, FileSupervisorPolicyReplayPort,
     FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
@@ -117,6 +117,10 @@ pub type PublicationResponse = TowerResponse<PublicationResult, PublicationLimit
 pub struct PublicationTower {
     mount: Address,
     scope: Scope,
+    // A learned stream exposes source-derived release intents only. Its
+    // observation facade may bind original supervisor grants, but must never
+    // turn the private weak gateway into ordinary payload intake or tickets.
+    learned_observer: bool,
     wire: ActorWire<FileActorPort<FileOversight>>,
     precheck: Option<FileActorPrecheckPort>,
     inspection: Option<FileSupervisorInspectionPort>,
@@ -153,6 +157,7 @@ impl PublicationTower {
         Ok(Self {
             mount,
             scope,
+            learned_observer: false,
             wire: ActorWire::new(port),
             precheck: None,
             inspection: None,
@@ -163,6 +168,27 @@ impl PublicationTower {
             policy_replay_cursors: BTreeMap::new(),
             limits,
         })
+    }
+
+    /// Mount an observation-only view of the ORIGINAL learned stream owner.
+    /// The host must separately install and retain its supervisor read grants.
+    /// This does not expose an ordinary actor port, accept a caller's payload,
+    /// acquire a release ticket or retain the supervisor's authority lock.
+    ///
+    /// Only an operator may use this facade, even when the caller is otherwise
+    /// authorized for the same run. Situation and explicitly granted historical
+    /// explanation/policy comparison remain their original native operations.
+    /// Unsupported numerical replay stays Unknown under those grants' original
+    /// work contracts. Permit/Experiment tags cannot enable ordinary submission,
+    /// cancellation, precheck, request polling or any other mutation here.
+    pub fn new_learned_observer(
+        mount: Address,
+        port: FileLearnedTextStreamActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        let mut tower = Self::new(mount, port.into_tower_observation_port(), limits)?;
+        tower.learned_observer = true;
+        Ok(tower)
     }
 
     pub fn mount_address(&self) -> &Address {
@@ -245,6 +271,17 @@ impl PublicationTower {
             || access.scope.is_authorized_for(&request.address).is_err()
         {
             return self.withheld(&request);
+        }
+        if self.learned_observer {
+            if !access.operator {
+                return self.withheld(&request);
+            }
+            if !matches!(
+                request.verb,
+                Verb::Situation | Verb::Explain | Verb::PolicyReplay
+            ) {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
         }
         if !CONNECTED_PUBLICATION_VERBS.contains(&request.verb) {
             return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);

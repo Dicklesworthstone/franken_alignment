@@ -1,0 +1,27 @@
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 1 warning (run `cargo fix --lib -p fa-reference` to apply 1 suggestion)
+   Compiling fa-reference v0.2.0 (/workspace/scratch/cf969907cc0d/verification/core/crates/fa-reference)
+    Finished `test` profile [unoptimized] target(s) in 4.81s
+     Running tests/tower_learned_observation.rs (/workspace/scratch/cf969907cc0d/verification/target/debug/build/fa-reference/e529cb0a142be425/out/tower_learned_observation-e529cb0a142be425)
+
+running 5 tests
+test learned_observer_binds_read_grants_to_original_allocation_and_registration ... ok
+test learned_observer_never_acquires_arbitrary_intake_even_with_broad_host_tags ... ok
+test learned_observers_share_original_read_work_and_revoke_without_retaining_owner ... ok
+test learned_observer_follows_original_numerical_intake_and_two_key_publication ... ok
+test numerical_explanation_keeps_original_unknown_and_spent_work ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+

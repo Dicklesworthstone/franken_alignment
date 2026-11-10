@@ -41,6 +41,13 @@ impl FileOversight {
     }
 }
 impl FileLearnedTextStreamActorPort {
+    /// The Tower uses this weak identity only inside its sealed learned
+    /// observation profile. Keep it crate-private: a public conversion would
+    /// expose ordinary arbitrary-payload intake and erase the source boundary.
+    pub(crate) fn into_tower_observation_port(self) -> FileActorPort<FileOversight> {
+        self.port
+    }
+
     /// A first request derives the ORIGINAL complete cumulative frame and full
     /// charge. A retry matches its release kind/deadline against the stored
     /// frame, even when today's audience has advanced or recovery paused source.
