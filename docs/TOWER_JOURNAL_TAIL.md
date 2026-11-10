@@ -163,6 +163,16 @@ complete. Output failure cannot spend another native query.
 Tail responses for explicit request documents. It remains an explicit document
 exchange; only `tower-tail` performs bounded continuation over a captured suffix.
 
+Both clients enforce each native event label’s permitted directly recorded IDs.
+For explicit exchanges, every Known page must match the full profile scope. A
+selected `journal_tail.events_per_page` also fixes the exact row count and
+aligned offset, including continuations first seen after reconnect. Within one
+explicit exchange, previously observed cursor IDs retain their original
+registration, basis, starting revision and next offset; consumed or reissued
+IDs refuse before output or the next request. An unqualified request address
+cannot move an observed cursor to another registration. Unseen earlier pages
+remain unknown to the client; the original native owner enforces cursor custody.
+
 ## Verification scope
 
 Native and public Tower regressions exercise real publication and learned

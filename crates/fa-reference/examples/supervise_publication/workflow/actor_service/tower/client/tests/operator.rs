@@ -398,3 +398,6 @@ fn operator_cli_owns_its_grammar_and_rejects_actor_profiles_without_connecting()
         io::ErrorKind::WouldBlock
     );
 }
+
+#[path = "operator/tail.rs"]
+mod tail;

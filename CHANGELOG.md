@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10: validate original metadata and explicit tail continuations
+
+- Apply exhaustive native event/identity rules to both bounded and explicit
+  operator clients, rejecting structurally valid but impossible metadata links.
+- Bind explicit exchanges to the profile scope, host-fixed page size, original
+  registration and immutable capture; reject cursor reuse and generationless
+  registration rebinding before output or another request.
+- Preserve the concurrently landed journal_tail profile and 1,024-page bounded
+  command. Add six native/socket regression functions; execution remains pending
+  the unavailable required RCH runner.
+
 ## 2026-11-10: follow native journal pages through authenticated operators
 
 - Add opt-in finite journal disclosure to ordinary, learned and resident

@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: retain native identity and capture boundaries in explicit clients
+
+Both journal-tail clients now validate every native event category against its
+exact directly recorded request/attempt/round identity shape. The generic
+explicit-document client additionally checks the complete original profile
+scope, fixed page size and aligned offsets, including a first observed page or
+a cursor first seen after reconnect. Observed continuations retain their exact
+registration, basis, starting revision and offset; a generationless request
+cannot rebind a known cursor to another registration or reuse a consumed one.
+All checks precede output and any later explicitly supplied document.
+
+This composes with main’s authenticated journal_tail profile and bounded
+tower-tail command without replacing either. The bounded command retains its
+1,024-page ceiling and native Capture checks; the explicit exchange remains
+limited to 64 caller-supplied documents and never follows cursors automatically.
+Unknown, withheld and capacity/error observations preserve native diagnostics.
+
+Six authored regression functions pair real native publication and Unix-socket
+transport with altered metadata links, full scope, capture basis, registration,
+configured first-page width, unseen continuation alignment and consumed cursors.
+They include real short final and complete empty pages plus output-before-next
+request boundaries. Independent source review and installed dated rustfmt syntax
+processing are complete; compilation, runtime and full RCH qualification remain
+pending because the required runner is unavailable. No roadmap acceptance or
+existing native authority was weakened.
+
 ## 2026-11-10: operate original journal tail through the authenticated service
 
 The ordinary, learned and resident operator services now accept an independently

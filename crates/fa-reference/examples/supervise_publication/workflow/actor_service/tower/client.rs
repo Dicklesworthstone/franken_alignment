@@ -5,6 +5,7 @@
 use super::super::operator::Settings as OperatorSettings;
 use super::super::{Duration, Instant, Profile, debug, pause};
 use crate::config::read_regular;
+use fa_reference::action::Scope;
 use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     CLIENT_IO_CHUNK, MAX_CLIENT_IO_BYTES, MAX_CLIENT_IO_CALLS,
@@ -25,6 +26,8 @@ mod fence;
 mod hold_diagnosis;
 #[path = "client/journal_tail.rs"]
 mod journal_tail;
+#[path = "client/journal_tail_validation.rs"]
+mod journal_tail_validation;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
 #[path = "client/refinement_explanation.rs"]
@@ -116,12 +119,15 @@ pub(crate) fn policy_replay_command(
     policy_replay::command(args, output)
 }
 
-/// Only shared transport parameters. An operator profile is never converted
-/// into an actor profile, given an invented request key or used as TowerAccess.
+/// Shared transport and response-correlation parameters. An operator profile is
+/// never converted into an actor profile, given an invented request key or used
+/// as TowerAccess.
 #[derive(Clone, Copy)]
 struct Endpoint<'a> {
     socket: &'a Path,
     supervisor: PeerPolicy,
+    scope: Scope,
+    tail_events_per_page: Option<usize>,
     exchanges: u64,
     runtime_ms: u64,
     poll_ms: u64,
@@ -132,6 +138,8 @@ impl<'a> Endpoint<'a> {
         Self {
             socket: &profile.socket,
             supervisor: profile.supervisor,
+            scope: profile.scope,
+            tail_events_per_page: None,
             exchanges: profile.exchanges,
             runtime_ms: profile.runtime_ms,
             poll_ms: profile.poll_ms,
@@ -142,6 +150,11 @@ impl<'a> Endpoint<'a> {
         Self {
             socket: &settings.socket,
             supervisor: settings.supervisor,
+            scope: settings.scope,
+            tail_events_per_page: settings
+                .journal_tail
+                .as_ref()
+                .map(|selected| selected.events_per_page),
             exchanges: settings.exchange_limit,
             runtime_ms: settings.runtime_ms,
             poll_ms: settings.poll_ms,
@@ -182,10 +195,13 @@ fn exchange_endpoint(
         documents.push(Prepared { request, frame });
     }
     let mut socket = connect_endpoint(endpoint, &budget, check_directory)?;
+    let mut tail_sequence =
+        journal_tail_validation::Sequence::new(endpoint.scope, endpoint.tail_events_per_page);
     for document in documents {
         budget.write_frame(&mut socket, &document.frame)?;
         let response = budget.read_frame(&mut socket)?;
-        validate_response(&response, &document.request)?;
+        let parsed = parse_response(&response, &document.request)?;
+        tail_sequence.accept(&parsed, &document.request)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -372,6 +388,7 @@ impl Budget {
 
 // Correlation and bounded syntax only. We deliberately do not reconstruct a
 // public Knowledge, native ticket, signed profile or authority from this data.
+#[cfg(test)]
 fn validate_response(bytes: &[u8], request: &TowerRequest) -> Result<(), String> {
     parse_response(bytes, request).map(|_| ())
 }
@@ -440,7 +457,12 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
         (Some("journal-tail"), Verb::Tail) => {
-            if !journal_tail::matches(&parsed, request) {
+            if !journal_tail::matches(&parsed, request)
+                || !journal_tail_validation::matches(
+                    result.get("value").ok_or_else(invalid)?,
+                    request,
+                )
+            {
                 return Err(invalid());
             }
         }
