@@ -65,6 +65,17 @@ Knowledge responses and clocks, and refuses live publication mounts on branch
 snapshots. Six real-owner integration tests are authored; execution qualification
 remains pending.
 
+A separately authorized [Tower admission fence](docs/TOWER_FENCE.md) now
+connects the original permanent Stop through the native API, strict request and
+response schemas, and authenticated ordinary/learned operator services. It
+binds the exact original predecessor, retains same-grant retry results and
+preserves unknown charges. The live workflow reuses that Stop for independent
+driver cleanup and retains the operator's bounded reply opportunity. This is
+one original admission domain; endpoint drain, remote actor halt and fleet
+fencing require separate evidence. New regression sources received independent
+review, but compilation and execution remain unqualified after loss of the
+execution workspace.
+
 The [bounded JSON request interface](docs/TOWER_REQUEST.md) exposes these
 configured Tower routes through `exchange`, with a closed versioned schema,
 exact decimal-string identities and binary payloads. Caller grants remain

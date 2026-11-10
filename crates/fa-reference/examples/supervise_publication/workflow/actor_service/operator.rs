@@ -1,6 +1,6 @@
-//! Separately authenticated inspection and explicitly selected reconciliation.
-//! A restricted operator mount prevents reconciliation authority from admitting
-//! actor proposals, cancelling them or entering publication.
+//! Separately authenticated inspection and explicitly selected native control.
+//! A restricted operator mount keeps receipt reconciliation and admission stop
+//! independent from actor proposal, cancellation and publication authority.
 #[path = "operator/profile.rs"]
 mod profile;
 pub(crate) use profile::Settings;
@@ -9,7 +9,8 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorHoldDiagnosisGrant,
+    FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
+    FileSupervisorHoldDiagnosisGrant,
     FileSupervisorInspectionGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorReviewExplanationGrant, FileSupervisorResolutionGrant,
 };
@@ -33,6 +34,7 @@ struct Active {
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
     resolution: Option<FileSupervisorResolutionGrant>,
+    fence: Option<FileSupervisorFenceGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
 }
@@ -69,7 +71,9 @@ impl Service {
         deadline: &Deadline,
     ) -> Result<Self, String> {
         Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
-            if settings.resolution.is_some() {
+            if settings.fence.is_some() {
+                PublicationTower::new_control_operator(mount, port, limits)
+            } else if settings.resolution.is_some() {
                 PublicationTower::new_reconciliation_operator(mount, port, limits)
             } else {
                 PublicationTower::new(mount, port, limits)
@@ -89,7 +93,9 @@ impl Service {
     ) -> Result<Self, String> {
         settings.check_learned_operator()?;
         Self::start_with(settings, actor, driver, generation, deadline, |mount, limits| {
-            if settings.resolution.is_some() {
+            if settings.fence.is_some() {
+                PublicationTower::new_learned_control_operator(mount, port, limits)
+            } else if settings.resolution.is_some() {
                 PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
             } else {
                 PublicationTower::new_learned_observer(mount, port, limits)
@@ -184,6 +190,20 @@ impl Service {
         } else {
             None
         };
+        let fence = if let Some(selected) = &settings.fence {
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().fence_port_with_numerical_budget(
+                    selected.max_replay_events,
+                    events,
+                ),
+                None => driver.supervisor().fence_port(selected.max_replay_events),
+            }
+            .map_err(debug)?;
+            tower.set_fence(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
             let (port, custodian) = match selected.numerical_replay_events {
                 Some(events) => driver.supervisor().review_explanation_port_with_numerical_budget(
@@ -222,14 +242,14 @@ impl Service {
         } else {
             None
         };
-        // The restricted reconciliation mount admits only its selected native
-        // Resolve path. Permit here cannot enable actor Propose or Hold.
+        // The restricted control mount admits only separately selected native
+        // Resolve and Fence paths. Permit cannot enable actor Propose or Hold.
         // Experiment remains limited to the selected native policy comparison.
         let mut purposes = Vec::new();
         if policy_replay.is_some() {
             purposes.push(PurposeTag::Experiment);
         }
-        if resolution.is_some() {
+        if resolution.is_some() || fence.is_some() {
             purposes.push(PurposeTag::Permit);
         }
         let access = TowerAccess::new(
@@ -266,6 +286,7 @@ impl Service {
                 explanation,
                 hold_diagnosis,
                 resolution,
+                fence,
                 review_explanation,
                 policy_replay,
             }),
@@ -383,7 +404,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -407,6 +428,13 @@ impl Service {
                 .as_ref()
                 .map(|grant| (
                     grant.remaining_queries(),
+                    grant.remaining_operations(),
+                    grant.remaining_numerical_replay_events(),
+                )),
+            active
+                .fence
+                .as_ref()
+                .map(|grant| (
                     grant.remaining_operations(),
                     grant.remaining_numerical_replay_events(),
                 )),

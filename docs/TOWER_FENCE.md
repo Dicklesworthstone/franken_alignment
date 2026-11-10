@@ -123,6 +123,100 @@ Global Tower clocks, measured costs and fleet/process state are not synthesized.
 `retry_safe` remains false: there is no instruction to retry automatically
 through a new owner or grant after a lost connection.
 
+## Use the authenticated live operator
+
+The Linux publication workflow can select this capability in its existing
+`fa.tower-operator-service/1` profile. Add the independently optional object:
+
+```json
+"fence": {
+  "max_replay_events": 4096,
+  "numerical_replay_events": 4096,
+  "authority": "stop_original_admission"
+}
+```
+
+This is a profile member, not a complete profile. Profile limits use JSON
+integers; request identities still use decimal strings. Both limits must be
+positive and no greater than 4,096, and the numerical allowance cannot exceed
+the replay ceiling. Ordinary histories may omit `numerical_replay_events`.
+Learned services require it explicitly and reject missing numerical selection
+before their first clock/source read, authority-store creation or listener.
+Existing profiles with omitted or null `fence` gain no stop capability.
+The original owner must already have its terminal recovery reserve before the
+service can issue this grant.
+
+The same service supports ordinary publication, finite ordinary request
+schedules, live learned actors and resident learned sequences. It retains one
+custodian across reconnects, review transitions and request handoffs. A new
+connection cannot replenish its one operation or numerical work.
+The host selects a restricted control mount only for an explicit fence profile.
+Its Permit purpose does not open actor proposal, cancellation or precheck paths.
+
+Obtain the predecessor from one original `situation` capture or direct trusted
+native inspection. The situation wire maps to the request as follows:
+
+| Fence input | Field from that same situation capture |
+|---|---|
+| `expected.scope` | `knowledge.basis.scope` |
+| `expected.journal_revision` | `knowledge.basis.journal_revision` |
+| `expected.control_sequence` | `knowledge.basis.control_sequence` |
+| `expected.authority_epoch` | `knowledge.value.summary.policy_epoch` |
+
+Here `knowledge` is beneath `result.value`. The summary's `policy_epoch`
+is the original authority ledger epoch; `policy_generation` is a different
+coordinate. Preserve the complete original capture, exact registration and
+scope. Do not combine coordinates from separate captures or substitute a clock.
+
+Fence uses compare-and-set semantics against that whole predecessor. If work
+advances the journal between observation and the explicit fence document,
+the operation refuses as stale without spending its native operation.
+The service processes at most one operator frame per cooperative checkpoint;
+continuously advancing generation or review can invalidate a separate prior
+observation on every turn. This profile therefore does not promise bounded-time
+acceptance during continuously advancing work. Stable intake, external-review
+waiting and quiescent-owner windows allow an exact observed cut to be selected.
+The existing independently authenticated Stop protocol remains available.
+
+Send the explicitly prepared request through the existing client:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE FENCE_REQUEST_JSON
+```
+
+The client authenticates the supervisor, validates the closed response and
+binds the scope, registration, operation, before/after cuts, raised floor and
+native liability lists before emitting bytes or sending a later explicit
+document. A malformed or unbound reply stops the sequence without a retry.
+Transport success alone is not a Known Stop acknowledgment: inspect the native
+Knowledge or error. The client never follows stale advice, reconnects or
+retries automatically. An explicit exact retry is useful only while the same
+live custodian and original healthy owner still exist.
+
+## Continue the original host cleanup
+
+An acknowledged Fence stops further admission immediately in its original
+native owner. At the next cooperative workflow boundary, the host observes that
+same Stop and passes its exact request to the original driver's reserved
+stop/drain path. It closes the old driver job before sampling cleanup time and
+does not append another Stop. Active learned native/process review retires its
+original review custody before handing its driver back for that cleanup.
+
+Cleanup retains both its first success and its first failure across shared
+workflow handles and terminal reply grace. A failed or unwinding cleanup cannot
+be retried merely by polling again. No source acquisition, next generation
+quantum or successor cohort is admitted after the boundary observes Stop.
+Unresolved effects keep their charges even when cleanup cannot finish.
+
+The independent operator keeps its original bounded reply opportunity after
+an actor transport failure, including a fence accepted between learned
+requests. The failed actor transport is retired rather than driven again.
+No reply window renews the operator's original lifetime or grants. A lost
+operator reply cannot erase an acknowledged Stop. Later endpoint drain or
+helper cleanup does not upgrade the original historical fence receipt:
+`endpoint_fenced`, `drained`, `actor_halted` and `fleet_fenced` keep their
+original response meanings.
+
 ## Regression scope and qualification
 
 The native regression sources cover reviewing and two-key-authorized work,
@@ -136,6 +230,14 @@ Public Tower regressions exercise the same original owner through typed and
 JSON requests, preserve unknown charges, reject authority and registration
 mismatches, prevent actor intake through a control mount and reject response
 relabeling. Fixed wire vectors retain full-width identities and strict syntax.
+
+Live regression sources additionally cover the explicit closed profile,
+authenticated original liabilities and retries, strict client response
+correlation, rejected acknowledgments, actual learned generation/review with
+separate numerical allowance, and memoized cleanup after terminal/error ingress, successful drain,
+and failed or unwinding cleanup. These additions comprise twelve regression
+functions on top of the twenty-one native/Tower/codec functions and three
+compile-fail examples introduced with the core route.
 
 The new source received independent source review. Before these changes, two
 qualified-nightly baseline library checks were terminated by SIGKILL without

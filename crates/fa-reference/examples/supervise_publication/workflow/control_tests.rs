@@ -479,3 +479,6 @@ fn silent_authenticated_controller_uses_the_original_failure_stop_not_a_weaker_l
 
 #[path = "late_control_tests.rs"]
 mod late_control_tests;
+
+#[path = "native_fence_tests.rs"]
+mod native_fence_tests;

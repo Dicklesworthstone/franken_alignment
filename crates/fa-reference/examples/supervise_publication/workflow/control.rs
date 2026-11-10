@@ -7,7 +7,6 @@ use fa_reference::action::ElapsedTick;
 mod recovery;
 #[cfg(target_os = "linux")]
 use std::path::PathBuf;
-#[cfg(target_os = "linux")]
 use std::{cell::RefCell, rc::Rc};
 
 #[cfg(target_os = "linux")]
@@ -20,6 +19,9 @@ pub(crate) fn socket_path(profile: &PeerProfile, operation: u64) -> PathBuf {
 pub(super) struct Control {
     #[cfg(target_os = "linux")]
     service: Option<Rc<RefCell<Service>>>,
+    // Shared across one synchronous workflow and its final reply grace. A
+    // failed drain is retained too; pumping the peer must not retry it.
+    native_outcome: Rc<RefCell<Option<Result<bool, String>>>>,
 }
 impl Control {
     pub(super) fn new(
@@ -39,6 +41,7 @@ impl Control {
                             .map(|service| Rc::new(RefCell::new(service)))
                     })
                     .transpose()?,
+                native_outcome: Rc::new(RefCell::new(None)),
             })
         }
         #[cfg(not(target_os = "linux"))]
@@ -47,7 +50,7 @@ impl Control {
             if profile.is_some() {
                 return Err("stop control requires Linux peer credentials".into());
             }
-            Ok(Self {})
+            Ok(Self { native_outcome: Rc::new(RefCell::new(None)) })
         }
     }
 
@@ -58,6 +61,7 @@ impl Control {
     pub(super) fn share(&self) -> Self {
         Self {
             service: self.service.as_ref().map(Rc::clone),
+            native_outcome: Rc::clone(&self.native_outcome),
         }
     }
 
@@ -76,7 +80,65 @@ impl Control {
         }
     }
 
-    /// No connection means no journal access or time observation. An admitted
+    /// Observe only an already acknowledged Stop on this original owner. The
+    /// native fence receipt remains historical and makes no drain claim; this
+    /// independent host cleanup uses its exact request, closes the old driver
+    /// job before sampling time, and never appends a second Stop.
+    ///
+    /// Retain both success and failure across shared control handles. Terminal
+    /// reply pumping cannot repeat a failed sweep or replenish reserved space.
+    pub(super) fn native_stop<F>(
+        &mut self,
+        driver: &mut FileSupervisedDriver,
+        time: &mut F,
+    ) -> Result<bool, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        let mut outcome = self.native_outcome.try_borrow_mut()
+            .map_err(|_| "native stop cleanup is already being driven")?;
+        if let Some(result) = outcome.as_ref() {
+            return result.clone();
+        }
+        // The original Stop transport owns its own one-use outcome. Do not
+        // retry its failed drain or relabel its acknowledgment through this path.
+        #[cfg(target_os = "linux")]
+        if let Some(service) = &self.service {
+            let service = service.try_borrow()
+                .map_err(|_| "stop transport is already being driven")?;
+            if let Some(result) = &service.outcome {
+                return result.clone();
+            }
+        }
+        let request = {
+            let host = driver.supervisor().host().map_err(super::debug)?;
+            host.inspect().stop.map(|receipt| receipt.request())
+        };
+        let Some(request) = request else { return Ok(false); };
+        // A caught clock/cleanup unwind must not turn the next poll into a retry.
+        *outcome = Some(Err("native stop cleanup did not acknowledge completion".into()));
+        let result = (|| {
+            let stopped = driver.stop_with_recovery_reserve(request, &mut *time)
+                .map_err(super::debug)?;
+            let progress = match stopped.drain.map_err(super::debug)? {
+                fa_reference::action::consequence::delivery::persistent::observed::driver::CapacityDrain::AlreadyDrained(progress) => progress,
+                fa_reference::action::consequence::delivery::persistent::observed::driver::CapacityDrain::Advanced(sweep) => sweep.progress,
+            };
+            if !progress.drained() {
+                return Err("native admission fence acknowledged; endpoint liabilities remain unresolved and charged".into());
+            }
+            Ok(true)
+        })();
+        *outcome = Some(result.clone());
+        result
+    }
+
+    pub(super) fn native_cleanup_started(&self) -> bool {
+        self.native_outcome.try_borrow().map_or(true, |outcome| outcome.is_some())
+    }
+
+    /// Without an acknowledged native Stop or a connection, this samples no
+    /// time and performs no journal mutation. An admitted
     /// control exchange pauses forward work under the original workflow deadline
     /// and a bounded session timeout. It can only stop, never approve an effect.
     pub(super) fn checkpoint<F>(
@@ -89,6 +151,7 @@ impl Control {
     where
         F: FnMut() -> ElapsedTick,
     {
+        if self.native_stop(driver, time)? { return Ok(true); }
         #[cfg(target_os = "linux")]
         if let Some(service) = &self.service {
             let mut service = service

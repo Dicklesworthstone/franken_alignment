@@ -154,6 +154,7 @@ impl Intake {
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
             super::operator::checkpoint(operator);
+            if control.native_stop(driver, time)? { return Ok(false); }
             precheck = Some(super::precheck::Service::start_learned(&selected.settings,
                 &self.profile, &selected.reviewer, config, driver, deadline, time, self.release)?);
         }
@@ -161,6 +162,7 @@ impl Intake {
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
             super::operator::checkpoint(operator);
+            if control.native_stop(driver, time)? { return Ok(false); }
             if let Some(service) = &mut precheck { service.checkpoint(driver, time()); }
             self.accept()?;
             deadline.check(time())?;
@@ -266,6 +268,7 @@ impl Intake {
         let started = Instant::now();
         let window = Duration::from_millis(self.profile.reply_ms);
         let mut failure = None;
+        let mut actor_transport_failed = false;
         while started.elapsed() < window && deadline.check(time()).is_ok() {
             if let Err(error) = control.checkpoint(driver, reviewer, deadline, time) {
                 // The original one-use Stop service retains its first failed
@@ -275,12 +278,22 @@ impl Intake {
                 failure.get_or_insert(error);
             }
             super::operator::checkpoint(operator);
-            if let Err(error) = self.observe_transport(driver.supervisor_mut()) {
-                failure = Some(match failure {
-                    Some(original) => format!("{original}; actor response transport: {error}"),
-                    None => error,
-                });
-                break;
+            if let Err(error) = control.native_stop(driver, time) {
+                // Keep flushing the original historical reply after cleanup
+                // failure; the shared control will not repeat its drain.
+                failure.get_or_insert(error);
+            }
+            if !actor_transport_failed {
+                if let Err(error) = self.observe_transport(driver.supervisor_mut()) {
+                    failure = Some(match failure {
+                        Some(original) => format!("{original}; actor response transport: {error}"),
+                        None => error,
+                    });
+                    actor_transport_failed = true;
+                    // Stop the failed actor transport, retaining the independent
+                    // operator's original bounded historical reply opportunity.
+                    self.session.revoke();
+                }
             }
             let remaining = window.saturating_sub(started.elapsed());
             let pause = self.profile.poll_ms.min(50)

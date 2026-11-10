@@ -19,6 +19,8 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
+#[path = "client/fence.rs"]
+mod fence;
 #[path = "client/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "client/policy_replay.rs"]
@@ -42,6 +44,8 @@ const MAX_POLICY_REPLAY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 // Completed congress reports have their own finite allowance. Ordinary
 // admission explanations keep the original smaller parser-work bound.
 const MAX_REVIEW_EXPLANATION_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
+// A native Stop may account for every admitted attempt in one receipt.
+const MAX_FENCE_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
 const OPERATOR_USAGE: &str = "tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic page following or resend)";
 
@@ -377,6 +381,8 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_POLICY_REPLAY_REPLY_ITEMS
             } else if review_explanation::selected_round(request).is_some() {
                 MAX_REVIEW_EXPLANATION_REPLY_ITEMS
+            } else if request.verb == Verb::Fence {
+                MAX_FENCE_REPLY_ITEMS
             } else {
                 4096
             },
@@ -444,6 +450,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("resolution-next"), Verb::Next) | (Some("resolution"), Verb::Resolve) => {
             if !resolution::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("fence"), Verb::Fence) => {
+            if !fence::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());
             }
         }

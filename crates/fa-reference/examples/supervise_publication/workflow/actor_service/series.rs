@@ -420,6 +420,10 @@ where
                     {
                         break;
                     }
+                } else {
+                    early_control = Some(super::super::control::Control::new(
+                        &config, request, None,
+                    )?);
                 }
                 if recorded {
                     if owner_start == OwnerStart::Ordinary {
@@ -449,6 +453,10 @@ where
                         }
                         if let Some(service) = &mut operator {
                             service.checkpoint();
+                        }
+                        if early_control.as_mut().expect("original control")
+                            .native_stop(&mut driver, &mut time)? {
+                            return Ok(());
                         }
                         frames_seen = frames_seen.saturating_add(ingress.admit_sequence(
                             &mut driver,
@@ -529,7 +537,7 @@ where
                                 peers: Some(reviewer_profile),
                                 publication,
                                 ingress: &mut pump,
-                                stop: early_control.take(),
+                                stop: early_control.as_ref().map(|control| control.share()),
                             },
                             &mut time,
                         )?;
@@ -580,6 +588,9 @@ where
                 if let Some(service) = &mut operator {
                     service.checkpoint();
                 }
+                if let Some(control) = &mut early_control {
+                    if control.native_stop(&mut driver, &mut time)? { return Ok(()); }
+                }
                 frames_seen = ingress.observe_sequence(&mut driver, &completed)?;
                 if frames_seen == 0 {
                     pause(actor.poll_ms);
@@ -588,7 +599,7 @@ where
             Ok(())
         })();
         let mut failure = work.err().map(|error| {
-            if observational {
+            if observational || early_control.as_ref().is_some_and(|control| control.native_cleanup_started()) {
                 error
             } else {
                 match stop(&mut driver, ingress.selected(), &mut time) {
@@ -598,28 +609,33 @@ where
             }
         });
         let started = Instant::now();
+        let mut actor_transport_failed = false;
         while started.elapsed() < Duration::from_millis(actor.reply_ms) {
             if owner_start == OwnerStart::Reconciled {
                 if let Some(control) = &mut early_control {
                     if let Err(error) =
                         control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
                     {
-                        failure = Some(match failure {
-                            Some(failure) => format!("{failure}; stop control: {error}"),
-                            None => error,
-                        });
-                        break;
+                        failure.get_or_insert(error);
                     }
                 }
             }
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
-            if let Err(error) = ingress.observe_sequence(&mut driver, &completed) {
-                if failure.is_none() {
-                    failure = Some(error);
+            if let Some(control) = &mut early_control {
+                if let Err(error) = control.native_stop(&mut driver, &mut time) {
+                    failure.get_or_insert(error);
                 }
-                break;
+            }
+            if !actor_transport_failed {
+                if let Err(error) = ingress.observe_sequence(&mut driver, &completed) {
+                    failure.get_or_insert(error);
+                    actor_transport_failed = true;
+                    // The actor transport does not own the independent
+                    // operator's remaining original terminal reply grace.
+                    ingress.revoke();
+                }
             }
             pause(actor.poll_ms);
         }

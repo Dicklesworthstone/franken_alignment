@@ -1,5 +1,7 @@
 //! Real learned inference, authenticated observation, separate human authority
 //! and independent Stop. Fixture weights establish protocol behavior only.
+#[path = "operator/fence.rs"]
+mod fence;
 #[path = "operator/admission_explanation.rs"]
 mod admission_explanation;
 #[path = "operator/review_explanation.rs"]

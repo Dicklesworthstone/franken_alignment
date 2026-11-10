@@ -502,6 +502,7 @@ where F: FnMut() -> ElapsedTick {
     let prepared = (|| {
         if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
         operator::checkpoint(operator);
+        if control.native_stop(&mut driver, time)? { return Ok(false); }
         // Bind only to this genuinely created/recovered owner. A resident run
         // retains this same permit; retries never reload secrets or renew it.
         credential.bind(loaded, &*driver.supervisor().host().map_err(debug)?)?;
@@ -555,6 +556,7 @@ where F: FnMut() -> ElapsedTick {
         if let Some(selected) = &loaded.publication {
             if control.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(false); }
             operator::checkpoint(operator);
+            if control.native_stop(&mut driver, time)? { return Ok(false); }
             deadline.check(time())?;
             let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
             // Capture the independently selected ORIGINAL image against this
@@ -638,8 +640,12 @@ where F: FnMut() -> ElapsedTick {
         }
     }
     if let Some(error) = failure.take() {
-        failure = Some(match stop(&mut driver, stop_operation, time) {
-            Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+        failure = Some(if control.native_cleanup_started() {
+            error
+        } else {
+            match stop(&mut driver, stop_operation, time) {
+                Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+            }
         });
     }
     // Receipt delivery cannot restart generation, review, reconciliation or an
@@ -727,6 +733,7 @@ where F: FnMut() -> ElapsedTick {
     prediction::check(&*driver.supervisor().host().map_err(debug)?, prediction.as_deref())?;
     if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
     operator::checkpoint(operator);
+    if control.native_stop(driver, time)? { return Ok(GenerationOutcome::Stopped); }
     refresh(driver, config, deadline, time)?;
     {
         let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
@@ -748,6 +755,7 @@ where F: FnMut() -> ElapsedTick {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(GenerationOutcome::Stopped); }
         operator::checkpoint(operator);
+        if control.native_stop(driver, time)? { return Ok(GenerationOutcome::Stopped); }
         let current = driver.supervisor().host().map_err(debug)?
             .learned_generation_inspection().map_err(debug)?;
         if !current.numerical.status.is_active() {

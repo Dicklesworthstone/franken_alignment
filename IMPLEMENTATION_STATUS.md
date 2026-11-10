@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: serve native admission fencing and original cleanup live
+
+The closed operator profile now accepts an independently selected `fence`
+capability. Ordinary and learned Tower services retain its original nonclone
+custodian across reconnects and request handoffs. Learned selection requires
+explicit numerical replay work before startup. Omitted/null selection preserves
+the original observer/reconciliation surfaces. Permit remains restricted to
+separately granted operator control; actor intake and publication keys stay
+independent.
+
+The authenticated document client accepts only a complete, correlated native
+`fa.publication-fence/1` response. It checks original scope and registration,
+exact operation/predecessor, the single epoch advance and native liability
+projections before output or a later explicit document. Rejected replies cannot
+cause another request or automatic retry.
+
+The original ordinary, scheduled and learned workflows observe an acknowledged
+native Stop at cooperative boundaries. They reuse its exact request for the
+existing reserved driver stop/drain path, retire active learned review custody,
+and preserve the first cleanup outcome across shared handles. Failure, unwind
+and terminal polling do not repeat cleanup or append another Stop. Independent
+operator reply grace survives an actor transport failure and a fence received
+between learned requests, without admitting a successor or renewing grants.
+
+Four profile/service, three client, one actual learned socket and four cleanup
+regression functions are added. The learned fixture reaches the real generated,
+reviewed AwaitingHuman state before its authenticated Fence and exact reconnect.
+Source review corrected premature reply retirement on actor transport failure.
+These twelve functions remain uncompiled and unexecuted: the qualified-nightly
+baseline checks were killed and the execution workspace became unavailable.
+The manifest records exact authored bytes; no acceptance gate, dependency
+admission, bead state or deployment qualification was weakened or claimed.
+
+This connects one permanent original admission stop. Exact predecessor matching
+can refuse a concurrently advancing journal; no bounded-time acceptance or
+distributed fence frontier is claimed. See the [complete contract](docs/TOWER_FENCE.md)
+and [live operator selection](docs/LIVE_TOWER_OPERATOR.md#fence-original-admission).
+
 ## 2026-11-10: enumerate the original live journal through native Tower tail
 
 The registered `tail` read now has an original-owner native capability and

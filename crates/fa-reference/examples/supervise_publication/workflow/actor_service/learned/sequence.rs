@@ -215,13 +215,31 @@ fn confirmed(driver: &FileSupervisedDriver, request: u64, response: &WireRespons
 fn retire<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
     process: &mut Option<process::ProcessHistory>, request: u64, config: &Config,
     control: &mut Control, deadline: &Deadline, operator: &mut Option<operator::Service>,
-    time: &mut F) -> Result<bool, String>
+    actor: &Profile, time: &mut F) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
     let started = Instant::now();
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
         if let Some(service) = operator.as_mut() { service.checkpoint(); }
+        let stopping = control.native_stop(driver, time);
+        if !matches!(&stopping, Ok(false)) {
+            // A Fence may arrive between completed requests, after the prior
+            // actor session has ended. Keep only this original operator's
+            // finite reply opportunity; no successor source or cohort starts.
+            let reply = Instant::now();
+            let window = Duration::from_millis(actor.reply_ms);
+            while reply.elapsed() < window && deadline.check(time()).is_ok() {
+                operator::checkpoint(operator);
+                if let Some(history) = process.as_mut() { history.reap(); }
+                let remaining = window.saturating_sub(reply.elapsed());
+                let pause = actor.poll_ms.min(50)
+                    .min(u64::try_from(remaining.as_millis()).unwrap_or(u64::MAX));
+                if pause == 0 { break; }
+                crate::workflow::pause(pause);
+            }
+            return stopping.map(|_| false);
+        }
         if let Some(history) = process.as_mut() { history.reap(); }
         let direct = driver.retire_completed_request(request).map_err(debug)?;
         if direct && process.as_ref().is_none_or(|history| history.pending() == 0) {
@@ -312,7 +330,7 @@ where F: FnMut() -> ElapsedTick {
     for (index, entry) in entries.iter().enumerate() {
         if index != 0 {
             match retire(&mut driver, &reviewer, &mut process, previous.unwrap(),
-                &config, &mut control, &global, &mut operator, &mut time) {
+                &config, &mut control, &global, &mut operator, &entries[index - 1].actor, &mut time) {
                 Ok(true) => {},
                 Ok(false) => { terminal = Some("learned sequence stopped before its next request".into()); break; }
                 Err(error) => { failure = Some(error); break; }

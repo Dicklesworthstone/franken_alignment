@@ -327,7 +327,16 @@ impl LiveControl<'_> {
         if self.stop.checkpoint(driver, reviewer, deadline, time)? {
             return Ok(true);
         }
-        (self.ingress)(driver)
+        // The ingress callback may have serviced the separately granted native
+        // Fence. Even a terminal actor result or transport error must retire the
+        // original driver before any following source/helper operation.
+        let ingress = (self.ingress)(driver);
+        let native = self.stop.native_stop(driver, time);
+        match (ingress, native) {
+            (Err(error), Err(stopping)) => Err(format!("{error}; native fence cleanup: {stopping}")),
+            (Err(error), _) | (_, Err(error)) => Err(error),
+            (Ok(terminal), Ok(stopped)) => Ok(terminal || stopped),
+        }
     }
 }
 

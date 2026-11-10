@@ -522,19 +522,20 @@ where
         // The operator can stop while the actor is absent or holds an incomplete
         // frame. Recovery keeps this independent Stop even for a recorded query;
         // actor receipt traffic itself cannot mutate or refresh the sealed cut.
-        let mut early_control = if recorded && owner_start == OwnerStart::Ordinary {
-            None
-        } else {
-            Some(super::control::Control::new(
-                &config,
-                actor.request,
-                Some(reviewer_profile),
-            )?)
-        };
+        let mut early_control = Some(super::control::Control::new(
+            &config,
+            actor.request,
+            if recorded && owner_start == OwnerStart::Ordinary {
+                None
+            } else {
+                Some(reviewer_profile)
+            },
+        )?);
         let mut precheck: Option<precheck::Service> = None;
-        // This separate session owns only explicit supervisor read grants. It uses
-        // the same original owner, remains alive through review and reply grace,
-        // and never supplies an admission source, Permit purpose or review key.
+        // This separate session owns only independently selected supervisor
+        // grants, including an optional one-use native admission Fence. It keeps
+        // the same original owner through review and reply grace; actor intake
+        // and publication still require their original separate authority.
         let mut operator = operator_settings
             .map(|settings| {
                 operator::Service::start(
@@ -587,6 +588,10 @@ where
                 }
                 if let Some(service) = &mut operator {
                     service.checkpoint();
+                }
+                if early_control.as_mut().expect("original control")
+                    .native_stop(&mut driver, &mut time)? {
+                    return Ok(());
                 }
                 if let Some(service) = &mut precheck {
                     // Precheck transport faults retire this sidecar only. They must
@@ -681,7 +686,7 @@ where
                     peers: Some(reviewer_profile),
                     publication,
                     ingress: &mut pump,
-                    stop: early_control.take(),
+                    stop: early_control.as_ref().map(|control| control.share()),
                 },
                 &mut time,
             )
@@ -697,6 +702,7 @@ where
             // its exact sealed recovery cut even after a disconnect or deadline;
             // legacy open paths keep their original reconciliation/stop behavior.
             Err(error) if recorded && owner_start == OwnerStart::Reconciled => Some(error),
+            Err(error) if early_control.as_ref().is_some_and(|control| control.native_cleanup_started()) => Some(error),
             Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {
                 Ok(()) => error,
                 Err(stopping) => format!("{error}; stop/drain: {stopping}"),
@@ -706,28 +712,35 @@ where
         // replies are original ActorWire responses to actual actor commands. Neither
         // disconnection nor a failed output proves nonexecution or requests a resend.
         let started = Instant::now();
+        let mut actor_transport_failed = false;
         while started.elapsed() < Duration::from_millis(actor.reply_ms) {
             if owner_start == OwnerStart::Reconciled {
                 if let Some(control) = &mut early_control {
                     if let Err(error) =
                         control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
                     {
-                        failure = Some(match failure {
-                            Some(failure) => format!("{failure}; stop control: {error}"),
-                            None => error,
-                        });
-                        break;
+                        // Preserve the already produced native reply throughout
+                        // this finite grace, including a failed cleanup.
+                        failure.get_or_insert(error);
                     }
                 }
             }
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
-            if let Err(error) = ingress.observe(&mut driver) {
-                if failure.is_none() {
-                    failure = Some(error);
+            if let Some(control) = &mut early_control {
+                if let Err(error) = control.native_stop(&mut driver, &mut time) {
+                    failure.get_or_insert(error);
                 }
-                break;
+            }
+            if !actor_transport_failed {
+                if let Err(error) = ingress.observe(&mut driver) {
+                    failure.get_or_insert(error);
+                    actor_transport_failed = true;
+                    // The actor transport does not own the independent
+                    // operator's remaining original terminal reply grace.
+                    ingress.revoke();
+                }
             }
             pause(actor.poll_ms);
         }

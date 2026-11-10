@@ -194,8 +194,9 @@ impl Selection {
     }
 }
 
-/// This transport has no publication error channel. Broken or exhausted peers
-/// retire only their original sidecar and cannot stop the learned owner.
+/// Broken or exhausted peers retire only their original sidecar. A separately
+/// granted Fence may stop the original owner; every driving caller must observe
+/// that native transition before another source, numerical or helper operation.
 pub(super) fn checkpoint(service: &mut Option<Service>) {
     if let Some(service) = service {
         service.checkpoint();

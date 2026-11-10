@@ -1,4 +1,4 @@
-# Observe a live learned publication through the original Tower owner
+# Observe and control a live learned publication through the original Tower owner
 
 The Linux learned publication commands can serve a separately authenticated
 operator endpoint while the original owner performs numerical generation,
@@ -74,12 +74,13 @@ following identities and paths with the actual deployment's values:
 }
 ```
 
-Omitted/null `resolution` retains the original read-only observer. A learned
-service can instead explicitly select bounded original receipt reconciliation
-with its independent numerical allowance, described below. A selected resolution
-object without that allowance, including a programmatically supplied profile,
-fails before clock/source acquisition, authority-store creation or listener
-setup. A historical explanation grant cannot authorize this mutation.
+Omitting or nulling both `resolution` and `fence` retains the original read-only
+observer. A learned service can independently select bounded receipt
+reconciliation or permanent original admission Stop, each with its own
+numerical allowance. A selected control object without that allowance,
+including a programmatically supplied profile, fails before clock/source
+acquisition, authority-store creation or listener setup. A historical
+explanation grant cannot authorize either mutation.
 
 The complete scope and selected supervisor identity must match every selected
 actor. Operator identity remains independently configured. Actual Linux UID/GID
@@ -279,6 +280,39 @@ refund the reservation or prove that no journal change occurred. Cached results
 remain historical and are not durable across grant replacement or owner reopening.
 See [the exact reconciliation contract](TOWER_RESOLUTION.md).
 
+## Fence the original learned admission domain
+
+The optional `fence` profile requires `authority: "stop_original_admission"`,
+a positive `max_replay_events` ceiling and explicit
+`numerical_replay_events`, both at most 4,096 and with numerical work no greater
+than the replay ceiling. The original terminal recovery reserve must already
+exist. One retained grant covers the whole resident owner; a Message/Finish
+handoff cannot replenish it.
+
+The request binds the exact original scope, journal revision, control sequence
+and authority epoch. Native replay reserves the complete acknowledged history
+plus Stop before entering learned work. It preserves the actual model, sampler
+and predictor histories and samples no new generation token. Undispatched
+reservations are cancelled/refunded; dispatched Unknown effects remain charged.
+A successful acknowledgment stops admission permanently in that original owner.
+
+The workflow observes the native transition at cooperative boundaries before
+further source acquisition or generation. Active native/process reviews retire
+their original review custody before handing back the driver for reserved
+cleanup. Exact Stop reuse and a shared retained cleanup outcome prevent another
+Stop or repeated failed drain during terminal reply handling. An independent
+operator reply can finish after actor transport failure or a stopped request
+handoff, within its original lifetime.
+
+Read [the admission-fence contract](TOWER_FENCE.md) before constructing the
+request: the historical response does not prove endpoint drain or remote actor
+halt, and exact predecessor matching can refuse continuously advancing
+generation/review. The existing independent Stop protocol remains available.
+The new actual learned socket regression reaches the original AwaitingHuman
+state, fences it with exact numerical allowance and verifies cancellation,
+unchanged numerical/source state and exact reconnect. It is authored and source
+reviewed; compilation and runtime qualification remain pending.
+
 ## Preserve cumulative work and independent control
 
 One service owns the socket, transport counters and selected native custodians for
@@ -293,9 +327,11 @@ Independent Stop has priority before each operator turn. The workflow services
 bounded operator work during generation, actor waiting, native/process review,
 human review, publication and the actor's existing terminal reply grace. A
 partial frame cannot block Stop. Truncated or oversized frames, transport failure,
-expiry or exhausted connection/exchange limits retire only this observer. They do not retry
-an effect, approve a request, stop a healthy publication or suppress the original
-actor response.
+expiry or exhausted connection/exchange limits retire only this operator
+sidecar. Transport failure does not request a native Stop, retry an effect or
+approve a request. An independently authorized Fence that already entered
+native work retains its acknowledgment and original cleanup path even if its
+reply is lost.
 
 The original learned observer facade permanently restricts dispatch to operator
 observations. The separately selected learned reconciliation facade adds only

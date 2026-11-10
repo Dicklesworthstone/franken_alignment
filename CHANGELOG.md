@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-10: carry admission fencing through authenticated live workflows
+
+- Add the independent closed fence profile and retained native custodian to
+  ordinary and learned operator services, with explicit learned replay budgets.
+- Validate full original fence responses in the authenticated document client
+  before output or later sends, preserving historical uncertainty and exact retry.
+- Connect acknowledged Stop to original driver cleanup at workflow boundaries;
+  retain success/failure once across shared controls, review handoffs and grace.
+- Preserve bounded operator replies after actor transport failure and between
+  learned requests without starting a successor or replenishing work.
+- Add twelve profile/service, client, learned socket and original cleanup
+  regression functions. Independent source review is complete; compilation,
+  formatting, Clippy, execution and the full gate remain unverified after the
+  baseline SIGKILLs and loss of the execution workspace.
+
 ## 2026-11-10: read the original live journal through Tower tail
 
 - Add a separately revocable supervisor grant for bounded original journal

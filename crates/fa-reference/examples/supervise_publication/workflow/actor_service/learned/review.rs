@@ -216,6 +216,11 @@ where F: FnMut() -> ElapsedTick {
             stop_requested: matches!(result, Ok(true)), failure: result.err() },
     }
     super::operator::checkpoint(operator);
+    match control.native_stop(&mut driver, time) {
+        Ok(false) => {},
+        result => return Reviewed { driver, history: None, process: None,
+            stop_requested: matches!(result, Ok(true)), failure: result.err() },
+    }
     match ingress::observe(intake, driver.supervisor_mut()) {
         Ok(false) => {},
         result => return Reviewed { driver, history: None, process: None,
@@ -237,6 +242,16 @@ where F: FnMut() -> ElapsedTick {
                 break;
             }
             super::operator::checkpoint(operator);
+            if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
+                stop_requested = true;
+                // Retire the original numerical/process owner before handing
+                // its driver to native stop cleanup. Cancel is a journal no-op
+                // for the already cancelled request.
+                if run.review().status() == NativeReviewStatus::Running {
+                    run.cancel(run.review().revision()).map_err(debug)?;
+                }
+                break;
+            }
             if ingress::observe(intake, run.supervisor_mut())? {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
@@ -323,6 +338,10 @@ where F: FnMut() -> ElapsedTick {
             return Ok(true);
         }
         super::operator::checkpoint(operator);
+        if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(true);
+        }
         if ingress::observe(intake, run.supervisor_mut())? {
             run.cancel(run.review().revision()).map_err(debug)?;
             // Request cancellation is already recorded by its original gateway;

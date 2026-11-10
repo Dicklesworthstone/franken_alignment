@@ -1,11 +1,12 @@
-# Live operator inspection and receipt reconciliation through the original Tower owner
+# Live operator inspection and control through the original Tower owner
 
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
 `situation`, historical admission or completed-congress `explain`, recorded
 `why-held` diagnosis and explicitly selected `policy-replay` capabilities to the
 running supervisor. A separately selected `resolution` grant connects native
-`next` and `resolve` to original endpoint receipt reconciliation. Policy replay
+`next` and `resolve` to original endpoint receipt reconciliation. A separate
+`fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
 without changing policy or issuing authority. The service keeps its original journal lock, source
 admission, helper/human review, publication keys, independent Stop and cleanup path.
@@ -129,7 +130,7 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `hold_diagnosis`, `policy_replay`, `review_explanation` and
-`resolution` are independently optional; omitting one or setting it to `null` keeps that capability
+`resolution` and `fence` are independently optional; omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
@@ -143,7 +144,7 @@ grant and does not enable an otherwise disabled operation.
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
 explanation, recorded-state diagnosis, completed-review explanation, policy
-replay or receipt reconciliation must be enabled. For inspection only, set
+replay, receipt reconciliation or original admission fencing must be enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
 selects policy-literal and selected-witness disclosure, with a positive bounded
@@ -497,7 +498,8 @@ topology, spend or refund source-refresh allowance, or create a new actor
 admission snapshot. The publication source, helper/human, accounting and key
 requirements still apply to every actual effect. The operator session receives
 `Experiment` purpose only when this native replay grant is explicitly selected;
-it never receives `Permit`, a policy governor or a promotion key. See the
+that replay grant supplies no `Permit`, policy governor or promotion key.
+Separately selected resolution/fence grants retain their own restricted authority. See the
 [native publication contract](TOWER_PUBLICATION.md) for the original capability
 and response boundaries.
 
@@ -701,12 +703,44 @@ independent limits, the actual 128-request plus direct-attempt boundary and
 closed final-flag grammar. Independent source review and syntax/format checks
 remain separate from the required runtime and full repository gates.
 
+## Fence original admission
+
+An explicit optional `fence` profile enables one permanent admission Stop:
+
+```json
+"fence": {
+  "max_replay_events": 4096,
+  "numerical_replay_events": 4096,
+  "authority": "stop_original_admission"
+}
+```
+
+The numerical member is optional for an ordinary history and required for
+learned services. The original terminal recovery reserve is mandatory.
+Omitted/null `fence` leaves the capability disabled. This selection issues its
+own native custodian and never borrows inspection, reconciliation or explanation
+allowances. It remains one operation across every reconnect and handoff.
+
+Use `tower-operator-exchange OPERATOR_PROFILE FENCE_REQUEST_JSON` with the exact
+current registration, operation/idempotency key and complete original journal,
+control, scope and authority-epoch predecessor. Stale observation refuses
+without spending the operation. The exact predecessor can race with ongoing
+generation/review, so this operation does not promise acceptance within a fixed
+time under continuous journal advancement.
+
+The Known result preserves the original local Stop, cancellation/refund and
+outstanding charged liabilities. It does not acknowledge endpoint drain, remote
+actor termination or fleet fencing. Original host cleanup is a separate step;
+the historical response remains unchanged after cleanup. See the
+[complete admission-fence contract](TOWER_FENCE.md) for the request, situation
+coordinate mapping, explicit retry rules, client validation and cleanup limits.
+
 ## Lifetime and authority
 
 The service provisions the original selected native grants once and retains their
 noncloneable custodians. One Tower session and its continuation state survive
 healthy reconnects. Reconnection, repeated operation labels, review transitions
-and reply grace cannot replenish query, resolution-operation, candidate,
+and reply grace cannot replenish query, resolution-operation, fence-operation, candidate,
 connection or exchange work.
 The operator's elapsed lifetime is bounded by its profile, actor lifetime and
 the remaining wall lifetime of the original supervisor deadline.
@@ -715,18 +749,24 @@ The host pumps at most one complete operator frame per cooperative checkpoint.
 Independent Stop runs first at active intake and execution checkpoints. Selected
 operator work remains available during helper/human review and terminal reply
 grace. Resolution requires its separate mutation grant and an eligible original
-request. Truncated, oversized or failed operator transport retires that sidecar
-without implicitly resubmitting work or entering Stop. A response failure does
-not roll back an already entered resolution. Every exit retires the sidecar
-before helper cleanup. The native grants retain no strong owner or authority
-lock, and their original health/custody checks still apply to every operation.
+request. Fence requires its own one-operation grant and exact original
+predecessor. After an acknowledged Stop, the workflow invokes its original
+driver cleanup before further source, generation or helper work; the separately
+retained operator can finish its bounded historical reply grace. An actor
+transport failure cannot revoke that independent reply opportunity.
+
+Truncated, oversized or failed operator transport retires that sidecar without
+implicitly resubmitting work or entering Stop. A response failure does not roll
+back an already entered resolution or Fence. Final retirement revokes all
+selected operator custodians. The native grants retain no strong owner or
+authority lock, and original health/custody checks apply to every operation.
 
 Only the separate operator session receives operator access and its explicitly
 selected grants. Policy replay additionally selects `Experiment`; it does not
 grant `Permit`, a source callback, precheck disclosure, helper/human keys or a
-supervisor mutation capability. Resolution explicitly selects `Permit` through
-an operator constructor whose closed verb set refuses actor submission,
-cancellation, polling and precheck before native work. A proposal sent to either
+supervisor mutation capability. Resolution and Fence independently select
+`Permit` through a restricted operator constructor whose closed verb set refuses actor submission,
+cancellation, polling and precheck before native work. A proposal sent to an
 operator profile cannot acquire source evidence or create an action. The actor endpoint keeps its original grants and
 cannot obtain these reads by adding fields to a request. Opening an existing
 recorded request can provide historical operator reads without reacquiring
@@ -771,3 +811,10 @@ and a real learned generation/congress/human/client regression spanning both an
 executed original receipt and a charged missing receipt. Exact/short budgets,
 reconnects, cached results and the driver's settled-state handling are covered.
 Independent source review is complete; new compilation and execution are pending.
+
+The admission-fence integration adds four profile/service, three client, one
+learned socket and four original cleanup regression functions. Independent
+source review is complete; these new tests have not compiled or executed in
+this session because the execution workspace became unavailable after two
+baseline SIGKILLs. The [fence contract](TOWER_FENCE.md#regression-scope-and-qualification)
+records this qualification boundary.

@@ -2,7 +2,8 @@
 use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES,
+    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
+    MAX_HOLD_DIAGNOSIS_QUERIES,
     MAX_INSPECTION_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
     MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
     MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
@@ -42,8 +43,53 @@ pub(crate) struct Settings {
     pub(crate) explanation_disclosure: String,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
+    pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+/// One explicitly selected permanent admission stop in the original domain.
+/// Endpoint drain and remote actor halt require independent acknowledgments.
+#[derive(Clone, Debug)]
+pub(crate) struct FenceSettings {
+    pub(crate) max_replay_events: usize,
+    pub(crate) numerical_replay_events: Option<usize>,
+    pub(crate) authority: String,
+}
+
+impl FenceSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
+                .map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.max_replay_events == 0
+            || self.max_replay_events > MAX_FENCE_REPLAY_EVENTS
+            || self.authority != "stop_original_admission"
+            || self.numerical_replay_events.is_some_and(|events| {
+                events == 0 || events > self.max_replay_events
+            })
+        {
+            return Err(
+                "fence requires explicit original-admission-stop authority and bounded replay"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 /// Explicit permission for one original owner's bounded receipt reconciliation.
@@ -306,6 +352,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(ResolutionSettings::decode(value)?),
             },
+            fence: match fields.optional("fence") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(FenceSettings::decode(value)?),
+            },
             review_explanation: match fields.optional("review_explanation") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(ReviewExplanationSettings::decode(value)?),
@@ -374,6 +424,7 @@ impl Settings {
                 && self.explanation_queries == 0
                 && self.hold_diagnosis.is_none()
                 && self.resolution.is_none()
+                && self.fence.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none())
         {
@@ -415,11 +466,14 @@ impl Settings {
         if let Some(selected) = &self.resolution {
             selected.validate()?;
         }
+        if let Some(selected) = &self.fence {
+            selected.validate()?;
+        }
         Ok(())
     }
 
     /// Learned observation retains its original read-only defaults. Selecting
-    /// reconciliation also requires explicit numerical work admission, before
+    /// reconciliation or admission stop requires explicit numerical work admission, before
     /// clock/source acquisition, owner startup or listener creation.
     pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
         self.validate()?;
@@ -431,6 +485,15 @@ impl Settings {
             return Err(
                 "learned receipt reconciliation requires an explicit numerical replay budget"
                     .into(),
+            );
+        }
+        if self
+            .fence
+            .as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(
+                "learned admission stop requires an explicit numerical replay budget".into(),
             );
         }
         Ok(())
