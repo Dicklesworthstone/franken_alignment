@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-10: grant bounded numerical replay for original completed reviews
+
+- Add an explicitly selected cumulative original-transition allowance for native
+  completed-review explanations over learned, decoder and raw-predictor histories.
+- Reserve the complete frozen cut before replay and retain charged reservations
+  after reconstruction, attribution or output failure; preserve weak owner custody.
+- Keep default numerical Unknown and plain-history compatibility, and close the
+  raw-predictor omission in admission explanation's missing-budget guard.
+- Add native causal-work tests and two public learned generation/congress/effect
+  regressions. Source review completed; new execution qualification remains open.
+
 ## 2026-11-10: serve live learned operator inspection across resident releases
 
 - Add authenticated original-owner Tower observation to live learned actor and

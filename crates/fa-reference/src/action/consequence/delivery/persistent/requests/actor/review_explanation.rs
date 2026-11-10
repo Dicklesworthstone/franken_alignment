@@ -217,6 +217,7 @@ pub type FileReviewExplanationResult = Result<FileReviewExplanationObservation, 
 struct Grant {
     remaining: Cell<usize>,
     max_replay_events: usize,
+    remaining_numerical_replay_events: Option<Cell<usize>>,
 }
 
 /// Noncloneable host custody, independent of admission explanation, situation,
@@ -238,6 +239,15 @@ impl FileSupervisorReviewExplanationGrant {
     pub fn max_replay_events(&self) -> usize {
         self.grant.max_replay_events
     }
+    /// Remaining reservations for original numerical-history transitions,
+    /// shared by every port clone. None means numerical replay was not granted.
+    /// These are logical event reservations, not arithmetic products or CPU time.
+    pub fn remaining_numerical_replay_events(&self) -> Option<usize> {
+        self.grant
+            .remaining_numerical_replay_events
+            .as_ref()
+            .map(Cell::get)
+    }
     pub fn revoke(self) {
         drop(self);
     }
@@ -248,6 +258,10 @@ impl fmt::Debug for FileSupervisorReviewExplanationGrant {
         f.debug_struct("FileSupervisorReviewExplanationGrant")
             .field("remaining_queries", &self.remaining_queries())
             .field("max_replay_events", &self.max_replay_events())
+            .field(
+                "remaining_numerical_replay_events",
+                &self.remaining_numerical_replay_events(),
+            )
             .finish_non_exhaustive()
     }
 }
@@ -300,12 +314,71 @@ impl FileActorSupervisor<FileOversight> {
         ),
         JournalError,
     > {
+        self.review_explanation_port_with_limits(queries, max_replay_events, None)
+    }
+
+    /// Explicitly permit replay of ORIGINAL decoder and action-predictor
+    /// recipes retained by this owner, with a separate cumulative allowance
+    /// across all queries. This includes predictors over captured raw frames.
+    ///
+    /// One unit reserves one original journal transition. For a numerical owner
+    /// the ENTIRE frozen cut, including its nonnumerical events, is reserved
+    /// before the first transition: bootstrap, review and later events can also
+    /// invoke predictors, refinement or checkpoint reconstruction. Each original
+    /// transition still enforces its immutable native numerical limits. This
+    /// allowance is not a scalar-products, CPU, memory or wall-clock bound.
+    ///
+    /// An insufficient allowance enters a charged Unknown query without any
+    /// numerical replay. Once admitted, the full reservation is spent even if
+    /// reconstruction, attribution or later output fails. The per-query event
+    /// bound and query allowance remain independent. No caller recipe, source
+    /// refresh, disk reopening or live numerical budget is involved.
+    pub fn review_explanation_port_with_numerical_budget(
+        &self,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: usize,
+    ) -> Result<
+        (
+            FileSupervisorReviewExplanationPort,
+            FileSupervisorReviewExplanationGrant,
+        ),
+        JournalError,
+    > {
+        self.review_explanation_port_with_limits(
+            queries,
+            max_replay_events,
+            Some(numerical_replay_events),
+        )
+    }
+
+    fn review_explanation_port_with_limits(
+        &self,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: Option<usize>,
+    ) -> Result<
+        (
+            FileSupervisorReviewExplanationPort,
+            FileSupervisorReviewExplanationGrant,
+        ),
+        JournalError,
+    > {
         if queries == 0 || max_replay_events == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        if numerical_replay_events == Some(0) {
             return Err(Error::InvalidInput.into());
         }
         if queries > MAX_REVIEW_EXPLANATION_QUERIES
             || max_replay_events > MAX_REVIEW_EXPLANATION_EVENTS
         {
+            return Err(Error::Limit.into());
+        }
+        let possible_replay_events = queries
+            .checked_mul(max_replay_events)
+            .ok_or(Error::Overflow)?;
+        if numerical_replay_events.is_some_and(|events| events > possible_replay_events) {
             return Err(Error::Limit.into());
         }
         let owner = self
@@ -318,6 +391,7 @@ impl FileActorSupervisor<FileOversight> {
         let grant = Rc::new(Grant {
             remaining: Cell::new(queries),
             max_replay_events,
+            remaining_numerical_replay_events: numerical_replay_events.map(Cell::new),
         });
         Ok((
             FileSupervisorReviewExplanationPort {
@@ -341,7 +415,8 @@ impl FileSupervisorReviewExplanationPort {
     /// congress, actual application and effect linkage in ONE complete pass.
     ///
     /// Unknown covers missing/unadmitted requests, unfinished rounds, unsupported
-    /// numerical history, replay bound exhaustion and reconstruction failure.
+    /// numerical history without its explicit allowance, replay bound exhaustion
+    /// and reconstruction failure.
     /// It is never proved absence, permission, an application retry or a source
     /// refresh. All queries share custody and accounting across port clones;
     /// later encoding/output failure does not refund the entered query.
@@ -373,9 +448,11 @@ impl FileSupervisorReviewExplanationPort {
         grant.remaining.set(remaining - 1);
         if owner.host.revision() > grant.max_replay_events as u64
             || owner.host.actor_explanation_scope() != self.scope
-            || owner.host.decoder_required()
-            || owner.host.learned_action_consistency_required()
         {
+            return Ok(unknown());
+        }
+        let numerical = owner.host.decoder_required() || owner.host.action_consistency_required();
+        if numerical && grant.remaining_numerical_replay_events.is_none() {
             return Ok(unknown());
         }
         let Ok(status) = owner.host.request_status(request) else {
@@ -390,6 +467,23 @@ impl FileSupervisorReviewExplanationPort {
         let Ok(mut cursor) = owner.host.begin_review_replay(round) else {
             return Ok(unknown());
         };
+        if numerical {
+            let events = cursor.progress().total_events;
+            if events as u64 != owner.host.revision() || events > grant.max_replay_events {
+                return Ok(unknown());
+            }
+            let allowance = grant
+                .remaining_numerical_replay_events
+                .as_ref()
+                .expect("checked numerical replay grant");
+            let Some(remaining) = allowance.get().checked_sub(events) else {
+                return Ok(unknown());
+            };
+            // Cursor construction only creates the empty private machine. Every
+            // original numerical Enable/step/review occurs inside advance, AFTER
+            // this complete reservation. Failed replay cannot refund its work.
+            allowance.set(remaining);
+        }
         if cursor.advance(0, grant.max_replay_events).is_err() {
             return Ok(unknown());
         }

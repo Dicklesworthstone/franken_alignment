@@ -7,7 +7,7 @@ committee applied, what each member actually revealed, which reducer rules
 selected the consequence, whether that consequence applied, and what the
 original publication journal subsequently observed.
 
-This implements a scoped part of FA-132/136 under plan §§9.2–9.4, 9.8, 17.3,
+This implements a scoped part of FA-137, supporting FA-136, under plan §§9.2–9.4, 9.8, 17.3,
 17.8 and 22.1, serving FI-A06, FI-A13 and FI-A14. It uses the original replay
 machine and effect audit; there is no second evaluator, congress, ledger or
 publication path. It does not claim a complete current `why-held` tree.
@@ -43,6 +43,46 @@ unknown requests. Malformed zero identities, invalid Tower syntax, unauthorized
 callers and stale mount generations refuse before native expenditure. Reads do
 not refresh source evidence, sample time, consume admission snapshots, acquire
 either publication key or write journal events.
+
+## Explicit numerical history allowance
+
+An original supervisor can select
+`review_explanation_port_with_numerical_budget(queries, max_replay_events,
+numerical_replay_events)`. This enables reconstruction of its retained decoder
+or action-predictor history, including learned text and raw-frame predictors.
+The existing constructors keep numerical reconstruction disabled.
+
+The additional allowance is cumulative across every clone and query. It must be
+positive and at most `queries * max_replay_events`, with checked multiplication.
+`remaining_numerical_replay_events()` returns `None` when it was not selected,
+or the original remaining reservation count, including `Some(0)` after spending.
+
+One unit reserves one original journal transition. Before advancing the private
+replay cursor, the implementation reserves the entire frozen acknowledged cut,
+including nonnumerical records: bootstrap, congress and later transitions can
+also invoke retained prediction, refinement or checkpoint work. Each transition
+still uses its immutable native numerical limits. These units do not measure
+arithmetic operations, CPU time, memory or wall time.
+
+An insufficient reservation consumes the entered query but executes no cursor
+transitions and leaves the numerical allowance untouched. An admitted replay
+spends its complete reservation even if reconstruction, final request/round
+attribution or output later fails. Missing request/round selection before replay
+also spends the entered query without a numerical reservation. A later query
+must pay for the then-acknowledged complete cut; no earlier answer is a free cache.
+
+The replay uses the original owner's retained bindings and journal, with no
+caller-supplied recipe, file reopening, source refresh or live-budget transfer.
+It recomputes historical numerical transitions while preserving the original
+committee's commitments and verdicts; it does not ask helpers for fresh judgments.
+The sealed historical response and its current-eligibility Unknowns are unchanged.
+
+Raw-frame action predictors also perform numerical work. Completed-review reads
+now require this explicit selection for those histories as well. Admission
+explanations have no corresponding numerical grant and therefore return charged
+Unknown for all decoder or action-predictor histories, including the raw-only
+case previously missed by the learned-only guard. Plain histories retain their
+existing known explanations without spending a selected numerical allowance.
 
 ## Explicit request
 

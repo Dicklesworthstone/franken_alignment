@@ -1,5 +1,53 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-10: explain original learned congresses with explicit numerical reservations
+
+An original supervisor can now issue
+`review_explanation_port_with_numerical_budget` for its completed-review
+explanation. The existing owner and replay cursor reconstruct the exact policy,
+congress, application and later effect linkage from retained immutable bindings.
+No caller recipe, second owner, disk reopening, source refresh, new helper
+judgment or publication key is introduced. Existing constructors retain
+numerical Unknown; the historical response schema remains unchanged.
+
+The independent cumulative allowance counts original journal transitions under
+their retained native limits, not arithmetic products, CPU, memory or wall time.
+The entire frozen cut is reserved before the first cursor event. Insufficient
+work spends the query without replay; admitted failure or later output loss
+retains the whole reservation. Clones share query and numerical counters, and
+ordinary histories do not consume numerical reservations.
+
+The numerical classification now covers raw-frame action predictors as well as
+decoders and learned predictors. The sibling admission explanation had the same
+raw-only omission; it now returns charged Unknown because that interface has no
+numerical grant. A paired plain-history case preserves its original Known result.
+Policy-corpus replay does not reconstruct numerical history and is unchanged.
+
+Native regression sources measure actual original cursor attempts with a
+strictly test-only thread-local counter, including zero attempts on default and
+one-short reservations. Two new public learned regression functions cover real
+generation, original congress and later publication, exact/short/default bounds,
+shared custody and replay from retained owner bindings despite foreign canonical
+file bytes. The admission follow-up adds a paired real raw-predictor/control case.
+Independent source review checked precharge ordering, full-cut identity, error
+accounting, weak custody and unchanged historical output claims.
+
+Before these edits, the frozen main revision `3e6910f6` compiled and passed all
+six public learned-observer and nine hold-diagnosis tests on qualified
+`nightly-2026-09-08` with Cranelift. Its full example test harness was killed
+during code generation before runtime execution. Those are baseline observations,
+not validation of this increment. The executor disconnected before new
+compilation; authored files were recovered from exact patches against verified
+base blobs. New compilation, runtime, formatting and full RCH qualification
+remain unclaimed. Observed baseline result metadata is retained in
+`artifacts/execution/2026-11-10-learned-read-baseline-observations.txt`; it is
+explicitly an observation record, not a reconstructed full compiler log.
+
+FA-137 remains in progress. The live profile selection is a separate integration;
+no complete current eligibility, ranked next action, numerical admission
+explanation, refinement-specific projection or production qualification is
+inferred. See [the numerical replay contract](docs/TOWER_REVIEW_EXPLANATION.md#explicit-numerical-history-allowance).
+
 ## 2026-11-10: inspect live and resident learned publication through the original owner
 
 Both `create-learned-generated` with an explicit actor profile and

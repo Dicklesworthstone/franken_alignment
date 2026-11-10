@@ -19,7 +19,7 @@ use std::rc::{Rc, Weak};
 
 pub const MAX_EXPLANATION_QUERIES: usize = 1024;
 /// A query replays at most this many retained original events. Operators may
-/// grant a smaller bound. Numerical decoder and learned-consistency profiles
+/// grant a smaller bound. Numerical decoder and action-predictor profiles
 /// require a separate numerical-work contract and are not replayed by this read.
 pub const MAX_EXPLANATION_EVENTS: usize = MAX_JOURNAL_EVENTS;
 
@@ -246,7 +246,7 @@ impl FileSupervisorExplanationPort {
     /// event bound. The original investigation reconstructs historical inputs
     /// in memory; it does not read disk, refresh a source, sample time, consume
     /// the supervisor's one-use snapshot or run a counterfactual experiment.
-    /// Numerical decoder/learned-consistency histories are Unknown because this
+    /// Numerical decoder/action-predictor histories are Unknown because this
     /// read grants no numerical-work allowance. Missing/unadmitted requests and
     /// reconstruction failures are also Unknown, never proved absence.
     ///
@@ -282,7 +282,7 @@ impl FileSupervisorExplanationPort {
         if owner.host.revision() > grant.max_replay_events as u64
             || owner.host.actor_explanation_scope() != self.scope
             || owner.host.decoder_required()
-            || owner.host.learned_action_consistency_required()
+            || owner.host.action_consistency_required()
         {
             return Ok(unknown());
         }

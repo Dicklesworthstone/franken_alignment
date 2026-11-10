@@ -7,6 +7,8 @@ mod cursor;
 mod effect;
 mod learned;
 pub use cursor::{FileReviewReplayCursor, FileReviewReplayProgress, FileReviewReplayStatus};
+#[cfg(test)]
+pub(crate) use cursor::review_replay_event_attempts;
 pub use effect::{AuditedAuthorization, AuditedDispatch, AuditedOutcome, AuditedReconciliation,
     FileReviewEffectReplay, ReviewEffectAudit};
 

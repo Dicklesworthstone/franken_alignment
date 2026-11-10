@@ -14,6 +14,19 @@ use std::cell::OnceCell;
 use std::fmt;
 use std::rc::Rc;
 
+// Unit tests observe actual entry to the original replay machine. Live owner
+// counters alone cannot establish that an insufficient grant avoided private
+// reconstruction. Per-thread observation keeps independent tests isolated.
+#[cfg(test)]
+std::thread_local! {
+    static REVIEW_EVENT_ATTEMPTS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn review_replay_event_attempts() -> usize {
+    REVIEW_EVENT_ATTEMPTS.with(std::cell::Cell::get)
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileReviewReplayStatus {
     Replaying,
@@ -262,6 +275,8 @@ impl FileReviewReplayCursor {
         while self.replayed < end {
             self.status = FileReviewReplayStatus::Interrupted;
             self.attempted += 1;
+            #[cfg(test)]
+            REVIEW_EVENT_ATTEMPTS.with(|count| count.set(count.get() + 1));
             if let Err(error) = self.step() {
                 self.status = FileReviewReplayStatus::Failed(error);
                 return Err(error.into());

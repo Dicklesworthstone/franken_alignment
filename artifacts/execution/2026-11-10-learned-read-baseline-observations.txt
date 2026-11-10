@@ -1,0 +1,26 @@
+Observed local verification metadata
+Consumer: IMPLEMENTATION_STATUS.md numerical-review capability entry.
+Scope: exact baseline commit 3e6910f69a0c291ae46abf015e2ff887d0987255.
+This records observed command results; it is NOT a reconstructed full raw log.
+It gives no execution credit to subsequent source changes.
+
+Toolchain: qualified nightly-2026-09-08, Cranelift, debug information disabled.
+CARGO_BUILD_JOBS=1; CARGO_INCREMENTAL=0.
+RUSTFLAGS=-Zcodegen-backend=cranelift -Zunstable-options --jobs-frontend=1 --jobs-backend=1
+
+Command:
+cargo test --locked -p fa-reference --test tower_learned_observation --test tower_hold_diagnosis -- --test-threads=1
+Observed: tower_hold_diagnosis 9 passed, 0 failed.
+Observed: tower_learned_observation 6 passed, 0 failed.
+Exit code: 0. Elapsed seconds: 30.73. Maximum RSS KiB: 1851788.
+
+Command:
+cargo test --locked -p fa-reference --example supervise_publication operator -- --test-threads=1
+Observed: rustc was terminated by signal 9 (SIGKILL) during test-harness code generation.
+No example runtime test execution was reached.
+Exit code: 101. Elapsed seconds: 96.03. Maximum RSS KiB: 3412580.
+
+The executor subsequently disconnected. Complete local raw logs were not
+available for inclusion at commit preparation; no missing output is synthesized.
+Retire this recovery observation in favor of a fresh exact-source executed
+qualification when such evidence is available, retaining historical results.
