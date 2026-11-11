@@ -1,0 +1,236 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Checking fa-reference v0.2.0 (/workspace/scratch/00ecc018888a/verification/baseline/crates/fa-reference)
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/inspection.rs:32:10
+   |
+32 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+   |
+32 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+32 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+  --> crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/journal_tail.rs:35:10
+   |
+35 |         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |          ^^^^^^^^^^^^
+   |
+help: replace the use of the deprecated method
+   |
+35 -         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+35 +         .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| {
+   |
+
+warning: `fa-reference` (lib) generated 2 warnings (run `cargo fix --lib -p fa-reference` to apply 2 suggestions)
+    Checking fa-journal v0.2.0 (/workspace/scratch/00ecc018888a/verification/baseline/crates/fa-journal)
+    Checking xtask v0.2.0 (/workspace/scratch/00ecc018888a/verification/baseline/xtask)
+warning: function `hash_chunk_fast` is never used
+   --> xtask/src/source_snapshot.rs:790:4
+    |
+790 | fn hash_chunk_fast(tool: &Tool, root: &Path, chunk: &[String]) -> Option<Vec<(String, String)>> {
+    |    ^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `xtask` (bin "xtask") generated 1 warning
+warning: function `command_with_learned` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/operator.rs:87:15
+   |
+87 | pub(crate) fn command_with_learned(args: &[String],
+   |               ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `validate_learned_argv` is never used
+   --> crates/fa-reference/examples/shutdown_fleet/operator.rs:105:4
+    |
+105 | fn validate_learned_argv(args: &[String]) -> Result<(), String> {
+    |    ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `command_with_learned` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/selected.rs:65:15
+   |
+65 | pub(super) fn command_with_learned(args: &[String],
+   |               ^^^^^^^^^^^^^^^^^^^^
+
+warning: `fa-reference` (example "shutdown_fleet") generated 3 warnings
+warning: unused import: `std::io::Write`
+  --> crates/fa-reference/examples/supervise_publication.rs:83:9
+   |
+83 |     use std::io::Write;
+   |         ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: type `actor_service::profile::Profile` is more private than the item `actor_service::serve_selected`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs:324:1
+    |
+324 | / pub(super) fn serve_selected<F>(
+325 | |     config: Config,
+326 | |     actor: &Profile,
+327 | |     reviewer_profile: &PeerProfile,
+...   |
+334 | | where
+335 | |     F: FnMut() -> ElapsedTick,
+    | |______________________________^ function `actor_service::serve_selected` is reachable at visibility `pub(in crate::workflow)`
+    |
+note: but type `actor_service::profile::Profile` is only usable at visibility `pub(in crate::workflow::actor_service)`
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/profile.rs:16:1
+    |
+ 16 | pub(super) struct Profile {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `workflow::Deadline` is more private than the item `recover`
+   --> crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs:179:1
+    |
+179 | / pub(crate) fn recover<F>(
+180 | |     config: &Config,
+181 | |     profile: &SubmitProfile,
+182 | |     custody: &Custody,
+...   |
+189 | | where
+190 | |     F: FnMut() -> ElapsedTick,
+    | |______________________________^ function `recover` is reachable at visibility `pub(crate)`
+    |
+note: but type `workflow::Deadline` is only usable at visibility `pub(self)`
+   --> crates/fa-reference/examples/supervise_publication/workflow.rs:57:1
+    |
+ 57 | struct Deadline {
+    | ^^^^^^^^^^^^^^^
+
+warning: function `command` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/operator.rs:61:15
+   |
+61 | pub(crate) fn command(args: &[String], out: &mut impl Write) -> Result<(), String> {
+   |               ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `command_with` is never used
+   --> crates/fa-reference/examples/shutdown_fleet/operator.rs:139:4
+    |
+139 | fn command_with(
+    |    ^^^^^^^^^^^^
+
+warning: function `prepare_command` is never used
+   --> crates/fa-reference/examples/shutdown_fleet/operator.rs:155:4
+    |
+155 | fn prepare_command(args: &[String], elapsed: &mut impl FnMut() -> Duration)
+    |    ^^^^^^^^^^^^^^^
+
+warning: function `run` is never used
+   --> crates/fa-reference/examples/shutdown_fleet/operator.rs:192:4
+    |
+192 | fn run(
+    |    ^^^
+
+warning: function `encode` is never used
+ --> crates/fa-reference/examples/shutdown_fleet/render.rs:9:15
+  |
+9 | pub(super) fn encode(mode: &str, timed_out: bool, pass: &FileShutdownRecoveryPass) -> String {
+  |               ^^^^^^
+
+warning: function `command_with` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/terminal.rs:28:15
+   |
+28 | pub(super) fn command_with(args: &[String], clock: impl FnMut() -> Result<ElapsedTick, String>,
+   |               ^^^^^^^^^^^^
+
+warning: function `command_for_phase` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/terminal.rs:34:15
+   |
+34 | pub(super) fn command_for_phase(args: &[String], clock: impl FnMut() -> Result<ElapsedTick, String>,
+   |               ^^^^^^^^^^^^^^^^^
+
+warning: function `command_for_selection` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/terminal.rs:40:15
+   |
+40 | pub(super) fn command_for_selection(args: &[String], clock: impl FnMut() -> Result<ElapsedTick, String>,
+   |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `command_with` is never used
+  --> crates/fa-reference/examples/shutdown_fleet/selected.rs:58:15
+   |
+58 | pub(super) fn command_with(args: &[String], clock: impl FnMut() -> Result<ElapsedTick, String>,
+   |               ^^^^^^^^^^^^
+
+warning: method `step_learned` is never used
+  --> crates/fa-reference/examples/supervise_publication/publication/learned.rs:47:19
+   |
+43 | impl PreparedPublication<'_> {
+   | ---------------------------- method in this implementation
+...
+47 |     pub(crate) fn step_learned<F>(&self, driver: &mut FileSupervisedDriver,
+   |                   ^^^^^^^^^^^^
+
+warning: function `check_live` is never used
+  --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/prediction.rs:31:15
+   |
+31 | pub(super) fn check_live(
+   |               ^^^^^^^^^^
+
+warning: function `serve` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/service.rs:152:32
+    |
+152 | pub(in super::super::super) fn serve<F>(
+    |                                ^^^^^
+
+warning: function `admit` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/readonly/custody.rs:117:15
+    |
+117 | pub(super) fn admit(
+    |               ^^^^^
+
+warning: function `run_checked` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs:168:15
+    |
+168 | pub(super) fn run_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    |               ^^^^^^^^^^^
+
+warning: function `run_serviced_checked` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs:183:15
+    |
+183 | pub(super) fn run_serviced_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    |               ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `run_serviced_checked_with_credential` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs:191:15
+    |
+191 | pub(super) fn run_serviced_checked_with_credential<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `run_serviced_checked` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/process.rs:136:15
+    |
+136 | pub(super) fn run_serviced_checked<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    |               ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `run_serviced_checked_with_credential` is never used
+   --> crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/process.rs:144:15
+    |
+144 | pub(super) fn run_serviced_checked_with_credential<F>(driver: FileSupervisedDriver, config: &mut Config, loaded: &Loaded,
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `fa-reference` (example "supervise_publication") generated 21 warnings
+warning: method `create_checked` is never used
+   --> crates/fa-reference/examples/native_andon/settings.rs:122:19
+    |
+ 28 | impl Settings {
+    | ------------- method in this implementation
+...
+122 |     pub(super) fn create_checked(&self, config: &Config, publication: PublicationLimits,
+    |                   ^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `fa-reference` (example "native_andon") generated 1 warning
+error: could not compile `fa-reference` (lib test)
+
+Caused by:
+  process didn't exit successfully: `/home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustc --crate-name fa_reference --edition=2024 crates/fa-reference/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat,unused-externs-silent --emit=dep-info,metadata -C embed-bitcode=no '--warn=clippy::all' '--allow=clippy::zombie_processes' '--allow=clippy::write_with_newline' '--allow=clippy::useless_vec' --forbid=unsafe_code '--allow=clippy::unnecessary_unwrap' '--allow=clippy::too_many_arguments' '--allow=clippy::sliced_string_as_bytes' '--allow=clippy::single_range_in_vec_init' '--allow=clippy::single_match' '--allow=clippy::result_large_err' '--allow=clippy::redundant_closure' '--allow=clippy::op_ref' '--allow=clippy::needless_bool' '--allow=clippy::module_inception' '--allow=clippy::map_clone' '--allow=clippy::manual_range_patterns' '--allow=clippy::manual_is_multiple_of' '--allow=clippy::manual_div_ceil' '--allow=clippy::manual_clamp' '--allow=clippy::large_enum_variant' '--allow=clippy::field_reassign_with_default' '--allow=clippy::duplicated_attributes' '--allow=clippy::duplicate_mod' '--allow=clippy::drop_non_drop' '--allow=clippy::derivable_impls' '--allow=clippy::collapsible_match' '--allow=clippy::collapsible_if' '--allow=clippy::clone_on_copy' '--allow=clippy::chunks_exact_to_as_chunks' '--allow=clippy::bool_assert_comparison' --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values())' -C metadata=15d9e4ceea14bead -C extra-filename=-71892226c95c11b3 --out-dir /workspace/scratch/00ecc018888a/verification/baseline/target/debug/build/fa-reference/71892226c95c11b3/out -C strip=debuginfo --force-warn=unused_crate_dependencies` (signal: 9, SIGKILL: kill)

@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: discover original request reviews through Tower
+
+The native owner now provides separately granted, finite request-to-review
+history. `related` at the original request address returns its recorded attempt,
+stage and complete bounded list of completed ordinary or learned reviews,
+including actual Begin/Finish revisions and original refinement/application
+category. Incomplete starts remain a separate historical count. Missing requests
+remain Unknown; complete-history and result limits refuse instead of truncating.
+
+Every completed row supplies an explicit, registration-pinned Explain request.
+The existing independent explanation grant still owns disclosure and replay;
+discovery consumes no numerical work, source snapshot, clock read or publication
+right. Original weak owner/issuer custody, shared grant expenditure and sealed
+query/operation/idempotency correlation prevent replacement or relabeling.
+
+Six native and eleven public integration regression functions are authored,
+including actual learned refinement then application/publication, stale original
+application, full source-history and output bounds, custody loss, missing and
+unadmitted requests, and discovered links consumed by existing Explain. An
+independent review found no production blocker. Qualified rustfmt and diff
+checks pass. No source admission or production qualification is widened.
+
+The unchanged baseline library and examples typechecked before the full
+library-test metadata compiler was killed. For this exact new source, ordinary
+focused metadata checking, Cranelift runtime code generation, and the previously
+successful serial Cranelift configuration were killed by the shared workspace's
+memory pressure before tests executed. These attempts establish no new compiler
+or runtime pass. Raw logs are retained under
+`artifacts/execution/2026-11-11-request-history-*`; complete RCH qualification and
+all broader dispatcher/roadmap acceptance remain pending.
+
+See [the native/Tower contract](docs/TOWER_REQUEST_HISTORY.md).
+
 ## 2026-11-10: compose journal observations with review and original Stop
 
 The operator regression suite now connects original Tail metadata to a real

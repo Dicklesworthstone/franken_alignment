@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-11: connect original request history to completed reviews
+
+- Add independently retained request-history metadata grants on the original
+  durable owner, with shared finite queries and complete scan/result limits.
+- Connect native Tower `related` to original request, attempt and completed
+  ordinary/refinement review relationships and explicit pinned Explain reads.
+- Preserve incomplete, missing and unadmitted histories; original disclosure,
+  replay, numerical work and publication authority remain separate.
+- Add six native and eleven public positive/negative regressions and the scoped
+  contract. Formatting and independent source review pass; memory-limited
+  compiler/runtime attempts did not execute tests, so qualification stays open.
+
 ## 2026-11-10: connect original history to review and fencing workflows
 
 - Add real authenticated composition regressions from observed Tail request and

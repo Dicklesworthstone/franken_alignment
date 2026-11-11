@@ -1,12 +1,12 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects twelve
+On Unix, `fa_reference::tower::publication::PublicationTower` connects thirteen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
 separately granted recorded-state `why-held`, and bounded original receipt
 planning/reconciliation through `next` and `resolve`, separately granted
-original journal `tail`, and original-domain `fence` through its restricted
+original journal `tail`, request-to-review `related`, and original-domain `fence` through its restricted
 control mount.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
@@ -17,6 +17,11 @@ The [native journal-tail contract](TOWER_JOURNAL_TAIL.md) supplies coherent
 historical metadata pages from the same live owner. An explicit original
 journal revision selects a fixed capture; finite supervisor disclosure and
 single-use continuations bound enumeration without replaying numerical work.
+
+The [request-history contract](TOWER_REQUEST_HISTORY.md) connects an original
+request directly to all of its completed reviews at a bounded acknowledged
+cut. Explicit Explain links preserve the separate replay/disclosure grant and
+distinguish a learned refinement from an attempted consequence application.
 
 ## Mount one actor session
 

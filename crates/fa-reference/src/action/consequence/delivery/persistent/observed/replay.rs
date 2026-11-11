@@ -5,6 +5,7 @@ mod anchored;
 mod cursor;
 mod effect;
 mod learned;
+pub(in crate::action::consequence::delivery::persistent) mod request_history;
 pub mod situation;
 pub mod tail;
 #[cfg(test)]

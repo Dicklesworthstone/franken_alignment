@@ -50,6 +50,13 @@ pub use journal_tail::{
     FileSupervisorJournalTailPort, MAX_JOURNAL_TAIL_CAPTURE_EVENTS, MAX_JOURNAL_TAIL_PAGE_EVENTS,
     MAX_JOURNAL_TAIL_QUERIES,
 };
+mod request_history;
+pub use request_history::{
+    FileRequestHistory, FileRequestHistoryBasis, FileRequestHistoryDisclosure,
+    FileRequestHistoryObservation, FileRequestHistoryResult, FileRequestReviewCompletion,
+    FileRequestReviewLink, FileSupervisorRequestHistoryGrant, FileSupervisorRequestHistoryPort,
+    MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
+};
 mod policy_replay;
 pub use policy_replay::{
     FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayCursor, FilePolicyReplayObservation,

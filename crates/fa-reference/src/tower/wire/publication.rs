@@ -10,6 +10,7 @@ mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
 mod policy_replay;
+mod request_history;
 mod resolution;
 mod review_explanation;
 
@@ -103,6 +104,16 @@ impl PublicationResponse {
             PublicationResult::JournalTail(linked) => (
                 "journal-tail",
                 journal_tail::encode(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::RequestHistory(linked) => (
+                "request-history",
+                request_history::encode(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

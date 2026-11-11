@@ -20,6 +20,8 @@ mod inspection;
 pub use inspection::LinkedSituation;
 mod journal_tail;
 pub use journal_tail::LinkedJournalTail;
+mod request_history;
+pub use request_history::LinkedRequestHistory;
 #[cfg(target_os = "linux")]
 pub mod peer;
 mod policy_replay;
@@ -36,7 +38,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileInspectionResult, FileJournalTailCursor, FileLearnedTextStreamActorPort,
     FilePolicyReplayCursor, FileSupervisorExplanationPort, FileSupervisorFencePort,
     FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorResolutionPort,
+    FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
@@ -52,9 +54,10 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 12] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 13] = [
     Verb::Propose,
     Verb::Get,
+    Verb::Related,
     Verb::Precheck,
     Verb::Capabilities,
     Verb::Situation,
@@ -106,6 +109,7 @@ pub enum PublicationResult {
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
     JournalTail(LinkedJournalTail),
+    RequestHistory(LinkedRequestHistory),
     Explanation(FileExplanationResult),
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
@@ -153,6 +157,7 @@ pub struct PublicationTower {
     inspection_cursor: Option<FileInspectionCursor>,
     journal_tail: Option<FileSupervisorJournalTailPort>,
     journal_tail_cursor: Option<FileJournalTailCursor>,
+    request_history: Option<FileSupervisorRequestHistoryPort>,
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
@@ -196,6 +201,7 @@ impl PublicationTower {
             inspection: None,
             inspection_cursor: None,
             journal_tail: None,
+            request_history: None,
             journal_tail_cursor: None,
             explanation: None,
             hold_diagnosis: None,
@@ -374,7 +380,12 @@ impl PublicationTower {
             }
             if !matches!(
                 request.verb,
-                Verb::Situation | Verb::Tail | Verb::Explain | Verb::WhyHeld | Verb::PolicyReplay
+                Verb::Situation
+                    | Verb::Tail
+                    | Verb::Related
+                    | Verb::Explain
+                    | Verb::WhyHeld
+                    | Verb::PolicyReplay
             ) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -387,6 +398,7 @@ impl PublicationTower {
                 request.verb,
                 Verb::Situation
                     | Verb::Tail
+                    | Verb::Related
                     | Verb::Explain
                     | Verb::WhyHeld
                     | Verb::Next
@@ -425,6 +437,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Tail {
             return self.dispatch_journal_tail(access, request);
+        }
+
+        if request.verb == Verb::Related {
+            return self.dispatch_request_history(access, request);
         }
 
         if request.verb == Verb::Explain {

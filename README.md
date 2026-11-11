@@ -29,6 +29,12 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The [native request-history capability](docs/TOWER_REQUEST_HISTORY.md) connects
+`related` on a publication request to its recorded attempt and completed
+reviews. An operator can follow exact Explain requests without manually
+joining the entire journal. Discovery uses separate finite disclosure custody,
+preserves missing and incomplete history, and performs no numerical replay.
+
 The [native journal-tail capability](docs/TOWER_JOURNAL_TAIL.md) now connects
 the original live journal to privileged Tower reads. Separately retained finite
 grants expose redacted event metadata through coherent pages pinned to one
