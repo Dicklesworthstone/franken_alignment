@@ -9,6 +9,8 @@ use std::fmt::{self, Write};
 
 #[cfg(unix)]
 pub(super) mod fence;
+#[cfg(unix)]
+pub(super) mod narrowing;
 pub(super) mod policy;
 #[cfg(unix)]
 pub(super) mod resolution;
@@ -25,6 +27,9 @@ pub const MAX_REQUEST_BYTES: usize = 256 * 1024;
 pub const MAX_REQUEST_DEPTH: usize = 8;
 // Includes both object keys and values, with room for all 64 target edits.
 pub const MAX_REQUEST_ITEMS: usize = 2048;
+/// The live wire accepts a bounded canonical restriction, independently of the
+/// wider trusted native API. This does not enlarge any owner or grant limit.
+pub const MAX_NARROWING_TARGETS: usize = 64;
 pub const MAX_REQUEST_STRING_BYTES: usize = MAX_PAYLOAD_BYTES * 2;
 
 /// Finite public errors deliberately contain no input, field names, offsets or
@@ -212,6 +217,13 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         #[cfg(unix)]
         Verb::Next if args.contains_key("operation") => {
             if args.contains_key("action") {
+                if text(args, "action")? == "narrow_authority" {
+                    fields(args, &["action", "operation", "retained_targets"])?;
+                    return Ok(ReadArguments::NarrowingNext {
+                        operation: decimal(args, "operation")?,
+                        retained_targets: narrowing::decode_targets(field(args, "retained_targets")?)?,
+                    });
+                }
                 fields(args, &["action", "operation"])?;
                 let operation = decimal(args, "operation")?;
                 return match text(args, "action")? {
@@ -251,6 +263,15 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             Ok(ReadArguments::Resolve {
                 operation: decimal(args, "operation")?,
                 expected: resolution::decode_basis(field(args, "expected")?)?,
+            })
+        }
+        #[cfg(unix)]
+        Verb::Narrow => {
+            fields(args, &["operation", "expected", "retained_targets"])?;
+            Ok(ReadArguments::Narrow {
+                operation: decimal(args, "operation")?,
+                expected: narrowing::decode_basis(field(args, "expected")?)?,
+                retained_targets: narrowing::decode_targets(field(args, "retained_targets")?)?,
             })
         }
         #[cfg(unix)]
@@ -405,6 +426,30 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
         }
         #[cfg(unix)]
+        (Verb::Next, ReadArguments::NarrowingNext { operation, retained_targets }) => {
+            narrowing::validate_targets(retained_targets)?;
+            if *operation == 0
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.idempotency_key.as_ref().is_some_and(|key| key != &operation.to_string())
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (Verb::Narrow, ReadArguments::Narrow { operation, expected, retained_targets }) => {
+            narrowing::validate_expected(*expected)?;
+            narrowing::validate_targets(retained_targets)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.address.tenant != expected.scope.tenant.to_string()
+                || request.address.id != expected.scope.run.to_string()
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
         (
             Verb::Fence,
             ReadArguments::Fence {
@@ -518,7 +563,7 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             return Err(TowerDecodingError::MalformedRequest);
         }
         #[cfg(unix)]
-        (Verb::Resolve | Verb::Fence, ReadArguments::None) => {
+        (Verb::Resolve | Verb::Fence | Verb::Narrow, ReadArguments::None) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -789,6 +834,18 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         } => object_json(&[
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::NarrowingNext { operation, retained_targets } => object_json(&[
+            ("action", quote("narrow_authority")),
+            ("operation", quote(&operation.to_string())),
+            ("retained_targets", narrowing::encode_targets(retained_targets)),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::Narrow { operation, expected, retained_targets } => object_json(&[
+            ("operation", quote(&operation.to_string())),
+            ("expected", narrowing::encode_basis(*expected)),
+            ("retained_targets", narrowing::encode_targets(retained_targets)),
         ]),
         #[cfg(unix)]
         ReadArguments::Fence {

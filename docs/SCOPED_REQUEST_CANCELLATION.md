@@ -92,7 +92,8 @@ The existing `next` and `resolve` verbs now accept a closed, explicit
 `"action": "cancel_undispatched"` discriminator for this separate capability.
 Omitting that field preserves the existing receipt-reconciliation format and
 authority. An unknown action refuses. Cancellation adds no registered verb:
-the publication adapter still connects thirteen of the thirty-five verbs.
+the publication adapter connects fourteen of the thirty-eight registered verbs,
+including the separately granted ordinary target-ceiling `narrow` route.
 
 Mount the original port with `PublicationTower::set_cancellation`. A foreign
 owner refuses installation even if its numerical scope matches, and a rejected

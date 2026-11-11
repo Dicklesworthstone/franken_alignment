@@ -13,6 +13,8 @@ mod cancellation;
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
 mod fence;
 pub use fence::LinkedFence;
+mod narrowing;
+pub use narrowing::{LinkedNarrowing, LinkedNarrowingNext};
 mod hold_diagnosis;
 pub use hold_diagnosis::LinkedHoldDiagnosis;
 mod resolution;
@@ -44,7 +46,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort, FileSupervisorCancellationPort,
-    FileSupervisorAbandonmentPort,
+    FileSupervisorAbandonmentPort, FileSupervisorNarrowPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -59,7 +61,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 13] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 14] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -71,6 +73,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 13] = [
     Verb::WhyHeld,
     Verb::Next,
     Verb::Resolve,
+    Verb::Narrow,
     Verb::Fence,
     Verb::PolicyReplay,
 ];
@@ -123,6 +126,8 @@ pub enum PublicationResult {
     Cancellation(LinkedCancellation),
     AbandonmentNext(LinkedAbandonmentNext),
     Abandonment(LinkedAbandonment),
+    NarrowingNext(LinkedNarrowingNext),
+    Narrowing(LinkedNarrowing),
     Fence(LinkedFence),
     ReviewExplanation(LinkedReviewExplanation),
     RefinementExplanation(LinkedRefinementExplanation),
@@ -172,6 +177,7 @@ pub struct PublicationTower {
     resolution: Option<FileSupervisorResolutionPort>,
     cancellation: Option<FileSupervisorCancellationPort>,
     abandonment: Option<FileSupervisorAbandonmentPort>,
+    narrowing: Option<FileSupervisorNarrowPort>,
     fence: Option<FileSupervisorFencePort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
@@ -219,6 +225,7 @@ impl PublicationTower {
             resolution: None,
             cancellation: None,
             abandonment: None,
+            narrowing: None,
             fence: None,
             review_explanation: None,
             policy_replay: None,
@@ -417,7 +424,7 @@ impl PublicationTower {
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) && !(self.control_operator && request.verb == Verb::Fence)
+            ) && !(self.control_operator && matches!(request.verb, Verb::Fence | Verb::Narrow))
             {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -436,7 +443,7 @@ impl PublicationTower {
             .is_some_and(|g| Some(g) != self.mount.generation)
             || (matches!(
                 request.verb,
-                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence
+                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence | Verb::Narrow
             ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -462,6 +469,18 @@ impl PublicationTower {
 
         if request.verb == Verb::WhyHeld {
             return self.dispatch_hold_diagnosis(access, request);
+        }
+
+        if request.verb == Verb::Narrow
+            || (request.verb == Verb::Next
+                && matches!(request.arguments, ReadArguments::NarrowingNext { .. }))
+        {
+            // A run-level authority change is available only on the explicit
+            // control mount, never actor, observer or legacy reconciliation.
+            if !self.control_operator {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+            return self.dispatch_narrowing(access, request);
         }
 
         if matches!(request.verb, Verb::Next | Verb::Resolve) {

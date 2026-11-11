@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: connect ordinary target-ceiling Narrow through the Tower
+
+The restricted publication control mount now connects the registered `narrow`
+verb to the original independently granted native owner. Explicit Next action
+`narrow_authority` offers a complete generation-bound Narrow document for at
+most 64 canonical exact targets. It preserves the separate requested, prior
+and effective sets and full original predecessor. Actor, legacy reconciliation,
+learned observation, imported-snapshot and branch surfaces cannot acquire the
+authority. The publication adapter now connects fourteen registered verbs.
+
+Sealed plans and receipts validate their original registration, operation,
+intersection, sequence/epoch law and refund accounting. Native grant custody,
+finite work and exact retries remain shared across facades. Plans execute
+nothing and retain Unknown costs, information gain, ranking and eligibility.
+Nine public Tower regression functions cover actual retained publication with
+fresh human approval, Unknown liabilities, stale and forged requests, bounded
+custody, sealed output and actual unsupported learned histories.
+
+Independent source review found no remaining concrete defect. Rust and the
+required RCH runner remain unavailable; no compilation, formatting, runtime,
+Clippy or full-gate pass is claimed. Existing qualification states are unchanged.
+
+Contracts: `docs/SCOPED_AUTHORITY_NARROWING.md`, `docs/TOWER_PUBLICATION.md`.
+
 ## 2026-11-11: add durable ordinary target-ceiling narrowing
 
 The original consequence authority now accepts a separately selected monotone

@@ -148,7 +148,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "Vec<Affordance> ranked",
-      "note": "The native publication adapter has distinct separately granted receipt-reconciliation and undispatched-request cancellation plans. Cancellation requires explicit action cancel_undispatched; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown."
+      "note": "The native publication adapter has separately granted receipt-reconciliation, undispatched-request cancellation, explicit Unknown disposition and ordinary target-ceiling narrowing plans. Actions cancel_undispatched, abandon_unknown and narrow_authority explicitly select the latter contracts; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown."
     },
     {
       "verb": "tail",
@@ -198,7 +198,7 @@
       "idempotency": "expected predecessor",
       "cost_class": "cheap",
       "response": "Consequence",
-      "note": "supervise_publication create-learned-generated --narrow-stream-checkpoint is the trusted local learned-stream mapping: it binds the original complete unsampled prompt and exact predecessor; original-gate target intersection and epoch revocation preserve policy/predictor generations, charged liabilities and incident count; mediated control retains an exact source/history pair, preserves source expenditure and withdraws the accepted topology cut until current-epoch certification; an exact retained operation retry adds no event"
+      "note": "The live ordinary publication adapter uses an independent original-owner grant: Next action narrow_authority offers an exact Narrow request; Narrow intersects the target ceiling, cancels only excluded undispatched work and refunds only its reservations. Retained automatic reservations and dispatched/Unknown charges remain; control sequence advances without an authority-epoch change, while fresh human approval is required. Decoder, predictor, mediated and all stream owners are unsupported by this ordinary route. Separate checkpoint contract: supervise_publication create-learned-generated --narrow-stream-checkpoint is the trusted local learned-stream mapping: it binds the original complete unsampled prompt and exact predecessor; original-gate target intersection and epoch revocation preserve policy/predictor generations, charged liabilities and incident count; mediated control retains an exact source/history pair, preserves source expenditure and withdraws the accepted topology cut until current-epoch certification; an exact retained operation retry adds no event"
     },
     {
       "verb": "suspend",
@@ -248,7 +248,7 @@
       "idempotency": "attempt id",
       "cost_class": "varies",
       "response": "Outcome",
-      "note": "The native publication adapter separately grants original-receipt reconciliation and original undispatched-request cancellation. Cancellation requires explicit action cancel_undispatched, its own live grant and the full acknowledged predecessor; omitted action preserves reconciliation. Exact retry custody is scoped to the original live grant. Neither action publishes or refunds an uncertain effect."
+      "note": "The native publication adapter separately grants original-receipt reconciliation, original undispatched-request cancellation and explicit Unknown disposition. Actions cancel_undispatched and abandon_unknown require their own live grants and full acknowledged predecessors; omitted action preserves reconciliation. Exact retry custody is scoped to the original live grant. Uncertain-effect disposition retains the charge and does not establish execution or resume a stream."
     },
     {
       "verb": "verify",

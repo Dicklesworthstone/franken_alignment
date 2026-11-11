@@ -8,6 +8,7 @@ mod abandonment;
 mod explanation;
 mod cancellation;
 mod fence;
+mod narrowing;
 mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
@@ -184,6 +185,26 @@ impl PublicationResponse {
             PublicationResult::Abandonment(linked) => (
                 "abandonment",
                 abandonment::encode_abandonment(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::NarrowingNext(linked) => (
+                "narrowing-next",
+                narrowing::encode_next(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::Narrowing(linked) => (
+                "narrowing",
+                narrowing::encode_narrowing(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

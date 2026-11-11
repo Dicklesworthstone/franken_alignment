@@ -37,7 +37,7 @@ use dispatch_replay::{CachedReplay, ReplayRegistration};
 pub use dispatch_replay::{MAX_REPLAY_OPERATIONS, MAX_REPLAY_RECORDS, MAX_REPLAY_RETAINED_BYTES};
 pub use replay::{ObservedReplayRecord, ObservedReplayReport, ReplayPlanMetadata};
 pub use request::{
-    MAX_REQUEST_BYTES, MAX_REQUEST_DEPTH, MAX_REQUEST_ITEMS, MAX_REQUEST_STRING_BYTES,
+    MAX_NARROWING_TARGETS, MAX_REQUEST_BYTES, MAX_REQUEST_DEPTH, MAX_REQUEST_ITEMS, MAX_REQUEST_STRING_BYTES,
     REQUEST_SCHEMA, TowerDecodingError, decode_request, encode_request,
 };
 pub use vocabulary::{ENVELOPE_FIELDS, ReasonCode, UnknownVerb, Verb, VerbClass};
@@ -235,6 +235,21 @@ pub enum ReadArguments {
     AbandonUnknown {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
+    },
+    /// Inspect one independently selected restriction of the original run's
+    /// target ceiling. This read does not reserve its operation or change rights.
+    #[cfg(unix)]
+    NarrowingNext {
+        operation: u64,
+        retained_targets: Vec<crate::action::ResolvedTarget>,
+    },
+    /// Intersect the original target ceiling at the full acknowledged cut.
+    /// A distinct supervisor grant owns this mutation; no policy is replaced.
+    #[cfg(unix)]
+    Narrow {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileNarrowBasis,
+        retained_targets: Vec<crate::action::ResolvedTarget>,
     },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
@@ -668,9 +683,11 @@ impl ReferenceTower {
             (&request.verb, &request.arguments),
             (Verb::Next, ReadArguments::AbandonmentNext { .. })
                 | (Verb::Resolve, ReadArguments::AbandonUnknown { .. })
+                | (Verb::Next, ReadArguments::NarrowingNext { .. })
+                | (Verb::Narrow, ReadArguments::Narrow { .. })
         ) {
-            // Original Unknown disposition requires the live owner and a
-            // separate control grant. Imported history cannot supply either.
+            // Original disposition and authority narrowing require the live
+            // owner and separate control grants. Imported history supplies neither.
             return self.refusal(
                 &request,
                 ReasonCode::CapabilityUnsupported,

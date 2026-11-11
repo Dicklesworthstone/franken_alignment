@@ -127,6 +127,71 @@ without another event, replay, refund or snapshot invalidation. Changed input
 under that key conflicts. The cache has live-grant lifetime; a new grant cannot
 reuse an operation already recorded in the durable native namespace.
 
+## Tower request and response
+
+Install the original capability with `PublicationTower::set_narrow(Some(port))`
+on a restricted control-operator mount. Operator role and Permit purpose remain
+required. Equal numeric scope cannot install another owner's port. Actor,
+legacy reconciliation, learned observer, imported-snapshot and branch surfaces
+cannot use this route. A learned control mount can report an explicitly blocked
+plan but cannot enter the ordinary narrowing mutation.
+
+Select the registered `next` verb at the original Run address with an explicit
+`narrow_authority` action. For example, substitute the actual route and target:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-target-restriction-9001",
+  "address": "fa://1/run/3@41",
+  "verb": "next",
+  "arguments": {
+    "action": "narrow_authority",
+    "operation": "9001",
+    "retained_targets": [{
+      "adapter": "1",
+      "object": "1",
+      "contract_version": "1",
+      "expected_version": "2",
+      "generation": "1"
+    }]
+  },
+  "idempotency_key": null
+}
+```
+
+Tower inputs contain at most 64 unique targets, ordered by adapter, object,
+contract version, expected version and generation. Their coordinates and
+operation use canonical nonzero decimal strings. Unsorted input, duplicates,
+unknown fields and noncanonical numeric spelling refuse before native work.
+The trusted native ceiling retains its separate 1,024-target bound.
+
+A known eligible plan supplies the complete `action` document through
+`LinkedNarrowingNext::action()`. Its verb is `narrow`; arguments contain
+`operation`, `expected` and `retained_targets`. `expected` binds the full native
+effect scope, journal revision, control sequence, authority epoch and nullable
+recorded time. The action binds the concrete original route generation and an
+idempotency key equal to the operation's decimal spelling. Next may omit route
+generation; mutation may not. Selecting a plan does not execute its action or
+guarantee the predecessor will still be current when it is submitted.
+
+The result kinds are `narrowing-next` and `narrowing`, with schemas
+`fa.publication-narrowing-next/1` and `fa.publication-narrowing/1`. Both identify
+`original_run_target_ceiling` scope and `live_narrowing_grant` retry custody.
+They distinguish requested `retained_targets` from the actual
+`effective_targets`. A plan carries `current_ceiling`, blocking reason and its
+explicit action; cost, information gain, ranking and current eligibility remain
+Unknown. A receipt carries the predecessor, previous ceiling, cancelled native
+attempts and refunded units, with the acknowledged successor as its Knowledge
+basis. Neither result discloses publication payloads or supplies effect keys.
+
+The encoder checks the original sealed response against its request and requires
+the exact requested/prior intersection, canonical attempt identities, a single
+journal/control advance and unchanged epoch and recorded time. Relabelling a
+native response cannot authorize another operation or turn the requested set
+into a wider effective ceiling. Run-level journal Tail metadata identifies the
+new event without inventing an attempt, external request or review round.
+
 ## Validation boundary
 
 Fourteen native regression functions cover actual retained publication with a
@@ -136,6 +201,12 @@ retries, finite work, owner replacement and revocation, unsupported histories,
 all five original storage failure barriers, and interrupted source acquisition.
 The positive publication fixture retains the original automatic reservation;
 it does not manufacture a replacement permit after narrowing.
+
+Nine public Tower regression functions cover actual retained publication and
+Unknown conservation, exact predecessor and scope checks, canonical bounded
+input, finite custody and retry, sealed output tampering, imported snapshot and
+branch refusal, and a real learned-history negative control that preserves
+numerical, stream and admission state.
 
 Implementation and regression sources are subject to the repository's required
 remote gate. In this session, `RCH_REQUIRE_REMOTE=1 rch exec -- cargo

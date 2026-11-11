@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-11: connect ordinary authority narrowing through the Tower
+
+- Connect explicit Next planning and the registered Narrow verb to the original
+  independent native grant on restricted control mounts.
+- Require canonical bounded exact targets, full native predecessors, matching
+  operation identity and concrete mutation registration generation.
+- Seal requested/prior/effective ceilings and exact native receipt accounting;
+  preserve finite original custody and explicit same-grant retries.
+- Add nine public Tower regression functions, including real retained
+  publication and charged Unknown conservation, plus learned-history refusal.
+- Update the live verb contract without claiming general ranked planning or
+  extending checkpoint narrowing. Source review only; Rust/RCH is unavailable.
+
 ## 2026-11-11: add durable ordinary target-ceiling narrowing
 
 - Restrict the original target ceiling by intersection, cancelling and refunding

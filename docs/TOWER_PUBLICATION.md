@@ -1,12 +1,13 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects thirteen
+On Unix, `fa_reference::tower::publication::PublicationTower` connects fourteen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
 separately granted recorded-state `why-held`, and bounded original receipt
-planning/reconciliation or independently granted undispatched-request cancellation
-through `next` and `resolve`, separately granted
+planning/reconciliation, independently granted undispatched-request cancellation
+or explicit Unknown disposition through `next` and `resolve`, independently
+granted ordinary target-ceiling restriction through `next` and `narrow`, separately granted
 original journal `tail`, request-to-review `related`, and original-domain `fence` through its restricted
 control mount.
 It uses the same `TowerRequest`, verb vocabulary
@@ -49,7 +50,7 @@ the original automatic and human keys, and invokes dispatch and publication.
 The Tower retains a weak actor port, so dropping the supervisor releases the
 original authority lock and makes further observations explicitly unavailable.
 
-The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the newest native
+The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the native
 route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy
 or publication authority.
@@ -91,6 +92,35 @@ spent work survive different facades on the same original owner. New response
 kinds `cancellation-next` and `cancellation` carry separate closed schemas;
 omitting the action discriminator retains the original reconciliation format.
 An action remains data until explicitly selected.
+
+## Restrict the original ordinary target ceiling
+
+The independent [ordinary narrowing contract](SCOPED_AUTHORITY_NARROWING.md)
+connects `next` with explicit `action: "narrow_authority"` to the registered
+`narrow` verb. Install the original `FileSupervisorNarrowPort` through
+`set_narrow`; only a restricted control-operator mount with Permit purpose can
+use it. Actor, legacy reconciliation, learned observer, imported-snapshot and
+branch routes do not acquire this capability.
+
+The operator selects at most 64 canonical complete target identities at the
+original Run address. A known plan reports both the requested set and its
+actual intersection with the current ceiling. The returned Narrow document
+binds the concrete route generation, operation identity and full native
+predecessor. It remains data until explicitly submitted. Plans reserve no
+mutation or admission snapshot; costs, information gain, ranking and current
+publication eligibility remain Unknown.
+
+Narrow advances the original control sequence once, cancels only excluded
+undispatched attempts and refunds only their actual reservations. It preserves
+retained automatic authorizations, authority epoch and dispatched/Unknown
+charges. Human keys retain their predecessor checks and require fresh approval.
+An empty target set retains nothing; a wider later selection cannot restore
+earlier exclusions. The ordinary operation refuses decoder, predictor, mediated
+and every stream owner, without borrowing their separate replay authority.
+
+Sealed `narrowing-next` and `narrowing` results correlate the exact requested,
+prior and effective sets and the original run cut. They retain the original
+finite grant and exact retry rules; a facade creates no new native budget.
 
 ## Observe an original learned stream owner
 
