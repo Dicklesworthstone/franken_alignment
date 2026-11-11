@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: authenticate admission Stop on the ordinary mediated recovery cursor
+
+A fully replayed ordinary mediated owner can now be consumed by
+`FileMediatedRecovery::into_recovery_stop(operation)`. The sealed handoff
+rechecks the original guard, policy, topology, credential and recovery-floor
+requirements, retains selected publication constraints, and requires the
+already-provisioned terminal reserve. It carries the same exclusive lock,
+canonical image and native machine into the existing authenticated transport.
+
+Only the complete original peer request applies the existing admission
+Stop/Fence pair. No live owner or reviewer/observer role, current source, clock,
+settlement sweep or new effect is introduced. Unknown liabilities remain
+charged, undispatched reservations follow the original cancellation law, and
+lost replies retain the acknowledged native result. Exact-operation recovery
+can confirm that historical result without another event.
+
+Six public integration regressions exercise real authenticated Unix sockets,
+incomplete/full-profile refusal, reserve/publication pins, silent/tampered/
+truncated requests paired with complete fragmented delivery, canonical
+substitution, and lost output at ordinary-capacity exhaustion with exact retry.
+One compile-fail example prevents live recovery after consuming the cursor.
+Independent source reviews and installed-rustfmt syntax processing completed
+before the editing workspace disconnected. The source was recovered from the
+verified GitHub base and reviewed patches; the test preserves the reviewed
+preformat source and type corrections rather than claiming recovered formatter
+bytes. No new post-recovery compiler or runtime execution is claimed.
+
+The required focused RCH launch exited 127 before compilation because `rch`
+is absent; its raw stderr is retained in
+`artifacts/execution/2026-11-11-mediated-stop-native-rch.log`. Full compilation,
+runtime, Clippy and packet/Bead qualification remain open. This is the native
+foundation for the ordinary live recovery integration, under FA-014/FA-073 and
+the existing FA-120 acknowledgment path. See
+[the native contract](docs/MEDIATED_RECOVERY_STOP_PEER.md).
+
 ## 2026-11-11: discover original request reviews through Tower
 
 The native owner now provides separately granted, finite request-to-review

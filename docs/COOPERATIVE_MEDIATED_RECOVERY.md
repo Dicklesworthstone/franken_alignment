@@ -25,6 +25,13 @@ coverage and approvals. Old topology custody cannot bind the new issuer; a newer
 graph/inventory and fresh native cut are required before new mediated work.
 Pending effects remain original reconciliation obligations, never resent effects.
 
+On Linux, a fully verified cursor can instead be consumed by
+`into_recovery_stop(operation)` for the existing authenticated Stop protocol.
+It retains the same lock and complete mediation requirements, requires the
+original terminal reserve and grants no live role. Only a complete bound peer
+request can apply the original admission Stop/Fence. See
+[ordinary recovery Stop custody](MEDIATED_RECOVERY_STOP_PEER.md).
+
 Cancellation or dropping the cursor preserves canonical and staging bytes and
 releases the lock. A changed canonical image is rejected before cleanup or
 replacement. The existing synchronous `open_mediated_guarded` now consumes the

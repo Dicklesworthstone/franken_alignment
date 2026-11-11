@@ -6,6 +6,51 @@ use crate::action::consequence::delivery::{StopRequest,
     persistent::observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery}};
 
 impl FileMediatedRecovery {
+    /// Transfer this fully verified ORIGINAL mediated history into the existing
+    /// nonce-bound Stop transport. All independent guards, topology, policy,
+    /// credentials and floors are rechecked before transferring the same lock,
+    /// canonical image and private reconstruction. Publication-profile and
+    /// reserve selections remain bound to those original immutable events.
+    ///
+    /// A previously provisioned recovery reserve is mandatory; this path never
+    /// installs or replenishes one. Merely creating or dropping the target does
+    /// not append a Fence, read a source, sample time, clean staging or issue a
+    /// live owner/role. Only an explicit exact request can consume the original
+    /// admission Stop, with canonical custody rechecked at that later boundary.
+    /// An already recorded Stop keeps its exact operation and predecessor.
+    ///
+    /// ```compile_fail,E0382
+    /// use fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::FileMediatedRecovery;
+    /// fn no_live_successor(run: FileMediatedRecovery) {
+    ///     let _ = run.into_recovery_stop(1);
+    ///     let _ = run.finish();
+    /// }
+    /// ```
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(self, operation: u64)
+        -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>
+    {
+        use crate::Error;
+        use crate::action::consequence::delivery::persistent::observed::{
+            BaseEvent, Event, reviewer::{client::ReviewerExpectation,
+                peer::control::FileRecoveryStop},
+        };
+        let request = self.stop_request(operation)?;
+        if !self.inner.events.iter().any(|event| matches!(event,
+            Event::Core(BaseEvent::ReserveRecovery(_)))) {
+            return Err(Error::Incomplete.into());
+        }
+        let audience = ReviewerExpectation {
+            reviewer: self.inner.profile.human.reviewer_id,
+            scope: self.inner.profile.delivery.scope,
+            clock_domain: self.inner.profile.delivery.clock_domain,
+        };
+        let expected = self.expected;
+        let recovery = self.inner.into_terminal_checked(
+            |run| check_machine(&run.profile, &run.machine, &run.events, &expected))?;
+        Ok(FileRecoveryStop::from_verified(recovery, audience, request))
+    }
+
     /// Select one native stop only after the entire original history and ALL
     /// independent mediation requirements have passed. This includes initial and
     /// current graphs, availability, prediction/evaluation, guards and floors.

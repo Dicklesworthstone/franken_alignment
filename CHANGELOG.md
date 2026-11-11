@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-11: connect ordinary mediated recovery to authenticated Stop
+
+- Add a sealed consuming handoff from fully verified `FileMediatedRecovery` to
+  the original authenticated Stop transport, preserving complete requirements,
+  the existing terminal reserve and original exclusive canonical custody.
+- Apply only an explicit exact peer request through the native Stop/Fence pair;
+  preserve Unknown charges, original retry identity and acknowledgment after
+  lost output. No ordinary recovery, live role, clock or source refresh occurs.
+- Add six public native/socket regressions and an ownership compile-fail example.
+  Independent source review and syntax processing completed before workspace
+  loss; recovered source remains uncompiled. The required RCH test launch exits
+  127 because the runner is absent, and qualification remains open.
+
 ## 2026-11-11: connect original request history to completed reviews
 
 - Add independently retained request-history metadata grants on the original

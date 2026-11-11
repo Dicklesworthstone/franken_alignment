@@ -146,7 +146,7 @@ impl FileGuardedRecovery {
         self.into_terminal_checked(check)?.finish_stopped_drain(request, clock)
     }
 
-    fn into_terminal_checked(self, check: impl FnOnce(&Self) -> Result<(), Error>)
+    pub(super) fn into_terminal_checked(self, check: impl FnOnce(&Self) -> Result<(), Error>)
         -> Result<FileStopRecovery, JournalError>
     {
         self.check_stopped_ready_with(check)?;

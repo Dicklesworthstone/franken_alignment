@@ -1,0 +1,4 @@
+Command: RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --test mediated_recovery_stop_peer
+Exit code: 127
+
+/bin/bash: line 1: rch: command not found

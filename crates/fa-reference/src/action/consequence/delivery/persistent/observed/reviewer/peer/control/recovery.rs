@@ -10,7 +10,7 @@ use crate::action::consequence::delivery::persistent::observed::shutdown::recove
 };
 use std::{fmt, io::{self, Read, Write}};
 
-/// A fixed Stop selected from one fully replayed original learned history.
+/// A fixed Stop selected from one fully replayed original history.
 /// Its creating wrapper checks its COMPLETE independent guard contract before
 /// transferring the original exclusive lock and native reducer. This value can
 /// only be consumed by the Stop transport, or dropped without changing storage.
