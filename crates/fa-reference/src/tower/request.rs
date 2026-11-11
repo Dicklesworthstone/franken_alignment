@@ -213,12 +213,12 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         Verb::Next if args.contains_key("operation") => {
             if args.contains_key("action") {
                 fields(args, &["action", "operation"])?;
-                if text(args, "action")? != "cancel_undispatched" {
-                    return Err(TowerDecodingError::MalformedRequest);
-                }
-                return Ok(ReadArguments::CancellationNext {
-                    operation: decimal(args, "operation")?,
-                });
+                let operation = decimal(args, "operation")?;
+                return match text(args, "action")? {
+                    "cancel_undispatched" => Ok(ReadArguments::CancellationNext { operation }),
+                    "abandon_unknown" => Ok(ReadArguments::AbandonmentNext { operation }),
+                    _ => Err(TowerDecodingError::MalformedRequest),
+                };
             }
             fields(args, &["operation"])?;
             Ok(ReadArguments::ResolutionNext {
@@ -235,13 +235,17 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         Verb::Resolve => {
             if args.contains_key("action") {
                 fields(args, &["action", "operation", "expected"])?;
-                if text(args, "action")? != "cancel_undispatched" {
-                    return Err(TowerDecodingError::MalformedRequest);
-                }
-                return Ok(ReadArguments::CancelUndispatched {
-                    operation: decimal(args, "operation")?,
-                    expected: resolution::decode_basis(field(args, "expected")?)?,
-                });
+                let operation = decimal(args, "operation")?;
+                let expected = resolution::decode_basis(field(args, "expected")?)?;
+                return match text(args, "action")? {
+                    "cancel_undispatched" => {
+                        Ok(ReadArguments::CancelUndispatched { operation, expected })
+                    }
+                    "abandon_unknown" => {
+                        Ok(ReadArguments::AbandonUnknown { operation, expected })
+                    }
+                    _ => Err(TowerDecodingError::MalformedRequest),
+                };
             }
             fields(args, &["operation", "expected"])?;
             Ok(ReadArguments::Resolve {
@@ -360,7 +364,12 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             validate_proposal(proposal)?;
         }
         #[cfg(unix)]
-        (Verb::Next, ReadArguments::ResolutionNext { operation } | ReadArguments::CancellationNext { operation }) => {
+        (
+            Verb::Next,
+            ReadArguments::ResolutionNext { operation }
+            | ReadArguments::CancellationNext { operation }
+            | ReadArguments::AbandonmentNext { operation },
+        ) => {
             if *operation == 0
                 || request
                     .idempotency_key
@@ -377,6 +386,9 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                 operation,
                 expected,
             } | ReadArguments::CancelUndispatched {
+                operation,
+                expected,
+            } | ReadArguments::AbandonUnknown {
                 operation,
                 expected,
             },
@@ -756,6 +768,17 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         #[cfg(unix)]
         ReadArguments::CancelUndispatched { operation, expected } => object_json(&[
             ("action", quote("cancel_undispatched")),
+            ("operation", quote(&operation.to_string())),
+            ("expected", resolution::encode_basis(*expected)),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::AbandonmentNext { operation } => object_json(&[
+            ("action", quote("abandon_unknown")),
+            ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::AbandonUnknown { operation, expected } => object_json(&[
+            ("action", quote("abandon_unknown")),
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
         ]),

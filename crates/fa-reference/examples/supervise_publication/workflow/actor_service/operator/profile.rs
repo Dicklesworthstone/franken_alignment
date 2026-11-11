@@ -2,6 +2,7 @@
 use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
+    MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
     MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
     MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS,
@@ -48,6 +49,7 @@ pub(crate) struct Settings {
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
     pub(crate) cancellation: Option<CancellationSettings>,
+    pub(crate) abandonment: Option<AbandonmentSettings>,
     pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
@@ -303,6 +305,68 @@ impl CancellationSettings {
     }
 }
 
+/// Separate authority to abandon one original Unknown delivery. Its full charge
+/// remains a liability; this grants no reconciliation, cancellation or admission.
+#[derive(Clone, Debug)]
+pub(crate) struct AbandonmentSettings {
+    pub(crate) queries: usize,
+    pub(crate) operations: usize,
+    pub(crate) max_replay_events: usize,
+    /// Complete-cut reservations for numerical replay, including native abandonment.
+    pub(crate) numerical_replay_events: Option<usize>,
+    pub(crate) authority: String,
+}
+
+impl AbandonmentSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            operations: usize::try_from(fields.number("operations")?).map_err(debug)?,
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
+                .map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_ABANDONMENT_QUERIES
+            || self.operations == 0
+            || self.operations > MAX_ABANDONMENT_OPERATIONS
+            || self.max_replay_events == 0
+            || self.max_replay_events > MAX_ABANDONMENT_REPLAY_EVENTS
+            || self.authority != "abandon_unknown_requests"
+        {
+            return Err(
+                "abandonment requires explicit unknown-delivery authority and bounded reads, operations and replay"
+                    .into(),
+            );
+        }
+        if self.numerical_replay_events.is_some_and(|events| {
+            events == 0
+                || self
+                    .operations
+                    .checked_mul(self.max_replay_events)
+                    .is_none_or(|maximum| events > maximum)
+        }) {
+            return Err(
+                "numerical abandonment requires a positive cumulative event budget within the selected operation and replay bounds"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct HoldDiagnosisSettings {
     pub(crate) queries: usize,
@@ -512,6 +576,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(CancellationSettings::decode(value)?),
             },
+            abandonment: match fields.optional("abandonment") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(AbandonmentSettings::decode(value)?),
+            },
             fence: match fields.optional("fence") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(FenceSettings::decode(value)?),
@@ -587,6 +655,7 @@ impl Settings {
                 && self.hold_diagnosis.is_none()
                 && self.resolution.is_none()
                 && self.cancellation.is_none()
+                && self.abandonment.is_none()
                 && self.fence.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none())
@@ -641,6 +710,9 @@ impl Settings {
         if let Some(selected) = &self.cancellation {
             selected.validate()?;
         }
+        if let Some(selected) = &self.abandonment {
+            selected.validate()?;
+        }
         if let Some(selected) = &self.fence {
             selected.validate()?;
         }
@@ -648,7 +720,8 @@ impl Settings {
     }
 
     /// Learned observation retains its original read-only defaults. Selecting
-    /// reconciliation, request cancellation or admission stop requires explicit
+    /// reconciliation, request cancellation, unknown abandonment or admission stop
+    /// requires explicit
     /// numerical work admission before clock/source acquisition, owner startup
     /// or listener creation.
     pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
@@ -670,6 +743,15 @@ impl Settings {
         {
             return Err(
                 "learned request cancellation requires an explicit numerical replay budget".into(),
+            );
+        }
+        if self
+            .abandonment
+            .as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(
+                "learned unknown abandonment requires an explicit numerical replay budget".into(),
             );
         }
         if self

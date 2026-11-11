@@ -223,6 +223,19 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
     },
+    /// Inspect an original Unknown request for separately authorized permanent
+    /// liability disposition. This read never reserves work or changes outcome.
+    #[cfg(unix)]
+    AbandonmentNext {
+        operation: u64,
+    },
+    /// Record an original Unknown request as IrrecoverablyUnknown. A separate
+    /// abandonment grant owns this mutation; the original effect stays charged.
+    #[cfg(unix)]
+    AbandonUnknown {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
+    },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
     #[cfg(unix)]
@@ -649,6 +662,20 @@ impl ReferenceTower {
             || (needs_operator && !access.operator)
         {
             return self.withheld(&request);
+        }
+        #[cfg(unix)]
+        if matches!(
+            (&request.verb, &request.arguments),
+            (Verb::Next, ReadArguments::AbandonmentNext { .. })
+                | (Verb::Resolve, ReadArguments::AbandonUnknown { .. })
+        ) {
+            // Original Unknown disposition requires the live owner and a
+            // separate control grant. Imported history cannot supply either.
+            return self.refusal(
+                &request,
+                ReasonCode::CapabilityUnsupported,
+                disclose_accounting,
+            );
         }
         if matches!(
             (&request.verb, &request.arguments),

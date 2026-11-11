@@ -20,6 +20,8 @@ use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 
+#[path = "client/abandonment.rs"]
+mod abandonment;
 #[path = "client/cancellation.rs"]
 mod cancellation;
 #[path = "client/fence.rs"]
@@ -511,6 +513,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("cancellation-next"), Verb::Next) | (Some("cancellation"), Verb::Resolve) => {
             if !cancellation::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("abandonment-next"), Verb::Next) | (Some("abandonment"), Verb::Resolve) => {
+            if !abandonment::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());
             }
         }

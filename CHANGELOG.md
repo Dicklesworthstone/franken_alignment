@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-11: expose explicit Unknown disposition through live Tower services
+
+- Connect Next/Resolve to the original abandonment capability using an explicit
+  action discriminator and sealed original-request plans/receipts.
+- Require a restricted control mount and independent retained grant; preserve
+  existing reconciliation/cancellation behavior and reject snapshot/branch use.
+- Add strict optional authenticated operator configuration and separate learned
+  numerical replay budgets; keep finite custody across reconnects and handoffs.
+- Validate the full explicit client action and receipt, including charge
+  retention and causal stage relationships, without automatic submission.
+- Author eight public Tower and eight service/client regression functions and
+  extend learned resident accounting controls. Independent source review only:
+  the executor is unavailable and no syntax or execution pass is claimed.
+
 ## 2026-11-11: grant independent live Unknown disposition
 
 - Add a finite original-owner abandonment port and nonclone custodian, separate

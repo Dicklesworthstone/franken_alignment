@@ -4,6 +4,7 @@
 //! request-local basis. Neither a request ID nor an intake generation becomes
 //! a global Tower generation, control sequence, or proof of effect admission.
 
+mod abandonment;
 mod explanation;
 mod cancellation;
 mod fence;
@@ -163,6 +164,26 @@ impl PublicationResponse {
             PublicationResult::Cancellation(linked) => (
                 "cancellation",
                 cancellation::encode_cancellation(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::AbandonmentNext(linked) => (
+                "abandonment-next",
+                abandonment::encode_next(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::Abandonment(linked) => (
+                "abandonment",
+                abandonment::encode_abandonment(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

@@ -28,7 +28,7 @@ fn selection(root: &Root, actor: &Profile) -> (PathBuf, live_operator::Selection
     let path = root.0.join("operator.json");
     let socket = root.0.join("peers/operator.sock");
     fs::write(&path, format!(
-        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"journal_tail":{{"queries":2,"events_per_page":4,"disclosure":"redacted_journal_events"}},"request_history":{{"queries":1,"max_history_events":4096,"max_reviews":16,"disclosure":"recorded_request_relationships"}},"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
+        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"abandonment":{{"queries":1,"operations":1,"max_replay_events":4096,"numerical_replay_events":4096,"authority":"abandon_unknown_requests"}},"journal_tail":{{"queries":2,"events_per_page":4,"disclosure":"redacted_journal_events"}},"request_history":{{"queries":1,"max_history_events":4096,"max_reviews":16,"disclosure":"recorded_request_relationships"}},"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
         scope.tenant, scope.principal, scope.run, scope.branch, scope.authority,
         quote(socket.to_str().unwrap()), identity.uid(), identity.gid(), identity.uid(), identity.gid(),
         MAX_EXPLANATION_EVENTS)).unwrap();
@@ -205,6 +205,19 @@ fn observe(
                 ]
             ),
             0
+        );
+        // The independently selected control grant exists on this original
+        // learned owner before actor intake. Missing work is Unknown, and the
+        // entered query spends its finite allowance without native replay.
+        let mut abandonment = TowerRequest::new(
+            "sequence-abandonment-before-intake", first_request.clone(), Verb::Next,
+        );
+        abandonment.arguments = ReadArguments::AbandonmentNext { operation: 9_007 };
+        let missing = exchange(&mut socket, abandonment, maximum);
+        assert_eq!(field(&missing, &["result", "kind"]).as_str(), Some("abandonment-next"));
+        assert_eq!(
+            field(&missing, &["result", "value", "knowledge", "state"]).as_str(),
+            Some("unknown")
         );
         advanced.initial.store(true, Ordering::Release);
 
@@ -479,12 +492,27 @@ fn observe(
         unknown_explanation(&retained);
         let exhausted = exchange(
             &mut socket,
-            TowerRequest::new("sequence-retained-work", first_request, Verb::Explain),
+            TowerRequest::new("sequence-retained-work", first_request.clone(), Verb::Explain),
             maximum,
         );
         assert_eq!(
             field(&exhausted, &["envelope", "reason_code"]).as_str(),
             Some("BudgetExhausted")
+        );
+        // Neither a resident handoff nor reconnect can provision another
+        // abandonment query or operation. All three real publications still
+        // complete through their original native and human review gates.
+        let mut abandonment = TowerRequest::new(
+            "sequence-abandonment-no-renewal",
+            first_request,
+            Verb::Next,
+        );
+        abandonment.arguments = ReadArguments::AbandonmentNext { operation: 9_007 };
+        let exhausted_abandonment = exchange(&mut socket, abandonment, maximum);
+        assert_eq!(
+            field(&exhausted_abandonment, &["result", "value", "error", "code"]).as_str(),
+            Some("capacity"),
+            "actor handoff or operator reconnect renewed abandonment work"
         );
         advanced.final_entry.store(true, Ordering::Release);
     });

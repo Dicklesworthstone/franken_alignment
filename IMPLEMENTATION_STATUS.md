@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: connect live Unknown disposition to authenticated Tower operators
+
+Next/Resolve now accept the explicit `abandon_unknown` action under a separate
+original-owner capability. The legacy reconciliation and cancellation profiles
+retain their authority and syntax. Restricted control mounts, full request
+predecessors and sealed response profiles prevent actor, observation,
+reconciliation-only, imported-snapshot and branch routes from supplying it.
+
+Closed optional operator profiles provision finite abandonment grants in
+ordinary, learned and resident services. Learned mutation needs its explicit
+independent numerical replay allowance. The same grant and exact-result cache
+survive authenticated reconnects and handoffs without renewed work. The
+explicit-document client validates scope, correlation, action, stage and
+retained-charge semantics and never submits a suggested action itself.
+
+Eight public Tower regression functions and eight new service/client regression
+functions accompany the integration. Existing all-three-mode learned resident
+sequence controls also inspect independent grant accounting across handoffs.
+Positive cases use original reviews, both publication keys and retained unknown
+effects; counterexamples preserve predecessor, stage, custody, output and budget
+boundaries. None of these authored regressions has executed in this environment.
+
+The earlier required RCH command failed because the runner was absent, and the
+executor remains unavailable. Independent source review and exact-base
+connector edits are not syntax checking, typechecking, runtime, Clippy or
+full-gate evidence. No packet or production qualification status is promoted.
+The connected-verb count is unchanged.
+
+Contract: `docs/SCOPED_UNKNOWN_ABANDONMENT.md`; operator playbook:
+`docs/AGENT_GUIDE.md`, P3.
+
 ## 2026-11-11: independently dispose of a live Unknown request
 
 The original full-input supervisor now provides a finite, separately retained

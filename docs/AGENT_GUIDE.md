@@ -271,6 +271,18 @@ the liability. Missing and expired receipts remain charged Unknown. The
 acknowledgment carries separate native before/after bases and a finite live-grant
 retry identity. See [the connected reconciliation contract](TOWER_RESOLUTION.md).
 
+**Implemented live Unknown disposition.** An authenticated operator may select
+the independent `abandonment` grant, send `next` with the explicit
+`action: "abandon_unknown"`, inspect its complete returned action, and
+explicitly submit that `resolve` request through `tower-operator-exchange`.
+Only recorded native Unknown is eligible. The original owner records
+IrrecoverablyUnknown while keeping the full charge, actor-visible uncertainty
+and stream obstruction. Reconciliation and cancellation grants do not supply
+this authority, and no client follows the action automatically. Learned
+services additionally require a separate cumulative numerical replay allowance.
+See [the scoped live contract](SCOPED_UNKNOWN_ABANDONMENT.md) for profile,
+wire, retry and current source-only validation limits.
+
 **Implemented source-publication reference mapping.** The trusted supervisor may
 explicitly record that final unresolved disposition with
 `supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.

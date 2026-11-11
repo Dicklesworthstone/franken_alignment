@@ -6,6 +6,8 @@
 //! This adapter has no second ledger or outcome cache. Native request-local
 //! provenance is preserved rather than converted into global Tower clocks.
 
+mod abandonment;
+pub use abandonment::{LinkedAbandonment, LinkedAbandonmentNext};
 mod capabilities;
 mod cancellation;
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
@@ -42,6 +44,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort, FileSupervisorCancellationPort,
+    FileSupervisorAbandonmentPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -118,6 +121,8 @@ pub enum PublicationResult {
     Resolution(LinkedResolution),
     CancellationNext(LinkedCancellationNext),
     Cancellation(LinkedCancellation),
+    AbandonmentNext(LinkedAbandonmentNext),
+    Abandonment(LinkedAbandonment),
     Fence(LinkedFence),
     ReviewExplanation(LinkedReviewExplanation),
     RefinementExplanation(LinkedRefinementExplanation),
@@ -166,6 +171,7 @@ pub struct PublicationTower {
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
     cancellation: Option<FileSupervisorCancellationPort>,
+    abandonment: Option<FileSupervisorAbandonmentPort>,
     fence: Option<FileSupervisorFencePort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
@@ -212,6 +218,7 @@ impl PublicationTower {
             hold_diagnosis: None,
             resolution: None,
             cancellation: None,
+            abandonment: None,
             fence: None,
             review_explanation: None,
             policy_replay: None,
@@ -277,7 +284,7 @@ impl PublicationTower {
 
     /// Mount one original owner for explicitly granted control operations.
     /// Ordinary actor intake stays closed even when Permit is allowed. This
-    /// constructor supplies no fence, cancellation or reconciliation grant.
+    /// constructor supplies no fence, cancellation, abandonment or reconciliation grant.
     pub fn new_control_operator(
         mount: Address,
         port: FileActorPort<FileOversight>,
@@ -458,6 +465,18 @@ impl PublicationTower {
         }
 
         if matches!(request.verb, Verb::Next | Verb::Resolve) {
+            if matches!(
+                request.arguments,
+                ReadArguments::AbandonmentNext { .. } | ReadArguments::AbandonUnknown { .. }
+            ) {
+                // Permanent uncertainty disposition is an explicit supervisor
+                // control capability, never an ordinary actor or legacy
+                // reconciliation route even when a native port was installed.
+                if !self.control_operator {
+                    return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+                }
+                return self.dispatch_abandonment(access, request);
+            }
             if matches!(request.arguments,
                 ReadArguments::CancellationNext { .. } | ReadArguments::CancelUndispatched { .. }
             ) {
