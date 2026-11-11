@@ -258,7 +258,9 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs",
-        "artifacts/execution/2026-11-11-scoped-cancellation-native-verification.log"
+        "artifacts/execution/2026-11-11-scoped-cancellation-native-verification.log",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series/cancellation.rs",
+        "artifacts/execution/2026-11-11-scoped-cancellation-integration-verification.log"
       ]
     },
     {
@@ -3453,7 +3455,16 @@
       "result_artifacts": [
         "crates/fa-reference/src/address_resolver.rs",
         "crates/fa-reference/tests/agent_projection_boundaries.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/SCOPED_REQUEST_CANCELLATION.md",
+        "crates/fa-reference/src/tower/publication/cancellation.rs",
+        "crates/fa-reference/src/tower/wire/publication/cancellation.rs",
+        "crates/fa-reference/tests/tower_cancellation.rs",
+        "crates/fa-reference/tests/tower_cancellation/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/cancellation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/cancellation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/cancellation.rs",
+        "artifacts/execution/2026-11-11-scoped-cancellation-integration-verification.log"
       ],
       "founding_ideas": [
         "FI-A06"

@@ -1,4 +1,4 @@
-//! The full original acknowledged cut carried by a native reconciliation request.
+//! The original acknowledged cut carried by reconciliation or cancellation.
 //! Parsing is data validation only; this object never confers an owner or grant.
 
 use super::{DecodeResult, TowerDecodingError, decimal, field, fields, object, object_json, quote, text};

@@ -1,5 +1,7 @@
 //! Actual original owners and authenticated Unix sockets, without qualification
 //! claims about production deployment or independent model judgments.
+#[path = "tests/cancellation.rs"]
+mod cancellation;
 #[path = "tests/fence.rs"]
 mod fence;
 #[path = "tests/hold_diagnosis.rs"]

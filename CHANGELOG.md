@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-11: connect scoped cancellation to live Tower operators
+
+- Extend existing Next/Resolve with an explicit cancellation action and sealed
+  original-owner plans/receipts; keep the legacy reconciliation format intact.
+- Provision independent finite cancellation authority from closed operator
+  profiles, with mandatory numerical replay selection for learned services.
+  Retain the same grant and exact receipt across reconnects and job handoffs.
+- Validate complete cancellation plans and receipts before client output or a
+  later explicit request. The client never submits a suggested action itself.
+- Add eighteen integration regression functions, including a real plain/checked
+  service sequence that cancels the first Authorized request and publishes the
+  second under the original source and actor budgets.
+- All twenty changed Rust files parse; eight new files pass formatting checks.
+  RCH exits 127, leaving compiler, runtime, Clippy and full qualification open.
+
 ## 2026-11-11: independently cancel one undispatched request
 
 - Add a separately retained finite cancellation grant and weak same-owner port.

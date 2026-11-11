@@ -357,6 +357,15 @@ These input profiles retain the current bounded decoder architecture and model l
 
 ## TL;DR
 
+The reference implementation also exposes
+[independently authorized cancellation of one undispatched request](docs/SCOPED_REQUEST_CANCELLATION.md)
+through native custody, Tower and authenticated operator sessions. The original
+Cancel transition releases that request's reservation while other work remains
+eligible to continue. Dispatched and uncertain effects retain their charge.
+The added regression sources cover a cancelled first request followed by actual
+second-request publication; syntax checks passed, while compiler/runtime
+qualification remains open because the required RCH runner was unavailable.
+
 **The problem.** Every conventional approach to AI alignment is compromised by fragile, post-hoc assumptions:
 - **Conversational cooperativeness is not an authority boundary.** An agent that sounds cooperative or sycophantic can still be prompt-injected, confused, or strategically deceptive.
 - **Opaque LLM monitor verdicts are not verifiable proofs.** Asking another large model "does this look safe?" yields probabilistic, uncalibrated natural language that cannot guarantee correctness or resist adversarial collusion.

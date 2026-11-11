@@ -1,6 +1,6 @@
 //! Separately authenticated inspection and explicitly selected native control.
-//! A restricted operator mount keeps receipt reconciliation and admission stop
-//! independent from actor proposal, cancellation and publication authority.
+//! A restricted operator mount keeps receipt reconciliation, undispatched-request
+//! cancellation and admission stop independent from actor intake and publication.
 #[path = "operator/profile.rs"]
 mod profile;
 pub(crate) use profile::Settings;
@@ -9,7 +9,8 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure, FileSupervisorExplanationGrant,
+    FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure, FileSupervisorCancellationGrant,
+    FileSupervisorExplanationGrant,
     FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorRequestHistoryGrant, FileSupervisorResolutionGrant,
@@ -37,6 +38,7 @@ struct Active {
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
     resolution: Option<FileSupervisorResolutionGrant>,
+    cancellation: Option<FileSupervisorCancellationGrant>,
     fence: Option<FileSupervisorFenceGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
@@ -64,7 +66,7 @@ pub(super) struct Service {
 
 impl Service {
     /// Issue only the host-selected original grants. Setup reads no source or
-    /// clock and performs no journal mutation; resolution is separately opted in.
+    /// clock and performs no journal mutation; native controls are separately opted in.
     pub(super) fn start(
         settings: &Settings,
         actor: &Profile,
@@ -80,7 +82,7 @@ impl Service {
             generation,
             deadline,
             |mount, limits| {
-                if settings.fence.is_some() {
+                if settings.fence.is_some() || settings.cancellation.is_some() {
                     PublicationTower::new_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
                     PublicationTower::new_reconciliation_operator(mount, port, limits)
@@ -92,7 +94,7 @@ impl Service {
     }
 
     /// Select the original learned observer, or an explicitly budgeted
-    /// reconciliation operator. Neither facade exposes ordinary actor intake.
+    /// control operator. Neither facade exposes ordinary actor intake.
     pub(super) fn start_learned(
         settings: &Settings,
         actor: &Profile,
@@ -109,7 +111,7 @@ impl Service {
             generation,
             deadline,
             |mount, limits| {
-                if settings.fence.is_some() {
+                if settings.fence.is_some() || settings.cancellation.is_some() {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
                     PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
@@ -236,6 +238,26 @@ impl Service {
         } else {
             None
         };
+        let cancellation = if let Some(selected) = &settings.cancellation {
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().cancellation_port_with_numerical_budget(
+                    selected.queries,
+                    selected.operations,
+                    selected.max_replay_events,
+                    events,
+                ),
+                None => driver.supervisor().cancellation_port(
+                    selected.queries,
+                    selected.operations,
+                    selected.max_replay_events,
+                ),
+            }
+            .map_err(debug)?;
+            tower.set_cancellation(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let fence = if let Some(selected) = &settings.fence {
             let (port, custodian) = match selected.numerical_replay_events {
                 Some(events) => driver
@@ -294,7 +316,7 @@ impl Service {
         if policy_replay.is_some() {
             purposes.push(PurposeTag::Experiment);
         }
-        if resolution.is_some() || fence.is_some() {
+        if resolution.is_some() || cancellation.is_some() || fence.is_some() {
             purposes.push(PurposeTag::Permit);
         }
         let access = TowerAccess::new(
@@ -333,6 +355,7 @@ impl Service {
                 explanation,
                 hold_diagnosis,
                 resolution,
+                cancellation,
                 fence,
                 review_explanation,
                 policy_replay,
@@ -451,7 +474,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -479,6 +502,11 @@ impl Service {
                 .as_ref()
                 .map(FileSupervisorHoldDiagnosisGrant::remaining_queries),
             active.resolution.as_ref().map(|grant| (
+                grant.remaining_queries(),
+                grant.remaining_operations(),
+                grant.remaining_numerical_replay_events(),
+            )),
+            active.cancellation.as_ref().map(|grant| (
                 grant.remaining_queries(),
                 grant.remaining_operations(),
                 grant.remaining_numerical_replay_events(),

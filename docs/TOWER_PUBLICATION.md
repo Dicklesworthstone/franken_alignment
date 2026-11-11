@@ -5,7 +5,8 @@ registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
 separately granted recorded-state `why-held`, and bounded original receipt
-planning/reconciliation through `next` and `resolve`, separately granted
+planning/reconciliation or independently granted undispatched-request cancellation
+through `next` and `resolve`, separately granted
 original journal `tail`, request-to-review `related`, and original-domain `fence` through its restricted
 control mount.
 It uses the same `TowerRequest`, verb vocabulary
@@ -67,6 +68,29 @@ caller-provided clock. Full predecessor checks and finite per-grant retry custod
 apply. Costs, information gain and publication eligibility remain Unknown.
 Numerical history requires a different replay contract, and the learned observer
 below keeps its existing closed read-only profile.
+
+## Cancel one original undispatched request
+
+The independent [scoped cancellation contract](SCOPED_REQUEST_CANCELLATION.md)
+connects the same existing `next` and `resolve` verbs using the explicit
+`action: "cancel_undispatched"` argument. It requires its own original
+`FileSupervisorCancellationPort`, installed through `set_cancellation`,
+and a restricted control operator with Permit purpose. The legacy
+reconciliation-only mount does not acquire this authority.
+
+Next offers an exact full-predecessor request for Proposed, Prepared, Reviewing
+or Authorized work under finite read, operation and replay allowances. Cancel
+invokes the original native transition, releases only the selected undispatched
+reservation and retains its original dependent-buffer cleanup. Dispatching,
+Unknown and terminal work refuse. This does not Fence the domain or prevent
+another original request from publishing.
+
+Learned control requires explicit cumulative numerical replay authority,
+including for raw-frame predictor histories. Grant custody, exact retries and
+spent work survive different facades on the same original owner. New response
+kinds `cancellation-next` and `cancellation` carry separate closed schemas;
+omitting the action discriminator retains the original reconciliation format.
+An action remains data until explicitly selected.
 
 ## Observe an original learned stream owner
 
@@ -666,9 +690,11 @@ The original grant and owner must still be available.
 The Linux [live Tower peer and client](TOWER_PEER.md) now integrate this profile
 into the existing ordinary `supervise_publication` service. Fresh source
 admission, peer credentials, selected-request scheduling, independent Stop and
-the original review/publication path remain native. This profile does not expose
-supervisor mutations, arbitrary affordance execution, a planner's decision card,
-learned generation, branch rehearsal or independent receipt verification.
+the original review/publication path remain native. Supervisor mutations are
+limited to independently selected original-domain Fence, original-receipt
+reconciliation and undispatched-request cancellation. Arbitrary affordance
+execution, a planner's decision card, learned generation, branch rehearsal and
+independent receipt verification remain outside this profile.
 Unsupported verbs refuse before touching the native owner.
 The complete dispatcher and deployment qualification contracts remain open.
 

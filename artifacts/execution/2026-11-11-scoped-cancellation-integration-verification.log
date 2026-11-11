@@ -1,0 +1,80 @@
+Scoped request cancellation integration verification — 2026-11-11 UTC
+All 20 integration source files matched their independently preserved immutable blobs before formatting, except for five extra trailing newlines introduced during materialization. Source comparison excluded terminal newline count only.
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --version
+rustfmt 1.10.0-nightly (9085017724 2026-08-30)
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/request.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/request/resolution.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/request/tests.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/publication.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/publication/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/wire/publication.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/wire/publication/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/tower_cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/tower_cancellation/learned.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/profile.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true crates/fa-reference/src/tower/publication/cancellation.rs crates/fa-reference/src/tower/wire/publication/cancellation.rs crates/fa-reference/tests/tower_cancellation.rs crates/fa-reference/tests/tower_cancellation/learned.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series/cancellation.rs
+exit_code=0
+
+$ /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/tower/publication/cancellation.rs crates/fa-reference/src/tower/wire/publication/cancellation.rs crates/fa-reference/tests/tower_cancellation.rs crates/fa-reference/tests/tower_cancellation/learned.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series/cancellation.rs
+exit_code=0
+
+$ git diff --check -- crates/fa-reference/src/tower.rs crates/fa-reference/src/tower/request.rs crates/fa-reference/src/tower/request/resolution.rs crates/fa-reference/src/tower/request/tests.rs crates/fa-reference/src/tower/publication.rs crates/fa-reference/src/tower/publication/cancellation.rs crates/fa-reference/src/tower/wire/publication.rs crates/fa-reference/src/tower/wire/publication/cancellation.rs crates/fa-reference/tests/tower_cancellation.rs crates/fa-reference/tests/tower_cancellation/learned.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/profile.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series/cancellation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/tower/series.rs
+exit_code=0
+
+$ bash -c 'RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --test tower_cancellation --example supervise_publication'
+bash: line 1: rch: command not found
+exit_code=127
+
+No local compiler fallback was used. Syntax/formatting checks are not typechecking or runtime evidence. Compiler, runtime, Clippy and complete gate qualification remain unestablished.

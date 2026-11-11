@@ -50,13 +50,13 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | Snapshot: `null` or `{"since_seq":"0","max_events":"64"}`. Native: exactly `{"after_revision":"0"}` or `{"cursor":"17"}`, with a separately granted original journal disclosure |
-| `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: exactly `{"operation":"9001"}` with a separately granted operator capability |
+| `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: `{"operation":"9001"}`. Independent undispatched cancellation: `{"action":"cancel_undispatched","operation":"9001"}`. Each native capability requires its own grant |
 | `replay` | `null` or `{"interventions":[...]}`; requires a nonempty idempotency key |
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
 | `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
 | `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`, optionally adding `"paged":true`; native page continuation uses exactly `{"campaign":"1","cursor":"17"}`. Requires separate native grants, canonical matching key and explicit nonzero mount generation |
-| `resolve` | On Unix, `{"operation":"9001","expected":{...}}` with the complete original native basis; requires the same canonical idempotency key and exact nonzero registration generation |
+| `resolve` | On Unix, `{"operation":"9001","expected":{...}}` reconciles an original receipt. Adding `"action":"cancel_undispatched"` selects independent undispatched cancellation. Both require the full native basis, same canonical idempotency key and exact nonzero registration generation |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -88,6 +88,22 @@ finite grant reconciles only an existing original endpoint outcome and retains
 exact retries for that live grant's lifetime. The restricted operator
 constructor does not enable actor `propose` or `hold` through its Permit tag.
 The reference snapshot's `next` profile and learned observer remain unchanged.
+
+### Native undispatched-request cancellation
+
+The [scoped cancellation profile](SCOPED_REQUEST_CANCELLATION.md) uses an
+explicit `action: "cancel_undispatched"` on `next` and `resolve`.
+The corresponding typed arguments are `CancellationNext` and
+`CancelUndispatched`. An omitted action preserves the original reconciliation
+bytes and semantics; unknown action values refuse.
+
+The complete `expected` object carries scope, `origin: "acknowledged_owner"`,
+request, request generation, attempt, journal revision, control sequence and
+nullable recorded elapsed tick. Integers use canonical decimal strings. A
+known plan supplies the complete Resolve document with that observed basis.
+The separate cancellation grant, exact original owner and full current
+predecessor are still required at execution. No caller clock, source, receipt
+or publication authority is accepted.
 
 ### Native situation pages
 

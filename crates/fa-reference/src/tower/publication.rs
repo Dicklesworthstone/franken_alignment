@@ -7,6 +7,8 @@
 //! provenance is preserved rather than converted into global Tower clocks.
 
 mod capabilities;
+mod cancellation;
+pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
 mod fence;
 pub use fence::LinkedFence;
 mod hold_diagnosis;
@@ -39,7 +41,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FilePolicyReplayCursor, FileSupervisorExplanationPort, FileSupervisorFencePort,
     FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
-    FileSupervisorReviewExplanationPort,
+    FileSupervisorReviewExplanationPort, FileSupervisorCancellationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -114,6 +116,8 @@ pub enum PublicationResult {
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
     Resolution(LinkedResolution),
+    CancellationNext(LinkedCancellationNext),
+    Cancellation(LinkedCancellation),
     Fence(LinkedFence),
     ReviewExplanation(LinkedReviewExplanation),
     RefinementExplanation(LinkedRefinementExplanation),
@@ -161,6 +165,7 @@ pub struct PublicationTower {
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
+    cancellation: Option<FileSupervisorCancellationPort>,
     fence: Option<FileSupervisorFencePort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
@@ -206,6 +211,7 @@ impl PublicationTower {
             explanation: None,
             hold_diagnosis: None,
             resolution: None,
+            cancellation: None,
             fence: None,
             review_explanation: None,
             policy_replay: None,
@@ -271,7 +277,7 @@ impl PublicationTower {
 
     /// Mount one original owner for explicitly granted control operations.
     /// Ordinary actor intake stays closed even when Permit is allowed. This
-    /// constructor supplies no fence or reconciliation grant of its own.
+    /// constructor supplies no fence, cancellation or reconciliation grant.
     pub fn new_control_operator(
         mount: Address,
         port: FileActorPort<FileOversight>,
@@ -283,8 +289,8 @@ impl PublicationTower {
     }
 
     /// The original learned owner with the same restricted operator surface.
-    /// A separate finite numerical grant is required to enter a learned fence;
-    /// neither this mount nor a caller's payload can drive generation.
+    /// Separate finite numerical grants are required to enter learned control
+    /// operations; neither this mount nor a caller's payload drives generation.
     pub fn new_learned_control_operator(
         mount: Address,
         port: FileLearnedTextStreamActorPort,
@@ -452,6 +458,14 @@ impl PublicationTower {
         }
 
         if matches!(request.verb, Verb::Next | Verb::Resolve) {
+            if matches!(request.arguments,
+                ReadArguments::CancellationNext { .. } | ReadArguments::CancelUndispatched { .. }
+            ) {
+                if self.reconciliation_operator && !self.control_operator {
+                    return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+                }
+                return self.dispatch_cancellation(access, request);
+            }
             return self.dispatch_resolution(access, request);
         }
 

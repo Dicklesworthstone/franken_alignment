@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: carry independent request cancellation through live operators
+
+Existing Tower Next/Resolve now select independently granted native cancellation
+only with the explicit `cancel_undispatched` action. Omitted action preserves
+receipt reconciliation. Same-owner installation, restricted control mounts,
+complete native predecessors and sealed cancellation result profiles keep
+observation, reconciliation and cancellation custody separate.
+
+The closed authenticated operator profile accepts finite cancellation queries,
+operations and replay events; learned services require the explicit independent
+numerical replay allowance. The original grant survives reconnects, scheduled
+requests and resident handoffs without renewed work. The explicit-document
+client validates the entire action/receipt and never follows suggested actions.
+
+The original driver already treats Cancelled as terminal. The new end-to-end
+regression uses both plain and checked mediated services to cancel an Authorized
+first request, retire its endpoints, retain the exact receipt and spent grant
+over reconnect, and publish the second request through its actual human review.
+Its assertions bind one publication, the surviving payload, exact source checks,
+reservation release, final charge and the unchanged version before publication.
+
+Eighteen new integration regression functions cover this sequence, seven public
+Tower cases, two codec cases, five service/profile cases and three client cases.
+All twenty changed integration Rust files pass syntax parsing; eight new files
+pass formatting checks and the tracked diff passes whitespace checks. Independent
+reviews covered the native, Tower, operator/client and live composition sources.
+The focused required RCH launch exits 127 because the runner is unavailable.
+No compiler, runtime, Clippy or full-gate success is claimed. Thirteen connected
+verbs remain thirteen; this increment does not qualify the full dispatcher.
+
+Contract: `docs/SCOPED_REQUEST_CANCELLATION.md`.
+Execution record:
+`artifacts/execution/2026-11-11-scoped-cancellation-integration-verification.log`.
+
 ## 2026-11-11: add independently authorized undispatched-request cancellation
 
 The native full-input owner now offers `cancellation_port` and its explicit

@@ -211,6 +211,15 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         }
         #[cfg(unix)]
         Verb::Next if args.contains_key("operation") => {
+            if args.contains_key("action") {
+                fields(args, &["action", "operation"])?;
+                if text(args, "action")? != "cancel_undispatched" {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::CancellationNext {
+                    operation: decimal(args, "operation")?,
+                });
+            }
             fields(args, &["operation"])?;
             Ok(ReadArguments::ResolutionNext {
                 operation: decimal(args, "operation")?,
@@ -224,6 +233,16 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         }
         #[cfg(unix)]
         Verb::Resolve => {
+            if args.contains_key("action") {
+                fields(args, &["action", "operation", "expected"])?;
+                if text(args, "action")? != "cancel_undispatched" {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::CancelUndispatched {
+                    operation: decimal(args, "operation")?,
+                    expected: resolution::decode_basis(field(args, "expected")?)?,
+                });
+            }
             fields(args, &["operation", "expected"])?;
             Ok(ReadArguments::Resolve {
                 operation: decimal(args, "operation")?,
@@ -341,7 +360,7 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             validate_proposal(proposal)?;
         }
         #[cfg(unix)]
-        (Verb::Next, ReadArguments::ResolutionNext { operation }) => {
+        (Verb::Next, ReadArguments::ResolutionNext { operation } | ReadArguments::CancellationNext { operation }) => {
             if *operation == 0
                 || request
                     .idempotency_key
@@ -355,6 +374,9 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         (
             Verb::Resolve,
             ReadArguments::Resolve {
+                operation,
+                expected,
+            } | ReadArguments::CancelUndispatched {
                 operation,
                 expected,
             },
@@ -726,6 +748,17 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         ReadArguments::ResolutionNext { operation } => {
             object_json(&[("operation", quote(&operation.to_string()))])
         }
+        #[cfg(unix)]
+        ReadArguments::CancellationNext { operation } => object_json(&[
+            ("action", quote("cancel_undispatched")),
+            ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::CancelUndispatched { operation, expected } => object_json(&[
+            ("action", quote("cancel_undispatched")),
+            ("operation", quote(&operation.to_string())),
+            ("expected", resolution::encode_basis(*expected)),
+        ]),
         #[cfg(unix)]
         ReadArguments::Resolve {
             operation,

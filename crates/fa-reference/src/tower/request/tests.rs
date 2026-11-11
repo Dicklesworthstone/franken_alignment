@@ -813,6 +813,73 @@ fn resolution_decoder_rejects_invented_clock_authority_and_inexact_identity_befo
 }
 
 #[cfg(unix)]
+#[test]
+fn cancellation_requires_an_explicit_action_and_preserves_legacy_reconciliation_bytes() {
+    let legacy = resolution_request();
+    let mut cancel = legacy.clone();
+    let ReadArguments::Resolve { operation, expected } = legacy.arguments else {
+        panic!("legacy reconciliation");
+    };
+    cancel.arguments = ReadArguments::CancelUndispatched { operation, expected };
+    let wire = encode_request(&cancel).unwrap();
+    assert_eq!(wire, RESOLVE.replace(
+        "\"arguments\":{\"operation\":",
+        "\"arguments\":{\"action\":\"cancel_undispatched\",\"operation\":",
+    ));
+    round_trip(&cancel);
+    assert!(matches!(decode_request(RESOLVE.as_bytes()).unwrap().arguments, ReadArguments::Resolve { .. }));
+    assert_eq!(encode_request(&resolution_request()).unwrap(), RESOLVE);
+    let next = request(Verb::Next, ReadArguments::CancellationNext { operation: u64::MAX });
+    round_trip(&next);
+    let mut keyed = next;
+    keyed.idempotency_key = Some(u64::MAX.to_string());
+    round_trip(&keyed);
+    let mut no_tick = cancel;
+    if let ReadArguments::CancelUndispatched { expected, .. } = &mut no_tick.arguments {
+        expected.recorded_at = None;
+    }
+    round_trip(&no_tick);
+}
+
+#[cfg(unix)]
+#[test]
+fn cancellation_decoder_refuses_implicit_actions_or_unbounded_control_inputs() {
+    let wire = RESOLVE.replace(
+        "\"arguments\":{\"operation\":",
+        "\"arguments\":{\"action\":\"cancel_undispatched\",\"operation\":",
+    );
+    for malformed in [
+        wire.replace("\"action\":\"cancel_undispatched\"", "\"action\":\"hold\""),
+        wire.replace("\"action\":\"cancel_undispatched\"", "\"action\":\"reconcile\""),
+        wire.replace("\"action\":\"cancel_undispatched\"", "\"action\":null"),
+        wire.replace("\"action\":\"cancel_undispatched\"", "\"action\":\"cancel_undispatched\",\"action\":\"cancel_undispatched\""),
+        wire.replace("\"operation\":\"5009\"", "\"operation\":\"0\""),
+        wire.replace("\"operation\":\"5009\"", "\"operation\":5009"),
+        wire.replace("\"operation\":\"5009\"", "\"operation\":\"05009\""),
+        wire.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":null"),
+        wire.replace("\"idempotency_key\":\"5009\"", "\"idempotency_key\":\"5010\""),
+        wire.replace("@41", ""),
+        wire.replace("\"recorded_at\":\"1\"", "\"recorded_at\":\"1\",\"now\":\"2\""),
+        wire.replace("\"origin\":\"acknowledged_owner\"", "\"origin\":\"imported\""),
+        wire.replace("\"purpose\":\"effect\"", "\"purpose\":\"capture\""),
+    ] {
+        assert_eq!(decode_request(malformed.as_bytes()), Err(TowerDecodingError::MalformedRequest));
+    }
+    let next = request(Verb::Next, ReadArguments::CancellationNext { operation: 1 });
+    let next_wire = encode_request(&next).unwrap();
+    for malformed in [
+        next_wire.replace("\"operation\":\"1\"", "\"operation\":\"1\",\"max_cost\":\"1\""),
+        next_wire.replace("\"action\":\"cancel_undispatched\"", "\"action\":\"cancel_all\""),
+        next_wire.replace("\"operation\":\"1\"", "\"operation\":\"0\""),
+    ] {
+        assert_eq!(decode_request(malformed.as_bytes()), Err(TowerDecodingError::MalformedRequest));
+    }
+    let mut mismatch = next;
+    mismatch.idempotency_key = Some("2".to_owned());
+    assert_eq!(encode_request(&mismatch), Err(TowerDecodingError::MalformedRequest));
+}
+
+#[cfg(unix)]
 const FENCE: &str = concat!(
     "{\"schema_version\":\"fa.tower_request/1\",\"operation_id\":\"fence-5009\",",
     "\"address\":\"fa://1/run/3@41\",\"verb\":\"fence\",",

@@ -5,7 +5,9 @@ separate authenticated operator endpoint. It connects the existing native
 `situation`, historical admission or completed-congress `explain`, recorded
 `why-held` diagnosis, request-to-review `related`, original journal `tail` and explicitly selected `policy-replay` capabilities to the
 running supervisor. A separately selected `resolution` grant connects native
-`next` and `resolve` to original endpoint receipt reconciliation. A separate
+`next` and `resolve` to original endpoint receipt reconciliation. An independent
+`cancellation` grant retires one original undispatched request through the same
+verbs with an explicit cancellation action. A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
 without changing policy or issuing authority. The service keeps its original journal lock, source
@@ -141,7 +143,7 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
-`review_explanation`, `resolution` and `fence` are independently optional;
+`review_explanation`, `resolution`, `cancellation` and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
@@ -156,7 +158,8 @@ grant and does not enable an otherwise disabled operation.
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
 explanation, journal Tail, request history, recorded-state diagnosis, completed-review explanation,
-policy replay, receipt reconciliation or original admission fencing must be
+policy replay, receipt reconciliation, undispatched-request cancellation or
+original admission fencing must be
 enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
 zero and `explanation_disclosure` to `"none"`. Enabling explanation explicitly
@@ -417,6 +420,48 @@ reply ends the client exchange before output or a later request. Native Unknown
 and Capacity responses remain explicit native observations. The client performs
 no automatic poll, retry, recovery or follow-up action.
 See [the native diagnosis contract](TOWER_HOLD_DIAGNOSIS.md).
+
+## Cancel one undispatched request and continue serving
+
+Select a separate optional `cancellation` profile member:
+
+```json
+"cancellation": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "authority": "cancel_undispatched_requests"
+}
+```
+
+The closed object permits 1–1,024 queries, 1–128 operations and 1–4,096 retained
+events including the appended Cancel. Omission or null leaves it disabled.
+Unknown fields, duplicates, invalid integers and a different authority marker
+refuse before setup. Optional positive `numerical_replay_events` is bounded
+by `operations * max_replay_events`; learned actor/resident services require
+it whenever cancellation is selected. Other numerical grants cannot pay for it.
+
+Send `next` with `{"action":"cancel_undispatched","operation":"9001"}`
+at the exact original request address. A known eligible plan includes the
+complete explicit Resolve document. Submit that document only after selecting
+it; `tower-operator-exchange` validates its closed cancellation response and
+does not follow actions or retry automatically. Omitting the action discriminator
+continues to select the original receipt-reconciliation contract.
+
+Successful cancellation terminally retires only Proposed, Prepared, Reviewing
+or Authorized work, releasing its undispatched reservation through original
+native accounting. Dispatched or Unknown effects retain their charge and refuse.
+The existing driver reaps the cancelled request and can serve the next scheduled
+request. The operator's original grant, counters and exact receipt cache survive
+that handoff and authenticated reconnects; neither renews authority.
+
+The [complete cancellation contract](SCOPED_REQUEST_CANCELLATION.md) includes
+request examples, exact predecessors, numerical replay limits and response
+schemas. Its regression sources include a real plain/checked service sequence
+where the first Authorized request is cancelled and the second publishes with
+the original source budget and actor connection. The integration syntax and
+format checks passed; runtime and compiler qualification remain pending because
+the required RCH runner was absent.
 
 ## Plan and reconcile an uncertain publication
 

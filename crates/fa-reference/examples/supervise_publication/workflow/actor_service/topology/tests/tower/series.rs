@@ -1,5 +1,8 @@
 //! Two real effects through one mediated owner; each later effect still buys
 //! its own source check, fresh independent review and one-shot publication keys.
+#[path = "series/cancellation.rs"]
+mod cancellation;
+
 use super::*;
 use crate::workflow::actor_service::series::{self as service, Options};
 

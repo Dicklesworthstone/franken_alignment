@@ -209,6 +209,20 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
     },
+    /// Inspect one original undispatched request for separately authorized
+    /// cancellation. This read neither reserves its operation key nor cancels.
+    #[cfg(unix)]
+    CancellationNext {
+        operation: u64,
+    },
+    /// Cancel one original undispatched request at its complete acknowledged
+    /// cut. The independent cancellation grant owns the mutation and retries;
+    /// a reconciliation grant cannot authorize it.
+    #[cfg(unix)]
+    CancelUndispatched {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileHoldDiagnosisBasis,
+    },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
     #[cfg(unix)]

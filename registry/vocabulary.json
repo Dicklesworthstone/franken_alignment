@@ -148,7 +148,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "Vec<Affordance> ranked",
-      "note": ""
+      "note": "The native publication adapter has distinct separately granted receipt-reconciliation and undispatched-request cancellation plans. Cancellation requires explicit action cancel_undispatched; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown."
     },
     {
       "verb": "tail",
@@ -248,7 +248,7 @@
       "idempotency": "attempt id",
       "cost_class": "varies",
       "response": "Outcome",
-      "note": ""
+      "note": "The native publication adapter separately grants original-receipt reconciliation and original undispatched-request cancellation. Cancellation requires explicit action cancel_undispatched, its own live grant and the full acknowledged predecessor; omitted action preserves reconciliation. Exact retry custody is scoped to the original live grant. Neither action publishes or refunds an uncertain effect."
     },
     {
       "verb": "verify",
