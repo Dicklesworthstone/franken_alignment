@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-11: independently cancel one undispatched request
+
+- Add a separately retained finite cancellation grant and weak same-owner port.
+  Next observes the complete original predecessor; Cancel invokes the existing
+  native transition and releases only its undispatched reservation.
+- Preserve unrelated requests, charged uncertain effects and original dependent
+  buffer cleanup. Require explicit cumulative numerical replay authority for
+  learned or raw-predictor histories.
+- Consume operation identity and work before mutation; retain exact retries and
+  interrupted-operation refusal without repeating native work.
+- Add eleven native regression functions covering actual later publication,
+  custody, every predecessor coordinate, finite budgets, learned cleanup and
+  all five storage replacement barriers. Syntax, new-file formatting and
+  whitespace checks pass; RCH exits 127, so runtime qualification remains open.
+- Document the contract in `docs/SCOPED_REQUEST_CANCELLATION.md`.
+
 ## 2026-11-11: keep independent Stop available across live Tower recovery
 
 - Bind authenticated Stop before ordinary mediated replay in plain, checked

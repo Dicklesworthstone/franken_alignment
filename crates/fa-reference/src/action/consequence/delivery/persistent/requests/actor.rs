@@ -13,6 +13,14 @@ pub use stopping::{
     FileFenceBasis, FileFenceError, FileFenceObservation, FileFenceReceipt, FileFenceRequest,
     FileFenceResult, FileSupervisorFenceGrant, FileSupervisorFencePort, MAX_FENCE_REPLAY_EVENTS,
 };
+mod cancellation;
+pub use cancellation::{
+    FileCancellationBlockReason, FileCancellationError, FileCancellationObservation,
+    FileCancellationPlan, FileCancellationPlanObservation, FileCancellationPlanResult,
+    FileCancellationReceipt, FileCancellationRequest, FileCancellationResult,
+    FileSupervisorCancellationGrant, FileSupervisorCancellationPort,
+    MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
+};
 mod resolution;
 pub use resolution::{
     FileResolutionBlockReason, FileResolutionError, FileResolutionObservation, FileResolutionPlan,

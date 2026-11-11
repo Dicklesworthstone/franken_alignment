@@ -252,7 +252,14 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": []
+      "result_artifacts": [
+        "docs/SCOPED_REQUEST_CANCELLATION.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs",
+        "artifacts/execution/2026-11-11-scoped-cancellation-native-verification.log"
+      ]
     },
     {
       "id": "FA-010",

@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: add independently authorized undispatched-request cancellation
+
+The native full-input owner now offers `cancellation_port` and its explicit
+numerical-budget variant. A separate nonclone custodian bounds queries,
+operations and complete original replay work; weak ports cannot self-grant
+authority. Next binds the full request predecessor. Cancel uses the existing
+original transaction, retires only Proposed/Prepared/Reviewing/Authorized work
+and preserves unrelated reservations and every charged effect.
+
+Entered cancellation consumes its operation identity and required numerical
+reservation before native mutation, invalidates the admission snapshot once,
+and caches the original acknowledgment. Exact same-grant retries cannot repeat
+work or destroy a later snapshot. Stale predecessors, wrong owners, spent
+allowances, dispatched or uncertain work, failed storage and interrupted entry
+remain closed. Numerical reconstruction, including raw predictors, requires
+its independently granted cumulative event budget.
+
+Eleven new native regression functions cover real subsequent two-key
+publication, every predecessor coordinate, finite work/custody, the five
+replacement barriers and complete learned-stream/direct-Cancel state equality.
+Independent source review, five-file syntax parsing, four-new-file formatting
+and whitespace checks pass. The required RCH invocation exits 127 because the
+runner is absent. Compilation, runtime, Clippy and full qualification remain
+unestablished; no packet status or acceptance gate is promoted.
+
+Contract: `docs/SCOPED_REQUEST_CANCELLATION.md`.
+Execution record:
+`artifacts/execution/2026-11-11-scoped-cancellation-native-verification.log`.
+
 ## 2026-11-11: service authenticated Stop throughout ordinary live recovery
 
 Ordinary topology-enforced Tower `serve-open` and `serve-open-checked`, including

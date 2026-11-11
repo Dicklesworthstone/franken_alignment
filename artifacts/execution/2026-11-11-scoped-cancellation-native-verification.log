@@ -1,0 +1,25 @@
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --version
+Exit code: 0
+rustfmt 1.10.0-nightly (9085017724 2026-08-30)
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs
+Exit code: 0
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs
+Exit code: 0
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs
+Exit code: 0
+
+Command: git diff --check -- crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs
+Exit code: 0
+
+Command: /bin/bash -c 'RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --lib action::consequence::delivery::persistent::requests::actor::cancellation::tests'
+Exit code: 127
+/bin/bash: line 1: rch: command not found
+
+Installed rustfmt parses source; it is not a typecheck or runtime test. No local compiler fallback was used.
+
+After independent review removed an unused test import:
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/port.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests.rs crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/cancellation/tests/numerical.rs
+Exit code: 0
