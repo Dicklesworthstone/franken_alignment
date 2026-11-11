@@ -10,6 +10,8 @@ mod journal_tail;
 mod numerical_explanation;
 #[path = "tests/policy_replay.rs"]
 mod policy_replay;
+#[path = "tests/request_history.rs"]
+mod request_history;
 #[path = "tests/resolution.rs"]
 mod resolution;
 #[path = "tests/review_explanation.rs"]

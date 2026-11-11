@@ -1,0 +1,72 @@
+{
+  "schema": "fa.scoped_verification/1",
+  "date": "2026-11-11",
+  "purpose": "Maintain exact source and execution limits for request-history discovery integration",
+  "native_commit": "5e7bc2ba6f4a9588a04fee733cbd2b59ead13e33",
+  "native_runtime_source_tree": "1dd6e6e3b8bbcf465568707cb82dad8982e2d1db",
+  "operator_source_tree": "9f97c7d1bdf2c6a30873f630c539640a57903f7f",
+  "toolchain": "nightly-2026-09-08",
+  "rustc_commit": "cea272fa356e94bd2ee2cadf376630aa0683867a",
+  "metadata_source_equivalence": "git diff --exit-code <native_runtime_source_tree> <native_commit> -- crates/fa-reference/src crates/fa-reference/tests/tower_request_history.rs passed",
+  "emitted_full_library_metadata_sha256": "f84b8fb5a2cf307f6991a632f754460b5560f8462a1b4cfac7731d1bb1aeab21",
+  "local_typechecks": [
+    {
+      "target": "crates/fa-reference/tests/tower_request_history.rs",
+      "test_functions": 11,
+      "command": "rustc --edition=2024 --crate-name tower_request_history --test --emit=metadata -Zunstable-options --jobs-frontend=1 --jobs-backend=1 -Cdebuginfo=0 --extern fa_reference=<exact emitted full-library metadata> -L dependency=<metadata directory> --out-dir <external output> <unchanged full target>",
+      "exit_code": 0
+    },
+    {
+      "target": "crates/fa-reference/examples/supervise_publication.rs",
+      "command": "rustc --edition=2024 --crate-name supervise_publication --emit=metadata -Zunstable-options --jobs-frontend=1 --jobs-backend=1 -Cdebuginfo=0 --extern fa_reference=<exact emitted full-library metadata> -L dependency=<metadata directory> --out-dir <external output> <unchanged full example>",
+      "exit_code": 0
+    },
+    {
+      "target": "complete supervise_publication example test harness",
+      "same_metadata_test_flag": true,
+      "exit_code": 137,
+      "outcome": "SIGKILL before metadata completion"
+    }
+  ],
+  "runtime": {
+    "command": "CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 RUSTFLAGS=\"-Zcodegen-backend=cranelift -Zunstable-options --jobs-frontend=1 --jobs-backend=1\" cargo test --locked -p fa-reference --test tower_request_history --test tower_journal_tail --test tower_fence --test tower_review_explanation --test tower_router",
+    "exit_code": 101,
+    "outcome": "full-library compiler SIGKILL; no tests executed"
+  },
+  "canonical_local_gate": {
+    "command": "cargo run --locked -p xtask -- check",
+    "exit_code": 1,
+    "verified_source_inputs": 2454,
+    "last_pass": "founding concordance",
+    "failure": "system-map missing playbook coverage for compare-learned-prompt, serve-learned-generated, stop-fleet"
+  },
+  "required_remote_gate": {
+    "command": "RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask -- check",
+    "exit_code": 127,
+    "outcome": "rch not installed"
+  },
+  "logs": [
+    "artifacts/execution/2026-11-11-request-history-operator-runtime.log",
+    "artifacts/execution/2026-11-11-request-history-public-typecheck.log",
+    "artifacts/execution/2026-11-11-request-history-operator-test-metadata.log",
+    "artifacts/execution/2026-11-11-request-history-operator-typecheck.log",
+    "artifacts/execution/2026-11-11-request-history-local-gate.log",
+    "artifacts/execution/2026-11-11-request-history-rch-gate.log",
+    "artifacts/execution/2026-11-11-request-history-final-gate.log"
+  ],
+  "qualification": "pending; typechecking and source checks are not runtime execution, a complete repository gate or production/foundation admission",
+  "concurrent_main_integration": {
+    "preserved_commit": "8bb3cfa7718d1fdc7af4ab2abbff2e06346291c6",
+    "combined_gate_source_tree": "90a33a916df16943d70e7ba84ee8c70e8b9bdd47",
+    "source_overlap": "No overlapping Rust changes; preserve concurrent recovery source/tests, merge additive status and changelog entries, and regenerate complete exact source manifest.",
+    "compiler_scope": "Earlier typechecks and attempted runtime builds apply to the recorded feature snapshots, before this concurrent main update; no combined full-library typecheck or runtime pass is claimed.",
+    "canonical_local_gate": {
+      "command": "cargo run --locked -p xtask -- check",
+      "exit_code": 1,
+      "verified_source_inputs": 2455,
+      "last_pass": "founding concordance",
+      "failure": "system-map missing playbook coverage for compare-learned-prompt, serve-learned-generated, stop-fleet",
+      "log": "artifacts/execution/2026-11-11-request-history-final-gate.log"
+    }
+  }
+}

@@ -32,6 +32,8 @@ mod journal_tail_validation;
 mod policy_replay;
 #[path = "client/refinement_explanation.rs"]
 mod refinement_explanation;
+#[path = "client/request_history.rs"]
+mod request_history;
 #[path = "client/resolution.rs"]
 mod resolution;
 #[path = "client/review_explanation.rs"]
@@ -51,6 +53,10 @@ const MAX_POLICY_REPLAY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const MAX_REVIEW_EXPLANATION_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 // A native Stop may account for every admitted attempt in one receipt.
 const MAX_FENCE_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
+// Request history may contain every completed review in the admitted native
+// journal, including one complete follow-up request per row. Its work remains
+// bounded independently from numerical congress explanation.
+const MAX_REQUEST_HISTORY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const USAGE: &str = "tower-exchange ACTOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic poll or resend)";
 const OPERATOR_USAGE: &str = "tower-operator-exchange OPERATOR_PROFILE TOWER_REQUEST_JSON [TOWER_REQUEST_JSON ...] (at most 64 documents; no automatic page following or resend)";
 
@@ -128,6 +134,7 @@ struct Endpoint<'a> {
     supervisor: PeerPolicy,
     scope: Scope,
     tail_events_per_page: Option<usize>,
+    request_history_limits: Option<(usize, usize)>,
     exchanges: u64,
     runtime_ms: u64,
     poll_ms: u64,
@@ -140,6 +147,7 @@ impl<'a> Endpoint<'a> {
             supervisor: profile.supervisor,
             scope: profile.scope,
             tail_events_per_page: None,
+            request_history_limits: None,
             exchanges: profile.exchanges,
             runtime_ms: profile.runtime_ms,
             poll_ms: profile.poll_ms,
@@ -155,6 +163,10 @@ impl<'a> Endpoint<'a> {
                 .journal_tail
                 .as_ref()
                 .map(|selected| selected.events_per_page),
+            request_history_limits: settings
+                .request_history
+                .as_ref()
+                .map(|selected| (selected.max_history_events, selected.max_reviews)),
             exchanges: settings.exchange_limit,
             runtime_ms: settings.runtime_ms,
             poll_ms: settings.poll_ms,
@@ -202,6 +214,12 @@ fn exchange_endpoint(
         let response = budget.read_frame(&mut socket)?;
         let parsed = parse_response(&response, &document.request)?;
         tail_sequence.accept(&parsed, &document.request)?;
+        request_history::check_profile(
+            &parsed,
+            &document.request,
+            endpoint.scope,
+            endpoint.request_history_limits,
+        )?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -407,6 +425,8 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_REVIEW_EXPLANATION_REPLY_ITEMS
             } else if request.verb == Verb::Fence {
                 MAX_FENCE_REPLY_ITEMS
+            } else if request.verb == Verb::Related {
+                MAX_REQUEST_HISTORY_REPLY_ITEMS
             } else {
                 4096
             },
@@ -456,6 +476,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("precheck"), Verb::Precheck) => {}
         (Some("capabilities"), Verb::Capabilities) => {}
         (Some("situation"), Verb::Situation) => {}
+        (Some("request-history"), Verb::Related) => {
+            if !request_history::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
         (Some("journal-tail"), Verb::Tail) => {
             if !journal_tail::matches(&parsed, request)
                 || !journal_tail_validation::matches(

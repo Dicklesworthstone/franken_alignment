@@ -5,6 +5,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
     MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS,
     MAX_JOURNAL_TAIL_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
+    MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
     MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
     MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
 };
@@ -42,11 +43,55 @@ pub(crate) struct Settings {
     pub(crate) explanation_numerical_replay_events: Option<usize>,
     pub(crate) explanation_disclosure: String,
     pub(crate) journal_tail: Option<JournalTailSettings>,
+    pub(crate) request_history: Option<RequestHistorySettings>,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
     pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+}
+
+/// Direct original request-to-review relationships. This metadata selection
+/// grants neither review-input disclosure nor numerical reconstruction work.
+#[derive(Clone, Debug)]
+pub(crate) struct RequestHistorySettings {
+    pub(crate) queries: usize,
+    pub(crate) max_history_events: usize,
+    pub(crate) max_reviews: usize,
+    pub(crate) disclosure: String,
+}
+
+impl RequestHistorySettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            max_history_events: usize::try_from(fields.number("max_history_events")?)
+                .map_err(debug)?,
+            max_reviews: usize::try_from(fields.number("max_reviews")?).map_err(debug)?,
+            disclosure: fields.text("disclosure")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_REQUEST_HISTORY_QUERIES
+            || self.max_history_events == 0
+            || self.max_history_events > MAX_REQUEST_HISTORY_EVENTS
+            || self.max_reviews == 0
+            || self.max_reviews > MAX_REQUEST_HISTORY_REVIEWS
+            || self.disclosure != "recorded_request_relationships"
+        {
+            return Err(
+                "request history requires explicit recorded-request-relationships disclosure and bounded queries, history and reviews"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 /// Explicit bounded disclosure of original journal event metadata. This does
@@ -387,6 +432,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(JournalTailSettings::decode(value)?),
             },
+            request_history: match fields.optional("request_history") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(RequestHistorySettings::decode(value)?),
+            },
             hold_diagnosis: match fields.optional("hold_diagnosis") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(HoldDiagnosisSettings::decode(value)?),
@@ -466,6 +515,7 @@ impl Settings {
             || (self.inspection_queries == 0
                 && self.explanation_queries == 0
                 && self.journal_tail.is_none()
+                && self.request_history.is_none()
                 && self.hold_diagnosis.is_none()
                 && self.resolution.is_none()
                 && self.fence.is_none()
@@ -505,6 +555,9 @@ impl Settings {
             selected.validate()?;
         }
         if let Some(selected) = &self.journal_tail {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.request_history {
             selected.validate()?;
         }
         if let Some(selected) = &self.hold_diagnosis {

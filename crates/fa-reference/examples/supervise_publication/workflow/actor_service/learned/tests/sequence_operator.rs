@@ -28,7 +28,7 @@ fn selection(root: &Root, actor: &Profile) -> (PathBuf, live_operator::Selection
     let path = root.0.join("operator.json");
     let socket = root.0.join("peers/operator.sock");
     fs::write(&path, format!(
-        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"journal_tail":{{"queries":2,"events_per_page":4,"disclosure":"redacted_journal_events"}},"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
+        r#"{{"schema":"fa.tower-operator-service/1","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},"socket":{},"supervisor":{{"uid":{},"gid":{},"pid":{pid}}},"operator":{{"uid":{},"gid":{},"pid":{pid}}},"candidate_limit":4,"connection_limit":4,"exchange_limit":16,"runtime_ms":60000,"poll_ms":1,"inspection_queries":3,"journal_tail":{{"queries":2,"events_per_page":4,"disclosure":"redacted_journal_events"}},"request_history":{{"queries":1,"max_history_events":4096,"max_reviews":16,"disclosure":"recorded_request_relationships"}},"explanation_queries":2,"explanation_replay_events":{},"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
         scope.tenant, scope.principal, scope.run, scope.branch, scope.authority,
         quote(socket.to_str().unwrap()), identity.uid(), identity.gid(), identity.uid(), identity.gid(),
         MAX_EXPLANATION_EVENTS)).unwrap();
@@ -297,6 +297,45 @@ fn observe(
         // Event-only historical grants do not include numerical reconstruction
         // work. A completed original request must still report honest Unknown.
         unknown_explanation(&first);
+        // Direct request relationships require no numerical explanation replay
+        // and remain a separate original grant from both Tail and Explain.
+        let history = exchange(
+            &mut socket,
+            TowerRequest::new(
+                "sequence-original-history",
+                first_request.clone(),
+                Verb::Related,
+            ),
+            maximum,
+        );
+        known(&history, "request-history");
+        assert_eq!(
+            number(
+                &history,
+                &["result", "value", "knowledge", "basis", "request"]
+            ),
+            first_key
+        );
+        let history = field(&history, &["result", "value", "knowledge", "value"]);
+        assert_eq!(field(history, &["stage"]).as_str(), Some("confirmed"));
+        assert_eq!(
+            field(history, &["enumeration_complete"]).as_bool(),
+            Some(true)
+        );
+        let reviews = field(history, &["reviews"]).as_array().unwrap();
+        assert!(!reviews.is_empty());
+        for review in reviews {
+            let explanation = field(review, &["explain_request"]);
+            assert_eq!(field(explanation, &["verb"]).as_str(), Some("explain"));
+            assert_eq!(
+                field(explanation, &["address"]).as_str(),
+                Some(first_request.canonical_string().as_str())
+            );
+            assert_eq!(
+                field(explanation, &["arguments", "round"]),
+                field(review, &["round"])
+            );
+        }
         drop(socket);
 
         let mut socket = connect(&selected);
@@ -404,6 +443,20 @@ fn observe(
         assert_eq!(
             field(&exhausted_tail, &["result", "value", "error", "code"]).as_str(),
             Some("capacity")
+        );
+        let exhausted_history = exchange(
+            &mut socket,
+            TowerRequest::new(
+                "sequence-history-no-renewal",
+                first_request.clone(),
+                Verb::Related,
+            ),
+            maximum,
+        );
+        assert_eq!(
+            field(&exhausted_history, &["result", "value", "error", "code"]).as_str(),
+            Some("capacity"),
+            "actor handoff or operator reconnect renewed request-history work"
         );
         let exhausted = exchange(
             &mut socket,

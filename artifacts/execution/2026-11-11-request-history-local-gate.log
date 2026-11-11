@@ -1,0 +1,68 @@
+   Compiling xtask v0.2.0 (/workspace/scratch/00ecc018888a/verification/request-history-2/xtask)
+warning: function `hash_chunk_fast` is never used
+   --> xtask/src/source_snapshot.rs:790:4
+    |
+790 | fn hash_chunk_fast(tool: &Tool, root: &Path, chunk: &[String]) -> Option<Vec<(String, String)>> {
+    |    ^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `xtask` (bin "xtask") generated 1 warning
+    Finished `dev` profile [unoptimized] target(s) in 3.32s
+     Running `target/debug/xtask check`
+PASS reference_lock: exactly fa-journal, fa-reference and xtask; no external packages
+PASS source_inventory: required files and crate-level prohibitions present
+EXECUTE rustc -Vv
+rustc 1.100.0-nightly (cea272fa3 2026-09-07)
+binary: rustc
+commit-hash: cea272fa356e94bd2ee2cadf376630aa0683867a
+commit-date: 2026-09-07
+host: x86_64-unknown-linux-gnu
+release: 1.100.0-nightly
+LLVM version: 23.1.1
+PASS qualified_rustc_identity: cea272fa356e94bd2ee2cadf376630aa0683867a on x86_64-unknown-linux-gnu; compiler-reported identity only
+PASS admission_contract: required local source, target, build/runtime review and future external constraints; snapshot identity matched
+SNAPSHOT tool: sha256sum
+SNAPSHOT verified files: 2454
+PASS source_snapshot: 2454 reviewed files match the manifest byte for byte, and the discovered set equals the manifest set. Digests come from the operator's SHA-256 tool; no cryptography is implemented here. Not a claim about the hashing binary's authenticity, runtime semantics, or package dependencies.
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform aarch64-apple-darwin --manifest-path /workspace/scratch/00ecc018888a/verification/request-history-2/Cargo.toml
+ADMISSION target profile: aarch64-apple-darwin
+ADMISSION inventory:
+  fa-journal 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/crates/fa-journal#0.2.0 at crates/fa-journal/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  fa-reference 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,example,lib,test links=none features=none
+  xtask 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+ADMISSION note: claim is bound to target profile `aarch64-apple-darwin`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform aarch64-apple-darwin`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[aarch64-apple-darwin]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[aarch64-apple-darwin]: actual workspace, manifests and target source files
+EXECUTE cargo metadata --format-version 1 --locked --offline --filter-platform x86_64-unknown-linux-gnu --manifest-path /workspace/scratch/00ecc018888a/verification/request-history-2/Cargo.toml
+    Blocking waiting for file lock on package cache
+ADMISSION target profile: x86_64-unknown-linux-gnu
+ADMISSION inventory:
+  fa-journal 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/crates/fa-journal#0.2.0 at crates/fa-journal/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+  fa-reference 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/crates/fa-reference#0.2.0 at crates/fa-reference/Cargo.toml [workspace local] kinds=bin,example,lib,test links=none features=none
+  xtask 0.2.0 path+file:///workspace/scratch/00ecc018888a/verification/request-history-2/xtask#0.2.0 at xtask/Cargo.toml [workspace local] kinds=bin,lib,test links=none features=none
+ADMISSION note: claim is bound to target profile `x86_64-unknown-linux-gnu`; cargo metadata does not record which --filter-platform produced it, so the target binding rests on the caller collecting this document with `--filter-platform x86_64-unknown-linux-gnu`, not on the document itself
+ADMISSION note: metadata establishes identity, structure and feature activation only; it does not establish a runtime or downloaded-artifact closure
+PASS admission_closed_inventory[x86_64-unknown-linux-gnu]: exact local package set, exact resolve bijection, no external source, build script, proc macro, native link, build or target-scoped dependency, and the frozen feature set. Not a runtime or downloaded-artifact closure claim.
+PASS collected_metadata_paths[x86_64-unknown-linux-gnu]: actual workspace, manifests and target source files
+PASS registry_core: IDs, roadmap DAG, declared links, retained files and scoped source test declarations; not execution or invariant proof
+CONCORDANCE input=registry/founding_concordance.json bytes=43328 sha256=4d3b26b20b954b95f3ffcd9ae572209240d58829cea58883066d93d8dd97a56b; verified source manifest, outer freeze required
+CONCORDANCE input=registry/invariants.json bytes=73049 sha256=28a2c1c086704d2b5610d9e15ccdd10eaa75656efb38672ffe692b62d1b1264a; verified source manifest, outer freeze required
+CONCORDANCE input=registry/claims.json bytes=15799 sha256=9e729380f01af536b21f116d334977db77e3900e43367c6f19b1522296c61005; verified source manifest, outer freeze required
+CONCORDANCE input=registry/roadmap.json bytes=138864 sha256=e41cbe16e4807c5bfbf097aa321f122f6f96987617f7393a1d995f5409c11112; verified source manifest, outer freeze required
+CONCORDANCE input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=254361 sha256=8ec294f36d0742f31bec17726d75c0ccb6198c0967177e173ca853ff1d26f4eb; verified source manifest, outer freeze required
+CONCORDANCE_JSON {"missing":[],"dangling":[],"counts":{"headings":231,"invariants":40,"hypotheses":21,"packets":143}}
+PASS concordance: direct typed coverage and reference validity; not implementation or invariant proof
+SYSTEM_MAP input=registry/system_map.json bytes=8282 sha256=d4eeb6faa3110741dd143d7ab30fc4737fc5b8b394107dee3e0b7c74ff31ae2b; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/vocabulary.json bytes=14832 sha256=d7977485a5b46fea680ef326c7d898b2fb2cd1612a8d40b365d03b84021963ba; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/invariants.json bytes=73049 sha256=28a2c1c086704d2b5610d9e15ccdd10eaa75656efb38672ffe692b62d1b1264a; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=registry/roadmap.json bytes=138864 sha256=e41cbe16e4807c5bfbf097aa321f122f6f96987617f7393a1d995f5409c11112; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/playbooks/playbooks.json bytes=26027 sha256=a3bf2e537e0f1fbf19cd92c7ea9e10558596650fe62829419bee75f1acf52823; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=README.md bytes=77918 sha256=60b57a0eccda20a7bed764347f77665c92a10cfc8c232663e2c9cfbe1b2c7b51; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/AGENT_GUIDE.md bytes=30433 sha256=664e3328ab13b8cc65cb63654d0488a9e3d1a0a8539443b712617c56f8ecc669; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=docs/SYSTEM_MAP.md bytes=7188 sha256=52cae2e9d0bfef7f44af75c398e9f9d47aba3591389e6b23553e3d390f422c02; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=.beads/issues.jsonl bytes=1665252 sha256=171b56d34aae8ef91a35a2ece4639e542fc3b13d9efc73c5c129ea4cbda30669; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP input=COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md bytes=254361 sha256=8ec294f36d0742f31bec17726d75c0ccb6198c0967177e173ca853ff1d26f4eb; operator digest and outer freeze, not receipt authentication
+SYSTEM_MAP_JSON {"missing":[{"file":"docs/playbooks/playbooks.json","id":"compare-learned-prompt","code":"unreferenced_verb","detail":"registered verb compare-learned-prompt is not exercised by any playbook step"},{"file":"docs/playbooks/playbooks.json","id":"serve-learned-generated","code":"unreferenced_verb","detail":"registered verb serve-learned-generated is not exercised by any playbook step"},{"file":"docs/playbooks/playbooks.json","id":"stop-fleet","code":"unreferenced_verb","detail":"registered verb stop-fleet is not exercised by any playbook step"}],"retired_in_use":[],"unregistered_verbs":[],"counts":{"layers":9,"verbs":38,"packets":143,"guide_commands":54,"readme_commands":11}}
+FAIL: System-map consistency refused; exact findings are in SYSTEM_MAP_JSON

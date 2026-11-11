@@ -367,6 +367,15 @@ It does not grant authority; every verb's authority requirement is in the vocabu
 
 ### Discover a completed original review from live history
 
+With an explicitly selected `request_history` operator profile, send `related`
+with null arguments to the original request address. The bounded complete
+report supplies actual completed-round metadata and generation-pinned Explain
+requests. Select one only under the separately retained explanation grant.
+Missing requests remain Unknown, incomplete starts stay separate, and a
+completed refinement or attempted application is not publication approval.
+The authenticated client validates all links and does not automatically follow
+them. See [the request-history contract](TOWER_REQUEST_HISTORY.md).
+
 Use linked situation rows to retain the original request address and attempt.
 A journal-tail `begin_review` event directly names its attempt and round; a
 `finish_review` with that round records completion. A learned-sidecar completion

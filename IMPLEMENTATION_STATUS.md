@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: serve request-history discovery through authenticated operators
+
+The closed optional `request_history` operator profile now provisions the
+original finite relationship grant in ordinary, learned and resident services.
+It survives reconnects and request handoffs under the same custody and spent
+allowance, and retires with its service. A history-only learned observer needs
+no numerical replay allowance and gains no actor intake or Permit authority.
+
+The explicit-document client validates the complete original scope,
+registration, request identity, bounded complete metadata and every generated
+Explain request before output or a later explicit send. It never follows a
+link automatically. Three service/profile and three client regression functions
+are added, and the actual all-three-mode learned sequence regression exercises
+request-history discovery and exhausted custody across reconnect/handoff.
+Independent review corrected a test expecting Unknown for a complete-history
+capacity refusal; the implementation and its capacity contract were unchanged.
+
+On the recorded feature snapshot, the unchanged eleven-function public
+integration target and complete production supervise_publication example pass
+qualified-compiler metadata typechecking against the exact full-library metadata
+emitted before its runtime build was killed. This is typechecking, not runtime
+execution. The complete example test harness metadata and another serial
+Cranelift runtime attempt were terminated by SIGKILL. No tests or runtime pass
+are claimed. Qualified changed-source formatting and independent review pass.
+
+After preserving the concurrent main recovery commit 8bb3cfa, the unmodified
+local xtask driver passes compiler identity, all 2,455 combined source input
+hashes, dependency inventory, registry and concordance checks, then
+refuses the three existing playbook coverage omissions for
+compare-learned-prompt, serve-learned-generated and stop-fleet. It does not reach
+formatting, Clippy or full runtime stages. The prescribed RCH gate exits 127
+because rch is absent. Exact sources, commands, outcomes and logs are recorded
+in artifacts/execution/2026-11-11-request-history-verification.json.
+The earlier compiler results apply to their recorded feature snapshot; no
+combined runtime or full-library typecheck is claimed after that main update.
+All broader dispatcher, foundation and deployment acceptance stays open.
+
 ## 2026-11-11: authenticate admission Stop on the ordinary mediated recovery cursor
 
 A fully replayed ordinary mediated owner can now be consumed by

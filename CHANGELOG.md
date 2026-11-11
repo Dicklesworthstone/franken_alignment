@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-11: connect authenticated operators to request-history discovery
+
+- Add opt-in finite request-history disclosure to ordinary, learned and resident
+  services, preserving original grants across reconnects and handoffs.
+- Validate closed Related responses and every original Explain link before
+  client output or a subsequent explicit request; never follow links implicitly.
+- Add six operator/client regressions and extend the three-mode learned sequence
+  control. Correct a test's capacity-refusal expectation without changing policy.
+- Typecheck all eleven public integration tests and the complete production
+  example using exact library metadata from the recorded feature snapshot.
+  Runtime compilation is SIGKILLed; the canonical local gate retains its existing
+  playbook failure and the required RCH runner is absent. Preserve the concurrent
+  main recovery changes, exact combined source bindings and qualification limits.
+
 ## 2026-11-11: connect ordinary mediated recovery to authenticated Stop
 
 - Add a sealed consuming handoff from fully verified `FileMediatedRecovery` to

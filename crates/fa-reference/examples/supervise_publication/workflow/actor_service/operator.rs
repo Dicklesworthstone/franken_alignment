@@ -9,9 +9,10 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileLearnedTextStreamActorPort, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
-    FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
-    FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant, FileSupervisorResolutionGrant,
+    FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure, FileSupervisorExplanationGrant,
+    FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
+    FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant,
+    FileSupervisorRequestHistoryGrant, FileSupervisorResolutionGrant,
     FileSupervisorReviewExplanationGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
@@ -32,6 +33,7 @@ struct Active {
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
     journal_tail: Option<FileSupervisorJournalTailGrant>,
+    request_history: Option<FileSupervisorRequestHistoryGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
     resolution: Option<FileSupervisorResolutionGrant>,
@@ -167,6 +169,21 @@ impl Service {
                 .journal_tail_port(selected.queries, selected.events_per_page)
                 .map_err(debug)?;
             tower.set_journal_tail(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        let request_history = if let Some(selected) = &settings.request_history {
+            let (port, custodian) = driver
+                .supervisor()
+                .request_history_port(
+                    selected.queries,
+                    selected.max_history_events,
+                    selected.max_reviews,
+                    FileRequestHistoryDisclosure::RecordedRequestRelationships,
+                )
+                .map_err(debug)?;
+            tower.set_request_history(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
             None
@@ -312,6 +329,7 @@ impl Service {
                 session,
                 inspection,
                 journal_tail,
+                request_history,
                 explanation,
                 hold_diagnosis,
                 resolution,
@@ -433,7 +451,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -444,6 +462,10 @@ impl Service {
                 .journal_tail
                 .as_ref()
                 .map(FileSupervisorJournalTailGrant::remaining_queries),
+            active
+                .request_history
+                .as_ref()
+                .map(FileSupervisorRequestHistoryGrant::remaining_queries),
             active
                 .explanation
                 .as_ref()

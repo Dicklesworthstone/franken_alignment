@@ -7,6 +7,8 @@ mod hold_diagnosis;
 mod policy_replay;
 #[path = "operator/refinement_explanation.rs"]
 mod refinement_explanation;
+#[path = "operator/request_history.rs"]
+mod request_history;
 #[path = "operator/resolution.rs"]
 mod resolution;
 #[path = "operator/review_explanation.rs"]

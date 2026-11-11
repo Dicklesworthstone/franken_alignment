@@ -90,6 +90,36 @@ All recorded reviews fit the response or the complete response is refused.
 The facade never removes rows to make a report fit. Retrying is another
 explicit native query, not a refund or automatic fallback to a snapshot.
 
+## Authenticated operator use
+
+The optional `request_history` member in `fa.tower-operator-service/1` selects
+the three finite native limits and `recorded_request_relationships` disclosure.
+Omission or null preserves existing profiles. The original service retains one
+custodian across reconnects and ordinary, learned or resident handoffs; a new
+request cannot renew the allowance. A history-only learned service requires no
+numerical replay grant or Permit purpose.
+
+The following is a complete explicit request for the example scope and Tower
+registration; substitute the original request address returned by the service:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "discover-request-7",
+  "address": "fa://1/attempt/request-3-2-4-5-7@41",
+  "verb": "related",
+  "arguments": null,
+  "idempotency_key": null
+}
+```
+
+Submit it through `supervise_publication tower-operator-exchange` using the
+existing operator profile and explicit-document grammar. The client validates
+the entire original scope, registration, coordinates, limits and completed
+links before printing that response or sending the next supplied document.
+It never follows links automatically. Its historical validation is not an
+independent journal verification or a new source of authority.
+
 ## Verification scope
 
 The public regression target is `tower_request_history`. It connects actual

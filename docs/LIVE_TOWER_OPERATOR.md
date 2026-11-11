@@ -3,7 +3,7 @@
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
 `situation`, historical admission or completed-congress `explain`, recorded
-`why-held` diagnosis, original journal `tail` and explicitly selected `policy-replay` capabilities to the
+`why-held` diagnosis, request-to-review `related`, original journal `tail` and explicitly selected `policy-replay` capabilities to the
 running supervisor. A separately selected `resolution` grant connects native
 `next` and `resolve` to original endpoint receipt reconciliation. A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
@@ -114,6 +114,12 @@ deployment's values:
     "events_per_page": 32,
     "disclosure": "redacted_journal_events"
   },
+  "request_history": {
+    "queries": 32,
+    "max_history_events": 4096,
+    "max_reviews": 128,
+    "disclosure": "recorded_request_relationships"
+  },
   "hold_diagnosis": {
     "queries": 32,
     "disclosure": "recorded_publication_state"
@@ -134,7 +140,7 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `journal_tail`, `hold_diagnosis`, `policy_replay`,
+fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
 `review_explanation`, `resolution` and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
@@ -149,7 +155,7 @@ grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
-explanation, journal Tail, recorded-state diagnosis, completed-review explanation,
+explanation, journal Tail, request history, recorded-state diagnosis, completed-review explanation,
 policy replay, receipt reconciliation or original admission fencing must be
 enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
@@ -174,6 +180,19 @@ refusal. The same custody survives reconnects and resident handoffs; retirement
 reports its remaining reservations. Plain histories do not spend this numerical
 allowance. Completed-review and receipt-reconciliation work have independent
 grants and cannot fund admission reconstruction.
+
+The optional `request_history` object requires exactly `queries` (1–1,024),
+`max_history_events` (1–4,096), `max_reviews` (1–2,048) and
+`disclosure: "recorded_request_relationships"`. It enables `related` with null
+arguments on an original request address. A complete bounded report identifies
+the request's original attempt and completed ordinary/refinement reviews, with
+explicit Explain requests. History-only ordinary and learned services need no
+numerical replay grant. Queries remain spent across reconnects and handoffs;
+retirement revokes the original custodian. Limits refuse a complete response
+rather than truncating reviews. The authenticated explicit-document client
+checks the original scope, registration, metadata bounds and every Explain
+link before output or another explicit request. It never follows a link itself.
+See [request-history discovery](TOWER_REQUEST_HISTORY.md).
 
 The optional `journal_tail` object requires exactly `queries` (1–1,024),
 `events_per_page` (1–64) and `disclosure: "redacted_journal_events"`. It exposes
