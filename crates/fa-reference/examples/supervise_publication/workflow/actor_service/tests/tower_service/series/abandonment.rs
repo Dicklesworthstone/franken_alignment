@@ -164,8 +164,9 @@ fn plain_and_checked_schedules_continue_after_explicit_unknown_abandonment_witho
             offer.recv_timeout(Duration::from_secs(10)).unwrap();
             let waiting = FileOversight::read_publication(&peer_store, &peer_bootstrap).unwrap();
             assert_eq!(waiting.control.ledger.charged, 7);
+            assert_eq!(waiting.control.ledger.reserved, 0);
             assert_eq!(waiting.executions, 0);
-            assert_eq!(waiting.control.ledger.stages[&2], ActionState::Authorized);
+            assert_eq!(waiting.control.ledger.stages[&2], ActionState::Reviewing);
             assert_eq!(raw_exchange(&mut operator, &command), abandoned);
             release.send(()).unwrap();
             assert!(executed(&finish(&mut actor, &second, &second_poll)));

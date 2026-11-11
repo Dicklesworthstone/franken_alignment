@@ -7,6 +7,8 @@ mod cancellation;
 mod fence;
 #[path = "operator/hold_diagnosis.rs"]
 mod hold_diagnosis;
+#[path = "operator/narrowing.rs"]
+mod narrowing;
 #[path = "operator/policy_replay.rs"]
 mod policy_replay;
 #[path = "operator/refinement_explanation.rs"]

@@ -12,6 +12,8 @@ mod hold_diagnosis;
 mod journal_tail;
 #[path = "tests/numerical_explanation.rs"]
 mod numerical_explanation;
+#[path = "tests/narrowing.rs"]
+mod narrowing;
 #[path = "tests/policy_replay.rs"]
 mod policy_replay;
 #[path = "tests/request_history.rs"]

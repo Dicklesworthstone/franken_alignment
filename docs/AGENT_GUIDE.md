@@ -214,6 +214,31 @@ render their response with a nonzero exit; transport/output failures never cause
 an automatic resend or an ordinary submission. A later Submit uses its original
 separate contract and independently fresh source.
 
+#### Implemented ordinary target restriction
+
+The original ordinary publication owner now has a separately granted
+[live target-ceiling Narrow](SCOPED_AUTHORITY_NARROWING.md). Select the operator
+profile's `narrowing` capability, then send Tower `next` at the original Run
+address with `action: "narrow_authority"`, a new operation identity and the
+canonical complete targets to retain. Inspect the reported effective
+intersection and explicitly submit the returned `narrow` document using
+`tower-operator-exchange`.
+
+The original gate cancels excluded undispatched attempts and refunds only their
+reservations. Retained automatic reservations and all dispatched/Unknown charges
+remain. Empty means retain no targets; a later wider request cannot restore an
+earlier exclusion. Include each needed exact resource version in the initial
+ceiling. Narrowing leaves the authority epoch unchanged but advances the control
+sequence, making old human approvals historical. Obtain fresh independent human
+approval and preserve every other current gate before dispatch.
+
+For the complete service workflow, narrow before intake of retained work. An
+already active retained driver job keeps its review/readiness predecessor and
+is not automatically refreshed by this operation. Excluded active work can
+retire through the existing scheduler, whose next request still faces the
+remaining ceiling. This ordinary operation does not handle learned, predictor,
+stream or mediated histories; the checkpoint contract below remains separate.
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references; `fa verify fa://…/receipt/<id>` confirms independent bundle and receipt integrity before trusting retained artifacts.

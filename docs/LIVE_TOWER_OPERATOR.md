@@ -7,7 +7,11 @@ separate authenticated operator endpoint. It connects the existing native
 running supervisor. A separately selected `resolution` grant connects native
 `next` and `resolve` to original endpoint receipt reconciliation. An independent
 `cancellation` grant retires one original undispatched request through the same
-verbs with an explicit cancellation action. A separate
+verbs with an explicit cancellation action. Independent `abandonment` selects
+terminal disposition of an original Unknown request while retaining its charge.
+An ordinary `narrowing` grant restricts the original exact target ceiling through
+explicit `next` and `narrow`, retaining allowed work and uncertain liabilities.
+A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
 without changing policy or issuing authority. The service keeps its original journal lock, source
@@ -143,7 +147,8 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
-`review_explanation`, `resolution`, `cancellation` and `fence` are independently optional;
+`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`
+and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
@@ -158,7 +163,8 @@ grant and does not enable an otherwise disabled operation.
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
 explanation, journal Tail, request history, recorded-state diagnosis, completed-review explanation,
-policy replay, receipt reconciliation, undispatched-request cancellation or
+policy replay, receipt reconciliation, undispatched-request cancellation,
+Unknown disposition, ordinary target restriction or
 original admission fencing must be
 enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
@@ -462,6 +468,49 @@ where the first Authorized request is cancelled and the second publishes with
 the original source budget and actor connection. The integration syntax and
 format checks passed; runtime and compiler qualification remain pending because
 the required RCH runner was absent.
+
+## Restrict the ordinary run to selected targets
+
+Select a separate optional `narrowing` profile member:
+
+```json
+"narrowing": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "authority": "narrow_original_targets"
+}
+```
+
+The closed object permits 1–1,024 queries, 1–128 operations and 1–4,096 events
+including the appended restriction. Omission or null disables it. The ordinary
+grant has no numerical replay field, and learned actor/resident setup refuses
+this selection. Decoder, predictor, stream and mediated histories remain
+unsupported by the native operation.
+
+At the original Run address, send `next` with `action: "narrow_authority"`,
+an operation number and at most 64 canonical complete `retained_targets`.
+The known plan reports the actual intersection and supplies a complete explicit
+Narrow document with the original predecessor and concrete route generation.
+Submit it only after selecting it. The existing `tower-operator-exchange` client
+checks the configured full audience and exact plan/receipt; it performs no
+automatic action or retry.
+
+Narrow cancels only excluded undispatched work and refunds only actual reserved
+units. Retained automatic reservations, original epoch and dispatched/Unknown
+charges survive. Human approvals and active driver readiness retain their
+predecessor checks, so narrowing does not silently make them current. Narrow
+before new intake for a subsequent complete retained workflow. An excluded
+active request can retire through the existing scheduler without Stop; its
+successor still faces the narrowed ceiling. Selecting an empty set admits no
+later targets, and a wider later request cannot restore removed permission.
+
+The original grant and exact retry cache survive reconnects and request handoff
+without replenishment. See the [complete narrowing contract](SCOPED_AUTHORITY_NARROWING.md)
+for request examples, response schemas, finite work and the active-driver
+boundary. Authored plain/checked service regressions and authenticated client
+regressions received independent source review; execution and formatting remain
+pending because the required Rust/RCH tools are unavailable.
 
 ## Plan and reconcile an uncertain publication
 
@@ -828,7 +877,7 @@ coordinate mapping, explicit retry rules, client validation and cleanup limits.
 The service provisions the original selected native grants once and retains their
 noncloneable custodians. One Tower session and its continuation state survive
 healthy reconnects. Reconnection, repeated operation labels, review transitions
-and reply grace cannot replenish query, resolution-operation, fence-operation, candidate,
+and reply grace cannot replenish query, mutation, candidate,
 connection or exchange work.
 The operator's elapsed lifetime is bounded by its profile, actor lifetime and
 the remaining wall lifetime of the original supervisor deadline.
@@ -845,16 +894,17 @@ transport failure cannot revoke that independent reply opportunity.
 
 Truncated, oversized or failed operator transport retires that sidecar without
 implicitly resubmitting work or entering Stop. A response failure does not roll
-back an already entered resolution or Fence. Final retirement revokes all
+back an already entered native control operation. Final retirement revokes all
 selected operator custodians. The native grants retain no strong owner or
 authority lock, and original health/custody checks apply to every operation.
 
 Only the separate operator session receives operator access and its explicitly
 selected grants. Policy replay additionally selects `Experiment`; it does not
 grant `Permit`, a source callback, precheck disclosure, helper/human keys or a
-supervisor mutation capability. Resolution and Fence independently select
-`Permit` through a restricted operator constructor whose closed verb set refuses actor submission,
-cancellation, polling and precheck before native work. A proposal sent to an
+supervisor mutation capability. Resolution, cancellation, Unknown disposition,
+ordinary narrowing and Fence independently select `Permit` through restricted
+operator constructors whose closed profiles refuse actor submission, ticket
+polling and precheck before native work. A proposal sent to an
 operator profile cannot acquire source evidence or create an action. The actor endpoint keeps its original grants and
 cannot obtain these reads by adding fields to a request. Opening an existing
 recorded request can provide historical operator reads without reacquiring

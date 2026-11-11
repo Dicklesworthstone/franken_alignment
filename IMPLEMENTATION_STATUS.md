@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: expose narrowing through authenticated ordinary services
+
+The optional closed operator `narrowing` profile now provisions and retains the
+original finite grant on a restricted control mount. Authenticated reconnects
+and ordinary request handoffs retain the same custody, spent work and exact
+retry cache. Learned service setup refuses this ordinary selection; no
+numerical allowance or implicit companion control is granted.
+
+The explicit operator client accepts correlated narrowing plans and receipts,
+validates the configured complete audience and exact target intersection, and
+rejects forged predecessors, epochs, refunds and action documents before output
+or later traffic. It does not execute plans or retry automatically.
+
+Twelve regression functions cover profile boundaries, authenticated original
+transitions, real retained publication, uncertain charges, reconnects, finite
+work and client tampering. The full plain/checked service fixtures narrow before
+intake and complete original helper/human publication, or exclude an active
+Reviewing request and retain an empty ceiling across schedule handoff without
+Stop. The previously authored abandonment schedule fixture now asserts the
+actual native Reviewing/zero-reservation stage while waiting for its human peer.
+
+Retained native automatic authorization survives narrowing, but existing human
+keys and active driver readiness keep their control-predecessor checks. This
+change supplies no automatic refresh of an already active retained driver job.
+Independent source review and whitespace inspection are complete; required
+Rust/RCH execution and formatting remain unavailable. No build, runtime-test,
+Clippy, full-gate or production qualification pass is claimed.
+
+Contracts: `docs/SCOPED_AUTHORITY_NARROWING.md`, `docs/LIVE_TOWER_OPERATOR.md`,
+`docs/AGENT_GUIDE.md`.
+
 ## 2026-11-11: connect ordinary target-ceiling Narrow through the Tower
 
 The restricted publication control mount now connects the registered `narrow`

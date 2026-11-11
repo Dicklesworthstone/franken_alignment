@@ -469,3 +469,5 @@ fn tower_schedule_checks_all_keys_and_socket_bindings_before_source_or_store() {
 
 #[path = "series/abandonment.rs"]
 mod abandonment;
+#[path = "series/narrowing.rs"]
+mod narrowing;

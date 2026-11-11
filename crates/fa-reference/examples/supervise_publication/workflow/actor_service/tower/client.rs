@@ -32,6 +32,8 @@ mod hold_diagnosis;
 mod journal_tail;
 #[path = "client/journal_tail_validation.rs"]
 mod journal_tail_validation;
+#[path = "client/narrowing.rs"]
+mod narrowing;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
 #[path = "client/refinement_explanation.rs"]
@@ -57,6 +59,9 @@ const MAX_POLICY_REPLAY_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 const MAX_REVIEW_EXPLANATION_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 // A native Stop may account for every admitted attempt in one receipt.
 const MAX_FENCE_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
+// A target-ceiling plan may describe the entire original native ceiling; a
+// receipt may cancel every outside undispatched attempt in one transition.
+const MAX_NARROWING_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 // Request history may contain every completed review in the admitted native
 // journal, including one complete follow-up request per row. Its work remains
 // bounded independently from numerical congress explanation.
@@ -224,6 +229,7 @@ fn exchange_endpoint(
             endpoint.scope,
             endpoint.request_history_limits,
         )?;
+        narrowing::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -429,6 +435,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_REVIEW_EXPLANATION_REPLY_ITEMS
             } else if request.verb == Verb::Fence {
                 MAX_FENCE_REPLY_ITEMS
+            } else if matches!(
+                &request.arguments,
+                ReadArguments::NarrowingNext { .. } | ReadArguments::Narrow { .. }
+            ) {
+                MAX_NARROWING_REPLY_ITEMS
             } else if request.verb == Verb::Related {
                 MAX_REQUEST_HISTORY_REPLY_ITEMS
             } else {
@@ -528,6 +539,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("fence"), Verb::Fence) => {
             if !fence::matches(result.get("value").ok_or_else(invalid)?, request) {
+                return Err(invalid());
+            }
+        }
+        (Some("narrowing-next"), Verb::Next) | (Some("narrowing"), Verb::Narrow) => {
+            if !narrowing::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
                 return Err(invalid());
             }
         }

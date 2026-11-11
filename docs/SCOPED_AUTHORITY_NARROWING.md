@@ -192,6 +192,67 @@ native response cannot authorize another operation or turn the requested set
 into a wider effective ceiling. Run-level journal Tail metadata identifies the
 new event without inventing an attempt, external request or review round.
 
+## Authenticated ordinary operator service
+
+An ordinary Tower service can select this independent optional member of its
+existing `fa.tower-operator-service/1` profile:
+
+```json
+"narrowing": {
+  "queries": 32,
+  "operations": 8,
+  "max_replay_events": 4096,
+  "authority": "narrow_original_targets"
+}
+```
+
+Omission or null leaves narrowing disabled. The object is closed: duplicate or
+unknown fields, noninteger allowances, out-of-bound values or a different
+authority marker refuse before setup. A narrowing-only endpoint can disable
+inspection and admission explanation. It does not obtain cancellation, Unknown
+disposition, reconciliation or Fence merely by selecting narrowing.
+
+Learned actor and resident service setup refuses this selection. The ordinary
+profile has no numerical replay allowance; adding one does not enable learned
+or predictor history. An otherwise supported operator endpoint over a mediated
+owner still receives the native unsupported-history boundary.
+
+The service installs the same-owner port on its restricted control mount and
+retains one original grant across authenticated reconnects, review transitions
+and ordinary schedule handoffs. None of those events renews queries, mutations
+or exact-result custody. Retirement drops the grant. Existing kernel peer
+authentication, transport bounds, source intake, checked publication, helper and
+human review, independent Stop and cleanup continue to govern the workflow.
+
+Use the existing client to send one explicit plan document:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE NARROW_PLAN_JSON
+```
+
+Inspect the plan, save its complete returned `action` as a separate request
+document, and explicitly send that document with the same client. The client
+does not follow a plan, reconnect, retry or construct a fresh predecessor by
+itself. It validates the exact request/response, configured full audience,
+target intersection, predecessor, epoch and receipt accounting before emitting
+the response or sending a later selected document. A forged widening receipt
+cannot be passed on as an acknowledgment.
+
+Narrow before new intake when the next retained request should follow the
+complete original helper/human publication workflow. If narrowing instead
+excludes a current undispatched request, the existing driver retires that
+cancelled job and the schedule may try its next independent request under the
+remaining ceiling. An empty ceiling therefore denies later admission. A request
+waiting for human approval can still be native Reviewing without a reservation;
+cancelling it refunds zero.
+
+For an already active retained driver job, the existing review/readiness
+predecessor can become stale. This implementation does not refresh that job
+automatically. Original containment remains available, while native retained
+automatic authorization can publish only with fresh independent human approval
+and all other current gates. Service evidence must not be read as automatic
+continuation of every active retained workflow.
+
 ## Validation boundary
 
 Fourteen native regression functions cover actual retained publication with a
@@ -207,6 +268,14 @@ Unknown conservation, exact predecessor and scope checks, canonical bounded
 input, finite custody and retry, sealed output tampering, imported snapshot and
 branch refusal, and a real learned-history negative control that preserves
 numerical, stream and admission state.
+
+Twelve operator/client/service regression functions cover strict profile
+selection, authenticated original-owner mutations, retained publication,
+reconnect/exhaustion behavior, explicit client action and retry documents,
+forged output refusal, and both plain and checked service workflows. The two
+full-workflow functions each exercise both publication modes: restriction before
+intake followed by actual helper/human publication, and active excluded review
+retirement followed by admission refusal under the retained empty ceiling.
 
 Implementation and regression sources are subject to the repository's required
 remote gate. In this session, `RCH_REQUIRE_REMOTE=1 rch exec -- cargo

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-11: connect narrowing to authenticated ordinary operator workflows
+
+- Add a closed independent `narrowing` profile and retain its original grant
+  across authenticated reconnects and ordinary request handoffs.
+- Validate explicit client plans and receipts against full audience,
+  predecessor, exact intersection and native accounting without automatic
+  action execution or retries.
+- Add twelve operator/client/service regression functions, including actual
+  plain/checked publication after restriction and active excluded review
+  retirement under an empty ceiling without Stop.
+- Correct the existing abandonment schedule fixture to the actual native
+  Reviewing stage and zero reservation while it waits for its human peer.
+- Document fresh human approval and active-driver predecessor boundaries.
+  Independent source review only; the required Rust/RCH gate remains unavailable.
+
 ## 2026-11-11: connect ordinary authority narrowing through the Tower
 
 - Connect explicit Next planning and the registered Narrow verb to the original
