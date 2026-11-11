@@ -849,7 +849,8 @@ where
                         stage: ActionState::Cancelled
                             | ActionState::Denied
                             | ActionState::Confirmed
-                            | ActionState::ConfirmedNotExecuted,
+                            | ActionState::ConfirmedNotExecuted
+                            | ActionState::IrrecoverablyUnknown,
                         ..
                     }
                 ))

@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: continue ordinary schedules after explicit Unknown disposition
+
+The original driver now recognizes durable IrrecoverablyUnknown as a terminal
+local disposition in `retire_completed_request`, matching its existing stopped
+job behavior. The shared native/Tower sequence validator accepts that same
+terminal predecessor before reading input, so the next scheduled request can
+reach its original admission checks. Dispatching and Unknown still refuse
+retirement and handoff. The change
+preserves the original charge, uncertain actor outcome, unresolved Stop
+liability and pending stream; retiring a job supplies no new effect evidence.
+
+Ordinary request schedules that explicitly select the independent abandonment
+grant retain their original authenticated operator, observation-only actor
+session, Stop transport and finite service deadline while waiting at native
+Unknown. An operator can explicitly dispose that request, after which original
+child cleanup and retirement allow the next independent ordinary request.
+Polling performs no source refresh, driver step, repeated reconciliation,
+publication or journal clock observation. Default profiles retain their
+existing behavior, and silence or Stop cannot authorize a handoff.
+
+Two new public driver regressions exercise real socket review and both
+publication keys, explicit scoped disposition, journal-free retirement and a
+later confirmed publication through the same surviving owner. The learned
+Tower regression additionally compares pending/confirmed/published stream
+state, numerical state and original bytes and refuses both Message and Finish
+with separate fresh admission snapshots. Service regression sources exercise
+the actual plain and checked scheduled paths, independent operator reconnects,
+shared-grant exhaustion, observation-only intake and the original deadline and
+authenticated Stop boundaries.
+
+These regressions and the production changes received independent source
+review only. Required RCH remains unavailable and the executor is disconnected;
+no formatting, compilation, runtime-test, Clippy or full-gate pass is claimed.
+Existing packet and production qualification states remain unchanged.
+
+Contract: `docs/SCOPED_UNKNOWN_ABANDONMENT.md`, ordinary schedule continuation.
+
 ## 2026-11-11: connect live Unknown disposition to authenticated Tower operators
 
 Next/Resolve now accept the explicit `abandon_unknown` action under a separate

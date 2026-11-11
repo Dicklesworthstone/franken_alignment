@@ -60,8 +60,11 @@ impl FileActorSupervisor<FileOversight> {
 
     /// Shared predecessor law for native and Tower transports. A caller's
     /// completed list is routing data, never evidence that an outcome settled.
-    /// Each predecessor must be terminal in this original healthy owner before
-    /// either transport consumes bytes or acquires a fresh source observation.
+    /// Each predecessor needs a terminal native disposition in this original
+    /// healthy owner before either transport consumes bytes or acquires a fresh
+    /// source observation. Explicit abandonment ends local scheduling only: its
+    /// charge and any pending stream obligation remain with the original owner.
+    /// New work still passes every original source, stream and authority check.
     pub(crate) fn check_request_sequence(
         &self,
         request: u64,
@@ -91,6 +94,7 @@ impl FileActorSupervisor<FileOversight> {
                         | ActionState::Denied
                         | ActionState::Confirmed
                         | ActionState::ConfirmedNotExecuted
+                        | ActionState::IrrecoverablyUnknown
                 ),
             };
             if !terminal {

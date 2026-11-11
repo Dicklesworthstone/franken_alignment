@@ -387,6 +387,7 @@ where
         // One independent read session spans this original owner lifetime. A new
         // selected request never reissues custody, clears a pending native cursor
         // or resets transport, query, candidate or elapsed allowances.
+        let await_abandonment = operator_settings.is_some_and(|settings| settings.abandonment.is_some());
         let mut operator = operator_settings
             .map(|settings| {
                 operator::Service::start(
@@ -443,7 +444,7 @@ where
                 {
                     break;
                 }
-                if !recorded || owner_start == OwnerStart::Reconciled {
+                if !recorded || owner_start == OwnerStart::Reconciled || await_abandonment {
                     if early_control.is_none() {
                         early_control = Some(super::super::control::Control::new(
                             &config,
@@ -560,7 +561,8 @@ where
                                     stage: ActionState::Cancelled
                                         | ActionState::Denied
                                         | ActionState::Confirmed
-                                        | ActionState::ConfirmedNotExecuted,
+                                        | ActionState::ConfirmedNotExecuted
+                                        | ActionState::IrrecoverablyUnknown,
                                     ..
                                 }
                             ))
@@ -590,6 +592,34 @@ where
                     .is_some()
                 {
                     break;
+                }
+                // Explicit abandonment may end a local Unknown request, but cannot
+                // establish its external outcome or release its charged liability.
+                // Keep this same operator grant and observation-only actor session
+                // live within their original deadline before deciding handoff.
+                // No provider/driver step, source read, reconciliation, resend or
+                // journal clock observation occurs merely because the wait polls.
+                while await_abandonment
+                    && matches!(
+                        driver.supervisor().host().map_err(debug)?
+                            .request_status(request).map_err(debug)?.disposition,
+                        FileRequestDisposition::Admitted { stage: ActionState::Unknown, .. }
+                    )
+                {
+                    deadline.check(time())?;
+                    let control = early_control.as_mut().expect("original abandonment Stop control");
+                    if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                        return Ok(());
+                    }
+                    if let Some(service) = &mut operator {
+                        service.checkpoint();
+                    }
+                    if control.native_stop(&mut driver, &mut time)? {
+                        return Ok(());
+                    }
+                    frames_seen = frames_seen
+                        .saturating_add(ingress.observe_sequence(&mut driver, &completed)?);
+                    pause(actor.poll_ms);
                 }
                 // Do not read more actor frames in the handoff: queued next requests
                 // wait for the previous direct children to be confirmed reaped. No

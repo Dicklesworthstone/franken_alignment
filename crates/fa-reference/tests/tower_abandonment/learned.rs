@@ -23,6 +23,7 @@ use fa_reference::action::consequence::gate::containment::{
 use fa_reference::action::consequence::oversight::{
     actor::{Knowledge as ActorKnowledge, UnknownReason as ActorUnknown},
     decoder_monitoring::LearnedDecoderBindingLimits,
+    learned_source::LearnedEvidenceLimits,
 };
 use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::tower::publication::{PublicationLimits, PublicationTower};
@@ -126,6 +127,21 @@ fn learned_source_abandonment_needs_a_control_mount_and_its_own_numerical_reserv
     let mut facade = tower(actor.clone());
     let original = image(&root);
     let before = supervisor.host().unwrap().inspect();
+    let (original_stream, original_generation, original_message) = {
+        let host = supervisor.host().unwrap();
+        (
+            host.stream_snapshot().unwrap(),
+            host.learned_generation_inspection().unwrap(),
+            host.learned_text_message(LearnedEvidenceLimits::default())
+                .unwrap()
+                .bytes()
+                .to_vec(),
+        )
+    };
+    assert_eq!(original_stream.pending, Some(keys.automatic.attempt()));
+    assert!(original_stream.confirmed.visible().is_empty());
+    assert!(original_stream.published.visible().is_empty());
+    assert_eq!(original_message, b"OK");
     let replay_events = before.revision as usize + 1;
     let (default_port, default_grant) = supervisor
         .abandonment_port(4, 2, MAX_ABANDONMENT_REPLAY_EVENTS)
@@ -232,6 +248,35 @@ fn learned_source_abandonment_needs_a_control_mount_and_its_own_numerical_reserv
         Some(total - replay_events)
     );
     let committed = image(&root);
+    {
+        let host = supervisor.host().unwrap();
+        let stream = host.stream_snapshot().unwrap();
+        assert_eq!(stream.confirmed_target, original_stream.confirmed_target);
+        assert_eq!(stream.confirmed, original_stream.confirmed);
+        assert_eq!(stream.published, original_stream.published);
+        assert_eq!(stream.pending, original_stream.pending);
+        let generation = host.learned_generation_inspection().unwrap();
+        assert_eq!(generation.paused, original_generation.paused);
+        assert_eq!(generation.pending, original_generation.pending);
+        assert_eq!(generation.numerical, original_generation.numerical);
+        assert_eq!(
+            host.learned_text_message(LearnedEvidenceLimits::default())
+                .unwrap()
+                .bytes(),
+            original_message.as_slice()
+        );
+    }
+    // A fresh trusted admission view cannot turn permanent accounting
+    // disposition into a confirmed stream receipt or a new source release.
+    for release in [LearnedTextRelease::Message, LearnedTextRelease::Finish] {
+        support::observe(&mut supervisor);
+        assert!(actor.submit(REQUEST + 1, release, ElapsedTick(100)).is_err());
+        assert_eq!(image(&root), committed);
+        assert_eq!(
+            supervisor.host().unwrap().stream_snapshot().unwrap().pending,
+            original_stream.pending
+        );
+    }
     let mut reconnected = tower(actor);
     reconnected.set_abandonment(Some(port)).unwrap();
     assert_eq!(

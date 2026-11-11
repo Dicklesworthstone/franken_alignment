@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-11: continue ordinary schedules after explicit Unknown disposition
+
+- Accept native IrrecoverablyUnknown for local driver retirement while keeping
+  original charges, unknown outcomes, Stop liabilities and stream obstruction.
+- Align the shared native/Tower sequence predecessor validator with that durable
+  disposition so the next independent request can reach its normal admission.
+- Keep explicitly configured ordinary schedules available to the same bounded
+  operator grant and authenticated Stop while waiting at native Unknown, then
+  allow the original reviewed workflow to serve a later independent request.
+- Preserve service deadlines and observation-only waiting without fresh source,
+  reconciliation, driver or publication work.
+- Add public driver and scheduled-service regressions and strengthen learned
+  stream conservation controls. Source review only; required execution and
+  formatting verification remain unavailable.
+
 ## 2026-11-11: expose explicit Unknown disposition through live Tower services
 
 - Connect Next/Resolve to the original abandonment capability using an explicit

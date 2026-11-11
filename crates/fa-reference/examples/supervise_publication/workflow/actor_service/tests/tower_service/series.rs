@@ -466,3 +466,6 @@ fn tower_schedule_checks_all_keys_and_socket_bindings_before_source_or_store() {
         assert!(!actor.socket.exists());
     }
 }
+
+#[path = "series/abandonment.rs"]
+mod abandonment;

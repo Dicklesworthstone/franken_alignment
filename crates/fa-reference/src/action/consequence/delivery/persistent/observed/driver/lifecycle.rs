@@ -227,8 +227,11 @@ impl FileSupervisedDriver {
     /// Retire only a terminal ORIGINAL request and its fully reaped direct
     /// children, without reopening the authority, resetting quotas or cancelling
     /// any other request. False means retain this driver and poll again; it is
-    /// not permission to start a second cohort. Dispatched/unknown outcomes are
-    /// never terminal here, even when this driver's local phase is Idle.
+    /// not permission to start a second cohort. Dispatching and Unknown still
+    /// refuse even when the local phase is Idle. An explicit durable
+    /// IrrecoverablyUnknown disposition permits local retirement only: the
+    /// original charge, unresolved outcome, Stop and pending stream remain.
+    /// Retirement does not acknowledge an effect or permit stream continuation.
     pub fn retire_completed_request(&mut self, request: u64) -> Result<bool, JournalError> {
         use super::super::super::requests::FileRequestDisposition;
         {
@@ -250,6 +253,7 @@ impl FileSupervisedDriver {
                         | ActionState::Denied
                         | ActionState::Confirmed
                         | ActionState::ConfirmedNotExecuted
+                        | ActionState::IrrecoverablyUnknown
                 ),
             };
             if !terminal {

@@ -283,6 +283,13 @@ services additionally require a separate cumulative numerical replay allowance.
 See [the scoped live contract](SCOPED_UNKNOWN_ABANDONMENT.md) for profile,
 wire, retry and current source-only validation limits.
 
+An ordinary scheduled service that explicitly selects abandonment keeps the
+same authenticated operator and Stop endpoints available while waiting at a
+native Unknown request, within its original deadline. After an explicit durable
+IrrecoverablyUnknown disposition and confirmed child cleanup, the surviving
+driver may admit the next independent ordinary request. This keeps the first
+request's charge and uncertainty; it cannot advance a blocked learned stream.
+
 **Implemented source-publication reference mapping.** The trusted supervisor may
 explicitly record that final unresolved disposition with
 `supervise_publication abandon-unknown CONFIG REQUEST_JSON --guarded RECOVERY_PROFILE`.
