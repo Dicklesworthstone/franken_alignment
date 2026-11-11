@@ -13,6 +13,14 @@ pub use stopping::{
     FileFenceBasis, FileFenceError, FileFenceObservation, FileFenceReceipt, FileFenceRequest,
     FileFenceResult, FileSupervisorFenceGrant, FileSupervisorFencePort, MAX_FENCE_REPLAY_EVENTS,
 };
+mod abandonment;
+pub use abandonment::{
+    FileAbandonmentBlockReason, FileAbandonmentError, FileAbandonmentObservation,
+    FileAbandonmentPlan, FileAbandonmentPlanObservation, FileAbandonmentPlanResult,
+    FileAbandonmentReceipt, FileAbandonmentRequest, FileAbandonmentResult,
+    FileSupervisorAbandonmentGrant, FileSupervisorAbandonmentPort,
+    MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
+};
 mod cancellation;
 pub use cancellation::{
     FileCancellationBlockReason, FileCancellationError, FileCancellationObservation,

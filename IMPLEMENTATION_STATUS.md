@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: independently dispose of a live Unknown request
+
+The original full-input supervisor now provides a finite, separately retained
+abandonment capability. Next observes the complete original request cut;
+Abandon calls the existing durable Unknown-to-IrrecoverablyUnknown transition.
+The selected effect remains charged and uncertain, streams remain blocked,
+and unrelated requests retain their original publication path.
+
+The weak same-owner port cannot supply its own custody. Queries, entered
+operations and complete replay work are bounded; learned and raw-predictor
+histories require their own cumulative numerical allowance. Entry consumes the
+operation and invalidates the admission snapshot before native work. Exact
+same-grant retries preserve the original acknowledgment without further work.
+The original durable operation namespace is checked as well as the live cache.
+
+Authored native regressions accompany the implementation, including positive
+publication/uncertain-liability cases and causal predecessor, custody, budget,
+retry and persistence controls. These tests have not executed. The required
+RCH command failed with exit 127 before implementation because the runner was
+absent; the executor subsequently became unavailable. Source was authored and
+independently reviewed through GitHub, without local syntax, compiler,
+runtime, Clippy or full-gate evidence. No packet or production gate is closed.
+
+Contract: `docs/SCOPED_UNKNOWN_ABANDONMENT.md`.
+
 ## 2026-11-11: carry independent request cancellation through live operators
 
 Existing Tower Next/Resolve now select independently granted native cancellation

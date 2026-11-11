@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-11: grant independent live Unknown disposition
+
+- Add a finite original-owner abandonment port and nonclone custodian, separate
+  from cancellation, reconciliation and whole-domain fencing.
+- Bind the full request predecessor and original authority epoch to the existing
+  durable abandonment transition; retain all uncertain charges and stream
+  obstructions, while unrelated requests keep their original path.
+- Preserve the durable operation namespace, spent-on-entry replay allowances,
+  exact same-grant retries and admission-snapshot invalidation.
+- Author native positive and boundary regressions. Required RCH is unavailable
+  and the executor disconnected before source validation; no syntax, compiler,
+  runtime, Clippy or full-gate pass is claimed.
+- Document the scoped contract in `docs/SCOPED_UNKNOWN_ABANDONMENT.md`.
+
 ## 2026-11-11: connect scoped cancellation to live Tower operators
 
 - Extend existing Next/Resolve with an explicit cancellation action and sealed
