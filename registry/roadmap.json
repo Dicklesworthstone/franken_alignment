@@ -443,7 +443,12 @@
         "docs/MEDIATED_RECOVERY_STOP_PEER.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/mediated/stopped.rs",
         "crates/fa-reference/tests/mediated_recovery_stop_peer.rs",
-        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log"
+        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log",
+        "docs/LIVE_TOWER_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs",
+        "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log"
       ]
     },
     {
@@ -1869,7 +1874,12 @@
         "docs/MEDIATED_RECOVERY_STOP_PEER.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/mediated/stopped.rs",
         "crates/fa-reference/tests/mediated_recovery_stop_peer.rs",
-        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log"
+        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log",
+        "docs/LIVE_TOWER_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs",
+        "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log"
       ]
     },
     {
@@ -3011,7 +3021,12 @@
         "docs/MEDIATED_RECOVERY_STOP_PEER.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/mediated/stopped.rs",
         "crates/fa-reference/tests/mediated_recovery_stop_peer.rs",
-        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log"
+        "artifacts/execution/2026-11-11-mediated-stop-native-rch.log",
+        "docs/LIVE_TOWER_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs",
+        "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log"
       ],
       "founding_ideas": [
         "FI-A02"

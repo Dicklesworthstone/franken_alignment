@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-11: keep independent Stop available across live Tower recovery
+
+- Bind authenticated Stop before ordinary mediated replay in plain, checked
+  and scheduled Tower recovery. Complete independent guards remain mandatory
+  before the sealed terminal consumer applies its original Stop/Fence pair.
+- Carry the same Stop session, peer allowance, gateway and driver through
+  normal recovery, current-source qualification and first actor admission.
+- Retain both exact custody successors after recovery Stop even when a reply
+  is lost, the deadline expires or the other selected export fails.
+- Add four real-socket regression functions and establish the existing
+  recorded-Stop test's live boundary with a complete native response.
+  Independent review and fresh recovered-source syntax checks pass; both new
+  test files are formatted. The renewed RCH launch exits 127 because the runner
+  is absent, leaving compiler, runtime and full qualification open.
+
 ## 2026-11-11: connect authenticated operators to request-history discovery
 
 - Add opt-in finite request-history disclosure to ordinary, learned and resident

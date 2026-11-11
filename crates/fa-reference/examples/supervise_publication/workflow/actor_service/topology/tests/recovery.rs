@@ -3,6 +3,8 @@
 
 #[path = "recovery/sequence.rs"]
 mod sequence;
+#[path = "recovery/stop.rs"]
+mod stop;
 
 use super::*;
 use crate::workflow::actor_service::{operator::Settings, tower::command_with_clock};
@@ -1010,11 +1012,18 @@ fn recorded_recovery_still_services_stop_without_exporting_an_obsolete_source_cu
         fs::remove_file(root.path(name)).unwrap();
     }
     let submit = proposal(&config, 7, 0, 1);
+    let poll = request_document(&config, 7, "get");
     let profile = actor.clone();
     let stop_peer = reviewer.clone();
     let peer = std::thread::spawn(move || {
         let mut socket = connect(&profile.socket);
         profile.supervisor.verify(&socket).unwrap();
+        // Listener creation now precedes replay. A complete native response,
+        // rather than a pathname, establishes this test's original live cut.
+        assert_eq!(
+            field(knowledge(&exchange(&mut socket, &poll)), "value").as_str(),
+            Some("executed")
+        );
         socket
             .write_all(&submit.as_bytes()[..submit.len() / 2])
             .unwrap();

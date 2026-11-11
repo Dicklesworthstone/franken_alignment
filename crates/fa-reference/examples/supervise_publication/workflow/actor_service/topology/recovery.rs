@@ -1,16 +1,17 @@
 //! Live Tower intake after the ORIGINAL independently anchored mediated replay.
 //! Recorded requests stay source-free; new work reuses the native source rebind.
 use super::super::{
-    BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, Instant, OwnerStart,
-    PeerProfile, Profile, PublicationProfile, check_deployment, debug, operator, plus,
-    serve_ready_ingress,
+    BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
+    Instant, OwnerStart, PeerProfile, Profile, PublicationProfile, check_deployment,
+    debug, operator, plus, serve_ready_driver,
 };
 use crate::recover_stop::guarded::{Custody, SubmitProfile};
+use crate::workflow::{FileHumanReviewer, control::Control};
 use crate::workflow::continuation::{
     checkpoint::{self, AcknowledgedOutput},
     guarded::{
         self,
-        mediated::{self, Recovered, profile::Selection},
+        mediated::{self, ReadyRecovery, Recovered, profile::Selection},
     },
 };
 use fa_reference::Error;
@@ -166,42 +167,52 @@ where
     // no frames until complete native replay, fencing and fresh checks finish.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let mut replay_checkpoint = || {
-        if deadline.started.elapsed() >= deadline.wall {
-            Err("live mediated recovery replay deadline reached".to_owned())
-        } else {
+    let mut control = Control::new(&config, actor.request, Some(reviewer))?;
+    let mut pending = false;
+    let ready = {
+        let mut replay_checkpoint = || {
+            deadline.check(time())?;
+            pending |= control.recovery_pending_peer()?;
             Ok(())
-        }
-    };
-    replay_checkpoint()?;
-    let Recovered {
-        native:
-            ReconciledMediatedOwner {
-                mut owner,
-                roles,
-                outcomes,
+        };
+        replay_checkpoint()?;
+        mediated::ready(
+            &config,
+            recovery,
+            &custody,
+            topology,
+            FilePublicationRecoveryRequirements {
+                validation: publication_limits,
+                feed: None,
+                joint: None,
             },
+            &mut replay_checkpoint,
+        )?
+    };
+    // Ready has its own final cooperative checkpoint. A retained candidate
+    // selects only the original no-clock admission Stop, before ordinary Fence,
+    // reconciliation, source acquisition or any live owner role is published.
+    if pending {
+        return stop_recovery(&config, &custody, archive.as_ref(), ready, &mut control,
+            &deadline, &mut time);
+    }
+    let Recovered {
+        native: ReconciledMediatedOwner { owner, roles, outcomes },
         history,
         checkpoint: saved,
-    } = mediated::recover(
-        &config,
-        recovery,
-        &custody,
-        topology,
-        FilePublicationRecoveryRequirements {
-            validation: publication_limits,
-            feed: None,
-            joint: None,
-        },
-        &deadline,
-        &mut replay_checkpoint,
-        &mut time,
-    )?;
+    } = ready.finish(&deadline, &mut time)?;
     let saved = saved.expect("v2 recovery retains original native source custody");
     let revision = owner.revision();
+    let (port, mut driver) = owner.into_supervised_driver();
     let prepared = (|| {
-        mediated::require_settled(&owner, &outcomes)?;
-        check_deployment(&config, &owner, publication)?;
+        {
+            let owner = driver.supervisor().host().map_err(debug)?;
+            mediated::require_settled(&owner, &outcomes)?;
+            check_deployment(&config, &owner, publication)?;
+        }
+        checkpoint_live(&mut control, &mut driver, &roles.oversight.human,
+            &deadline, &mut time)?;
+        let owner = driver.supervisor().host().map_err(debug)?;
         let mut has_new_work = false;
         for &request in scheduled {
             match owner.request_status(request) {
@@ -216,17 +227,25 @@ where
         if owner.inspect().stop.is_some() {
             return Err("the original domain is terminally stopped".into());
         }
-        deadline.check(time())?;
-        let next = topology.next(&config, history, &mut || deadline.check(time()))?;
-        deadline.check(time())?;
+        drop(owner);
+        let next = topology.next(&config, history, &mut || {
+            checkpoint_live(&mut control, &mut driver, &roles.oversight.human,
+                &deadline, &mut time)
+        })?;
+        checkpoint_live(&mut control, &mut driver, &roles.oversight.human,
+            &deadline, &mut time)?;
         // Original rebind preserves spent work and operation floors and requires
         // BOTH graph and inventory to advance. It revokes, never certifies.
+        let mut owner = driver.supervisor_mut().host_mut().map_err(debug)?;
         next.bind(&mut owner, roles.topology_observer).map(Some)
     })();
     let selected = match prepared {
         Ok(selected) => selected,
         Err(error) => {
-            let retained = retain_saved(&custody, archive.as_ref(), &saved, &owner);
+            let retained = match driver.supervisor().host() {
+                Ok(owner) => retain_saved(&custody, archive.as_ref(), &saved, &owner),
+                Err(error) => Err(debug(error)),
+            };
             let error = match retained {
                 Ok(()) => error,
                 Err(retention) => format!("{error}; {retention}"),
@@ -255,7 +274,7 @@ where
         checkpoint::combine(history, source)
     };
     let result = if let Some(requests) = requests {
-        super::super::series::serve_ready_ingress(
+        super::super::series::serve_ready_driver(
             config,
             actor,
             reviewer,
@@ -268,16 +287,18 @@ where
             Some(generation),
             operator,
             socket,
-            owner,
+            port,
+            driver,
             roles.oversight.human,
             source,
             OwnerStart::Reconciled,
+            Some(control),
             deadline,
             time,
             retain,
         )
     } else {
-        serve_ready_ingress(
+        serve_ready_driver(
             config,
             actor,
             reviewer,
@@ -287,16 +308,60 @@ where
             Some(generation),
             operator,
             socket,
-            owner,
+            port,
+            driver,
             roles.oversight.human,
             source,
             OwnerStart::Reconciled,
+            Some(control),
             deadline,
             time,
             retain,
         )
     };
     result.map_err(|error| guarded::acknowledged(revision, &error))
+}
+
+fn checkpoint_live<F>(control: &mut Control, driver: &mut FileSupervisedDriver,
+    reviewer: &FileHumanReviewer, deadline: &Deadline, time: &mut F) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    deadline.check(time())?;
+    if control.checkpoint(driver, reviewer, deadline, time)? {
+        return Err("original native Stop acknowledged before live actor intake; no new work admitted".into());
+    }
+    Ok(())
+}
+
+fn stop_recovery<F>(config: &Config, custody: &Custody,
+    archive: Option<&AcknowledgedOutput>, ready: ReadyRecovery, control: &mut Control,
+    deadline: &Deadline, time: &mut F) -> Result<(), String>
+where F: FnMut() -> ElapsedTick {
+    // Pin original store identity before native acknowledgment. Only the
+    // selected historical checkpoint owns source custody; no next files open.
+    let identity = fs::canonicalize(&config.store).map_err(debug)?;
+    let target = ready.recovery.into_recovery_stop(control.recovery_operation()?)
+        .map_err(debug)?;
+    let outcome = control.stop_recovery(target, deadline, time)?;
+    let mut terminal = outcome.terminal_message();
+    if let Ok(stopped) = &outcome.application.result {
+        let history = custody.retain(stopped.history_anchor()).map_err(|error| format!(
+            "history anchor retention failed: {error}; keep the previous archive and select a new output path"));
+        let source = archive.map_or(Ok(()), |archive| {
+            let saved = ready.history.checkpoint()
+                .ok_or("admission Stop requires the selected exact source checkpoint")?;
+            let stopped = saved.after_admission_stop(&config.profile, &identity, stopped)
+                .map_err(debug)?;
+            archive.retain(&stopped)
+        }).map_err(|error: String| format!(
+            "terminal topology checkpoint retention failed: {error}; keep previous paired custody and use terminal checkpoint recovery with new output paths"));
+        // A late deadline or lost reply cannot suppress either independent
+        // export after acknowledgment, and an export failure never retries Stop.
+        if let Err(error) = checkpoint::combine(history, source) {
+            terminal.push_str("; ");
+            terminal.push_str(&error);
+        }
+    }
+    Err(terminal)
 }
 
 fn retain_saved(

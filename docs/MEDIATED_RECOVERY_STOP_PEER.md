@@ -48,6 +48,30 @@ For an independently retained topology-source checkpoint, the existing
 from the exact matching history. Source expenditure and operation floors remain
 unchanged. An arbitrary snapshot cannot replace that paired custody.
 
+## Ordinary live Tower recovery
+
+The Linux `serve-open` and `serve-open-checked` commands with
+`--tower-generation`, `--guarded` and a `fa.mediated-submit/2` topology profile
+now bind this independent Stop listener before historical loading and replay.
+An explicit `--requests` schedule uses the first selected request's original
+endpoint. Existing `stop-peer REVIEWER_PROFILE REQUEST` selects the same
+authenticated protocol; it needs no private supervisor configuration.
+
+The service checks for a verified peer at every cooperative replay boundary,
+including Ready. Pending Stop consumes the original cursor through this sealed
+path; otherwise the original live finalizer runs and the same control, gateway
+and driver continue into current-source checks and actor service. Candidate
+allowance, pending peer and session timing are not renewed at handoff.
+Synchronous I/O and native transitions remain cooperative, not preemptible.
+
+After a native recovery acknowledgment, the service independently retains the
+selected history anchor and exact terminal source checkpoint. A lost reply, late
+deadline or one failed export cannot skip the other output or retry the native
+Stop. An already-live Stop still refuses an obsolete saved source cut when it
+lacks the separately bound source needed for capture; it retains acknowledged
+history instead of inventing a source successor. See
+[live recovery](LIVE_TOWER_RECOVERY.md) for commands and custody boundaries.
+
 ## Scope and qualification
 
 This extends the existing recovery protocol to the ordinary mediated cursor;
@@ -59,11 +83,21 @@ acceptance, deployment mediation and runtime qualification remain open.
 Six public regressions in `crates/fa-reference/tests/mediated_recovery_stop_peer.rs`
 cover authenticated application, incomplete and mismatched recovery, reserve and
 publication requirements, malformed and silent requests, canonical replacement,
-and lost replies with exact retry. Independent source review and a direct
+and lost replies with exact retry. Independent source review and an initial
 installed-rustfmt syntax pass completed before the editing workspace became
-unavailable. Recovered source was reviewed again before upload. The required
-RCH test attempt exited 127 because `rch` is absent; compilation, runtime tests,
-Clippy and the full qualification gate remain unexecuted for this increment.
+unavailable. After restoration, all eleven changed Rust files passed fresh
+syntax processing; both new test files were formatted and passed focused
+format checks, and `git diff --check` passed. Required RCH test attempts before
+and after workspace restoration exited 127 because `rch` is absent; compilation,
+runtime tests, Clippy and the full qualification gate remain unexecuted.
+
+Four further real-socket regressions in the live service cover plain, checked
+and scheduled recovery, malformed peers, independent requirement mismatches and
+post-acknowledgment failures of transport, time and either custody export. Those
+integration sources were reconstructed after workspace loss, independently
+reviewed and syntax-checked after restoration. This establishes no compiler or
+runtime pass; the actual checks and runner failure are retained in
+`artifacts/execution/2026-11-11-mediated-stop-integration-verification.log`.
 
 The original contracts remain in [cooperative mediated recovery](COOPERATIVE_MEDIATED_RECOVERY.md),
 [recovery Stop transport](LEARNED_RECOVERY_STOP_PEER.md) and

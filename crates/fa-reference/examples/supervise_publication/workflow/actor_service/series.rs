@@ -321,7 +321,7 @@ where
 /// and helper-retirement path; the caller retains its exact native custody before
 /// cleanup releases the owner. A recovered historical schedule is observation-only.
 pub(super) fn serve_ready_ingress<F, R>(
-    mut config: Config,
+    config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
@@ -333,6 +333,39 @@ pub(super) fn serve_ready_ingress<F, R>(
     reviewer: super::super::FileHumanReviewer,
     topology: Option<FileDriverTopology>,
     owner_start: OwnerStart,
+    deadline: Deadline,
+    time: F,
+    retain: R,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
+{
+    let (port, driver) = host.into_supervised_driver();
+    serve_ready_driver(
+        config, actor, reviewer_profile, publication, options, tower_generation,
+        operator_settings, socket, port, driver, reviewer, topology, owner_start,
+        None, deadline, time, retain,
+    )
+}
+
+/// Continue the SAME recovered gateway and first request's Stop transport.
+/// Later schedule entries acquire only their originally selected endpoints.
+pub(super) fn serve_ready_driver<F, R>(
+    mut config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
+    socket: BoundSocket,
+    port: Port,
+    mut driver: FileSupervisedDriver,
+    reviewer: super::super::FileHumanReviewer,
+    topology: Option<FileDriverTopology>,
+    owner_start: OwnerStart,
+    mut early_control: Option<super::super::control::Control>,
     deadline: Deadline,
     mut time: F,
     retain: R,
@@ -346,9 +379,11 @@ where
         credibility,
         ..
     } = options;
-    let (port, mut driver) = host.into_supervised_driver();
     let result = (|| {
-        topology::install(&mut driver, topology, &deadline, &mut time)?;
+        if topology::install(&mut driver, topology, &deadline, &mut time,
+            early_control.as_mut(), &reviewer)? {
+            return Ok(());
+        }
         // One independent read session spans this original owner lifetime. A new
         // selected request never reissues custody, clears a pending native cursor
         // or resets transport, query, candidate or elapsed allowances.
@@ -376,7 +411,6 @@ where
         // observer disconnected or timed out. The first new scheduled request ends
         // that observational mode, retaining ordinary error containment thereafter.
         let mut observational = owner_start == OwnerStart::Reconciled;
-        let mut early_control = None;
         eprintln!(
             "Sequential actor endpoint ready: {:?}; requests={requests:?}",
             actor.socket
@@ -385,7 +419,9 @@ where
             for (index, &request) in requests.iter().enumerate() {
                 // Drop only the prior idle Stop listener before selecting its
                 // successor. Active execution owns and retires its original control.
-                early_control = None;
+                if index != 0 {
+                    early_control = None;
+                }
                 ingress.select(request);
                 deadline.check(time())?;
                 let recorded = {
@@ -408,11 +444,13 @@ where
                     break;
                 }
                 if !recorded || owner_start == OwnerStart::Reconciled {
-                    early_control = Some(super::super::control::Control::new(
-                        &config,
-                        request,
-                        Some(reviewer_profile),
-                    )?);
+                    if early_control.is_none() {
+                        early_control = Some(super::super::control::Control::new(
+                            &config,
+                            request,
+                            Some(reviewer_profile),
+                        )?);
+                    }
                     if early_control
                         .as_mut()
                         .expect("selected Stop control")

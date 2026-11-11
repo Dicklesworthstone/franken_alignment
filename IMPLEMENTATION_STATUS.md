@@ -1,5 +1,50 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: service authenticated Stop throughout ordinary live recovery
+
+Ordinary topology-enforced Tower `serve-open` and `serve-open-checked`, including
+explicit request schedules, now bind their original independent Stop endpoint
+before historical source loading and cooperative replay. Each replay checkpoint,
+including Ready, observes the same deadline and authenticated peer admission.
+A pending peer selects the sealed native recovery Stop consumer before ordinary
+Fence/Time/Sweep, source acquisition, reviewer roles or live actor admission.
+Complete original source, publication, history-anchor and floor requirements
+remain mandatory; silence or a malformed request cannot fall through to startup.
+
+Acknowledged recovery Stop independently attempts both custody exports using the
+native history and exact original source checkpoint's `after_admission_stop`.
+Lost replies, late deadlines and either failed export preserve the native result
+and cannot prevent the other selected export. Unknown and dispatched effects stay
+charged; no source read, effect-clock acquisition, sweep or resend is introduced
+by the terminal consumer. Admission acknowledgment does not attest remote halt.
+
+The no-Stop path retains the same Control, authenticated peer/session allowance,
+port and driver through source reads, initial qualification and the first actor
+request. Schedules preserve that first control before selecting later endpoints.
+Original unsettled-delivery and deployment checks remain before live control.
+Already-live Stop retains its original source-export limitation when the saved
+cut has become obsolete; no checkpoint is manufactured from an arbitrary snapshot.
+
+Four authored real-socket regression functions cover exact native journal-byte
+equivalence for plain/checked/scheduled Stop, silent/nonce/operation/truncated
+requests, source identity/all three floors/checked-publication mismatches, and
+lost reply plus late deadline and both export-failure directions. The existing
+recorded-Stop test now waits for a complete native Get reply before stopping.
+Existing successful publication and recorded-service cases cover normal handoff.
+
+All five production files and both integration test files were reconstructed
+from the verified GitHub base after workspace loss and independently reviewed.
+After restoration, all eleven changed Rust files passed fresh installed-rustfmt
+syntax processing. Both new test files were formatted and passed focused format
+checks; `git diff --check` passed. These checks are not typechecking or execution.
+The renewed focused native/example RCH launch still exited 127 because the runner
+is absent. Raw output is retained in
+`artifacts/execution/2026-11-11-mediated-stop-integration-verification.log`,
+alongside the earlier native launch failure. Compilation, runtime, Clippy, full
+qualification and FA-014/FA-073/FA-120 acceptance remain open. The concurrent
+original request-history commit is preserved. See [the live contract](docs/LIVE_TOWER_RECOVERY.md) and
+[the native boundary](docs/MEDIATED_RECOVERY_STOP_PEER.md).
+
 ## 2026-11-11: serve request-history discovery through authenticated operators
 
 The closed optional `request_history` operator profile now provisions the

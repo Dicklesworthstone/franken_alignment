@@ -62,16 +62,26 @@ pub(super) fn install<F>(
     source: Option<FileDriverTopology>,
     deadline: &Deadline,
     time: &mut F,
-) -> Result<(), String>
+    control: Option<&mut super::super::super::control::Control>,
+    reviewer: &super::super::super::FileHumanReviewer,
+) -> Result<bool, String>
 where
     F: FnMut() -> ElapsedTick,
 {
+    let mut control = control;
+    let mut stopped = |driver: &mut FileSupervisedDriver, time: &mut F| {
+        control.as_mut().map_or(Ok(false), |control| {
+            control.checkpoint(driver, reviewer, deadline, time)
+        })
+    };
     let Some(source) = source else {
-        return Ok(());
+        return stopped(driver, time);
     };
     let revision = driver.supervisor().host().map_err(debug)?.revision();
     driver.require_topology(revision, source).map_err(debug)?;
+    if stopped(driver, time)? { return Ok(true); }
     deadline.check(time())?;
+    if stopped(driver, time)? { return Ok(true); }
     let revision = driver.supervisor().host().map_err(debug)?.revision();
     let refreshed = driver.refresh_topology(revision).map_err(debug)?;
     if refreshed.refusal.is_some()
@@ -86,8 +96,9 @@ where
     }
     let now = time();
     deadline.check(now)?;
+    if stopped(driver, time)? { return Ok(true); }
     let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
     let revision = host.revision();
     host.observe_time(revision, now).map_err(debug)?;
-    Ok(())
+    Ok(false)
 }

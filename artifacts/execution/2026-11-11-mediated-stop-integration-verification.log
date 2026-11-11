@@ -1,0 +1,27 @@
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --version
+Exit code: 0
+rustfmt 1.10.0-nightly (9085017724 2026-08-30)
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/continuation/guarded/mediated.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/series.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/series/topology.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/recovery.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/mediated/stopped.rs crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/stopped.rs crates/fa-reference/src/action/consequence/delivery/persistent/observed/reviewer/peer/control/recovery.rs crates/fa-reference/tests/mediated_recovery_stop_peer.rs
+Exit code: 0
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true crates/fa-reference/tests/mediated_recovery_stop_peer.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs
+Exit code: 0
+
+Command: /workspace/scratch/c2fa33589189/rust-validation/pinned-toolchain/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/mediated_recovery_stop_peer.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs
+Exit code: 0
+
+Command: git diff --check
+Exit code: 0
+
+Command: /bin/bash -c 'RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --test mediated_recovery_stop_peer --example supervise_publication'
+Exit code: 127
+/bin/bash: line 1: rch: command not found
+
+Rustfmt parses source and formats the two new test files only. It is not a typecheck or runtime test. No local compiler fallback was used.
+
+Independent Python hashlib verification of the materialized source closure:
+{"dependency_policy_binding": "matches", "git_diff_check": "passed", "hash_mismatches": [], "missing": [], "orphaned": [], "source_files_checked": 2453, "source_snapshot_sha256": "133ab97cbebcdf3149e463f782aac8f68ec3973e3e8879f3177c363fd65a6eb0"}
+
+After concurrent main commit 7812a2, preserved its disjoint operator changes and reconciled shared documentation/source bindings. The prior Python check remains scoped to its recorded 2,453-file snapshot. Final closure and incoming GitHub bytes were checked with the same SHA-256 implementation previously cross-checked against Python hashlib; this is source binding verification, not compilation or runtime execution.
+{"parent":"7812a2d473b500760e012073ee5ee8ebef073493","source_files":2456,"incoming_source_files_retrieved_and_hash_verified":9,"source_snapshot_sha256":"3e237e588acba4c7914dc1b0c20e4a45829a796545e629724e1eb7625ff4fe96","missing":[],"orphaned":[],"policy_only_digest_changed":true}

@@ -40,17 +40,50 @@ an output cannot reuse an endpoint merely because that request has not begun.
 The original cursor checks source guard, effective policy, initial/current
 topology, availability, publication requirements, reserve and all independent
 floors. It holds the same exclusive owner while replay advances one original
-event per checkpoint. Elapsed checks are cooperative; synchronous reads, native
-transitions and persistence are not preempted. The live Stop listener starts
-after recovery and initial source qualification; replay does not service a live
-Stop connection.
+event per checkpoint. The independent authenticated Stop listener is bound
+before historical source loading and replay; each checkpoint observes the
+original workflow deadline and polls that same listener. Elapsed checks remain
+cooperative: synchronous reads, native transitions and persistence are not
+preempted.
 
-At Ready, the original atomic Fence/Time/Sweep acknowledges once. Its sealed
+A verified pending Stop peer selects the sealed
+[ordinary recovery Stop path](MEDIATED_RECOVERY_STOP_PEER.md) at Ready, before
+ordinary Fence/Time/Sweep, current-source acquisition or live actor custody.
+Complete replay, the exact source checkpoint, publication requirements and all
+independent history floors remain mandatory before an offer. A silent or
+malformed request terminates that original startup attempt without falling
+through to live recovery; no successful Stop receipt or canonical mutation is
+manufactured.
+
+Use the existing independent reviewer command with the actor profile's first
+selected request key (8 in this example):
+
+```sh
+supervise_publication stop-peer REVIEWER_PROFILE 8
+```
+
+The exact request applies the original atomic admission Stop/Fence pair without
+an effect-clock read, reconciliation sweep, fresh source or new publication.
+Unknown and dispatched liabilities retain their charges. Admission acknowledgment
+does not attest endpoint drain, helper reaping or remote process termination.
+Once acknowledged, both selected custody outputs are attempted independently:
+the history anchor comes from the native result and the terminal source successor
+comes only from the exact original checkpoint's `after_admission_stop`.
+Lost replies, a late workflow deadline or one failed export cannot discard the
+acknowledgment or suppress the other export. Startup then terminates without
+returning a live owner.
+
+When no Stop is pending at Ready, the original atomic Fence/Time/Sweep
+acknowledges once. Its sealed
 [checkpoint successor](TOPOLOGY_WORK_CHECKPOINT.md#ordinary-reconciled-checkpoint-successors)
 retains the exact resulting history without another replay or current source
 read. Every reconciliation outcome and remaining delivery stage is checked before
 selecting old or new request work. Dispatching, Unknown and irrecoverably unknown
-liabilities refuse further admission and retain their original charges.
+liabilities refuse further admission and retain their original charges. The same
+Stop control, admitted peer, candidate allowance and session timing continue
+through source acquisition, initial qualification and the first actor request;
+recovery does not drop and rebind the listener. An explicit schedule carries
+that original control into its first request before selecting later endpoints.
 
 ## Fresh publication and recorded observations
 
@@ -94,10 +127,12 @@ saved cut. Any genuinely unresolved old delivery still refuses the whole
 schedule before admission, including a schedule beginning with that old request.
 
 Independent authenticated Stop remains available against partial actor frames
-and during reply grace. If Stop advances a recorded owner's cut, the new history
-is retained and export of the obsolete source checkpoint refuses. This service
-does not construct a terminal successor from arbitrary snapshots; terminal
-recovery retains its separately admitted native path.
+and during reply grace. If Stop advances an already-live recorded owner's cut, the new
+history is retained and export of the obsolete source checkpoint refuses. The
+same limitation applies after ordinary finalization but before a new source is
+bound. This differs from the sealed recovery Stop branch above, which owns the
+exact pre-finalization cursor and can derive its terminal source successor.
+No terminal successor is constructed from arbitrary snapshots.
 
 ## Failure, retention and verification
 
@@ -115,12 +150,25 @@ a checkpoint does not attest reaping. The finite
 `submit --guarded --topology-profile` command retains its own recorded-request
 source-export restriction while sharing the same recovery helper.
 
-Ten authored regression functions cover both open grammars and option orders,
-actual plain/checked second publication, cumulative source spending, stale
+The existing regressions cover both open grammars and option orders, actual
+plain/checked second publication, cumulative source spending, stale
 custody/inventory, exhausted source work, operator reads, final witness refusal,
 repeated recorded recovery with missing live assets, genuinely unresolved charged
-dispatch, independent Stop and archive/endpoint aliases. Independent source
-review and Rust 2024 syntax/format checks are separate from pending remote
-compilation, Clippy and runtime execution. No bead or packet is closed. Modeled
+dispatch, independent Stop and archive/endpoint aliases. Four additional
+real-socket regression functions compare plain, checked and scheduled recovery
+Stop with the exact native byte oracle; reject silent/malformed peers and
+independently wrong requirements; and preserve each custody output after a lost
+reply, late deadline or failure of the other export. The recorded-Stop regression
+now waits for a complete native actor response to establish its live boundary.
+
+The new integration sources were reconstructed after the editing workspace
+became unavailable and independently reviewed. After the workspace returned,
+all eleven changed Rust files passed installed-rustfmt syntax processing; both
+new test files were formatted and passed focused format checks, and
+`git diff --check` passed. The renewed focused native/example RCH attempt still
+exited 127 because the required runner was absent. Its raw log is retained in
+`artifacts/execution/2026-11-11-mediated-stop-integration-verification.log`.
+Compilation, Clippy, runtime execution and full qualification remain pending.
+No bead or packet is closed. Modeled
 topology completeness and trusted storage, clock and custody retain their
 original deployment assumptions.

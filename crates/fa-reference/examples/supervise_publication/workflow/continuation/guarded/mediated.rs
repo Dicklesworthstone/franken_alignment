@@ -15,7 +15,8 @@ use crate::recover_stop::guarded::Custody;
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::recovery::FilePublicationRecoveryRequirements;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
-    mediated::FileMediatedRequirements, recovery::mediated::ReconciledMediatedOwner,
+    mediated::FileMediatedRequirements,
+    recovery::mediated::{FileMediatedRecovery, ReconciledMediatedOwner},
 };
 use fa_reference::action::consequence::delivery::persistent::{
     observed::driver::topology::checkpoint::TopologyCheckpoint, requests::PendingReconciliations,
@@ -176,6 +177,38 @@ pub(crate) struct Recovered {
     pub checkpoint: Option<TopologyCheckpoint>,
 }
 
+/// Complete replay without publishing a live owner or consuming its Fence.
+/// A live service may instead pass this SAME Ready cursor to authenticated
+/// admission Stop. The independent requirements and source cut stay attached.
+pub(crate) struct ReadyRecovery {
+    pub recovery: FileMediatedRecovery,
+    pub history: profile::History,
+}
+
+impl ReadyRecovery {
+    pub(crate) fn finish<F>(self, deadline: &Deadline, time: &mut F)
+        -> Result<Recovered, String>
+    where F: FnMut() -> ElapsedTick {
+        let ReadyRecovery { recovery, history } = self;
+        let now = time();
+        deadline.check(now)?;
+        let (native, saved) = match history.checkpoint() {
+            Some(saved) => recovery
+                .finish_reconciled_with_checkpoint(saved, || now)
+                .map(|(owner, checkpoint)| (owner, Some(checkpoint))),
+            None => recovery
+                .finish_reconciled(|| now)
+                .map(|owner| (owner, None)),
+        }
+        .map_err(unconfirmed)?;
+        Ok(Recovered {
+            native,
+            history,
+            checkpoint: saved,
+        })
+    }
+}
+
 pub(crate) fn recover<F>(
     config: &Config,
     profile: &SubmitProfile,
@@ -189,6 +222,18 @@ pub(crate) fn recover<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    ready(config, profile, custody, topology, publication_requirements, checkpoint)?
+        .finish(deadline, time)
+}
+
+pub(crate) fn ready(
+    config: &Config,
+    profile: &SubmitProfile,
+    custody: &Custody,
+    topology: &Selection,
+    publication_requirements: FilePublicationRecoveryRequirements,
+    checkpoint: &mut impl FnMut() -> Result<(), String>,
+) -> Result<ReadyRecovery, String> {
     // Only independent historical contracts are loaded before recovery. A known
     // request never needs the next live files, source read, helper or human key.
     let history = topology.history(config, checkpoint)?;
@@ -231,22 +276,7 @@ where
             .advance(progress.replayed_events, 1)
             .map_err(unconfirmed)?;
     }
-    let now = time();
-    deadline.check(now)?;
-    let (native, saved) = match history.checkpoint() {
-        Some(saved) => recovery
-            .finish_reconciled_with_checkpoint(saved, || now)
-            .map(|(owner, checkpoint)| (owner, Some(checkpoint))),
-        None => recovery
-            .finish_reconciled(|| now)
-            .map(|owner| (owner, None)),
-    }
-    .map_err(unconfirmed)?;
-    Ok(Recovered {
-        native,
-        history,
-        checkpoint: saved,
-    })
+    Ok(ReadyRecovery { recovery, history })
 }
 
 pub(crate) fn require_settled(
