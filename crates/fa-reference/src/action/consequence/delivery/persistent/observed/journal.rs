@@ -69,6 +69,7 @@ pub(super) enum Event {
     Mediation(MediationEvent),
     PublicationWitness(WitnessEvent),
     TextMessage(Box<generated::FileTextMessageRequest>, Snapshot),
+    NarrowAuthority(super::narrowing::FileAuthorityNarrowRequest),
 }
 
 fn core_allowed(event: &BaseEvent) -> bool {
@@ -427,12 +428,17 @@ fn write_event(w: &mut Writer, event: &Event) -> Result<(), Error> {
             generated::write_request(w, request)?;
             w.snapshot(snapshot)?;
         }
+        Event::NarrowAuthority(request) => {
+            w.u8(33)?;
+            super::narrowing::write(w, request)?;
+        }
     }
     Ok(())
 }
 
 fn read_event(r: &mut Reader<'_>) -> Result<Event, Error> {
     Ok(match r.u8()? {
+        33 => Event::NarrowAuthority(super::narrowing::read(r)?),
         0 => {
             let event = r.event()?;
             if !core_allowed(&event) {

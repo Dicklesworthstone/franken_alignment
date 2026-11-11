@@ -44,6 +44,7 @@ pub enum FileJournalEventKind {
     Stop,
     StopProgress,
     ReplacePolicy,
+    NarrowAuthority,
     ReserveRecovery,
     ActorState,
     ActorCheckpoint,
@@ -118,6 +119,7 @@ impl FileJournalEventKind {
             "stop" => Self::Stop,
             "stop_progress" => Self::StopProgress,
             "replace_policy" => Self::ReplacePolicy,
+            "narrow_authority" => Self::NarrowAuthority,
             "reserve_recovery" => Self::ReserveRecovery,
             "actor_state" => Self::ActorState,
             "actor_checkpoint" => Self::ActorCheckpoint,
@@ -192,6 +194,7 @@ impl FileJournalEventKind {
             Self::Stop => "stop",
             Self::StopProgress => "stop_progress",
             Self::ReplacePolicy => "replace_policy",
+            Self::NarrowAuthority => "narrow_authority",
             Self::ReserveRecovery => "reserve_recovery",
             Self::ActorState => "actor_state",
             Self::ActorCheckpoint => "actor_checkpoint",
@@ -429,6 +432,7 @@ fn project(revision: u64, event: &Event) -> Result<FileJournalTailEvent, Error> 
             Kind::Dispatch
         }
         Event::ActorState(_) => Kind::ActorState,
+        Event::NarrowAuthority(_) => Kind::NarrowAuthority,
         Event::ActorCheckpoint(..) => Kind::ActorCheckpoint,
         Event::ActorReset(..) => Kind::ActorReset,
         Event::PublicationGuard => Kind::PublicationGuard,

@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-11: add durable ordinary target-ceiling narrowing
+
+The original consequence authority now accepts a separately selected monotone
+target restriction without inventing a congress review or checkpoint. It
+intersects the current exact target ceiling, cancels only excluded undispatched
+attempts and refunds only their original reservations. Retained automatic
+reservations and dispatched/Unknown liabilities remain with the original gate.
+Control sequence advances once; authority epoch, recorded clock, policy, actor
+and incident state remain unchanged. Human approvals retain their predecessor
+binding and must be renewed after the restriction.
+
+An ordinary FileOversight journal records the new canonical operation and its
+bounded durable identity. Exact healthy retries return the original receipt,
+including after applicable recovery, without another narrowing event or refund.
+The independent live port adds complete run predecessors, shared finite query,
+operation and replay bounds, revocable weak custody and exact-result retries.
+Decoder, predictor/consistency, mediated and all stream owners refuse this
+ordinary operation before replay. Existing checkpoint narrowing is separate.
+
+Fourteen native regression functions exercise actual retained publication with
+fresh human approval, excluded reservation refunds, Unknown charge retention,
+canonical replay, finite custody, exact retries, storage failures and original
+source interruption. Existing cancellation and abandonment storage fixtures use
+a narrowly scoped test-only failure injection method without exposing store
+custody in production.
+
+The required remote gate was attempted in the restored editing workspace and
+returned exit 127 because rch is unavailable. No Rust toolchain is available
+for formatting or syntax checks. Implementation and regression sources receive
+independent source review only; compilation, runtime, Clippy and full-gate
+qualification remain pending. No packet or production status is promoted.
+
+Contract: `docs/SCOPED_AUTHORITY_NARROWING.md`.
+
 ## 2026-11-11: continue ordinary schedules after explicit Unknown disposition
 
 The original driver now recognizes durable IrrecoverablyUnknown as a terminal

@@ -214,7 +214,7 @@ fn raw_predictor_work_is_separate_and_failed_storage_cannot_refund_its_reservati
         ).unwrap();
         assert_eq!(plan(port.next(701, 1801)).request(), Some(input));
         if fail {
-            supervisor.host().unwrap().store.fail_once(JournalIo::Write);
+            supervisor.host().unwrap().fail_storage_once(JournalIo::Write);
             assert_eq!(port.abandon(input), Err(FileAbandonmentError::Unavailable));
             unknown(port.clone().abandon(input));
         } else {

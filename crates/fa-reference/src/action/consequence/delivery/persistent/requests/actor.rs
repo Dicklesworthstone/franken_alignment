@@ -14,6 +14,13 @@ pub use stopping::{
     FileFenceResult, FileSupervisorFenceGrant, FileSupervisorFencePort, MAX_FENCE_REPLAY_EVENTS,
 };
 mod abandonment;
+mod narrowing;
+pub use narrowing::{
+    FileNarrowBasis, FileNarrowBlockReason, FileNarrowError, FileNarrowObservation,
+    FileNarrowPlan, FileNarrowPlanObservation, FileNarrowPlanResult, FileNarrowReceipt,
+    FileNarrowRequest, FileNarrowResult, FileSupervisorNarrowGrant, FileSupervisorNarrowPort,
+    MAX_NARROW_OPERATIONS, MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_NARROW_TARGETS,
+};
 pub use abandonment::{
     FileAbandonmentBlockReason, FileAbandonmentError, FileAbandonmentObservation,
     FileAbandonmentPlan, FileAbandonmentPlanObservation, FileAbandonmentPlanResult,

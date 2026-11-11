@@ -6,6 +6,8 @@
 //! witness, epoch, deadline, scope and exact-envelope checks.
 
 pub mod containment;
+mod narrowing;
+pub use narrowing::TargetNarrowReceipt;
 
 use super::{Consequence, Decision, DecisionInputs, decide};
 use crate::action::retirement::RetirementBatch;
@@ -49,6 +51,15 @@ impl TargetCeiling {
 
     pub fn intersect(&self, other: &Self) -> Self {
         Self(self.0.intersection(&other.0).copied().collect())
+    }
+
+    /// Exact bounded target identities in canonical identity order. This is
+    /// ceiling data, not evidence that any particular effect is authorized.
+    pub fn targets(&self) -> Vec<ResolvedTarget> {
+        self.0.iter().map(|key| ResolvedTarget {
+            adapter: key[0], object: key[1], contract_version: key[2],
+            expected_version: key[3], generation: key[4],
+        }).collect()
     }
 
     fn key(target: ResolvedTarget) -> [u64; 5] {
@@ -125,6 +136,7 @@ pub struct ConsequenceAuthority {
     seen_rounds: BTreeSet<u64>,
     receipts: Vec<ControlReceipt>,
     retirement_receipts: Vec<RetirementReceipt>,
+    narrow_receipts: Vec<TargetNarrowReceipt>,
 }
 
 impl ConsequenceAuthority {
@@ -138,6 +150,7 @@ impl ConsequenceAuthority {
             seen_rounds: BTreeSet::new(),
             receipts: Vec::new(),
             retirement_receipts: Vec::new(),
+            narrow_receipts: Vec::new(),
         })
     }
 
@@ -356,6 +369,7 @@ impl ConsequenceAuthority {
             .receipts
             .len()
             .checked_add(self.retirement_receipts.len())
+            .and_then(|count| count.checked_add(self.narrow_receipts.len()))
             .ok_or(Error::Limit)?;
         if count >= MAX_DECISIONS {
             Err(Error::Limit)
@@ -1006,6 +1020,61 @@ mod tests {
         assert_eq!(receipt.batch.refunded_units, 9);
         assert_eq!(gate.inspect().ledger.available, 20);
         assert_eq!(gate.receipts(), reviews.as_slice());
+        conserved(&gate);
+    }
+
+    #[test]
+    fn supervisor_narrow_preserves_inside_permit_and_unknown_charge() {
+        let mut gate = authority();
+        let inside = action(1, 4);
+        let outside = action(2, 5);
+        let uncertain = action(3, 6);
+        let inside_permit = authorize(&mut gate, 1, &inside);
+        let outside_permit = authorize(&mut gate, 2, &outside);
+        let sent = authorize(&mut gate, 3, &uncertain);
+        gate.dispatch(&sent, &uncertain, &snapshot()).unwrap();
+        gate.mark_unknown(3).unwrap();
+        let before = gate.inspect();
+        let target = inside.spec().target.unwrap();
+        let receipt = gate.narrow_targets(before.sequence, before.ledger.epoch,
+            TargetCeiling::new(&[target]).unwrap()).unwrap();
+        assert_eq!(receipt.cancelled, vec![2]);
+        assert_eq!(receipt.refunded_units, 5);
+        assert_eq!(receipt.authority_epoch, before.ledger.epoch);
+        assert_eq!(receipt.sequence, before.sequence + 1);
+        assert_eq!(gate.inspect().ledger.charged, 6);
+        assert_eq!(gate.inspect().ledger.stages[&3], ActionState::Unknown);
+        assert!(gate.dispatch(&outside_permit, &outside, &snapshot()).is_err());
+        gate.dispatch(&inside_permit, &inside, &snapshot()).unwrap();
+        let now = gate.inspect();
+        let wider = gate.narrow_targets(now.sequence, now.ledger.epoch,
+            TargetCeiling::new(&[target, outside.spec().target.unwrap()]).unwrap()).unwrap();
+        assert_eq!(wider.ceiling.targets(), vec![target]);
+        assert_eq!(wider.refunded_units, 0);
+        assert!(wider.cancelled.is_empty());
+        conserved(&gate);
+    }
+
+    #[test]
+    fn supervisor_narrow_shares_the_original_record_limit_and_refuses_stale_inputs() {
+        let mut gate = authority();
+        let item = action(1, 4);
+        begin(&mut gate, 1, &item);
+        let before = gate.inspect();
+        let retained = TargetCeiling::new(&[item.spec().target.unwrap()]).unwrap();
+        assert_eq!(gate.narrow_targets(before.sequence + 1, before.ledger.epoch, retained.clone()), Err(Error::Stale));
+        assert_eq!(gate.narrow_targets(before.sequence, before.ledger.epoch + 1, retained.clone()), Err(Error::Stale));
+        assert_eq!(gate.inspect(), before);
+        gate.narrow_targets(before.sequence, before.ledger.epoch, retained.clone()).unwrap();
+        for _ in 1..MAX_DECISIONS {
+            let hold = request(&gate, 1, &item, Restriction::HoldEffect);
+            gate.apply_review(hold).unwrap();
+        }
+        let before = gate.inspect();
+        assert_eq!(gate.narrow_targets(before.sequence, before.ledger.epoch, retained), Err(Error::Limit));
+        let review = request(&gate, 1, &item, Restriction::Continue);
+        assert_eq!(gate.apply_review(review), Err(Error::Limit));
+        assert_eq!(gate.inspect(), before);
         conserved(&gate);
     }
 }

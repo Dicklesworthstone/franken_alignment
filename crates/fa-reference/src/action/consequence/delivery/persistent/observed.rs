@@ -12,6 +12,7 @@ pub mod credibility;
 pub mod decoder;
 pub mod driver;
 pub mod governance;
+pub mod narrowing;
 pub mod guarded;
 pub mod helpers;
 mod human;
@@ -96,6 +97,15 @@ impl fmt::Debug for FileOversight {
             .field("clock_ready", &self.clock_ready())
             .field("fault", &self.fault)
             .finish_non_exhaustive()
+    }
+}
+
+#[cfg(test)]
+impl FileOversight {
+    /// Keep the original Store's causal barrier available to sibling native
+    /// capability tests without exposing its private storage owner.
+    pub(in crate::action::consequence::delivery::persistent) fn fail_storage_once(&self, barrier: JournalIo) {
+        self.store.fail_once(barrier);
     }
 }
 

@@ -205,6 +205,7 @@ impl FileOversight {
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::ReplacePolicy(_)
                 | BaseEvent::Reconcile(_) | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::AbandonUnknown(_))
             | Event::InputsUnavailable(..) | Event::RevokeHumans | Event::ActorReset(..)
+            | Event::NarrowAuthority(_)
             | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
         ) {
             Ok(())

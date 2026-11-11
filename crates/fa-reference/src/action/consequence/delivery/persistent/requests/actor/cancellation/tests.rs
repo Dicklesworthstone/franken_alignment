@@ -492,7 +492,7 @@ fn all_original_storage_barriers_charge_once_and_never_export_a_candidate_refund
         supervisor
             .set_snapshot(before.revision, Some(snapshot()))
             .unwrap();
-        supervisor.host().unwrap().store.fail_once(barrier);
+        supervisor.host().unwrap().fail_storage_once(barrier);
         assert_eq!(port.cancel(input), Err(FileCancellationError::Unavailable));
         assert_eq!(grant.remaining_operations(), 0);
         assert!(supervisor.owner.borrow().snapshot.is_none());

@@ -37,6 +37,7 @@ mod governance;
 mod identity;
 mod learned;
 mod mediation;
+mod narrowing;
 mod publication;
 mod requests;
 mod source;
@@ -73,6 +74,7 @@ pub(super) enum Transition {
     DecoderForced(Box<Result<crate::action::consequence::activation::monitor::decoder::MonitoredStep, Error>>),
     DecoderSampled(Box<Result<crate::action::consequence::activation::monitor::decoder::sampled::MonitoredSampledStep, Error>>),
     Abandoned(FileAbandonReceipt),
+    AuthorityNarrowed(super::narrowing::FileAuthorityNarrowReceipt),
 }
 
 pub(super) struct Machine {
@@ -113,6 +115,7 @@ pub(super) struct Machine {
     reviewer: HumanReviewer,
     envelopes: BTreeMap<u64, DispatchEnvelope>,
     pub(super) abandonments: super::super::abandonment::Abandonments,
+    pub(super) narrowings: BTreeMap<u64, super::narrowing::FileAuthorityNarrowReceipt>,
 }
 impl Machine {
     pub(super) fn new(p: &FileOversightProfile) -> Result<Self, Error> {
@@ -180,6 +183,7 @@ impl Machine {
             consistency_request: None,
             mediation: None,
             abandonments: super::super::abandonment::Abandonments::default(),
+            narrowings: BTreeMap::new(),
         })
     }
     pub(super) fn replay(p: &FileOversightProfile, events: &[Event]) -> Result<Self, Error> {
@@ -367,11 +371,13 @@ impl Machine {
                 | Event::ActorState(_)
                 | Event::ActorCheckpoint(..)
                 | Event::ActorReset(..)
+                | Event::NarrowAuthority(_)
         );
         if !without_current_time && !self.clock_ready {
             return Err(Error::Incomplete);
         }
         match event {
+            Event::NarrowAuthority(request) => return self.apply_authority_narrow(request),
             // Source-linked inputs are expanded exactly once by apply above.
             Event::TextMessage(..) => return Err(Error::Binding),
             Event::PublicationWitness(event) => return self.apply_publication_witness(event),

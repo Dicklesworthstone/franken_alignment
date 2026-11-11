@@ -80,6 +80,17 @@ pub struct OversightBroker {
 }
 
 impl OversightBroker {
+    pub(crate) fn narrow_targets(&mut self, sequence: u64, epoch: u64,
+        retained: crate::action::consequence::gate::TargetCeiling)
+        -> Result<crate::action::consequence::gate::TargetNarrowReceipt, Error>
+    {
+        let receipt = self.delivery.narrow_targets(sequence, epoch, retained)?;
+        for id in &receipt.cancelled {
+            if let Some(input) = self.inputs.get_mut(id) { input.approved = None; }
+        }
+        Ok(receipt)
+    }
+
     pub fn new(
         config: ControllerConfig,
         endpoint: &mut PublicationEndpoint,

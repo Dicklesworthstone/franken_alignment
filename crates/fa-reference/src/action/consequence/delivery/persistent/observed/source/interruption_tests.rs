@@ -241,6 +241,41 @@ fn caught_read_unwind_blocks_old_snapshot_until_real_recapture() {
 }
 
 #[test]
+fn ordinary_narrow_does_not_acknowledge_an_interrupted_source_read() {
+    let (_root, mut host, mut reader, capture, action) = setup();
+    let revision = host.revision();
+    assert!(catch_unwind(AssertUnwindSafe(|| {
+        host.refresh_source_with(
+            revision,
+            || panic!("interrupted acquisition before explicit restriction"),
+            ElapsedTick(2),
+        )
+    })).is_err());
+    let before = host.inspect();
+    let source = host.file_source_status().unwrap();
+    assert!(source.interrupted);
+    let reads = reader.status().read_attempts;
+    let request = super::super::narrowing::FileAuthorityNarrowRequest::new(
+        1,
+        before.control.sequence,
+        before.control.ledger.epoch,
+        vec![action.target.unwrap()],
+    ).unwrap();
+    host.narrow_authority(host.revision(), request).unwrap();
+    assert_eq!(host.file_source_status().unwrap(), source);
+    assert_eq!(reader.status().read_attempts, reads);
+    assert_eq!(host.inspect().control.ledger.elapsed, before.control.ledger.elapsed);
+    assert_eq!(host.inspect().executions, before.executions);
+    assert_eq!(host.inspect().control.ledger, before.control.ledger);
+    assert!(matches!(host.propose(host.revision(), 1, action.clone(), capture.snapshot().clone()),
+        Err(JournalError::Contract(Error::Incomplete))));
+    host.refresh_file_source(host.revision(), &mut reader, ElapsedTick(2)).unwrap();
+    assert_eq!(reader.status().read_attempts, reads + 1);
+    assert!(!host.file_source_status().unwrap().interrupted);
+    host.propose(host.revision(), 1, action, capture.snapshot().clone()).unwrap();
+}
+
+#[test]
 fn successful_unchanged_refresh_retains_whole_input_eligibility() {
     let (_root, mut host, mut reader, capture, spec) = setup();
     let action = host

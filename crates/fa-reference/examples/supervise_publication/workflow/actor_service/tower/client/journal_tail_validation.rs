@@ -268,6 +268,7 @@ fn kind_links(
         | Kind::Stop
         | Kind::StopProgress
         | Kind::ReplacePolicy
+        | Kind::NarrowAuthority
         | Kind::ReserveRecovery
         | Kind::ActorState
         | Kind::ActorCheckpoint

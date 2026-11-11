@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-11: add durable ordinary target-ceiling narrowing
+
+- Restrict the original target ceiling by intersection, cancelling and refunding
+  only excluded undispatched reservations while retaining allowed automatic
+  reservations and all dispatched/Unknown liabilities.
+- Persist the original gate transition, previous/effective ceilings and exact
+  operation identity; retain historical acknowledgments across canonical replay.
+- Add independently granted live plans and mutations with complete run cuts,
+  finite shared work, exact retries and explicit unsupported-history boundaries.
+- Preserve original human and driver predecessor checks. No automatic key
+  renewal, policy replacement, epoch reset or stream continuation is supplied.
+- Author regression sources under independent source review. Required RCH is
+  absent; no formatting, compilation, test or full-gate pass is claimed.
+
 ## 2026-11-11: continue ordinary schedules after explicit Unknown disposition
 
 - Accept native IrrecoverablyUnknown for local driver retirement while keeping

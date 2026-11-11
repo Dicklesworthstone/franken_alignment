@@ -673,6 +673,14 @@ impl DeliveryBroker {
         self.controller.revoke_epoch()
     }
 
+    pub(crate) fn narrow_targets(&mut self, sequence: u64, epoch: u64,
+        retained: crate::action::consequence::gate::TargetCeiling)
+        -> Result<crate::action::consequence::gate::TargetNarrowReceipt, Error>
+    {
+        self.check_not_stopping()?;
+        self.controller.narrow_targets(sequence, epoch, retained)
+    }
+
     pub fn abandon_unknown(&mut self, attempt: u64) -> Result<(), Error> {
         self.records.get(&attempt).ok_or(Error::Missing)?;
         self.controller.mark_irrecoverable(attempt)

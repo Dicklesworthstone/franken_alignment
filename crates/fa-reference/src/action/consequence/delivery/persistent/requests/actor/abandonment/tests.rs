@@ -418,7 +418,7 @@ fn every_original_storage_barrier_spends_once_without_exporting_an_unacknowledge
         let (port, grant) = supervisor.abandonment_port(1, 1, MAX_ABANDONMENT_REPLAY_EVENTS).unwrap();
         let input = plan(port.next(701, 1001)).request().unwrap();
         supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
-        supervisor.host().unwrap().store.fail_once(barrier);
+        supervisor.host().unwrap().fail_storage_once(barrier);
         assert_eq!(port.abandon(input), Err(FileAbandonmentError::Unavailable));
         assert_eq!(grant.remaining_operations(), 0);
         assert!(supervisor.owner.borrow().snapshot.is_none());

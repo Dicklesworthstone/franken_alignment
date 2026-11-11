@@ -327,6 +327,12 @@ impl PolicyAuthority {
         self.host.gate.revoke_epoch()
     }
 
+    pub(crate) fn narrow_targets(&mut self, sequence: u64, epoch: u64,
+        retained: TargetCeiling) -> Result<crate::action::consequence::gate::TargetNarrowReceipt, Error>
+    {
+        self.host.gate.narrow_targets(sequence, epoch, retained)
+    }
+
     pub fn mark_unknown(&mut self, id: u64) -> Result<(), Error> {
         self.host.gate.mark_unknown(id)
     }
