@@ -11,6 +11,8 @@ pub use abandonment::{LinkedAbandonment, LinkedAbandonmentNext};
 mod capabilities;
 mod cancellation;
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
+mod convening;
+pub use convening::{LinkedConvene, LinkedConveneNext};
 mod fence;
 pub use fence::LinkedFence;
 mod narrowing;
@@ -48,6 +50,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort, FileSupervisorCancellationPort,
     FileSupervisorAbandonmentPort, FileSupervisorNarrowPort,
+    FileSupervisorConvenePort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -62,7 +65,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 14] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 15] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -75,6 +78,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 14] = [
     Verb::Next,
     Verb::Resolve,
     Verb::Narrow,
+    Verb::Convene,
     Verb::Fence,
     Verb::PolicyReplay,
 ];
@@ -125,6 +129,8 @@ pub enum PublicationResult {
     Resolution(LinkedResolution),
     CancellationNext(LinkedCancellationNext),
     Cancellation(LinkedCancellation),
+    ConveneNext(LinkedConveneNext),
+    Convene(LinkedConvene),
     AbandonmentNext(LinkedAbandonmentNext),
     Abandonment(LinkedAbandonment),
     NarrowingNext(LinkedNarrowingNext),
@@ -177,6 +183,7 @@ pub struct PublicationTower {
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
     cancellation: Option<FileSupervisorCancellationPort>,
+    convening: Option<FileSupervisorConvenePort>,
     abandonment: Option<FileSupervisorAbandonmentPort>,
     narrowing: Option<FileSupervisorNarrowPort>,
     fence: Option<FileSupervisorFencePort>,
@@ -225,6 +232,7 @@ impl PublicationTower {
             hold_diagnosis: None,
             resolution: None,
             cancellation: None,
+            convening: None,
             abandonment: None,
             narrowing: None,
             fence: None,
@@ -468,7 +476,7 @@ impl PublicationTower {
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) && !(self.control_operator && matches!(request.verb, Verb::Fence | Verb::Narrow))
+            ) && !(self.control_operator && matches!(request.verb, Verb::Fence | Verb::Narrow | Verb::Convene))
             {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -487,7 +495,7 @@ impl PublicationTower {
             .is_some_and(|g| Some(g) != self.mount.generation)
             || (matches!(
                 request.verb,
-                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence | Verb::Narrow
+                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene
             ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -513,6 +521,16 @@ impl PublicationTower {
 
         if request.verb == Verb::WhyHeld {
             return self.dispatch_hold_diagnosis(access, request);
+        }
+
+        if request.verb == Verb::Convene
+            || (request.verb == Verb::Next
+                && matches!(request.arguments, ReadArguments::ConveneNext { .. }))
+        {
+            if !self.control_operator {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+            return self.dispatch_convening(access, request);
         }
 
         if request.verb == Verb::Narrow

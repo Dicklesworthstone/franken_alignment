@@ -215,6 +215,11 @@ where
     if operator_settings.is_some() && tower_generation.is_none() {
         return Err("operator request schedules require an explicit Tower generation".into());
     }
+    if topology_selection.is_some()
+        && operator_settings.is_some_and(|settings| settings.convening.is_some())
+    {
+        return Err("held-review convening does not support mediated topology services".into());
+    }
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
@@ -666,16 +671,23 @@ where
             }
             Ok(())
         })();
+        let mut automatic_cleanup_attempted = false;
         let mut failure = work.err().map(|error| {
             if observational || early_control.as_ref().is_some_and(|control| control.native_cleanup_started()) {
                 error
             } else {
+                automatic_cleanup_attempted = true;
                 match stop(&mut driver, ingress.selected(), &mut time) {
                     Ok(()) => error,
                     Err(stopping) => format!("{error}; stop/drain: {stopping}"),
                 }
             }
         });
+        if automatic_cleanup_attempted {
+            // Automatic cleanup has already spent its one attempt. Keep the
+            // original operator reply channel, never a second drain entry.
+            drop(early_control.take());
+        }
         let started = Instant::now();
         let mut actor_transport_failed = false;
         while started.elapsed() < Duration::from_millis(actor.reply_ms) {

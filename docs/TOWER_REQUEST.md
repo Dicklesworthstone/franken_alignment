@@ -50,13 +50,14 @@ zeros, fractional/exponent forms, numeric JSON values and overflow are rejected.
 | `situation` | `null` for a fresh capture; `{"cursor":"17"}` for native continuation; opt-in request links use `{"request_links":true}` or `{"request_links":true,"cursor":"17"}` |
 | `related` | `null` or `{"relation":null}`; a relation string selects one existing relation kind |
 | `tail` | Snapshot: `null` or `{"since_seq":"0","max_events":"64"}`. Native: exactly `{"after_revision":"0"}` or `{"cursor":"17"}`, with a separately granted original journal disclosure |
-| `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: `{"operation":"9001"}`. Independent undispatched cancellation: `{"action":"cancel_undispatched","operation":"9001"}`. Each native capability requires its own grant |
+| `next` | Reference snapshot: `null` or `{"max_cost":"8"}`. Native reconciliation: `{"operation":"9001"}`. Independent undispatched cancellation: `{"action":"cancel_undispatched","operation":"9001"}`. Explicit ordinary held-review planning: `{"action":"convene_held","round":"8"}`. Each native capability requires its own grant |
 | `replay` | `null` or `{"interventions":[...]}`; requires a nonempty idempotency key |
 | `propose` | `{"request":"1","proposal":{...}}`; requires the same canonical key and an explicit nonzero address generation |
 | `precheck` | `{"query":"1","proposal":{...}}` |
 | `capabilities` | `{"query":"1","expected_policy_epoch":"0"}` at the native run mount with an explicitly installed disclosure |
 | `policy-replay` | `{"campaign":"1","expected_policy_generation":"1","candidate":{"generation":"2","nodes":[...]}}`, optionally adding `"paged":true`; native page continuation uses exactly `{"campaign":"1","cursor":"17"}`. Requires separate native grants, canonical matching key and explicit nonzero mount generation |
 | `resolve` | On Unix, `{"operation":"9001","expected":{...}}` reconciles an original receipt. Adding `"action":"cancel_undispatched"` selects independent undispatched cancellation. Both require the full native basis, same canonical idempotency key and exact nonzero registration generation |
+| `convene` | On Unix, `{"round":"8","expected":{...}}` explicitly admits one ordinary held-review successor. Requires the separate original convening grant, complete held predecessor, matching round key and exact nonzero registration generation; Pending admission is not an opened round |
 | Other registered verbs | `null`; the original dispatcher returns `CapabilityUnsupported` |
 
 The six relation strings are `closure_strong_ref`, `closure_weak_ref`,
@@ -104,6 +105,25 @@ known plan supplies the complete Resolve document with that observed basis.
 The separate cancellation grant, exact original owner and full current
 predecessor are still required at execution. No caller clock, source, receipt
 or publication authority is accepted.
+
+### Explicit ordinary held-review successor
+
+At an original request address, `next` with exactly
+`{"action":"convene_held","round":"8"}` offers one independently granted
+successor to the original successful Hold. A Known actionable plan contains the
+complete `convene` document, including its original effect scope, request and
+generation, attempt, held round, journal/control/authority/input revisions,
+recorded elapsed tick and unchanged action deadline. The scope has exactly
+tenant, principal, run, branch, authority and purpose (`"effect"`); all numeric
+fields are canonical decimal strings, and recorded time may be null.
+
+The `ConveneNext` and `Convene` typed arguments have no helper recipe, source,
+caller clock, verdict or authority field. Planning reserves no operation.
+Convene queues one finite, nonrenewable, process-local operation; only the
+original driver can consume its sealed ticket and open a fresh round. Explicit
+exact retries observe its current Pending/Opened/Failed/Abandoned disposition
+without reexecution. See [held-review convening](HELD_REVIEW_CONVENING.md) for
+closed response schemas, custody and the original deadline/two-key boundary.
 
 ### Native situation pages
 

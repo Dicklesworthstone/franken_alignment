@@ -97,6 +97,10 @@ fn fixed_request_vector_is_stable_and_all_registered_verbs_are_recognized() {
             Verb::Resolve => value = resolution_request(),
             #[cfg(unix)]
             Verb::Fence => value = fence_request(),
+            #[cfg(unix)]
+            Verb::Narrow => value = narrow_request(),
+            #[cfg(unix)]
+            Verb::Convene => value = convene_request(),
             Verb::Precheck => {
                 value.arguments = ReadArguments::Precheck {
                     query: 1,
@@ -892,6 +896,57 @@ const FENCE: &str = concat!(
 #[cfg(unix)]
 fn fence_request() -> TowerRequest {
     decode_request(FENCE.as_bytes()).unwrap()
+}
+
+#[cfg(unix)]
+fn narrow_request() -> TowerRequest {
+    use crate::action::consequence::delivery::persistent::requests::actor::FileNarrowBasis;
+    let mut request = fence_request();
+    let ReadArguments::Fence { operation, expected } = request.arguments else {
+        panic!("exact native fence fixture");
+    };
+    request.operation_id = format!("narrow-{operation}");
+    request.verb = Verb::Narrow;
+    request.arguments = ReadArguments::Narrow {
+        operation,
+        expected: FileNarrowBasis {
+            scope: expected.scope,
+            journal_revision: expected.journal_revision,
+            control_sequence: expected.control_sequence,
+            authority_epoch: expected.authority_epoch,
+            recorded_at: Some(ElapsedTick(1)),
+        },
+        retained_targets: Vec::new(),
+    };
+    request
+}
+
+#[cfg(unix)]
+fn convene_request() -> TowerRequest {
+    use crate::action::consequence::delivery::persistent::requests::actor::FileConveneBasis;
+    let mut request = resolution_request();
+    let ReadArguments::Resolve { operation, expected } = request.arguments else {
+        panic!("exact native resolution fixture");
+    };
+    request.operation_id = format!("convene-{operation}");
+    request.verb = Verb::Convene;
+    request.arguments = ReadArguments::Convene {
+        round: operation,
+        expected: FileConveneBasis {
+            scope: expected.scope,
+            request: expected.request,
+            request_generation: expected.request_generation,
+            attempt: expected.attempt,
+            held_round: operation - 1,
+            journal_revision: expected.journal_revision,
+            control_sequence: expected.control_sequence,
+            authority_epoch: 0,
+            input_revision: 1,
+            recorded_at: expected.recorded_at,
+            deadline: ElapsedTick(100),
+        },
+    };
+    request
 }
 
 #[cfg(unix)]

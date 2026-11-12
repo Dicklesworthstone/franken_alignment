@@ -11,6 +11,9 @@ verbs with an explicit cancellation action. Independent `abandonment` selects
 terminal disposition of an original Unknown request while retaining its charge.
 An ordinary `narrowing` grant restricts the original exact target ceiling through
 explicit `next` and `narrow`, retaining allowed work and uncertain liabilities.
+A separately selected ordinary `convening` grant admits explicit fresh helper
+rounds for a held original request through `next` and `convene`, with the same
+helper recipe, original deadline and later independent human approval.
 A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
@@ -37,8 +40,10 @@ Tower generation.
 Live learned actor and resident sequence commands also accept the explicitly
 paired operator/generation selection through their own closed grammar; see
 [live learned observation](LIVE_LEARNED_OPERATOR.md). Their facade preserves
-source-derived intake and the original numerical-replay limits. Multi-peer and
-ordinary native-text service modes do not consume it. Unsupported combinations
+source-derived intake and the original numerical-replay limits. Native generated
+text services use their own [explicit operator selection](NATIVE_TEXT_PUBLICATION_SERVICE.md)
+and numerical-work limits; ordinary held-review convening remains unavailable
+there. Multi-peer services do not consume this selection. Unsupported combinations
 fail before reading configuration.
 
 An optional `--precheck-profile PRECHECK_PROFILE` retains its separate actor
@@ -147,7 +152,7 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
-`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`
+`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`
 and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
@@ -164,7 +169,7 @@ Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
 explanation, journal Tail, request history, recorded-state diagnosis, completed-review explanation,
 policy replay, receipt reconciliation, undispatched-request cancellation,
-Unknown disposition, ordinary target restriction or
+Unknown disposition, ordinary target restriction, explicit held-review convening or
 original admission fencing must be
 enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to
@@ -511,6 +516,64 @@ for request examples, response schemas, finite work and the active-driver
 boundary. Authored plain/checked service regressions and authenticated client
 regressions received independent source review; execution and formatting remain
 pending because the required Rust/RCH tools are unavailable.
+
+## Explicitly continue an ordinary held review
+
+Select a separate optional `convening` profile member:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+Queries must be 1–1024 and operations 1–128. The selection is independent of
+inspection or other mutation grants; it may be the only selected capability.
+Omitted/null selection preserves the ordinary service's existing post-Hold
+cancellation behavior. The service rejects this selection for numerical,
+generated-text and topology-mediated profiles before starting work.
+
+While the original ordinary request is held, send a complete Tower request
+using `tower-operator-exchange`, for example:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "plan-held-review-8",
+  "address": "fa://1/attempt/request-3-2-4-5-7@41",
+  "verb": "next",
+  "arguments": {"action": "convene_held", "round": "8"},
+  "idempotency_key": null
+}
+```
+
+Replace the full scope, original request and route generation with the actual
+deployment's values, and select a globally unused successor round. Inspect the
+returned action and explicitly submit that complete `convene` document. Its
+first Known result is Pending admission with `round_opened: false`. The service
+must separately consume its one-use ticket, recheck the exact original held
+predecessor, capture fresh evidence and launch the original fixed helper recipe
+before the same operation can report Opened. Repeating the same command only
+observes that disposition; it cannot launch again or restore an allowance.
+
+Restored helper availability may be reviewed with unchanged source bytes.
+Neither availability nor source changes, actor polls or repeated Hold outcomes
+automatically requests another round. Every successor consumes the same original
+cumulative grant and action lifetime. Previous children must be reaped, every
+round stays in native history, and a later Continue still waits for fresh
+independent human approval and both original publication keys. Checked
+publication retains its original prepared witness configuration. Later scheduled
+requests skip consumed successor round IDs without changing their external keys.
+
+Stop remains first at each cooperative boundary. An expired deadline, unavailable
+fresh source or failed launch follows original failure cleanup. Failed and
+abandoned handoffs are never refunded; operator retirement revokes unconsumed
+work. Original operator replies remain available within their finite lifetime
+without repeating an already attempted Stop/drain. See the
+[complete held-review contract](HELD_REVIEW_CONVENING.md) for native and wire
+semantics, exact predecessor fields and validation limits.
 
 ## Plan and reconcile an uncertain publication
 
@@ -902,7 +965,7 @@ Only the separate operator session receives operator access and its explicitly
 selected grants. Policy replay additionally selects `Experiment`; it does not
 grant `Permit`, a source callback, precheck disclosure, helper/human keys or a
 supervisor mutation capability. Resolution, cancellation, Unknown disposition,
-ordinary narrowing and Fence independently select `Permit` through restricted
+ordinary narrowing, held-review convening and Fence independently select `Permit` through restricted
 operator constructors whose closed profiles refuse actor submission, ticket
 polling and precheck before native work. A proposal sent to an
 operator profile cannot acquire source evidence or create an action. The actor endpoint keeps its original grants and

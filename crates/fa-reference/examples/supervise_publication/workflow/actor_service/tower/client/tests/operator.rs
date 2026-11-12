@@ -3,6 +3,8 @@
 mod abandonment;
 #[path = "operator/cancellation.rs"]
 mod cancellation;
+#[path = "operator/convening.rs"]
+mod convening;
 #[path = "operator/fence.rs"]
 mod fence;
 #[path = "operator/hold_diagnosis.rs"]

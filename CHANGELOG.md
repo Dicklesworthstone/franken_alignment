@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-12: connect authenticated held-review continuation end to end
+
+- Connect separately granted Next/Convene to exact original held predecessors,
+  with strict action/request correlation and distinct queued/opened dispositions.
+- Add an optional finite operator profile; retain ordinary held requests while
+  the original service handles explicit fresh rounds, Stop and actor ingress.
+- Preserve helper recipes, original deadlines, checked-publication preparation,
+  independent human approval and all spent work across reconnects and schedules.
+- Validate operator replies before output or later explicit documents, retain
+  default behavior when unselected, and reject unsupported startup profiles.
+- Prevent terminal replies from repeating an already attempted automatic or
+  authenticated Stop/drain while preserving fallback after protocol-only failure.
+- Add sixteen substantive Tower/client/service/control regression functions and
+  a subprocess fixture; retain strict complete-argument codec coverage. Source
+  review and qualified syntax/format checks do not qualify unexecuted runtime.
+
 ## 2026-11-12: add explicit bounded ordinary HoldEffect continuation
 
 - Add one original finite held-review grant, complete predecessor plans and

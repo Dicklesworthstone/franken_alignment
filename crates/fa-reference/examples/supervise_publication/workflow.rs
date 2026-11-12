@@ -9,6 +9,8 @@ pub mod continuation;
 pub(crate) mod control;
 #[path = "workflow/review_session.rs"]
 mod review_session;
+#[path = "workflow/held_review.rs"]
+mod held_review;
 
 use super::config::{CLOCK_DOMAIN, Config, debug};
 use super::peers::{Admission, PeerProfile};
@@ -33,6 +35,7 @@ use fa_reference::action::consequence::oversight::actor_wire::{
 };
 use fa_reference::action::consequence::oversight::helper_workers::HelperLimits;
 use fa_reference::action::{ActionState, ElapsedTick};
+use fa_reference::action::consequence::Consequence;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::os::unix::fs::{FileTypeExt, MetadataExt};
@@ -409,9 +412,14 @@ where
         .map_err(debug)?
         .input_revision(attempt)
         .map_err(debug)?;
+    // Successor rounds may use keys that a later scheduled request would have
+    // preferred. Allocation observes the original bounded round history; it
+    // does not open a round or replenish any selected allowance.
+    let round = driver.supervisor().next_review_round(request).map_err(debug)?;
+    let held_review = held_review::Continuation::new(driver, request, &config.programs)?;
     let launch = FileReviewLaunch {
         request,
-        round: request,
+        round,
         window,
         expected_input_revision: input_revision,
         workers: std::mem::take(&mut config.programs),
@@ -436,6 +444,19 @@ where
                 if matches!(driver.phase(), FileDriverPhase::AwaitingDispatch { .. }) =>
             {
                 break;
+            }
+            FileDriverEvent::ReviewApplied { receipt, .. }
+                if receipt.policy.control.decision.consequence == Consequence::HoldEffect =>
+            {
+                if let Some(held_review) = &held_review {
+                    if held_review.wait(
+                        driver, reviewer, config, deadline, &mut control, time,
+                    )? {
+                        continue;
+                    }
+                }
+                cancel_unspent(driver, request)?;
+                return Ok(());
             }
             FileDriverEvent::ReviewApplied { .. }
             | FileDriverEvent::ReviewRejected { .. }

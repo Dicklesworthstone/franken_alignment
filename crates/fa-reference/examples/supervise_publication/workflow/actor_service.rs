@@ -414,6 +414,9 @@ where
     if topology.is_some() && open {
         return Err("topology-supervised live service requires an explicit create mode".into());
     }
+    if topology.is_some() && operator_settings.is_some_and(|settings| settings.convening.is_some()) {
+        return Err("held-review convening does not support mediated topology services".into());
+    }
     if precheck_settings.is_some() && topology.is_some() {
         return Err("precheck disclosure has no topology-service fallback".into());
     }
@@ -882,6 +885,7 @@ where
         if let Some(service) = &mut precheck {
             service.retire();
         }
+        let mut automatic_cleanup_attempted = false;
         let mut failure = match work {
             Ok(()) => None,
             // A settled recorded query has no live admission to withdraw. Preserve
@@ -895,11 +899,20 @@ where
             {
                 Some(error)
             }
-            Err(error) => Some(match stop(&mut driver, actor.request, &mut time) {
-                Ok(()) => error,
-                Err(stopping) => format!("{error}; stop/drain: {stopping}"),
-            }),
+            Err(error) => {
+                automatic_cleanup_attempted = true;
+                Some(match stop(&mut driver, actor.request, &mut time) {
+                    Ok(()) => error,
+                    Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+                })
+            }
         };
+        if automatic_cleanup_attempted {
+            // The fallback already attempted the original Stop and drain.
+            // Preserve finite operator replies without re-entering a failed
+            // sweep through this handle's unused native-outcome cache.
+            drop(early_control.take());
+        }
         // Read-free grace for terminal polls and same-session reconnects. The only
         // replies are original ActorWire responses to actual actor commands. Neither
         // disconnection nor a failed output proves nonexecution or requests a resend.

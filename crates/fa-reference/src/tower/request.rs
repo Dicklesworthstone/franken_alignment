@@ -10,6 +10,8 @@ use std::fmt::{self, Write};
 #[cfg(unix)]
 pub(super) mod fence;
 #[cfg(unix)]
+pub(super) mod convening;
+#[cfg(unix)]
 pub(super) mod narrowing;
 pub(super) mod policy;
 #[cfg(unix)]
@@ -215,6 +217,22 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             })
         }
         #[cfg(unix)]
+        Verb::Next if args.contains_key("round") => {
+            fields(args, &["action", "round"])?;
+            if text(args, "action")? != "convene_held" {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+            Ok(ReadArguments::ConveneNext { round: decimal(args, "round")? })
+        }
+        #[cfg(unix)]
+        Verb::Convene => {
+            fields(args, &["round", "expected"])?;
+            Ok(ReadArguments::Convene {
+                round: decimal(args, "round")?,
+                expected: convening::decode_basis(field(args, "expected")?)?,
+            })
+        }
+        #[cfg(unix)]
         Verb::Next if args.contains_key("operation") => {
             if args.contains_key("action") {
                 if text(args, "action")? == "narrow_authority" {
@@ -401,6 +419,24 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
         }
         #[cfg(unix)]
+        (Verb::Next, ReadArguments::ConveneNext { round }) => {
+            if *round == 0 || request.idempotency_key.as_ref()
+                .is_some_and(|key| key != &round.to_string())
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (Verb::Convene, ReadArguments::Convene { round, expected }) => {
+            convening::validate_expected(*expected)?;
+            if *round == 0
+                || request.idempotency_key.as_deref() != Some(round.to_string().as_str())
+                || request.address.generation.is_none_or(|generation| generation == 0)
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
         (
             Verb::Resolve,
             ReadArguments::Resolve {
@@ -563,7 +599,7 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             return Err(TowerDecodingError::MalformedRequest);
         }
         #[cfg(unix)]
-        (Verb::Resolve | Verb::Fence | Verb::Narrow, ReadArguments::None) => {
+        (Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene, ReadArguments::None) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -809,6 +845,16 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
         ReadArguments::CancellationNext { operation } => object_json(&[
             ("action", quote("cancel_undispatched")),
             ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::ConveneNext { round } => object_json(&[
+            ("action", quote("convene_held")),
+            ("round", quote(&round.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::Convene { round, expected } => object_json(&[
+            ("round", quote(&round.to_string())),
+            ("expected", convening::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
         ReadArguments::CancelUndispatched { operation, expected } => object_json(&[

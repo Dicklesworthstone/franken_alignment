@@ -330,3 +330,6 @@ mod operator;
 
 #[path = "tower_service/operator_sequence.rs"]
 mod operator_sequence;
+
+#[path = "tower_service/convening.rs"]
+mod convening;

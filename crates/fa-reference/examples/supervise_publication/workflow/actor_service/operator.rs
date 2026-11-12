@@ -1,6 +1,6 @@
 //! Separately authenticated inspection and explicitly selected native control.
 //! A restricted operator mount keeps receipt reconciliation, undispatched-request
-//! cancellation, unknown abandonment, target narrowing and admission stop
+//! cancellation, unknown abandonment, target narrowing, held-review convening and admission stop
 //! independent from actor intake.
 #[path = "operator/profile.rs"]
 mod profile;
@@ -16,6 +16,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorNarrowGrant,
+    FileSupervisorConveneGrant,
     FileSupervisorRequestHistoryGrant, FileSupervisorResolutionGrant,
     FileSupervisorReviewExplanationGrant,
 };
@@ -44,6 +45,7 @@ struct Active {
     cancellation: Option<FileSupervisorCancellationGrant>,
     abandonment: Option<FileSupervisorAbandonmentGrant>,
     narrowing: Option<FileSupervisorNarrowGrant>,
+    convening: Option<FileSupervisorConveneGrant>,
     fence: Option<FileSupervisorFenceGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
@@ -91,6 +93,7 @@ impl Service {
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
                     || settings.narrowing.is_some()
+                    || settings.convening.is_some()
                 {
                     PublicationTower::new_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -346,6 +349,16 @@ impl Service {
         } else {
             None
         };
+        let convening = if let Some(selected) = &settings.convening {
+            let (port, custodian) = driver
+                .supervisor()
+                .convene_port(selected.queries, selected.operations)
+                .map_err(debug)?;
+            tower.set_convene(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let review_explanation = if let Some(selected) = &settings.review_explanation {
             let (port, custodian) = match selected.numerical_replay_events {
                 Some(events) => driver
@@ -385,7 +398,7 @@ impl Service {
             None
         };
         // The restricted control mount admits only separately selected native
-        // Resolve, Narrow and Fence paths. Permit cannot enable actor Propose or Hold.
+        // Resolve, Narrow, Convene and Fence paths. Permit cannot enable actor Propose or Hold.
         // Experiment remains limited to the selected native policy comparison.
         let mut purposes = Vec::new();
         if policy_replay.is_some() {
@@ -395,6 +408,7 @@ impl Service {
             || cancellation.is_some()
             || abandonment.is_some()
             || narrowing.is_some()
+            || convening.is_some()
             || fence.is_some()
         {
             purposes.push(PurposeTag::Permit);
@@ -438,6 +452,7 @@ impl Service {
                 cancellation,
                 abandonment,
                 narrowing,
+                convening,
                 fence,
                 review_explanation,
                 policy_replay,
@@ -556,7 +571,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -599,6 +614,10 @@ impl Service {
                 grant.remaining_numerical_replay_events(),
             )),
             active.narrowing.as_ref().map(|grant| (
+                grant.remaining_queries(),
+                grant.remaining_operations(),
+            )),
+            active.convening.as_ref().map(|grant| (
                 grant.remaining_queries(),
                 grant.remaining_operations(),
             )),

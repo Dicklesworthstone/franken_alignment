@@ -93,6 +93,78 @@ handoff. External request numbers therefore cannot collide with an earlier
 successor's native review ID. The allocator observes; it does not reserve a
 round or expand either native or grant capacity.
 
+## Authenticated Tower and live service
+
+The registered `convene` verb connects only through a restricted original
+control-operator mount with Permit purpose and its own same-owner
+`FileSupervisorConvenePort`, installed with `set_convene`. Actor, ordinary
+observer, legacy reconciliation, imported-snapshot and foreign-owner routes do
+not gain this capability. Learned and generated-text service profiles reject
+its selection, as do topology-mediated ordinary create/open/schedule profiles.
+
+At the exact native request address, send `next` with
+`{"action":"convene_held","round":"8"}`. All Tower integers are canonical
+decimal strings. An actionable `convene-next` response contains the complete
+generation-bound `convene` document; inspect and explicitly submit it. The
+mutation requires the same canonical round idempotency key, an explicit nonzero
+mount generation and its full eleven-field native predecessor. No caller clock,
+source contents, helper recipe or claimed review verdict is accepted.
+
+The closed response schemas are `fa.publication-convene-next/1` and
+`fa.publication-convene/1`. Both bind the original request/round, registration,
+query correlation and scope `original_held_review`. They explicitly report
+`live_evidence_read`, `clock_read`, `effect_authority`, `payload_disclosed` and
+`automatic_retry` as false. Planning returns one connected action with unknown
+cost, information gain, ranking and current publication eligibility. Mutation
+reports `queued_work_is_durable: false` and a known admission disposition:
+
+```json
+{"outcome":"pending","round_opened":false,"opened":null}
+```
+
+Only an actually completed native launch can report `outcome: "opened"` and
+`round_opened: true`. Its `opened` object carries the actual journal revision,
+input revision and start tick, all as decimal strings. Missing original request
+knowledge is `Unknown(outcome_unknown)`; unavailable owner knowledge is
+`Unknown(controller_unavailable)`. Neither is encoded as a successful plan.
+
+Select the optional member in the existing independent operator profile:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+The ordinary Linux Tower service retains this original grant across requests
+and reconnects. With it selected, an actual Hold waits within the original
+action/service deadline, servicing the same independent Stop, operator and
+actor endpoints. The fixed helper program/argument/environment recipe and
+checked-publication preparation are retained from before the initial review.
+Every successor still requires a separate explicit operator admission. Without
+this selection, the existing post-Hold cancellation behavior is unchanged.
+
+The service consumes one ticket only after old helper children are reaped,
+builds a fresh bounded review window within the unchanged lifetime, captures
+fresh evidence and launches the original helper protocol once. If a later
+scheduled request prefers a round ID used by that successor, the bounded
+original allocator chooses a free ID; external request identity is unchanged.
+Operator retirement withdraws unconsumed work, and deadline or capture/launch
+failure follows the original failure cleanup. Terminal replies cannot repeat
+an already attempted automatic Stop/drain. A failed authenticated Stop
+application keeps its original reply custody; a protocol-only failure still
+requires the original automatic failure Stop.
+
+Use `supervise_publication tower-operator-exchange OPERATOR_PROFILE JSON` to
+send each selected document. The client validates exact scope, predecessor,
+round/generation, complete returned action, envelope and disposition metadata
+before emitting a reply or sending a later supplied document. It accepts
+Pending as known admission, never as opened work, and cannot select or resend
+an action on its own. These authenticated response checks are correlation and
+protocol validation, not independent proof against a dishonest supervisor.
+
 ## Verification boundary
 
 Nine authored public integration tests cover actual Hold and fresh independent
@@ -103,8 +175,21 @@ query/operation allowances, round-ID exclusion and a later failed review's
 inability to borrow an old Hold. Their helper ballots are controlled fixtures,
 not evidence about model reliability.
 
+The connected increment adds five public Tower and five authenticated client
+tests, five substantive service/profile tests plus one helper subprocess entry
+fixture, and one causal Stop-control test. They cover exact codecs and sealed
+responses; absent, actor and foreign grants; real Pending-to-Opened and fresh
+two-key publication; malformed response suppression before later documents;
+plain/checked live publication across two scheduled requests; unchanged-source
+helper recovery without automatic retry; missing-source launch failure;
+independent Stop and original deadline while held; nonrenewable profile bounds
+and unsupported startup refusal; and one-time cleanup
+through single-request and scheduled terminal replies. The protocol-only Stop
+refusal test also asserts that automatic failure cleanup remains necessary.
+
 Independent source review and qualified-nightly syntax parsing passed for the
-native source and test files. Compilation and runtime of this increment remain
+changed native, Tower, client and service source/test files; new files are
+formatted. Compilation and runtime of these increments remain
 unverified: the existing library compiler was killed by the environment while
 emitting metadata, before reaching integration targets. No whole-repository,
 RCH, production or roadmap qualification is claimed.

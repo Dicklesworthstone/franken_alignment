@@ -257,6 +257,24 @@ request still faces the remaining ceiling. This ordinary operation does not
 handle learned, predictor, stream or mediated histories; the checkpoint contract
 below remains separate.
 
+#### Implemented ordinary held-review continuation
+
+Select the independent operator profile's `convening` capability to retain an
+ordinary held request while awaiting an explicit successor. Send Tower `next`
+at its full original request address with `action: "convene_held"` and an unused
+round ID, inspect the complete action, then explicitly submit its `convene`
+document with `tower-operator-exchange`. A Known Pending reply means admission
+only. The original supervisor must capture fresh complete evidence and launch
+the same configured helpers before that operation can report Opened.
+
+Helper recovery can justify a fresh round with unchanged source bytes, but
+edits, polling and another Hold never select one automatically. The operation
+allowance and original deadline remain cumulative across reconnects and
+scheduled requests. Failed/abandoned operations remain spent; a new Continue
+still needs fresh independent human approval. Omitted capability selection
+preserves the original service behavior. This path is limited to ordinary,
+unmediated Reviewing holds; see the [exact contract](HELD_REVIEW_CONVENING.md).
+
 ### P2. Investigating an incident
 
 1. `fa get fa://…/incident/<id>` → the incident with its `Knowledge` status and the addresses of the closures, rounds, evidence and findings it references; `fa verify fa://…/receipt/<id>` confirms independent bundle and receipt integrity before trusting retained artifacts.

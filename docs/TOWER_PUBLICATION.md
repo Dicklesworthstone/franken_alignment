@@ -1,13 +1,14 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects fourteen
+On Unix, `fa_reference::tower::publication::PublicationTower` connects fifteen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
 separately granted recorded-state `why-held`, and bounded original receipt
 planning/reconciliation, independently granted undispatched-request cancellation
 or explicit Unknown disposition through `next` and `resolve`, independently
-granted ordinary target-ceiling restriction through `next` and `narrow`, separately granted
+granted ordinary target-ceiling restriction through `next` and `narrow`, explicit
+ordinary held-review admission through `next` and `convene`, separately granted
 original journal `tail`, request-to-review `related`, and original-domain `fence` through its restricted
 control mount.
 It uses the same `TowerRequest`, verb vocabulary
@@ -121,6 +122,25 @@ and every stream owner, without borrowing their separate replay authority.
 Sealed `narrowing-next` and `narrowing` results correlate the exact requested,
 prior and effective sets and the original run cut. They retain the original
 finite grant and exact retry rules; a facade creates no new native budget.
+
+## Explicitly request a fresh ordinary held review
+
+The [held-review contract](HELD_REVIEW_CONVENING.md) connects `next` with
+`action: "convene_held"` and an unused round ID at the original request address
+to the registered `convene` verb. Its separate original grant, installed through
+`set_convene`, is available only to a restricted control operator with Permit
+purpose. The mutation requires a concrete route generation, matching round key
+and complete original successful Hold predecessor.
+
+The Tower admits bounded process-local work and initially reports Pending. It
+does not capture evidence, open a native round or create either publication key.
+The original ordinary service consumes the one-use ticket, captures fresh
+complete evidence and opens a new frozen helper round under the original
+deadline and helper recipe. Only that successful handoff changes the historical
+admission disposition to Opened. Failed/abandoned handoffs remain spent;
+explicit exact retries observe the same operation and never relaunch it.
+Actor polling, source edits and helper outcomes do not request a successor.
+A new Continue still requires fresh independent human approval.
 
 ## Observe an original learned stream owner
 
@@ -756,7 +776,8 @@ into the existing ordinary `supervise_publication` service. Fresh source
 admission, peer credentials, selected-request scheduling, independent Stop and
 the original review/publication path remain native. Supervisor mutations are
 limited to independently selected original-domain Fence, original-receipt
-reconciliation and undispatched-request cancellation. Arbitrary affordance
+reconciliation, undispatched-request cancellation, Unknown disposition,
+ordinary target restriction and explicit ordinary held-review admission. Arbitrary affordance
 execution, a planner's decision card, learned generation, branch rehearsal and
 independent receipt verification remain outside this profile.
 Unsupported verbs refuse before touching the native owner.

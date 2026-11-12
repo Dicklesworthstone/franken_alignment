@@ -215,6 +215,19 @@ pub enum ReadArguments {
     CancellationNext {
         operation: u64,
     },
+    /// Plan one explicitly granted fresh review of the original held request.
+    /// Reading this plan neither queues work nor opens a congress round.
+    #[cfg(unix)]
+    ConveneNext {
+        round: u64,
+    },
+    /// Queue one separately authorized successor to an acknowledged HoldEffect.
+    /// The original driver must capture fresh inputs and open the actual round.
+    #[cfg(unix)]
+    Convene {
+        round: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileConveneBasis,
+    },
     /// Cancel one original undispatched request at its complete acknowledged
     /// cut. The independent cancellation grant owns the mutation and retries;
     /// a reconciliation grant cannot authorize it.
@@ -684,6 +697,7 @@ impl ReferenceTower {
             (Verb::Next, ReadArguments::AbandonmentNext { .. })
                 | (Verb::Resolve, ReadArguments::AbandonUnknown { .. })
                 | (Verb::Next, ReadArguments::NarrowingNext { .. })
+                | (Verb::Next, ReadArguments::ConveneNext { .. })
                 | (Verb::Narrow, ReadArguments::Narrow { .. })
         ) {
             // Original disposition and authority narrowing require the live

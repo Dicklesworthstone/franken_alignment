@@ -111,6 +111,9 @@ where
 {
     // Own the complete bootstrap before any source, clock, socket or recovery
     // mutation. Richer publication contracts cannot collapse to plain limits.
+    if operator.is_some_and(|settings| settings.convening.is_some()) {
+        return Err("held-review convening does not support mediated topology services".into());
+    }
     let publication_limits = publication
         .map(PublicationProfile::simple_limits)
         .transpose()?;

@@ -24,6 +24,8 @@ use std::path::Path;
 mod abandonment;
 #[path = "client/cancellation.rs"]
 mod cancellation;
+#[path = "client/convening.rs"]
+mod convening;
 #[path = "client/fence.rs"]
 mod fence;
 #[path = "client/hold_diagnosis.rs"]
@@ -230,6 +232,7 @@ fn exchange_endpoint(
             endpoint.request_history_limits,
         )?;
         narrowing::check_profile(&parsed, &document.request, endpoint.scope)?;
+        convening::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -544,6 +547,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("narrowing-next"), Verb::Next) | (Some("narrowing"), Verb::Narrow) => {
             if !narrowing::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
+        (Some("convene-next"), Verb::Next) | (Some("convene"), Verb::Convene) => {
+            if !convening::matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,

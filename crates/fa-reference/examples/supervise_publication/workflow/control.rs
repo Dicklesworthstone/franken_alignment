@@ -134,7 +134,19 @@ impl Control {
     }
 
     pub(super) fn native_cleanup_started(&self) -> bool {
-        self.native_outcome.try_borrow().map_or(true, |outcome| outcome.is_some())
+        if self.native_outcome.try_borrow().map_or(true, |outcome| outcome.is_some()) {
+            return true;
+        }
+        // The separately authenticated Stop transport owns an equally final
+        // one-use outcome, including a failed drain. Automatic failure cleanup
+        // must not replay it or discard a reply that this service still owns.
+        #[cfg(target_os = "linux")]
+        if let Some(service) = &self.service {
+            return service.try_borrow().map_or(true, |service| {
+                service.application_started || service.recovery_application.is_some()
+            });
+        }
+        false
     }
 
     /// Without an acknowledged native Stop or a connection, this samples no
@@ -184,6 +196,8 @@ struct Service {
     cleanup: Duration,
     poll_ms: u64,
     outcome: Option<Result<bool, String>>,
+    // A protocol refusal or silent peer is not a native cleanup attempt.
+    application_started: bool,
     pending: Option<ReviewStream>,
     pending_since: Option<Instant>,
     recovery_application: Option<StopRecoveryApplication>,
@@ -200,7 +214,8 @@ impl Service {
         eprintln!("Independent stop endpoint ready: {path:?}");
         Ok(Self { socket, admission, operation, runtime: Duration::from_millis(profile.runtime_ms),
             cleanup: Duration::from_millis(config.timing.cleanup_ms), poll_ms: profile.poll_ms,
-            outcome: None, pending: None, pending_since: None, recovery_application: None })
+            outcome: None, application_started: false, pending: None, pending_since: None,
+            recovery_application: None })
     }
     fn accept_peer(&mut self) -> Result<bool, String> {
         if self.outcome.is_some() || self.pending.is_some() {
@@ -257,7 +272,12 @@ impl Service {
                     .into_stop_connection(&host, reviewer, self.operation, nonce()?)
                     .map_err(debug)?
             };
-            self.exchange(&mut connection, driver, deadline, time)
+            let result = self.exchange(&mut connection, driver, deadline, time);
+            // Even a failed sweep or receipt encode/write retains the one-use
+            // native application. Earlier transport failures still require the
+            // original automatic failure Stop, rather than leaving work live.
+            self.application_started = connection.application().is_some();
+            result
         })();
         self.outcome = Some(result.clone());
         result

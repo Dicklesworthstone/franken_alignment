@@ -1,5 +1,60 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: connect explicit held-review continuation through the live Tower
+
+The registered Convene operation now reaches the original ordinary supervisor
+through a separately granted control-operator route. Next returns a complete
+generation-bound request at the original request address; Convene binds its
+unused round identity and full successful Hold predecessor. Closed request and
+response codecs distinguish process-local Pending admission from an actually
+Opened round, retain Failed/Abandoned dispositions, and preserve honest missing
+or unavailable observations. Neither route reads evidence, chooses helpers,
+opens a round itself or grants effect authority.
+
+The independent operator profile can explicitly select bounded `convening`
+queries/operations. The ordinary single-request and scheduled services then
+retain a held action under its original deadline, fixed helper recipe, prepared
+checked-publication configuration and existing Stop/actor/operator custody.
+Only an explicit operator admission produces a one-use handoff. Fresh complete
+evidence and new helper review precede any new Continue; independent human
+approval and original two-key dispatch still govern publication. Same-byte
+evidence is supported when helpers recover, without implicit reruns from edits,
+availability changes, actor polls or further Hold outcomes. Scheduled initial
+rounds skip IDs consumed by earlier successors without changing request keys.
+Omitted/null selection preserves the existing post-Hold cancellation behavior.
+Numerical/generated and topology-mediated services reject selection before
+startup rather than advertising unconsumable work.
+
+The bounded operator client validates full audience, expected predecessor,
+round/generation, complete executable action and disposition metadata before
+output or any later supplied document. It never follows a plan or retries on
+its own. Original automatic failure cleanup is retired before terminal reply
+grace, preventing a failed successor capture from repeating Stop/drain. An
+actual failed authenticated Stop application retains its original reply and
+one-use outcome; a protocol-only failure still triggers necessary fallback
+cleanup.
+
+This increment authors five public Tower tests, five authenticated client
+tests, five substantive service/profile tests plus one helper subprocess entry
+fixture, and one additional Stop-control test. The source scenarios cover real
+Pending-to-Opened, fresh independent publication, plain/checked schedules,
+round-ID collision, absent/foreign/actor grants, exact retries and malformed
+responses, failed fresh capture, original deadline and Stop, unsupported startup
+profiles and one-time cleanup in both ordinary service modes. Existing strict
+all-verb codec fixtures now supply complete Narrow and Convene arguments; null
+Convene refuses before spending. Together with the native increment this is
+25 substantive new regression functions and one helper fixture, using synthetic
+ballots rather than claiming detector quality.
+
+Independent source review found no remaining blocker. Qualified-nightly syntax
+parsing and formatting of new files are recorded for the changed source/tests;
+compilation and runtime remain unverified under the previously observed library
+compiler memory constraint. No new build success, RCH gate, Beads closure or
+production qualification is claimed.
+
+Contracts: `docs/HELD_REVIEW_CONVENING.md`, `docs/TOWER_PUBLICATION.md`,
+`docs/TOWER_REQUEST.md`, `docs/LIVE_TOWER_OPERATOR.md`, `docs/AGENT_GUIDE.md`.
+
 ## 2026-11-12: explicitly convene fresh ordinary reviews after HoldEffect
 
 The original ordinary file supervisor now exposes a separately selected,

@@ -4,6 +4,7 @@ use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
     MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
+    MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES,
     MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
     MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS,
     MAX_JOURNAL_TAIL_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
@@ -52,6 +53,7 @@ pub(crate) struct Settings {
     pub(crate) cancellation: Option<CancellationSettings>,
     pub(crate) abandonment: Option<AbandonmentSettings>,
     pub(crate) narrowing: Option<NarrowingSettings>,
+    pub(crate) convening: Option<ConveningSettings>,
     pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
@@ -174,6 +176,45 @@ impl NarrowingSettings {
         {
             return Err(
                 "narrowing requires explicit original-target authority and bounded queries, operations and replay"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+}
+
+/// Explicit additional congress rounds for an original ordinary held request.
+/// This allowance never changes the roster, grants either effect key or extends
+/// the action deadline. Each successor requires a separate operator request.
+#[derive(Clone, Debug)]
+pub(crate) struct ConveningSettings {
+    pub(crate) queries: usize,
+    pub(crate) operations: usize,
+    pub(crate) authority: String,
+}
+
+impl ConveningSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            operations: usize::try_from(fields.number("operations")?).map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_CONVENE_QUERIES
+            || self.operations == 0
+            || self.operations > MAX_CONVENE_OPERATIONS
+            || self.authority != "convene_held_review"
+        {
+            return Err(
+                "convening requires explicit held-review authority and bounded queries and successor rounds"
                     .into(),
             );
         }
@@ -629,6 +670,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(NarrowingSettings::decode(value)?),
             },
+            convening: match fields.optional("convening") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(ConveningSettings::decode(value)?),
+            },
             fence: match fields.optional("fence") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(FenceSettings::decode(value)?),
@@ -706,6 +751,7 @@ impl Settings {
                 && self.cancellation.is_none()
                 && self.abandonment.is_none()
                 && self.narrowing.is_none()
+                && self.convening.is_none()
                 && self.fence.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none())
@@ -766,6 +812,9 @@ impl Settings {
         if let Some(selected) = &self.narrowing {
             selected.validate()?;
         }
+        if let Some(selected) = &self.convening {
+            selected.validate()?;
+        }
         if let Some(selected) = &self.fence {
             selected.validate()?;
         }
@@ -789,6 +838,11 @@ impl Settings {
 
     fn check_numerical_operator(&self, profile: &str) -> Result<(), String> {
         self.validate()?;
+        if self.convening.is_some() {
+            return Err(
+                "held-review convening supports only original ordinary publication runs".into(),
+            );
+        }
         if self.narrowing.is_some() {
             return Err(
                 "target-ceiling narrowing supports only original ordinary publication runs".into(),
