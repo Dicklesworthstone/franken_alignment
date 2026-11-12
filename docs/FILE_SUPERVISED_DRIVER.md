@@ -41,6 +41,11 @@ only local readiness; fresh source checks and a new independent human approval
 remain mandatory, and an in-progress review cannot use it.
 Adverse or refused completed reviews leave no automatic re-review job. The operator
 must explicitly choose any subsequent work; the driver never hunts for an Allow.
+The separately selected [held-review convening capability](HELD_REVIEW_CONVENING.md)
+provides that explicit ordinary Hold continuation through a finite one-use
+handoff. It rechecks the exact original held predecessor, captures fresh evidence
+and starts a new frozen helper round under the same deadline. Pending admission
+does not open a round; a new Continue still requires independent human approval.
 
 ## Evidence and time
 

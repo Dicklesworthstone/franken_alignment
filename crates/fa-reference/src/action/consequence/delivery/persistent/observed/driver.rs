@@ -5,6 +5,7 @@
 pub mod learned;
 mod lifecycle;
 mod narrowing;
+mod convening;
 pub use narrowing::FileDriverNarrowingContinuation;
 pub mod native_learned;
 pub mod process_learned;

@@ -14,6 +14,14 @@ pub use stopping::{
     FileFenceResult, FileSupervisorFenceGrant, FileSupervisorFencePort, MAX_FENCE_REPLAY_EVENTS,
 };
 mod abandonment;
+mod convening;
+pub use convening::{
+    FileConveneBasis, FileConveneBlockReason, FileConveneError, FileConveneObservation,
+    FileConveneOpened, FileConveneOutcome, FileConvenePlan, FileConvenePlanObservation,
+    FileConvenePlanResult, FileConveneReceipt, FileConveneRequest, FileConveneResult,
+    FileConveneTicket, FileSupervisorConveneGrant, FileSupervisorConvenePort,
+    MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES,
+};
 mod narrowing;
 pub use narrowing::{
     FileNarrowBasis, FileNarrowBlockReason, FileNarrowError, FileNarrowObservation,
@@ -129,6 +137,9 @@ type OwnerRef<H> = RefCell<Owner<H>>;
 struct Owner<H> {
     host: H,
     snapshot: Option<Snapshot>,
+    // One original finite convening selection; a weak slot never keeps its
+    // grant alive and cannot be replaced to renew a spent or revoked allowance.
+    convening: Option<convening::Selection>,
 }
 
 /// Observation/cancellation handle bound to this particular live gateway.
@@ -209,6 +220,7 @@ pub(in crate::action::consequence::delivery::persistent) fn gateway<H: FileReque
     let owner = Rc::new(RefCell::new(Owner {
         host,
         snapshot: None,
+        convening: None,
     }));
     (
         FileActorPort {

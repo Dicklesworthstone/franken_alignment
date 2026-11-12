@@ -80,6 +80,21 @@ pub struct OversightBroker {
 }
 
 impl OversightBroker {
+    /// Original applied evidence, not a caller-supplied replay or a reconstructed
+    /// authority key. The bounded owner retains only successful applications.
+    pub(crate) fn latest_applied_review(&self, attempt: u64) -> Option<&PolicyReceipt> {
+        self.delivery.controller().review_receipts().iter().rev()
+            .find(|receipt| receipt.control.attempt == attempt)
+    }
+
+    pub(crate) fn review_round_used(&self, round: u64) -> bool {
+        self.started_rounds.contains(&round)
+    }
+
+    pub(crate) fn review_round_count(&self) -> usize {
+        self.started_rounds.len()
+    }
+
     pub(crate) fn narrow_targets(&mut self, sequence: u64, epoch: u64,
         retained: crate::action::consequence::gate::TargetCeiling)
         -> Result<crate::action::consequence::gate::TargetNarrowReceipt, Error>

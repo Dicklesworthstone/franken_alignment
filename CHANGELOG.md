@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-12: add explicit bounded ordinary HoldEffect continuation
+
+- Add one original finite held-review grant, complete predecessor plans and
+  explicit one-use successor admission without automatic review or authority gain.
+- Recheck original owner/control/input custody before fresh source capture and
+  native helper launch; retain the original action deadline and independent keys.
+- Distinguish queued, opened, failed and abandoned work, preserve exact retry
+  identity and spent allowances, and exclude successor IDs from later initial rounds.
+- Add nine public integration tests for actual Hold recovery and causal refusal
+  boundaries. Syntax parsing and independent source review passed; compilation
+  and runtime remain unverified under the existing compiler memory constraint.
+
 ## 2026-11-12: connect authenticated operators throughout native text publication
 
 - Add paired native-service operator options with complete grammar, audience,

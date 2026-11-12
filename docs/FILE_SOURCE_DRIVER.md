@@ -48,6 +48,10 @@ samples time after capture and rechecks the leased source. At its expiry, the
 observation remains historical but cannot start a review. A failed setup before
 native begin does not consume the round; a later original process-start failure
 retains its already-started round and all direct-child cleanup obligations.
+An explicitly admitted [held-review successor](HELD_REVIEW_CONVENING.md) also
+spends its separate process-local operation and successor ID on any handoff
+failure, including before native Begin. That ID is not reused by the host's
+bounded allocator; this does not add a journal event or claim a begun round.
 
 Both sockets and executable helpers use the same launch preparation. Partial
 spawn retains the successfully admitted observation identity in its existing

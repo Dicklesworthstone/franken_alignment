@@ -13,6 +13,7 @@ pub mod decoder;
 pub mod driver;
 pub mod governance;
 pub mod narrowing;
+mod convening;
 pub mod guarded;
 pub mod helpers;
 mod human;

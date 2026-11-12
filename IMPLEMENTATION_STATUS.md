@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: explicitly convene fresh ordinary reviews after HoldEffect
+
+The original ordinary file supervisor now exposes a separately selected,
+nonrenewable held-review grant. A bounded query identifies the complete original
+held predecessor; an explicit operation queues one successor with an exact
+round identity. Pending admission is process-local and neither opens a round
+nor grants authority. Its nonclone one-use ticket enters the original file
+driver only after previous helper children are reaped. Before source or clock
+work, the driver rechecks the original grant, owner, applied Hold, action,
+control/input cut and unchanged deadline. Fresh complete evidence and original
+helper launch create a new frozen round. Same-byte evidence is allowed after
+helper availability recovers, but no availability change, actor poll, source
+edit or helper outcome automatically requests another review.
+
+Exact retries observe Pending, Opened, Failed or Abandoned on the same original
+admission. They cannot restart it or refund operations; failed/abandoned IDs
+remain excluded from subsequent initial round allocation even after revocation.
+Stopped, suspended, stale, active, numerical/generated and topology-mediated
+histories cannot use this ordinary continuation. A new Continue still requires
+the original independent human key, source checks and two-key publication.
+No journal format, authority reducer, dependency or effect-accounting rule is
+added. The service/Tower connection is a separate increment.
+
+Nine public integration tests are authored for actual held congresses, fresh
+two-key publication, absence of implicit retry, source failure, one-use custody,
+revocation/nonrenewal, full predecessor drift, bounded allowances and globally
+excluded successor identities. Native source and test syntax parsing passed
+with the qualified nightly; the two new test files are formatted. Independent
+source review found no remaining blocker. Compilation/runtime remain unverified
+after the library compiler's previously observed metadata-emission SIGKILL;
+the memory constraint has not changed. No RCH, whole-repository, roadmap-packet,
+Beads or production qualification is promoted.
+
+Contracts: `docs/HELD_REVIEW_CONVENING.md`, `docs/FILE_SUPERVISED_DRIVER.md`,
+`docs/FILE_SOURCE_DRIVER.md`.
+
 ## 2026-11-12: supervise live native text through the authenticated operator
 
 Native create/open, checked and explicit continuation/Finish services now accept

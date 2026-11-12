@@ -30,7 +30,7 @@ impl FileSupervisedDriver {
         self.start_file_review_checked(source, launch, clock, |_| Ok(()))
     }
 
-    pub(super) fn start_file_review_checked<S, F>(&mut self, source: &mut S,
+    pub(in super::super) fn start_file_review_checked<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<UnixStream>, mut clock: F,
         before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
         -> Result<EvidenceIdentity, FileSourceReviewError>
@@ -64,7 +64,7 @@ impl FileSupervisedDriver {
         self.start_file_process_review_checked(source, launch, clock, |_| Ok(()))
     }
 
-    pub(super) fn start_file_process_review_checked<S, F>(&mut self, source: &mut S,
+    pub(in super::super) fn start_file_process_review_checked<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<HelperProgram>, mut clock: F,
         before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
         -> Result<EvidenceIdentity, FileSourceReviewError>
