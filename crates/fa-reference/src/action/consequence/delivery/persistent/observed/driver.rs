@@ -4,6 +4,8 @@
 
 pub mod learned;
 mod lifecycle;
+mod narrowing;
+pub use narrowing::FileDriverNarrowingContinuation;
 pub mod native_learned;
 pub mod process_learned;
 mod recovery_capacity;
@@ -183,6 +185,7 @@ pub struct FileSupervisedDriver {
     retiring: Option<HelperChildren>,
     learned_review: Option<learned::RetainedReview>,
     topology: Option<topology::FileDriverTopology>,
+    narrowing_continuation: Option<FileDriverNarrowingContinuation>,
 }
 impl fmt::Debug for FileSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -201,7 +204,7 @@ impl FileOversight {
 }
 impl FileSupervisedDriver {
     /// Adopt an existing gateway without changing its port, identity or rights.
-    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None, topology: None } }
+    pub fn new(supervisor: FileActorSupervisor<FileOversight>) -> Self { Self { supervisor, job: None, retiring: None, learned_review: None, topology: None, narrowing_continuation: None } }
     pub fn supervisor(&self) -> &FileActorSupervisor<FileOversight> { &self.supervisor }
     /// Trusted integration, including use of a separately held FileHumanReviewer.
     /// Do not pass this role or its mutable host to the actor/helper processes.

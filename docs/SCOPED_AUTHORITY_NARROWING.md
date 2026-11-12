@@ -127,6 +127,52 @@ without another event, replay, refund or snapshot invalidation. Changed input
 under that key conflicts. The cache has live-grant lifetime; a new grant cannot
 reuse an operation already recorded in the durable native namespace.
 
+## Continue an already completed ordinary review
+
+A completed `Continue` review may remain useful when an independent operator
+narrows the run to a set that still includes its exact target. The native driver
+provides a separate, explicit continuation step for that case:
+
+```rust,ignore
+let operation = driver.pending_narrowing_continuation(request)?;
+if let Some(operation) = operation {
+    driver.continue_after_narrowing(request, operation)?;
+}
+```
+
+Both methods operate on the original process-local driver. The first reports
+only a provable pending continuation; the second checks it again before changing
+the driver's retained control predecessor. They require the same healthy locked
+owner, a completed ordinary review in its Ready phase, the original exact action
+and complete input revision and bytes, the original authority epoch, a retained
+target and the original native Continue decision. A Ready job may still be
+native Reviewing while it waits for its first human key. If it already owns an
+automatic permit, its native reservation must still be Authorized.
+
+Every intervening control sequence must be accounted for by an acknowledged
+ordinary target-narrowing receipt held by this owner. Each restriction must
+retain the selected target, and the selected final operation must end at the
+current sequence. A source replacement, policy update, another review, fencing,
+cancellation, suspended owner, excluded target or other unaccounted control
+transition cannot be treated as narrowing. An in-progress helper review, a
+dispatched or uncertain effect, and a learned, stream or mediated history cannot
+use this continuation path.
+
+The returned `FileDriverNarrowingContinuation` records the request, attempt,
+selected operation, previous and current control sequences, authority epoch,
+ordered narrowing operation identities and whether the original automatic permit
+was retained. An exact retry returns that acknowledgment only while the same
+Ready job and current native custody still agree; it cannot revive a terminal,
+replaced or faulted owner.
+
+Continuation changes only the driver's local readiness predecessor. It does not
+append an event, sample time, acquire source evidence, run helpers, refund rights,
+recreate a permit or issue a human approval. Subsequent ordinary approval and
+dispatch still acquire fresh evidence through their original paths. Earlier
+human requests and approvals remain withdrawn; a new independent human review
+must bind the new control context. Missing or changed source evidence still
+prevents publication.
+
 ## Tower request and response
 
 Install the original capability with `PublicationTower::set_narrow(Some(port))`

@@ -33,7 +33,12 @@ transient or foreign-key refusal; authorization is not rerun to allocate another
 one. The original human gate forbids a second request for the same reviewed
 context. Expiry cannot be repaired by selecting another key number: fresh work
 requires a new request and review. Source withdrawal or a changed predecessor
-cannot repair the old approval or silently rebase its permit.
+cannot repair the old approval or silently rebase its permit. The explicit
+[ordinary narrowing continuation](SCOPED_AUTHORITY_NARROWING.md#continue-an-already-completed-ordinary-review)
+can advance a completed Ready job only across a contiguous chain of acknowledged
+restrictions that retain its exact target, action, inputs and epoch. It changes
+only local readiness; fresh source checks and a new independent human approval
+remain mandatory, and an in-progress review cannot use it.
 Adverse or refused completed reviews leave no automatic re-review job. The operator
 must explicitly choose any subsequent work; the driver never hunts for an Allow.
 

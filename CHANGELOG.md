@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-12: continue retained ordinary reviews after narrowing
+
+- Add explicit original-driver readiness continuation across acknowledged
+  monotone target restrictions with exact owner, action, input and epoch checks.
+- Preserve original reservations and withdrawn human approvals; publication
+  still requires fresh independent approval and the existing source/dispatch gates.
+- Refuse incomplete review, excluded targets and unrelated stale predecessors
+  without adding a journal event, rerunning helpers or changing accounting.
+- Add a public integration target covering retained publication and causal
+  refusals. New source is independently reviewed but uncompiled: the execution
+  environment became unavailable after baseline compiler memory exhaustion.
+
 ## 2026-11-11: connect narrowing to authenticated ordinary operator workflows
 
 - Add a closed independent `narrowing` profile and retain its original grant

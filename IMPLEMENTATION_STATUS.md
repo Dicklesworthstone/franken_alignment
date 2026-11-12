@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: continue retained completed reviews after ordinary narrowing
+
+The original supervised driver can explicitly advance a completed Ready job
+across a contiguous chain of acknowledged target-narrowing receipts from the
+same healthy owner. Exact action, input bytes and revision, authority epoch,
+Continue decision and retained target remain required. Native Reviewing before
+first authorization and Authorized with the original retained permit are
+distinct permitted states. Other control transitions and in-progress reviews
+cannot be rebased.
+
+The query and continuation perform no journal write, source or clock
+acquisition, helper execution, refund or permit replacement. Normal source and
+dispatch gates remain in force, and narrowing's withdrawn human approval must
+be replaced by an independently issued approval for the new control context.
+Ten public `file_driver_narrowing` regression functions cover original socket
+reviews and publication, retained automatic reservations, missing or changed
+inputs, intervening control decisions, finite human requests, incomplete review,
+cancellation, fencing, policy replacement, dispatched/Unknown liability, foreign
+owner custody and actual durable storage failure.
+
+Before these changes, local development checking used the repository's exact
+qualified compiler, nightly-2026-09-08 (cea272fa356e94bd2ee2cadf376630aa0683867a),
+on unchanged 4760bc3. The workspace/all-target check exited 101 when the large
+fa-reference library-test compiler received SIGKILL. It is not a passing gate.
+The execution environment then became unavailable before focused tests could
+launch. Required RCH was absent (exit 127). New source receives independent
+review only; no new-source formatting, compilation, runtime, Clippy or complete
+gate pass is claimed, and existing qualification states remain unchanged.
+
+Contracts: `docs/SCOPED_AUTHORITY_NARROWING.md`,
+`docs/FILE_SUPERVISED_DRIVER.md`.
+
 ## 2026-11-11: expose narrowing through authenticated ordinary services
 
 The optional closed operator `narrowing` profile now provisions and retains the
