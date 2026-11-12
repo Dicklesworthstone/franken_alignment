@@ -10,7 +10,8 @@ use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure, FileSupervisorCancellationGrant,
+    FileGeneratedTextActorPort, FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure,
+    FileSupervisorCancellationGrant,
     FileSupervisorAbandonmentGrant, FileSupervisorExplanationGrant,
     FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant,
@@ -125,6 +126,38 @@ impl Service {
                     PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
                 } else {
                     PublicationTower::new_learned_observer(mount, port, limits)
+                }
+            },
+        )
+    }
+
+    /// The original native-text owner uses the same finite operator grants.
+    /// Its branded actor port cannot become arbitrary-payload Tower intake.
+    pub(super) fn start_generated(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileGeneratedTextActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
+        settings.check_generated_operator()?;
+        Self::start_with(
+            settings,
+            actor,
+            driver,
+            generation,
+            deadline,
+            |mount, limits| {
+                if settings.fence.is_some()
+                    || settings.cancellation.is_some()
+                    || settings.abandonment.is_some()
+                {
+                    PublicationTower::new_generated_control_operator(mount, port, limits)
+                } else if settings.resolution.is_some() {
+                    PublicationTower::new_generated_reconciliation_operator(mount, port, limits)
+                } else {
+                    PublicationTower::new_generated_observer(mount, port, limits)
                 }
             },
         )

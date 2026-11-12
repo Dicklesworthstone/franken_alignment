@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: supervise live native text through the authenticated operator
+
+Native create/open, checked and explicit continuation/Finish services now accept
+paired operator-profile and Tower-generation selections. Complete CLI and
+audience/path/numerical-grant preflight preserve the original source-only actor
+wire. The original operator session and finite grants survive qualification,
+generation, actor intake, helper/human review, publication and bounded reply
+delivery. Independent Stop runs first; an acknowledged operator Fence enters the
+same one-use original cleanup without advancing a token or acquiring approval.
+
+Recorded source-linked receipt recovery accepts observation-only operator
+selection and explicitly refuses mutation grants after exact canonical opening.
+It does not acquire evidence, launch helpers/inference or create Stop/reviewer
+listeners. Historical output failure still issues no Stop. A new-work output
+failure performs its original Stop/drain once; the retained operator reply path
+cannot repeat either acknowledged or failed cleanup. Operator reconnects retain
+spent work, and transport loss alone does not stop the run.
+
+Five service regression functions cover real native generation and publication,
+authenticated versus rejected peers, fencing before human-authorized dispatch,
+finite queries across reconnects, source/store/endpoint preflight, historical
+receipt reads with missing sources/helpers, recorded mutation refusal and exact
+canonical comparison with the original output-failure cleanup. Together with
+the library increment, ten new regression functions are authored. Synthetic
+models and helper verdicts test protocol boundaries, not detector quality.
+
+Independent source review found no remaining blocker. Qualified rustfmt parsed
+all changed service/registration/test files and the original Stop module,
+preserving source hashes; the new service test file is formatted. Compilation/runtime remain
+unverified after the frozen library check's SIGKILL described below. No RCH,
+whole-repository, packet or production qualification is promoted.
+
+Contracts: `docs/NATIVE_TEXT_PUBLICATION_SERVICE.md`, `docs/TOWER_PUBLICATION.md`,
+`docs/AGENT_GUIDE.md`.
+
 ## 2026-11-12: expose native generated streams to scoped Tower operators
 
 The original native generated-text gateway now supports explicit observation,

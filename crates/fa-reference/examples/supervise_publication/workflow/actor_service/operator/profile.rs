@@ -778,6 +778,16 @@ impl Settings {
     /// numerical work admission before clock/source acquisition, owner startup
     /// or listener creation.
     pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
+        self.check_numerical_operator("learned")
+    }
+
+    /// Native decoder histories require the same independent numerical work
+    /// reservations. An ordinary allowance cannot silently fund reconstruction.
+    pub(crate) fn check_generated_operator(&self) -> Result<(), String> {
+        self.check_numerical_operator("native text")
+    }
+
+    fn check_numerical_operator(&self, profile: &str) -> Result<(), String> {
         self.validate()?;
         if self.narrowing.is_some() {
             return Err(
@@ -789,37 +799,36 @@ impl Settings {
             .as_ref()
             .is_some_and(|selected| selected.numerical_replay_events.is_none())
         {
-            return Err(
-                "learned receipt reconciliation requires an explicit numerical replay budget"
-                    .into(),
-            );
+            return Err(format!(
+                "{profile} receipt reconciliation requires an explicit numerical replay budget"
+            ));
         }
         if self
             .cancellation
             .as_ref()
             .is_some_and(|selected| selected.numerical_replay_events.is_none())
         {
-            return Err(
-                "learned request cancellation requires an explicit numerical replay budget".into(),
-            );
+            return Err(format!(
+                "{profile} request cancellation requires an explicit numerical replay budget"
+            ));
         }
         if self
             .abandonment
             .as_ref()
             .is_some_and(|selected| selected.numerical_replay_events.is_none())
         {
-            return Err(
-                "learned unknown abandonment requires an explicit numerical replay budget".into(),
-            );
+            return Err(format!(
+                "{profile} unknown abandonment requires an explicit numerical replay budget"
+            ));
         }
         if self
             .fence
             .as_ref()
             .is_some_and(|selected| selected.numerical_replay_events.is_none())
         {
-            return Err(
-                "learned admission stop requires an explicit numerical replay budget".into(),
-            );
+            return Err(format!(
+                "{profile} admission stop requires an explicit numerical replay budget"
+            ));
         }
         Ok(())
     }

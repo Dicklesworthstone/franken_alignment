@@ -62,6 +62,64 @@ Source-reference output failure stops new-work workflows; it does not send or
 retry the actor request. Receipt-only recovery does not issue Stop on output
 failure, because doing so could affect unrelated later work.
 
+## Independent live operator
+
+Native services can select the same authenticated Tower operator profile used
+by other publication services. The actor continues to use its original
+source-only wire and independently submit the generated reference:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE --operator-profile OPERATOR_PROFILE \
+  --tower-generation 41 > native-submit.json
+```
+
+The two operator options must appear together. They are also accepted by the
+checked create/open forms and explicit native continuation or Finish. Their
+complete grammar is validated before configuration or numerical assets open;
+duplicates, mixed modes and an absent, zero or malformed route generation
+refuse. The generation identifies the Tower route, not the model, journal cut
+or publication authority epoch. The existing
+[live operator contract](LIVE_TOWER_OPERATOR.md) supplies the profile, peer
+authentication, request codec and client commands.
+
+The supervisor provisions the original finite grants on a restricted
+[generated-text Tower mount](TOWER_PUBLICATION.md#operate-an-original-native-generated-text-stream).
+An operator can inspect the actual live situation and original journal history,
+diagnose recorded holds and request separately granted historical explanations
+or policy comparisons. Explicitly selected receipt reconciliation, undispatched
+request cancellation, Unknown abandonment and admission fencing retain their
+original independent grants. Every selected control that reconstructs numerical
+history must declare its separate cumulative `numerical_replay_events`
+allowance. Ordinary target-ceiling narrowing remains unsupported. A read grant
+without sufficient numerical work reports its original uncertainty; it cannot
+borrow the generation budget.
+
+One operator listener, authentication session and set of grants remain owned
+through qualification, initial or resumed generation, actor intake, helper and
+human review, publication and bounded final reply delivery. Existing Stop
+checkpoints run first. The service then pumps the selected operator and observes
+any acknowledged Fence through the original one-use Stop cleanup before further
+source, token or effect work. Reconnecting does not restore spent queries,
+operations or replay work, and operator disconnection does not itself issue Stop.
+Numerical replay remains synchronous under its original bounded work contract;
+this adds no hard real-time preemption guarantee.
+
+The operator endpoint must be distinct from actor, reviewer and Stop sockets,
+the registered evidence source and the authority store, including aliases
+through existing filesystem ancestors. Neither operator observations nor stdout
+release unapproved generated text. Source refresh, native monitoring, the
+original helpers, fresh independent human approval and both publication keys
+remain required for an effect.
+
+An open that resolves to an already-recorded source-linked request accepts only
+observation operator grants. Selecting any mutation for that receipt workflow
+refuses explicitly after exact canonical recovery identifies it and before
+operator listener/grant creation. It is never silently downgraded. The historical
+path opens no Stop/reviewer listener, launches no inference or helpers and never
+turns a failed receipt output into a new Stop. Its sidecar can only observe the
+original history while the original bounded actor receipt exchange completes.
+
 ## Explicit recovery
 
 ```sh

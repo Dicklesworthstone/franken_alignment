@@ -78,6 +78,17 @@ allowances across handoffs; a later request never renews spent operator work.
 Explanation additionally requires explicit policy/selected-witness disclosure;
 it remains historical admission evidence, not current `why-held` or permission.
 
+The [native text publication service](NATIVE_TEXT_PUBLICATION_SERVICE.md#independent-live-operator)
+accepts the same paired `--operator-profile PATH --tower-generation NONZERO`
+options beside `--native-text RECIPE`, including checked forms and explicit
+continuation/Finish. Use the same `tower-operator-exchange` client; the actor
+continues to submit only its original generated-source reference. The operator
+retains its own authentication, finite grants and deadline through inference,
+review, publication and final replies. Selected reconciliation, cancellation,
+abandonment and Fence require explicit numerical replay allowances. A recorded
+receipt-only open accepts observation grants and refuses mutation selections;
+it does not restart generation, acquire fresh evidence or open a Stop listener.
+
 For recorded publication blockers, explicitly select `hold_diagnosis` with
 bounded queries and `disclosure: "recorded_publication_state"` in that operator
 profile. Send `why-held` with null arguments to the original native request

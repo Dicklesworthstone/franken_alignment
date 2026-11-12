@@ -2,10 +2,14 @@
 //! Stdout carries a submission reference, NEVER unapproved generated text.
 #[path = "native/bootstrap.rs"]
 mod bootstrap;
+#[path = "native/control.rs"]
+mod control;
 #[path = "native/continuation.rs"]
 mod continuation;
 #[path = "native/finish.rs"]
 mod finish;
+#[path = "native/operator.rs"]
+mod operator;
 #[path = "native/qualification.rs"]
 mod qualification;
 #[path = "native/recipe.rs"]
@@ -18,7 +22,7 @@ mod tests;
 
 use super::*;
 use super::super::FileHumanReviewer;
-use super::super::control::Control;
+use control::Control;
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::GenerationFinish;
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::text::FileTextGenerationCommand;
 use fa_reference::action::consequence::delivery::persistent::observed::stream::generated::FileTextMessageRequest;
@@ -30,10 +34,11 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    let (args, finishing) = finish::take_option(args)?;
+    let (selected_args, operator_option) = operator::take_option(args)?;
+    let (args, finishing) = finish::take_option(&selected_args)?;
     let (args, after) = continuation::take_option(args)?;
     let (open, checked) = match args.first().map(String::as_str) {
         Some("serve-create") => (false, false),
@@ -50,6 +55,12 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     let actor = Profile::read(Path::new(&args[2]))?;
     let reviewer = PeerProfile::read(Path::new(&args[3]))?;
     check_profiles(&config, &actor, &reviewer)?;
+    let operator = operator_option
+        .map(|(path, generation)| operator::Selection::read(&path, generation))
+        .transpose()?;
+    if let Some(selected) = &operator {
+        selected.check(&config, &actor, &reviewer)?;
+    }
     let publication = if checked {
         Some(PublicationProfile::read(Path::new(&args[4]))?)
     } else {
@@ -60,6 +71,23 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes,
     )?;
+    if let Some(operator) = &operator {
+        let mode = match (finishing, after) {
+            (Some(previous), _) => finish::Intent::Finish(previous),
+            (None, Some(previous)) => finish::Intent::Continue(previous),
+            (None, None) => finish::Intent::Existing,
+        };
+        return serve_lifecycle_selected(
+            config,
+            &actor,
+            &reviewer,
+            inputs,
+            (open, publication.as_ref(), credibility, mode),
+            Some(operator),
+            super::super::clock,
+            &mut std::io::stdout().lock(),
+        );
+    }
     if let Some(previous) = finishing {
         finish::serve(
             config,
@@ -251,6 +279,28 @@ where
 }
 
 fn serve_lifecycle<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    inputs: Inputs,
+    deployment: (
+        bool,
+        Option<&PublicationProfile>,
+        Option<&Path>,
+        finish::Intent,
+    ),
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_lifecycle_selected(
+        config, actor, reviewer_profile, inputs, deployment, None, time, output,
+    )
+}
+
+fn serve_lifecycle_selected<F>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
@@ -261,6 +311,7 @@ fn serve_lifecycle<F>(
         Option<&Path>,
         finish::Intent,
     ),
+    operator_selection: Option<&operator::Selection>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
@@ -270,6 +321,9 @@ where
     let (open, publication, credibility, mode) = deployment;
     mode.check(open, actor.request)?;
     check_profiles(&config, actor, reviewer_profile)?;
+    if let Some(selected) = operator_selection {
+        selected.check(&config, actor, reviewer_profile)?;
+    }
     // Source and complete witness/joint policy belong to the same initial image.
     // Recovery checks this selection before cleaning staging or fencing keys.
     let selected = bootstrap::selection(&config, &inputs, publication)?;
@@ -316,11 +370,17 @@ where
         _ => None,
     };
     let recorded = recovered.is_some();
+    if recorded {
+        if let Some(selected) = operator_selection {
+            selected.check_recorded()?;
+        }
+    }
     if !recorded && credibility.is_none() {
         host.check_credibility().map_err(debug)?;
     }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
+    let operator_port = operator_selection.map(|_| port.clone());
     let inbox = FileActorInbox::new(
         actor.actor,
         ActorWire::new(port),
@@ -346,6 +406,20 @@ where
             Some(reviewer_profile),
         )?)
     };
+    let mut operator = operator_selection
+        .map(|selected| selected.start(
+            actor,
+            operator_port.expect("selected native operator retains its source-only port"),
+            &driver,
+            &deadline,
+        ))
+        .transpose()?;
+    if let Some(control) = &mut control {
+        control.install_operator(operator.take());
+    }
+    // Only an explicitly selected operator retains the existing Stop custody
+    // through reply grace. The unselected path keeps its original lifetime.
+    let mut operator_stop = None;
     let work = (|| {
         let proposal = if let Some(proposal) = recovered {
             // Even a supplied credibility path is not opened for receipt-only
@@ -449,6 +523,9 @@ where
             // no fresh evidence, helpers, human approval or publication occurs.
             loop {
                 deadline.check(time())?;
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
                 if ingress.observe_count(&mut driver)? != 0 {
                     return Ok(());
                 }
@@ -478,7 +555,20 @@ where
             }
             pause(actor.poll_ms);
         }
+        let (stop_service, selected_operator) = control
+            .take()
+            .expect("original live native Stop owner")
+            .into_parts();
+        operator = selected_operator;
+        if operator_selection.is_some() {
+            operator_stop = Some(stop_service.share());
+        }
         let mut pump = |driver: &mut FileSupervisedDriver| {
+            // LiveControl services the original Stop first, then observes any
+            // newly acknowledged operator Fence before further workflow work.
+            if let Some(service) = &mut operator {
+                service.checkpoint();
+            }
             ingress.observe(driver)?;
             let status = driver
                 .supervisor()
@@ -507,31 +597,87 @@ where
                 peers: Some(reviewer_profile),
                 publication,
                 ingress: &mut pump,
-                stop: control.take(),
+                stop: Some(stop_service),
             },
             &mut time,
         )
     })();
+    if let Some(control) = &mut control {
+        operator = control.take_operator();
+    }
+    let mut automatic_cleanup_attempted = false;
     let mut failure = work.err().map(|error| {
         // A broken receipt connection must not stop unrelated later work in the
         // recovered journal. New-work failures retain the original stop/drain.
-        if recorded {
+        if recorded
+            || control.as_ref().is_some_and(Control::native_cleanup_started)
+            || operator_stop.as_ref().is_some_and(crate::workflow::control::Control::native_cleanup_started)
+        {
             return error;
         }
+        automatic_cleanup_attempted = true;
         match stop(&mut driver, actor.request, &mut time) {
             Ok(()) => error,
             Err(stopping) => format!("{error}; stop/drain: {stopping}"),
         }
     });
+    if automatic_cleanup_attempted && operator_selection.is_some() {
+        // The original failure path already attempted Stop AND its drain.
+        // Reply grace must not reinterpret that Stop as an unconsumed operator
+        // cleanup and repeat an acknowledged or failed sweep. Only the finite
+        // historical operator reply channel survives this original failure.
+        drop(control.take());
+        drop(operator_stop.take());
+    }
     let grace = Instant::now();
+    let mut actor_transport_failed = false;
     while grace.elapsed() < Duration::from_millis(actor.reply_ms) {
-        if let Err(error) = ingress.observe(&mut driver) {
-            if failure.is_none() {
-                failure = Some(error);
+        if operator_selection.is_some() {
+            // Keep independent Stop ahead of operator traffic while this
+            // explicitly selected live endpoint retains terminal reply custody.
+            // Historical receipt-only recovery still has no Stop listener.
+            let stopped = if let Some(control) = &mut control {
+                control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+            } else if let Some(control) = &mut operator_stop {
+                control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+            } else {
+                Ok(false)
+            };
+            if let Err(error) = stopped {
+                failure.get_or_insert(error);
             }
-            break;
+        }
+        if let Some(service) = &mut operator {
+            service.checkpoint();
+        }
+        if operator_selection.is_some() {
+            let stopped = if let Some(control) = &mut control {
+                control.native_stop(&mut driver, &mut time)
+            } else if let Some(control) = &mut operator_stop {
+                control.native_stop(&mut driver, &mut time)
+            } else {
+                Ok(false) // Recorded recovery has observation-only custody.
+            };
+            if let Err(error) = stopped {
+                failure.get_or_insert(error);
+            }
+        }
+        if !actor_transport_failed {
+            if let Err(error) = ingress.observe(&mut driver) {
+                failure.get_or_insert(error);
+                if operator_selection.is_none() {
+                    break;
+                }
+                // A broken actor channel cannot consume the independent
+                // operator's remaining original opportunity to read its reply.
+                actor_transport_failed = true;
+                ingress.pool.revoke_all();
+            }
         }
         pause(actor.poll_ms);
+    }
+    if let Some(service) = &mut operator {
+        service.retire();
     }
     ingress.pool.revoke_all();
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);

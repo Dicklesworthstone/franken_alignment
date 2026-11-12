@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-12: connect authenticated operators throughout native text publication
+
+- Add paired native-service operator options with complete grammar, audience,
+  endpoint/source/store and independent numerical-work preflight.
+- Retain the original operator session through generation, review, publication
+  and final replies; keep independent Stop priority and finite grant custody.
+- Support observation-only recorded receipt recovery; reject selected mutation
+  grants and preserve no implicit Stop on historical output failure.
+- Prevent terminal operator reply handling from repeating original failure
+  cleanup, and add five service regressions for publication, Fence, authentication,
+  reconnect budgets, recorded recovery and exact output-loss cleanup.
+- Record successful syntax parsing and independent review, with compilation and
+  runtime still blocked by the ordinary library compiler's memory-related kill.
+
 ## 2026-11-12: connect native generated streams to scoped Tower operators
 
 - Add explicit original generated-text observer, reconciliation and control

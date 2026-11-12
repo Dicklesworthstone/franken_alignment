@@ -150,6 +150,13 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         Some("create-learned-generated") => return learned::command(args, credibility),
         _ => {}
     }
+    // Native text retains its source-only actor wire. Its independently
+    // selected Tower operator must not redirect it into ordinary Tower intake.
+    if args.iter().any(|arg| arg == "--native-text")
+        && args.iter().any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation"))
+    {
+        return native::command(args, credibility);
+    }
     // The selected wire format owns its complete ordinary-service grammar.
     // No other profile can consume this option and silently run actor JSON.
     if args
