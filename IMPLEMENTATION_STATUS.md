@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: expose native generated streams to scoped Tower operators
+
+The original native generated-text gateway now supports explicit observation,
+reconciliation and control Tower mounts. Each retains the same weak owner and
+original finite supervisor grants. Numerical control and reconciliation require
+their existing separate cumulative replay budgets. No mount admits ordinary
+payloads, generated-source Submit documents, actor tickets, policy precheck or
+generation control. The raw-port bridge remains crate-private; independent
+helper and human publication keys remain with their original owners.
+
+Five public `tower_generated_operator` regression functions use actual native
+SafeTensors inference and original two-key publication. They exercise source-only
+intake refusal across all three mounts, read/custody limits, active generation
+fencing and receipt reconciliation with missing, one-short and complete numerical
+allowances. Exact retries across facades retain original grants and effects.
+Synthetic model weights and helper verdicts are boundary fixtures, not detector
+quality evidence. Independent source review found no blocking issue. The two
+new test files are formatted; the changed library files passed syntax parsing
+with the exact qualified rustfmt without modifying their existing formatting.
+
+The frozen-source local command `cargo check --locked -p fa-reference --test
+file_driver_narrowing --test tower_generated_operator -j1`, using the exact
+qualified nightly-2026-09-08 compiler with debug information and incremental
+compilation disabled, exited 101 when the ordinary library compiler received
+SIGKILL while emitting metadata. Neither integration target was reached. An
+earlier focused runtime attempt on unchanged f6ffb4b also received SIGKILL during
+library code generation. These are resource failures, not passing compilation
+or runtime evidence. Full repository, RCH, roadmap-packet and production
+qualification remain open. The live service connection is a separate step.
+
+Contract: `docs/TOWER_PUBLICATION.md`.
+
 ## 2026-11-12: preserve authenticated review custody across live narrowing
 
 Ordinary publication services now consume the explicit native narrowing

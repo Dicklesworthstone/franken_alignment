@@ -27,6 +27,10 @@ use crate::action::{ElapsedTick, ResolvedTarget};
 /// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileGeneratedTextActorPort;
 /// fn substitute(port: FileGeneratedTextActorPort) { port.submit_stream(1, "replacement"); }
 /// ```
+/// ```compile_fail,E0624
+/// use fa_reference::action::consequence::delivery::persistent::requests::actor::FileGeneratedTextActorPort;
+/// fn bypass(port: FileGeneratedTextActorPort) { port.into_tower_observation_port(); }
+/// ```
 #[derive(Clone, Debug)]
 pub struct FileGeneratedTextActorPort {
     port: FileActorPort<FileOversight>,
@@ -61,6 +65,13 @@ impl FileOversight {
 }
 
 impl FileGeneratedTextActorPort {
+    /// Use the original weak owner only inside the Tower's restricted source
+    /// observer or operator mounts. A public conversion would expose ordinary
+    /// arbitrary-payload intake and erase the native-generation boundary.
+    pub(crate) fn into_tower_observation_port(self) -> FileActorPort<FileOversight> {
+        self.port
+    }
+
     /// Immutable bootstrap limits, not current publication or model state.
     pub fn profile(&self) -> StreamProfile {
         self.profile

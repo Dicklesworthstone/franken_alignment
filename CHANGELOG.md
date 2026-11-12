@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-12: connect native generated streams to scoped Tower operators
+
+- Add explicit original generated-text observer, reconciliation and control
+  mounts while retaining the source-only actor boundary and independent keys.
+- Reuse the same finite disclosure, numerical replay and mutation grants;
+  preserve owner custody, unchanged inference and exact historical retries.
+- Add five public regressions with actual native generation and publication,
+  one-short numerical-budget refusals and shared-grant/lost-owner checks.
+- Keep full repository and production qualification open.
+
 ## 2026-11-12: continue retained publication through authenticated review renewal
 
 - Carry explicit ordinary driver continuation through pending human review and

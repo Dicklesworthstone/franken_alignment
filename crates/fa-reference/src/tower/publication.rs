@@ -42,6 +42,7 @@ use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
     FileInspectionResult, FileJournalTailCursor, FileLearnedTextStreamActorPort,
+    FileGeneratedTextActorPort,
     FilePolicyReplayCursor, FileSupervisorExplanationPort, FileSupervisorFencePort,
     FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
@@ -156,10 +157,10 @@ pub type PublicationResponse = TowerResponse<PublicationResult, PublicationLimit
 pub struct PublicationTower {
     mount: Address,
     scope: Scope,
-    // A learned stream exposes source-derived release intents only. Its
+    // A generated or learned stream exposes source-derived release intents only. Its
     // observation facade may bind original supervisor grants, but must never
     // turn the private weak gateway into ordinary payload intake or tickets.
-    learned_observer: bool,
+    source_observer: bool,
     // Operator reconciliation grants never widen this service into actor intake.
     reconciliation_operator: bool,
     // Explicit original-domain control mount; legacy observation and
@@ -210,7 +211,7 @@ impl PublicationTower {
         Ok(Self {
             mount,
             scope,
-            learned_observer: false,
+            source_observer: false,
             reconciliation_operator: false,
             control_operator: false,
             wire: ActorWire::new(port),
@@ -252,7 +253,25 @@ impl PublicationTower {
         limits: PublicationLimits,
     ) -> Result<Self, TowerInstallError> {
         let mut tower = Self::new(mount, port.into_tower_observation_port(), limits)?;
-        tower.learned_observer = true;
+        tower.source_observer = true;
+        Ok(tower)
+    }
+
+    /// Mount an observation-only view of the ORIGINAL native generated-text
+    /// stream. Only an independently authorized operator can use its explicitly
+    /// installed read grants. The source-only actor port remains private.
+    ///
+    /// The mount cannot submit a payload or generation reference, obtain an
+    /// actor ticket, advance inference, expose unpublished text or issue an
+    /// effect key. Historical numerical replay retains each read grant's own
+    /// explicit finite work contract; this constructor supplies no work grant.
+    pub fn new_generated_observer(
+        mount: Address,
+        port: FileGeneratedTextActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        let mut tower = Self::new(mount, port.into_tower_observation_port(), limits)?;
+        tower.source_observer = true;
         Ok(tower)
     }
 
@@ -289,6 +308,19 @@ impl PublicationTower {
         Self::new_reconciliation_operator(mount, port.into_tower_observation_port(), limits)
     }
 
+    /// Reconcile an already dispatched native generated-text effect through
+    /// separately retained original grants. The constructor does not admit
+    /// actor requests, resume generation or expose its private ordinary port.
+    /// Numerical replay authority must be granted explicitly and remains
+    /// cumulative across facade reconstruction and exact operation retries.
+    pub fn new_generated_reconciliation_operator(
+        mount: Address,
+        port: FileGeneratedTextActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        Self::new_reconciliation_operator(mount, port.into_tower_observation_port(), limits)
+    }
+
     /// Mount one original owner for explicitly granted control operations.
     /// Ordinary actor intake stays closed even when Permit is allowed. This
     /// constructor supplies no fence, cancellation, abandonment or reconciliation grant.
@@ -308,6 +340,18 @@ impl PublicationTower {
     pub fn new_learned_control_operator(
         mount: Address,
         port: FileLearnedTextStreamActorPort,
+        limits: PublicationLimits,
+    ) -> Result<Self, TowerInstallError> {
+        Self::new_control_operator(mount, port.into_tower_observation_port(), limits)
+    }
+
+    /// Restrict or settle the ORIGINAL native generated-text owner using only
+    /// separately selected finite control grants. Ordinary actor intake stays
+    /// closed. Decoder history keeps the native numerical replay budget gates;
+    /// ordinary target-ceiling Narrow remains unsupported for stream owners.
+    pub fn new_generated_control_operator(
+        mount: Address,
+        port: FileGeneratedTextActorPort,
         limits: PublicationLimits,
     ) -> Result<Self, TowerInstallError> {
         Self::new_control_operator(mount, port.into_tower_observation_port(), limits)
@@ -394,7 +438,7 @@ impl PublicationTower {
         {
             return self.withheld(&request);
         }
-        if self.learned_observer {
+        if self.source_observer {
             if !access.operator {
                 return self.withheld(&request);
             }

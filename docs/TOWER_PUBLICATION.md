@@ -172,6 +172,40 @@ different owner and requires its own explicitly issued grants. This connects the
 existing L4 situation projection and L8 observation contracts; it adds no new
 verb, authority type or execution guarantee.
 
+## Operate an original native generated-text stream
+
+Native monitored generation uses the original `FileGeneratedTextActorPort` and
+its immutable native-text-only bootstrap contract. Three explicit constructors
+connect that owner to the same separately granted operator operations:
+
+| Constructor | Available profile |
+|---|---|
+| `new_generated_observer` | Original inspection, journal tail, request history, admission/completed-review explanation, hold diagnosis and policy comparison |
+| `new_generated_reconciliation_operator` | The same reads and explicitly granted original receipt reconciliation through `next` / `resolve` |
+| `new_generated_control_operator` | The same operations plus separately granted undispatched cancellation, Unknown abandonment and admission fencing |
+
+Each takes the original generated-text port, an exact versioned Run address and
+`PublicationLimits`. The constructor itself grants no disclosure, replay work
+or mutation. The host must independently issue, install and retain the original
+native grants; all clones and facades share their finite work and exact retries.
+Numerical history still requires explicit numerical replay allowances for the
+operations that replay it. Ordinary target-ceiling narrowing remains unsupported
+for this stream contract.
+
+All three mounts require operator access. They cannot accept ordinary caller
+payloads or generated-source Submit documents, obtain actor tickets, run
+`precheck`, advance generation or issue either publication key. Permit and
+Experiment purpose tags do not expand their closed vocabulary. The internal
+weak-port conversion stays crate-private, so actors cannot obtain an ordinary
+arbitrary-payload gateway from a generated-text port. Observations contain their
+original metadata and epistemic status, never an unapproved text release.
+
+Mounting and reading do not consume the actor's admission snapshot, change
+numerical state or write journal records. A grant from another owner is refused,
+including an owner with identical numeric scope. Losing the original supervisor
+or revoking a grant makes the corresponding access unavailable; the facade
+cannot keep the original authority lock alive or adopt a reopened owner.
+
 ## Acquire fresh evidence at native intake
 
 For a source-backed live owner, use
