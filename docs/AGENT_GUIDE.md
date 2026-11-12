@@ -232,12 +232,19 @@ ceiling. Narrowing leaves the authority epoch unchanged but advances the control
 sequence, making old human approvals historical. Obtain fresh independent human
 approval and preserve every other current gate before dispatch.
 
-For the complete service workflow, narrow before intake of retained work. An
-already active retained driver job keeps its review/readiness predecessor and
-is not automatically refreshed by this operation. Excluded active work can
-retire through the existing scheduler, whose next request still faces the
-remaining ceiling. This ordinary operation does not handle learned, predictor,
-stream or mediated histories; the checkpoint contract below remains separate.
+An ordinary service can retain an active job after its helper review has
+completed with Continue. It advances local readiness only across the original
+acknowledged narrowing receipts, then requires a new authenticated human
+connection and independent approval of the new packet. An old pending offer is
+disconnected; an already-committed decision keeps its historical receipt.
+Reviewer candidate limits, native human-request capacity and the original
+workflow deadline remain in force. A rejection does not invite another vote.
+
+Narrowing during an unfinished helper review cannot reuse that old review.
+Excluded active work can retire through the existing scheduler, whose next
+request still faces the remaining ceiling. This ordinary operation does not
+handle learned, predictor, stream or mediated histories; the checkpoint contract
+below remains separate.
 
 ### P2. Investigating an incident
 

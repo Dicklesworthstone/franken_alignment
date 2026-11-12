@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-12: continue retained publication through authenticated review renewal
+
+- Carry explicit ordinary driver continuation through pending human review and
+  pre-dispatch approval withdrawal, preserving the original reviewer session.
+- Require fresh authenticated connection, nonce, request identity and explicit
+  human decision while retaining candidate, request, source and deadline bounds.
+- Preserve committed historical receipts and terminal restrictive decisions;
+  prevent renewal IDs from colliding with later ordinary scheduled requests.
+- Add three real service regression functions covering seven positive and causal
+  scenarios, including both plain and checked publication.
+- Independently review native/service composition and exact API use. New-source
+  formatting, compilation and runtime checks remain blocked by the unavailable
+  execution environment; no production qualification is claimed.
+
 ## 2026-11-12: continue retained ordinary reviews after narrowing
 
 - Add explicit original-driver readiness continuation across acknowledged

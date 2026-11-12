@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: preserve authenticated review custody across live narrowing
+
+Ordinary publication services now consume the explicit native narrowing
+continuation after a completed helper review. A withdrawn pending human offer
+is disconnected before its buffered decision can apply. Fresh approval needs a
+new independently initiated authenticated connection, nonce and unused native
+human-request identity. The original listener, candidate allowance, native
+request capacity, input-retention bounds and workflow deadline remain owned by
+the same session. Already-committed decisions retain their historical receipt;
+human rejection or revocation stays terminal.
+
+The publication loop returns to that same retained reviewer session if narrowing
+withdraws approval before dispatch. All later ordinary scheduled requests use
+bounded unused human identities too, avoiding collisions with renewal IDs.
+Original source acquisition, two-key dispatch, checked publication, independent
+Stop and terminal cleanup remain in force. Learned one-shot review retains its
+existing contract.
+
+Three service regression functions exercise seven scenarios: plain and checked
+real publication with a withdrawn offer and a second scheduled request; original
+candidate and human-request exhaustion and changed evidence; and deterministic
+narrowing after approved or rejected human decisions with original receipt
+delivery. Together with the native target, thirteen new regression functions
+are authored. Independent source review found no remaining concrete blocker.
+The execution environment remains unavailable; these changes have not been
+formatted, compiled or executed, and no gate or qualification state is promoted.
+
+Contract and operator guidance: `docs/SCOPED_AUTHORITY_NARROWING.md`,
+`docs/AGENT_GUIDE.md`.
+
 ## 2026-11-12: continue retained completed reviews after ordinary narrowing
 
 The original supervised driver can explicitly advance a completed Ready job

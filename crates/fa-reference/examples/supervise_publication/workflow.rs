@@ -7,6 +7,8 @@ pub(crate) mod actor_service;
 pub mod continuation;
 #[path = "workflow/control.rs"]
 pub(crate) mod control;
+#[path = "workflow/review_session.rs"]
+mod review_session;
 
 use super::config::{CLOCK_DOMAIN, Config, debug};
 use super::peers::{Admission, PeerProfile};
@@ -449,31 +451,43 @@ where
             }
         }
     }
-    let approval = human_review(
-        driver,
-        reviewer,
-        config,
-        request,
-        deadline,
-        (peers, &mut control),
-        time,
+    if control.checkpoint(driver, reviewer, deadline, time)? {
+        return Ok(());
+    }
+    let mut reviews = review_session::Session::new(config, request, peers, true)?;
+    let mut approval = reviews.review(
+        driver, reviewer, config, deadline, &mut control, time,
     )?;
-    let Some(approval) = approval else {
+    if approval.is_none() {
         cancel_unspent(driver, request)?;
         return Ok(());
-    };
+    }
     loop {
         deadline.check(time())?;
         if control.checkpoint(driver, reviewer, deadline, time)? {
             return Ok(());
         }
+        if reviews.continue_after_narrowing(driver)? {
+            // Retire the withdrawn human key before accepting a new independent
+            // decision. The original listener, candidate allowance and deadline
+            // remain owned by this same reviewer session.
+            drop(approval.take());
+            approval = reviews.review(
+                driver, reviewer, config, deadline, &mut control, time,
+            )?;
+            if approval.is_none() {
+                cancel_unspent(driver, request)?;
+                return Ok(());
+            }
+            continue;
+        }
         let event = match &mut publication {
             Some(profile) => {
-                profile.step_or_wait(driver, &mut config.source, time, Some(&approval))?
+                profile.step_or_wait(driver, &mut config.source, time, approval.as_ref())?
             }
             None => Some(
                 driver
-                    .step_from_file(&mut config.source, &mut *time, Some(&approval))
+                    .step_from_file(&mut config.source, &mut *time, approval.as_ref())
                     .result
                     .map_err(debug)?,
             ),
@@ -513,110 +527,11 @@ where
     if control.checkpoint(driver, reviewer, deadline, time)? {
         return Ok(None);
     }
-    let path = peers.map_or_else(|| config.socket(request), |profile| profile.socket(request));
-    let mut admission = Admission::new(peers)?;
-    let socket = BoundSocket::bind(&path, peers)?;
-    if peers.is_none() {
-        eprintln!("Reviewer peer credentials are unchecked: legacy namespace-isolated transport");
-    }
-    eprintln!("Independent reviewer endpoint ready: {path:?}");
-    let stream = loop {
-        deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, time)? {
-            return Ok(None);
-        }
-        match socket.listener.accept() {
-            Ok((stream, _)) => match admission.admit(stream)? {
-                Some(stream) => break stream,
-                None => pause(config.timing.poll_ms),
-            },
-            Err(e)
-                if matches!(
-                    e.kind(),
-                    io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
-                ) =>
-            {
-                pause(config.timing.poll_ms)
-            }
-            Err(e) => return Err(debug(e)),
-        }
-    };
-    // Peer acceptance precedes source capture, human-request creation and offer
-    // construction. Rejected peers cannot burn or influence the pending request.
-    if control.checkpoint(driver, reviewer, deadline, time)? {
-        return Ok(None);
-    }
-    let expires = plus(time(), config.profile.human.max_validity_ticks)?.min(deadline.logical);
-    let policy_only = driver
-        .supervisor()
-        .host()
-        .map_err(debug)?
-        .policy_only_file_source_required();
-    let request = if policy_only {
-        driver.request_learned_human_approval_from_policy_file(
-            &mut config.source,
-            request,
-            expires,
-            &mut *time,
-        )
-    } else {
-        driver.request_human_approval_from_file(&mut config.source, request, expires, &mut *time)
-    }
-    .result
-    .map_err(debug)?;
-    let nonce = nonce()?;
-    let mut connection = {
-        let host = driver.supervisor().host().map_err(debug)?;
-        stream.into_connection(&host, reviewer, request, nonce)?
-    };
-    let application = loop {
-        deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, time)? {
-            return Ok(None);
-        }
-        let progress = {
-            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-            connection
-                .step(&mut host, reviewer, &mut *time)
-                .map_err(debug)?
-        };
-        match progress {
-            ReviewerProgress::Applied(application) => break application,
-            ReviewerProgress::Complete => {
-                return Err("reviewer completed without an application".into());
-            }
-            ReviewerProgress::Progress | ReviewerProgress::Blocked => pause(config.timing.poll_ms),
-        }
-    };
-    // The human transition already committed. Receipt loss cannot rerun approval,
-    // erase its key, or pretend it was rejected. Bound only the remaining delivery
-    // of this historical receipt; the next ORIGINAL dispatch rereads the source.
-    let drain_started = Instant::now();
-    while connection.phase() != ReviewerPhase::Complete
-        && drain_started.elapsed() < Duration::from_millis(config.timing.cleanup_ms)
-    {
-        if control.checkpoint(driver, reviewer, deadline, time)? {
-            return Ok(None);
-        }
-        let result = {
-            let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
-            connection.step(&mut host, reviewer, &mut *time)
-        };
-        match result {
-            Ok(ReviewerProgress::Complete) => break,
-            Ok(ReviewerProgress::Applied(_)) => return Err("duplicate reviewer application".into()),
-            Ok(_) => pause(config.timing.poll_ms),
-            Err(error) => {
-                eprintln!("Committed review receipt was not delivered: {error:?}");
-                break;
-            }
-        }
-    }
-    if application.receipt.decision != ReviewDecision::Approve && application.approval.is_some() {
-        return Err("unexpected key for a restrictive reviewer decision".into());
-    }
-    Ok(application.approval)
+    // Learned consumers retain their original one-shot request/key contract.
+    let mut session = review_session::Session::new(config, request, peers, false)?;
+    session.review(driver, reviewer, config, deadline, control, time)
 }
+
 fn cancel_unspent(driver: &mut FileSupervisedDriver, request: u64) -> Result<(), String> {
     let mut host = driver.supervisor_mut().host_mut().map_err(debug)?;
     let status = host.request_status(request).map_err(debug)?;

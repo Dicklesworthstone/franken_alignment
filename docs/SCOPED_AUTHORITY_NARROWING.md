@@ -284,20 +284,39 @@ target intersection, predecessor, epoch and receipt accounting before emitting
 the response or sending a later selected document. A forged widening receipt
 cannot be passed on as an acknowledgment.
 
-Narrow before new intake when the next retained request should follow the
-complete original helper/human publication workflow. If narrowing instead
+Narrowing before new intake keeps the next retained request on the complete
+original helper/human publication workflow. If narrowing instead
 excludes a current undispatched request, the existing driver retires that
 cancelled job and the schedule may try its next independent request under the
 remaining ceiling. An empty ceiling therefore denies later admission. A request
 waiting for human approval can still be native Reviewing without a reservation;
 cancelling it refunds zero.
 
-For an already active retained driver job, the existing review/readiness
-predecessor can become stale. This implementation does not refresh that job
-automatically. Original containment remains available, while native retained
-automatic authorization can publish only with fresh independent human approval
-and all other current gates. Service evidence must not be read as automatic
-continuation of every active retained workflow.
+After the original helper review has completed with Continue, an ordinary
+service can preserve retained active work through the explicit native
+continuation above. The service checks the original acknowledged narrowing chain
+before offering human review, while an offer is pending and before dispatch.
+An unfinished helper review cannot use this path, and unrelated stale control
+changes still refuse.
+
+The same reviewer listener, socket identity, authenticated candidate allowance,
+absolute workflow deadline and cleanup bounds survive continuation. A withdrawn
+pending offer is disconnected before a buffered decision can apply to the new
+control context. The reviewer must initiate a new authenticated connection and
+independently approve a new packet with a fresh nonce and human-request identity.
+If the first decision was already committed, its historical receipt retains
+the original bounded cleanup grace before a replacement approval is considered. A human
+rejection or revocation remains terminal; narrowing cannot turn it into an
+automatic request for a more permissive decision.
+
+Human-request identities are selected from unused entries under the original
+finite native request capacity. They are separate from actor-request identities.
+Every later ordinary scheduled request uses the same bounded selection rule, so
+a key consumed by a renewal cannot block a later actor request.
+Native request, input-retention and authenticated candidate limits are never
+replenished. Missing or changed source evidence prevents a replacement offer;
+expiry and all original publication checks still apply. Learned one-shot
+review retains its original behavior and does not select this continuation.
 
 ## Validation boundary
 
@@ -322,6 +341,22 @@ forged output refusal, and both plain and checked service workflows. The two
 full-workflow functions each exercise both publication modes: restriction before
 intake followed by actual helper/human publication, and active excluded review
 retirement followed by admission refusal under the retained empty ceiling.
+
+The continuation adds ten public native regression functions and three live
+service regression functions. The service functions exercise both plain and
+checked publication with a withdrawn pending offer, fresh independent approval,
+and a later scheduled actor request whose preferred human key was already used.
+They also cover original peer-candidate and human-request capacity, changed
+source evidence, already-committed historical receipt delivery and terminal
+human rejection. These are authored regressions, not executed results.
+
+On November 12, the original baseline workspace/all-target compiler check under
+nightly-2026-09-08 ended with SIGKILL in the large library test target. The
+execution environment then became unavailable, before focused tests or any of
+this new source could execute. The new continuation has independent source
+review only; formatting, compilation, runtime, Clippy and the required full gate
+remain unverified. The historical November 11 verification record below remains
+unchanged.
 
 Implementation and regression sources are subject to the repository's required
 remote gate. In this session, `RCH_REQUIRE_REMOTE=1 rch exec -- cargo

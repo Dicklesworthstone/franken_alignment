@@ -255,3 +255,6 @@ fn narrowing_excluded_active_review_retires_without_stop_and_schedule_keeps_the_
         assert!(!reviewer.socket(8).exists());
     }
 }
+
+#[path = "narrowing/continuation.rs"]
+mod continuation;
