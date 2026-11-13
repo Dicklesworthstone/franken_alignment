@@ -121,6 +121,39 @@ Recovery revokes the original process-local approval; it does not recreate it.
 
 ## Sealed response profiles and scope of evidence
 
+### Explicit authenticated document client
+
+An independently provisioned native endpoint can be called with the existing
+operator client and an explicitly selected public connection profile:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE NEXT_DOCUMENT
+supervise_publication tower-operator-exchange OPERATOR_PROFILE PROMOTE_DOCUMENT
+```
+
+The client validates the complete closed promotion schema, original registration,
+campaign, operation, predecessor and returned structured action. Every selected
+document must match the configured tenant, principal, run, branch and authority;
+the entire input sequence is checked before connecting. A known response's full
+audience is checked again before output or any later document.
+
+Acknowledgments must preserve the original before-cut and recorded clock, advance
+journal revision, control sequence and authority epoch exactly once, and name a
+newer policy generation. Cancellation IDs must be canonical, ordered and bounded
+by `MAX_ATTEMPTS`; an empty cancellation set cannot claim a refund. The client
+checks internal consistency, not independent truth of a remote ledger. The reply
+parser admits a complete bounded cancellation set within the existing response
+byte ceiling. Malformed replies stop the sequence before another document is sent.
+
+The client sends only supplied documents. It does not follow a returned action,
+approve a candidate, reconnect or retry automatically. A promotion result or
+refusal must retain `retry_safe: false`. Genuine native Next refusals keep their
+original Boolean retry metadata. A payload relabeled as a generic refusal cannot
+bypass validation. The profile supplies connection identity and finite transport
+limits; it does not provision a governor or install server-side promotion custody.
+
+### Native evidence and limits
+
 `PublicationResult::PolicyPromotionNext` encodes as
 `fa.publication-policy-promotion-next/1`; `PolicyPromotion` encodes as
 `fa.publication-policy-promotion/1`. Both remain inside the existing sixteen-field

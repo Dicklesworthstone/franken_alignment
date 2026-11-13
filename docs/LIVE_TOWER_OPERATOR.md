@@ -20,6 +20,13 @@ compares a candidate against the original owner's retained policy corpus
 without changing policy or issuing authority. The service keeps its original journal lock, source
 admission, helper/human review, publication keys, independent Stop and cleanup path.
 
+The explicit `tower-operator-exchange` client also validates `next` / `promote`
+documents for an [independently provisioned native policy-promotion endpoint](TOWER_POLICY_PROMOTION.md).
+Ordinary service profiles do not provision the separate governor or install an
+approval permit. The client/profile cannot turn policy replay into approval;
+it checks the complete audience and original response bindings and sends only
+the caller's explicit documents, with no automatic promotion or retry.
+
 ## Select the operator endpoint
 
 Using an already qualified executable:

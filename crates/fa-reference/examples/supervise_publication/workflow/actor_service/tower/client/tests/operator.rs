@@ -11,6 +11,8 @@ mod fence;
 mod hold_diagnosis;
 #[path = "operator/narrowing.rs"]
 mod narrowing;
+#[path = "operator/policy_promotion.rs"]
+mod policy_promotion;
 #[path = "operator/policy_replay.rs"]
 mod policy_replay;
 #[path = "operator/refinement_explanation.rs"]

@@ -412,6 +412,10 @@ governor and delegate one independently approved native campaign to
 The complete original corpus and predecessor are rechecked at promotion; fresh
 work still requires both effect keys. Ordinary server CLI profiles do not
 provision this governor or approval, and selecting policy replay cannot do so.
+The existing `tower-operator-exchange` client can submit explicit Next/Promote
+documents to that independently provisioned endpoint. It validates the complete
+configured audience, campaign, predecessor and acknowledgment, and stops before
+later documents on malformed replies. It follows no returned action itself.
 
 ### P7. Running an experiment
 

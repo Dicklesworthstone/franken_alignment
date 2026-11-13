@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-13: validate explicit policy promotion in the operator client
+
+- Accept original native promotion plans and acknowledgments through the existing
+  authenticated explicit-document client, with complete audience and cut binding.
+- Validate exact executable actions, policy transitions, bounded cancellations,
+  refund structure and refusal metadata before output or any later document.
+- Reject unsafe/nonboolean promotion retry claims and preflight a foreign later
+  document before connecting; retain explicit-only action and retry behavior.
+- Add seven native-corpus and socket regression functions; ordinary service
+  profiles still do not provision a governor or approve a policy.
+- Pass focused dated formatting and execute the required xtask gate through its
+  source-snapshot refusal; full library builds remain SIGKILLed and no new runtime
+  test is claimed as passing.
+
 ## 2026-11-13: connect one independently approved policy campaign to the Tower
 
 - Delegate one original nonclone approval through finite revocable supervisor

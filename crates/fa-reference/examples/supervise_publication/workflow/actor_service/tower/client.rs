@@ -36,6 +36,8 @@ mod journal_tail;
 mod journal_tail_validation;
 #[path = "client/narrowing.rs"]
 mod narrowing;
+#[path = "client/policy_promotion.rs"]
+mod policy_promotion;
 #[path = "client/policy_replay.rs"]
 mod policy_replay;
 #[path = "client/refinement_explanation.rs"]
@@ -64,6 +66,9 @@ const MAX_FENCE_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
 // A target-ceiling plan may describe the entire original native ceiling; a
 // receipt may cancel every outside undispatched attempt in one transition.
 const MAX_NARROWING_REPLY_ITEMS: usize = MAX_REPLY_BYTES / 4;
+// One original policy transition may cancel every undispatched attempt. Its
+// closed response has no policy literals or unbounded report/case collection.
+const MAX_POLICY_PROMOTION_REPLY_ITEMS: usize = 4096 + 4 * fa_reference::action::MAX_ATTEMPTS;
 // Request history may contain every completed review in the admitted native
 // journal, including one complete follow-up request per row. Its work remains
 // bounded independently from numerical congress explanation.
@@ -214,6 +219,7 @@ fn exchange_endpoint(
         budget.check()?;
         let request = decode_request(&read_regular(path, MAX_REQUEST_BYTES)?)
             .map_err(|_| "invalid bounded Tower request document".to_owned())?;
+        policy_promotion::check_request(&request, endpoint.scope)?;
         let frame = request_frame(&request)?;
         documents.push(Prepared { request, frame });
     }
@@ -233,6 +239,7 @@ fn exchange_endpoint(
         )?;
         narrowing::check_profile(&parsed, &document.request, endpoint.scope)?;
         convening::check_profile(&parsed, &document.request, endpoint.scope)?;
+        policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -443,6 +450,11 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 ReadArguments::NarrowingNext { .. } | ReadArguments::Narrow { .. }
             ) {
                 MAX_NARROWING_REPLY_ITEMS
+            } else if matches!(
+                &request.arguments,
+                ReadArguments::PolicyPromotionNext { .. } | ReadArguments::Promote { .. }
+            ) {
+                MAX_POLICY_PROMOTION_REPLY_ITEMS
             } else if request.verb == Verb::Related {
                 MAX_REQUEST_HISTORY_REPLY_ITEMS
             } else {
@@ -489,7 +501,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         return Err(invalid());
     }
     match (result.get("kind").and_then(Json::as_str), request.verb) {
-        (Some("refused"), _) => {}
+        (Some("refused"), _) => {
+            if !policy_promotion::refused_matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
         (Some("publication-request"), Verb::Propose | Verb::Get) => {}
         (Some("precheck"), Verb::Precheck) => {}
         (Some("capabilities"), Verb::Capabilities) => {}
@@ -556,6 +576,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("convene-next"), Verb::Next) | (Some("convene"), Verb::Convene) => {
             if !convening::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
+        (Some("policy-promotion-next"), Verb::Next) | (Some("policy-promotion"), Verb::Promote) => {
+            if !policy_promotion::matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,

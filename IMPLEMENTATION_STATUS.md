@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: validate explicit policy promotion through the authenticated client
+
+`tower-operator-exchange` now accepts the sealed native policy-promotion plan
+and acknowledgment profiles. It validates closed fields, original registration,
+campaign, operation, the entire predecessor, the exact returned action, policy
+advancement and cancellation/refund structure. Configured principal, branch and
+authority are enforced in addition to tenant/run; every input document is checked
+before connecting, and known response audiences are checked before output or a
+later request. The parser admits the complete bounded cancellation set.
+
+The client neither follows Next actions nor approves, reconnects or retries
+implicitly. Both native promotion results and generic promotion refusals must
+retain Boolean `retry_safe: false`; relabeling a receipt as refused cannot bypass
+validation. The existing profile remains connection metadata and does not
+provision the separate governor or install a server-side approval.
+
+Seven client regression functions use original nonempty native campaign corpora,
+actual socket exchanges and paired causal changes. They cover valid plans and
+acknowledgments, full-scope mismatch, executable-action/predecessor tampering,
+explicit retries, malformed replies preventing later documents, whole-sequence
+preflight and complete cancellation-array parsing. The maximum-array fixture
+is explicitly syntax coverage, not evidence of actual native attempts.
+
+Independent source review found and corrected the generic-refusal retry flag
+gap. All four client Rust files pass the `nightly-2026-09-08` formatter with child
+traversal disabled; patch whitespace and vocabulary JSON checks also pass.
+
+The required `cargo run --locked -j 1 -p xtask -- check` compiled and executed
+xtask with the qualified dated compiler. It passed `reference_lock`,
+`source_inventory`, `qualified_rustc_identity` and `admission_contract`, verified
+2,417 source-file hashes, and exited 1 at `source_snapshot` for unlisted files
+and digest mismatches. This includes existing drift and newly changed inputs;
+no manifest was regenerated to manufacture admission. Workspace formatting,
+Clippy and tests were not reached. The full library's ordinary and serialized
+metadata/executable builds were SIGKILLed. A later typed-HIR analysis-only
+diagnostic was stopped with SIGINT before completion; it supplies no passing
+analysis evidence. No client/runtime tests executed, no Bead was closed and no
+full gate or production qualification is claimed.
+
+Contracts: `docs/TOWER_POLICY_PROMOTION.md`, `docs/LIVE_TOWER_OPERATOR.md`.
+
 ## 2026-11-13: delegate an approved native policy campaign through the Tower
 
 A separately retained original `FilePolicyPromotionPermit` now provisions a
