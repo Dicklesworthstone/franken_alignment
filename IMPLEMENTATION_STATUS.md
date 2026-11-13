@@ -1,5 +1,67 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: recover governed publication with fresh custody and independent Stop
+
+Ordinary and simple-witness checked scheduled Tower services now accept explicit
+governed `serve-open` with `--guarded`, the independent governor profile and the
+promotion operator. The closed `fa.guarded-submit/2` document independently binds
+the full current policy, exact campaign guard limits, history anchor and all
+journal/control/authority floors. Version one retains its original grammar,
+parser bounds and bootstrap-policy/no-campaign expectation. Ordinary and mediated
+continuation consume the selected full requirements; specialised Andon refuses
+version two before clock, custody or source work instead of ignoring them.
+
+The original locked cursor checks the complete anchored history, exact policy
+contents, source/campaign inventory, terminal reserve and selected publication
+limits before acknowledgment. Replay yields at each original event and at Ready.
+The independent Stop listener remains available during replay. A pending peer
+consumes that same verified cursor into the original authenticated Stop exchange
+before ordinary Fence/Time/Sweep or fresh-role issuance. Admission Stop preserves
+Unknown/dispatched charges, cancels only undispatched reservations, and retains
+its acknowledged anchor even after a lost reply or late deadline.
+
+With no pending Stop, the original Fence/Time/Sweep completes once and only its
+fresh governor is transferred to the independent service. Old roles, old
+promotion keys and pending approvals remain revoked. Unresolved delivery stages
+block intake. Current source acquisition, original helper work, fresh human
+approval and the selected final witness gate remain mandatory for new effects.
+Requested successor-anchor retention uses the same acknowledged owner on normal
+success and returned errors, including failures before intake. Recovery never
+rewrites actor epochs or restores campaign or effect authority from reports.
+
+Three new native public/socketpair integration tests pass: actual authenticated
+Stop accounting and exact retries; incomplete replay and independent expectation
+mismatches without cleanup; and missing/wrong reserve refusal. The two checked
+bootstrap/publication integration tests from the preceding increment also pass.
+Authored example regressions cover exact promoted-policy recovery and a further
+fresh promotion, revoked old keys and pending approvals, every cooperative replay
+cut, altered same-generation policy/campaign/source/floor/reserve/anchor inputs,
+closed versioned profiles and actual command preflight. Two complete separate-
+process service cases cover ordinary and checked recovered publication with Get,
+explicit governor approval, independent operator promotion and fresh human reviews.
+
+The qualified complete updated example test-harness metadata check passes. The
+complete production executable also compiles and links with the same original
+runtime and dependency set. All three full example test-executable builds ended
+with SIGKILL; the last two recorded maximum child RSS of 3,023,120 and 2,754,748 KiB.
+The exact reason for termination is not established. Serial frontend/backend/
+linker workers and target-only compiler metadata reductions preserved all tests,
+assertions, overflow checks, runtime Debug behavior and unwinding. No new example
+runtime test is claimed as executed, and the older executable was not reused.
+The existing environment's AF_UNIX socket-creation refusal separately leaves
+real listener/client/service execution unverified. Full qualification remains
+open and no Bead or source-snapshot manifest was changed to claim it.
+
+The required `cargo run --locked -j1 -p xtask -- check` passed reference lock,
+source inventory, qualified compiler identity and admission contract, then exited
+1 at the reviewed source snapshot: 159 refusals (96 unlisted files and 63 digest
+mismatches). Downstream workspace formatting, Clippy and full tests were not
+reached. Qualified scoped formatting of all 25 changed Rust paths and
+`git diff --check` passed separately. The source snapshot was not regenerated.
+
+Contracts: docs/LIVE_POLICY_GOVERNOR.md, docs/GUARDED_NEW_PUBLICATION.md and
+docs/COMPOSED_GUARDED_RECOVERY.md.
+
 ## 2026-11-13: discover policy-governor predecessors through independent custody
 
 The governor can now request `get` through its own authenticated endpoint and
@@ -21,11 +83,12 @@ Eight new regression functions use actual native owners, production responses an
 the original cache: usable discovery-to-Review, stale cuts, historical retries,
 independent identities, Stop/source state, finite cache, audience restrictions
 and hostile client documents. The complete updated example test-harness metadata
-check passes with the qualified nightly. The first complete code-generation
-attempt ended with SIGKILL after warnings and no Rust errors; those eight tests
-have not yet executed in this increment. The full harness is being retried with
-the compiler's memory-reducing LLVM-name option, without disabling modules or
-assertions. Existing pathname-listener limitations and full qualification remain
+check passes with the qualified nightly. All three complete code-generation
+attempts ended with SIGKILL after warnings and no Rust errors, including target-
+only reductions of retained LLVM names and MIR local-debug metadata. Those eight
+tests have not executed; no module or assertion was disabled and the stale older
+harness was not reused as evidence. The complete production executable compiles
+and links. Existing pathname-listener limitations and full qualification remain
 open; no native observation is presented as a live socket exchange.
 
 Contract and explicit Get-to-Review recipe: docs/LIVE_POLICY_GOVERNOR.md.

@@ -1,7 +1,8 @@
 # Independently approve policy changes in a running publication service
 
 The Linux reference executable can provision a separate governor endpoint for a
-new ordinary Tower publication run. The governor requests a replay of the
+new or independently recovered ordinary Tower publication run. The governor
+requests a replay of the
 complete original policy corpus and explicitly approves the exact returned
 report. That approval delegates one original opaque permit to the independently
 selected operator. The operator then uses the existing `next` / `promote` path.
@@ -31,9 +32,10 @@ an explicit schedule of at least two requests, the Tower generation, and both
 independent profiles. Checked creation requires the existing plain publication
 witness profile. Feed, wait, producer, snapshot fallback, whole-domain and joint
 profiles remain explicit refusals; a stronger selected verifier is never reduced
-to plain witness limits. The selection refuses topology, precheck, generated/learned modes and
-open/recovery combinations before reading their configuration. Existing
-journals are never upgraded to campaign governance by an actor or connection.
+to plain witness limits. The selection refuses topology, precheck and
+generated/learned modes before reading their configuration. Governed open uses
+the separate explicit recovery selection below. Existing journals are never
+upgraded to campaign governance by an actor or connection.
 
 The complete first canonical image contains the selected publication guard,
 configured file-source guard, campaign requirement and original terminal
@@ -96,6 +98,84 @@ key. The ordinary command requires the governor and this operator selection
 together. Native/learned numerical operator profiles refuse this ordinary
 promotion selection. The operator can receive only one approved campaign during
 its original lifetime; reconnects and request-schedule handoffs do not renew it.
+
+## Recover the governed owner with fresh independent custody
+
+Both ordinary and simple-witness checked services can continue an already
+campaign-guarded owner through its original anchored recovery:
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 42 --requests 8,9 \
+  --guarded GUARDED_SUBMIT_V2_PROFILE \
+  --operator-profile OPERATOR_PROFILE --governor-profile GOVERNOR_PROFILE
+
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE \
+  --tower-generation 42 --requests 8,9 \
+  --guarded GUARDED_SUBMIT_V2_PROFILE \
+  --operator-profile OPERATOR_PROFILE --governor-profile GOVERNOR_PROFILE
+```
+
+The recovery document has the closed `fa.guarded-submit/2` schema. Retain the
+actual current **complete policy**, exact campaign guard limits, independent
+minimum floors and history anchor before selecting this command. Values below
+are examples and must match that separately trusted expectation:
+
+```json
+{
+  "schema_version": "fa.guarded-submit/2",
+  "minimum": {
+    "journal_revision": 70,
+    "control_sequence": 10,
+    "authority_epoch": 1
+  },
+  "history_anchor": "/operator/custody/previous.anchor",
+  "retain_history_anchor": "/operator/custody/next.anchor",
+  "effective_policy": {
+    "generation": 2,
+    "nodes": [{"op": "payload_at_most", "maximum": 512}]
+  },
+  "campaigns": {"cases": 512, "input_bytes": 1048576, "max_campaigns": 8}
+}
+```
+
+The governor profile must select exactly those campaign limits. A legacy `/1`
+profile, missing campaigns, changed bounds or stronger publication profile
+refuses before the clock or live-resource acquisition. The original locked
+cursor then verifies the complete history, independent anchor and floors, exact
+full policy contents, source guard, terminal reserve and selected publication
+limits before recovery acknowledgment. A different policy with the same
+generation is still a mismatch. No source observation, policy approval or new
+actor input is reconstructed from retained metadata.
+
+Replay yields at every original event and at Ready. The independently
+authenticated Stop listener remains available throughout replay. A pending peer
+selects the original sealed recovery Stop exchange before ordinary completion;
+complete replay and all requirements remain mandatory. Stop can acknowledge its
+original admission Stop/Fence pair without an effect-clock observation, fresh
+source, reconciliation sweep or live governor. Unknown/dispatched effects retain
+their charges. A lost response or late deadline cannot erase the acknowledged
+native Stop or suppress requested successor-anchor retention. Startup then ends
+without admitting work.
+
+With no pending Stop, the same cursor completes the original `Fence → Time →
+Sweep` transaction once. All unresolved Dispatching, Unknown and irrecoverably
+unknown deliveries block new intake. The fresh owner preserves policy history,
+confirmed effects, charges, native campaign spending and original reserve, while
+old source eligibility, old roles and old promotion keys stay revoked. The
+service transfers only the newly returned governor into its independently
+selected endpoint. A later policy change needs a fresh full-corpus campaign,
+explicit governor approval and separate operator promotion; no old report or
+cached response restores approval.
+
+The original Stop control continues through preparation and first intake. New
+publication still requires current source evidence, helper review, fresh human
+approval and the selected final witness check. Actor proposals must carry the
+actual new epoch and target; the command never rewrites them. The selected
+successor anchor is retained from that same acknowledged owner on normal success
+and returned failure paths, including failures before intake. A retention or
+response error cannot undo a known effect or authorize a resend. Keep the old
+independent anchor until its successor is acknowledged.
 
 ## Discover the current cut through the independent governor endpoint
 
@@ -300,6 +380,7 @@ listener/client/end-to-end cases did not reach their intended protocol work.
 These are scoped Unix reference regressions; source coverage alone does not
 establish execution or full qualification. Kernel credentials
 identify the connecting local process under the trusted host assumptions; they
-do not prove evaluator competence or cryptographic independence. Recovery of a
-governor service, mediated/numerical composition, richer publication profiles, policy efficacy and
+do not prove evaluator competence or cryptographic independence. Live recovered
+service execution, mediated/numerical governor composition, richer publication
+profiles, policy efficacy and
 full production/runtime qualification remain separate unfinished capabilities.

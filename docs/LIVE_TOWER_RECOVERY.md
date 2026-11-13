@@ -17,6 +17,12 @@ multiple peers, generated/learned modes and stronger feed, wait, snapshot or joi
 witness profiles keep their separate lifecycles. Unsupported combinations refuse
 before service setup.
 
+For ordinary campaign-governed recovery without topology, use the separately
+selected [live governor recovery command](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody).
+It requires `fa.guarded-submit/2` with full effective-policy and campaign
+expectations. The mediated service described here does not provision a live
+governor.
+
 ## Independent history and source custody
 
 The existing `fa.guarded-submit/1` profile supplies an independent history anchor

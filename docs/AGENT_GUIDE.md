@@ -417,6 +417,11 @@ through `--governor-profile`, paired with the independent operator's
 `get`, review or exact-report approval document. Get discovers the current cut
 and selected bounds through the governor endpoint; exact query retries retain
 their historical response. The client does not auto-approve or promote.
+Governed ordinary `serve-open` and `serve-open-checked` additionally require
+`--guarded` with `fa.guarded-submit/2`, an independent anchor/floors, the complete
+current policy and exact campaign limits. Recovery returns fresh governor custody
+after the original Fence/Time/Sweep; old approvals remain revoked. Original Stop
+is available before completion and unresolved effects block new intake.
 Selecting policy replay alone cannot provision governor approval.
 The existing `tower-operator-exchange` client can submit explicit Next/Promote
 documents to that independently provisioned endpoint. It validates the complete

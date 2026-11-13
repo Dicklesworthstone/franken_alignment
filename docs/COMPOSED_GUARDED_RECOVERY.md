@@ -11,3 +11,14 @@ The existing specialized and legacy entry points are unchanged and do not acquir
 Seven public integration regressions cover both recovered roles through fresh identity, policy promotion and two-key publication; old key/role rejection; every optional gate; retained policy and credential revocation; each external floor; unresolved dispatch accounting; explicit legacy refusal; and corrupt suffix/profile handling. Two unit tests cover all five original Store fence replacement barriers and a syntactically valid but semantically invalid suffix. Two compile-fail doctests protect role non-cloning and the absence of a live-owner role getter. These are source tests, not reported passing executions. Rust compilation, rustfmt, Clippy, tests and doctests remain unexecuted; the editing environment lacks RCH. No Beads, qualified counts, original assertions, dependencies or journal formats were changed.
 
 The guard inventory also pins the exact `FileDecoderConfig`, including its immutable parameter, monitor and sampler inputs. Unexpected or duplicate numerical configuration is refused before token replay; the normal semantic replay still checks every numerical witness. The original recovery fence leaves the numerical owner paused. Explicit fresh-clock resume and newly measured identity are required independently; obtaining all roles does not release old outputs or restore effect keys. Two additional integration regressions cover combined numerical continuation through two-key publication, changed monitor configuration, unexpected presence/absence, and untouched staged data on refusal.
+
+## Independent recovery Stop before live custody
+
+On Linux, `FileGuardedRecovery::into_recovery_stop(operation)` consumes the same
+fully verified Ready cursor into the original authenticated recovery Stop peer.
+It requires complete independent guard/policy/floor/anchor checks and a retained
+recovery reserve. It exposes no ordinary owner, fresh role or Fence/Time/Sweep
+completion before the peer selects the exact original Stop request. Admission
+Stop preserves unknown/dispatched liabilities and exact retries; a different
+operation cannot take over a retained Stop. The live governed service composes
+this sealed path with its original Stop listener and successor-anchor retention.

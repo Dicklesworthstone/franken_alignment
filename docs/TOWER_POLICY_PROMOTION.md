@@ -5,7 +5,7 @@ to one independently approved campaign in the original durable owner. This is
 a trusted Rust embedding capability, including the existing authenticated Linux
 `PublicationPeerSession` transport. The ordinary `supervise_publication` server
 can now explicitly provision a [separate live governor](LIVE_POLICY_GOVERNOR.md)
-for a new ordinary plain or checked scheduled run. Its ordinary policy-replay selection continues
+for a new or independently recovered ordinary plain or checked scheduled run. Its ordinary policy-replay selection continues
 to grant comparison only; governor custody and operator promotion are separate
 startup selections and explicit authenticated decisions.
 
@@ -177,13 +177,15 @@ bypass validation. The profile supplies connection identity and finite transport
 limits; it does not provision a governor or install server-side promotion custody.
 
 For the executable ordinary service, select `--governor-profile` and the
-independent operator `policy_promotion` object at new ordinary plain or checked scheduled creation.
-The separate `policy-governor-exchange` client sends one explicit review or
-approval document per invocation. The service requires approval to contain the
+independent operator `policy_promotion` object at new ordinary plain or checked
+scheduled creation, or at explicitly anchored governed recovery.
+The separate `policy-governor-exchange` client sends one explicit cut-discovery,
+review or approval document per invocation. The service requires approval to contain the
 exact complete report returned for that campaign. The original native key is installed into the surviving operator session
 before its approval acknowledgment. See [live governor setup and wire
-contracts](LIVE_POLICY_GOVERNOR.md). Open, mediated and numerical
-combinations remain outside this new ordinary service selection.
+contracts](LIVE_POLICY_GOVERNOR.md). Governed open requires the exact independent
+`fa.guarded-submit/2` policy/campaign expectations and returns only fresh governor
+custody. Mediated and numerical governor combinations remain outside this selection.
 
 ### Native evidence and limits
 

@@ -14,6 +14,8 @@ use std::sync::mpsc;
 
 #[path = "policy_governor/checked.rs"]
 mod checked;
+#[path = "policy_governor/recovery.rs"]
+mod recovery;
 
 const CHILD_ROOT: &str = "FA_POLICY_GOVERNOR_E2E_ROOT";
 const CHILD_TEST: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::independent_governor_process";

@@ -13,9 +13,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[path = "profile/topology.rs"] mod topology;
-#[path = "profile/creation.rs"] mod creation;
+#[path = "profile/creation.rs"]
+mod creation;
+#[path = "profile/submission.rs"]
+mod submission;
+#[path = "profile/topology.rs"]
+mod topology;
 pub(crate) use creation::CreationOutput;
+pub(crate) use submission::SubmitProfile;
 
 const PROFILE_BYTES: usize = 16 * 1024;
 
@@ -53,9 +58,11 @@ impl Profile {
         let version = take(&mut root, "schema_version")?;
         // Only the stop and abandonment readers may select v2. Receipt and new-work profiles
         // retain their exact original schema; no other mode ignores topology.
-        let mediated = matches!((schema, version.as_str()),
+        let mediated = matches!(
+            (schema, version.as_str()),
             ("fa.guarded-stop/1", Some("fa.guarded-stop/2"))
-            | ("fa.guarded-abandon/1", Some("fa.guarded-abandon/2")));
+                | ("fa.guarded-abandon/1", Some("fa.guarded-abandon/2"))
+        );
         if !mediated && version.as_str() != Some(schema) {
             return Err(unsupported.into());
         }
@@ -67,20 +74,31 @@ impl Profile {
         };
         end(&floor)?;
         let input = absolute(take(&mut root, "history_anchor")?)?;
-        let output = root.remove("retain_history_anchor").map(absolute).transpose()?;
+        let output = root
+            .remove("retain_history_anchor")
+            .map(absolute)
+            .transpose()?;
         let topology = if mediated {
             Some(topology::Selection::decode(take(&mut root, "topology")?)?)
-        } else { None };
+        } else {
+            None
+        };
         end(&root)?;
-        Ok(Self { minimum, input, output, topology })
+        Ok(Self {
+            minimum,
+            input,
+            output,
+            topology,
+        })
     }
 
     /// Reuse the exact independent input custody for read-only investigation.
     /// Such a read acknowledges no new cut and therefore cannot export one.
     /// Reject output requests before touching either the store or anchor paths.
-    pub(crate) fn admit_investigation(&self, config: &Config)
-        -> Result<(FileHistoryAnchor, FileRecoveryFloor), String>
-    {
+    pub(crate) fn admit_investigation(
+        &self,
+        config: &Config,
+    ) -> Result<(FileHistoryAnchor, FileRecoveryFloor), String> {
         if self.topology.is_some() {
             return Err("mediated stop profiles are not read-only investigation profiles".into());
         }
@@ -100,8 +118,11 @@ impl Profile {
     pub(super) fn admit_topology(&self, config: &Config,
         checkpoint: &mut impl FnMut() -> Result<(), String>)
         -> Result<Option<fa_reference::action::consequence::delivery::persistent::observed::guarded::mediated::FileTopologyRequirement>, String>
-    {
-        self.topology.as_ref().map(|selection| selection.admit(config, checkpoint)).transpose()
+{
+        self.topology
+            .as_ref()
+            .map(|selection| selection.admit(config, checkpoint))
+            .transpose()
     }
 
     pub(super) fn admit(&self, config: &Config) -> Result<Custody, String> {
@@ -148,15 +169,22 @@ impl AbandonProfile {
     }
 
     pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let profile = Profile::decode_schema(bytes, "fa.guarded-abandon/1",
-            "unsupported guarded abandonment profile")?;
+        let profile = Profile::decode_schema(
+            bytes,
+            "fa.guarded-abandon/1",
+            "unsupported guarded abandonment profile",
+        )?;
         if profile.output.is_none() {
-            return Err("guarded abandonment requires retain_history_anchor for a new output file".into());
+            return Err(
+                "guarded abandonment requires retain_history_anchor for a new output file".into(),
+            );
         }
         Ok(Self(profile))
     }
 
-    pub(super) fn profile(&self) -> &Profile { &self.0 }
+    pub(super) fn profile(&self) -> &Profile {
+        &self.0
+    }
 }
 
 /// Schema-separated receipt recovery. A stop profile is never a live-recovery
@@ -171,28 +199,6 @@ impl ResumeProfile {
             bytes,
             "fa.guarded-resume/1",
             "unsupported guarded resume profile",
-        )
-        .map(Self)
-    }
-    pub(crate) fn minimum(&self) -> FileRecoveryFloor {
-        self.0.minimum()
-    }
-    pub(crate) fn admit(&self, config: &Config) -> Result<Custody, String> {
-        self.0.admit(config)
-    }
-}
-
-/// Explicit new-work recovery intent, never inferred from a stop/receipt profile.
-pub(crate) struct SubmitProfile(Profile);
-impl SubmitProfile {
-    pub(crate) fn read(path: &Path) -> Result<Self, String> {
-        Self::decode(&read_regular(path, PROFILE_BYTES)?)
-    }
-    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
-        Profile::decode_schema(
-            bytes,
-            "fa.guarded-submit/1",
-            "unsupported guarded submit profile",
         )
         .map(Self)
     }

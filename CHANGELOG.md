@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-13: reopen governed services with exact policy and fresh approval custody
+
+- Add bounded `fa.guarded-submit/2` with complete effective-policy and exact
+  campaign expectations while preserving the original version-one parser.
+- Compose ordinary and checked governed recovery with one independently anchored
+  cursor, original Fence/Time/Sweep, fresh roles and existing settlement gates.
+- Keep authenticated Stop available through replay and consume the verified
+  cursor into its original terminal exchange before exposing a live governor.
+- Preserve charges, old-key revocation, current-source/helper/human/witness gates
+  and successor-anchor retention after acknowledged success or failure.
+- Add native, profile, command and separate-process recovery regressions. All
+  three new native Stop tests pass; the preceding two checked tests also pass.
+- Pass complete example test-harness type checking and compile/link the production
+  executable. Preserve all assertions through three SIGKILLed test-executable
+  attempts; new example runtime and full repository qualification remain open.
+- Run the required xtask gate through four passing prerequisites and its reviewed
+  source-snapshot refusal (159 findings); downstream workspace checks remain open.
+
 ## 2026-11-13: discover the governor's current cut independently
 
 - Add authenticated read-only Get with full native predecessor, selected limits,
@@ -8,9 +26,9 @@
   historical retries, distinct query/campaign identities and finite cache use.
 - Add eight actual native/cache/client regression functions and an explicit
   independent discovery-to-Review recipe.
-- Pass the complete qualified example test-harness metadata check. The first
-  full code-generation attempt was SIGKILLed; runtime execution remains pending
-  while a memory-reducing build is attempted with all tests retained.
+- Pass the complete qualified example test-harness metadata check and production
+  executable build. Three full test-executable builds were SIGKILLed; runtime
+  execution of the new example tests remains pending with every test retained.
 
 ## 2026-11-13: retain checked publication through live policy governance
 

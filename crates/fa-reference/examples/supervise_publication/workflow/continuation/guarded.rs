@@ -4,14 +4,15 @@ use super::{Continuation, Deadline, RunResult, combine_failure, from_recovered, 
 use crate::config::{CLOCK_DOMAIN, Config, debug};
 use crate::peers::PeerProfile;
 use crate::recover_stop::guarded::{Custody, SubmitProfile};
+#[cfg(test)]
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
+    FileGuardSet, FileRecoveryRequirements,
+};
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError, Reconciliation, RecoveryReserve,
     observed::{
         FileOversight,
-        guarded::{
-            FileGuardSet, FileRecoveryRequirements,
-            recovery::{FileGuardedRecoveryStatus, ReconciledGuardedOwner},
-        },
+        guarded::recovery::{FileGuardedRecoveryStatus, ReconciledGuardedOwner},
     },
 };
 use fa_reference::action::consequence::oversight::actor_wire::{Command, decode_command};
@@ -21,7 +22,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[path = "guarded/mediated.rs"] pub(crate) mod mediated;
+#[path = "guarded/mediated.rs"]
+pub(crate) mod mediated;
 
 pub(crate) struct Submission<'a> {
     pub document: &'a [u8],
@@ -85,20 +87,7 @@ where
     let runtime_deadline = plus(start, config.timing.runtime_ms)?;
     let custody = profile.admit(&config)?;
     checkpoint()?;
-    let expected = FileRecoveryRequirements {
-        guards: FileGuardSet {
-            stream: None,
-            decoder: None,
-            decoder_stop: None,
-            source: Some(config.source_policy),
-            identity: None,
-            campaigns: None,
-            credential: None,
-        },
-        effective_policy: config.profile.delivery.policy.clone(),
-        credential_epoch: None,
-        minimum: profile.minimum(),
-    };
+    let expected = profile.requirements(&config);
     let mut recovery = FileOversight::begin_open_guarded_anchored(
         &config.store,
         config.profile.clone(),
@@ -199,10 +188,16 @@ const USAGE: &str = "usage: supervise_publication submit CONFIG SUBMIT_JSON --gu
 /// The outer command has already removed the existing credibility option. Only
 /// these explicit remaining options select this mode; no rejected guarded call
 /// can return to the legacy opener or guess a profile from the journal.
-pub(crate) fn command(args: &[String], credibility: Option<&Path>, out: &mut impl std::io::Write)
-    -> Result<(), String>
-{
-    if args.iter().skip(3).any(|argument| argument == "--topology-profile") {
+pub(crate) fn command(
+    args: &[String],
+    credibility: Option<&Path>,
+    out: &mut impl std::io::Write,
+) -> Result<(), String> {
+    if args
+        .iter()
+        .skip(3)
+        .any(|argument| argument == "--topology-profile")
+    {
         return mediated::command(args, credibility, out);
     }
     let (recovery_path, peer_path) = arguments(args)?;

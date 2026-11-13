@@ -554,7 +554,7 @@ where
     )
 }
 
-fn serve_ready_driver_with_governor<F, R>(
+pub(super) fn serve_ready_driver_with_governor<F, R>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,

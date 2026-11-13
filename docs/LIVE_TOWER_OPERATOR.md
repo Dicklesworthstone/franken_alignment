@@ -15,8 +15,8 @@ A separately selected ordinary `convening` grant admits explicit fresh helper
 rounds for a held original request through `next` and `convene`, with the same
 helper recipe, original deadline and later independent human approval.
 A separately selected `policy_promotion` capability can receive one original
-permit from an independently authenticated governor during new ordinary plain or checked scheduled
-creation, then perform explicit `next` / `promote` on that same session.
+permit from an independently authenticated governor during new or independently
+recovered ordinary plain or checked scheduled service, then perform explicit `next` / `promote` on that same session.
 A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
@@ -25,7 +25,8 @@ admission, helper/human review, publication keys, independent Stop and cleanup p
 
 The explicit `tower-operator-exchange` client also validates `next` / `promote`
 documents for an [independently provisioned native policy-promotion endpoint](TOWER_POLICY_PROMOTION.md).
-New ordinary plain or checked scheduled creation can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
+New or explicitly guarded recovered ordinary plain or checked scheduled services
+can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
 with `--governor-profile` and an independently selected operator allowance.
 The operator client/profile alone cannot turn policy replay into approval;
 it checks the complete audience and original response bindings and sends only
@@ -175,7 +176,7 @@ approved campaign during the original service lifetime, without supplying the
 governor role or changing an existing session's counters. The executable ordinary
 service requires its separate governor profile; numerical operator modes refuse
 this selection. [Live governor setup](LIVE_POLICY_GOVERNOR.md) specifies the
-supported creation grammar and exact-report approval.
+supported creation/recovery grammar, independent cut discovery and exact-report approval.
 Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response

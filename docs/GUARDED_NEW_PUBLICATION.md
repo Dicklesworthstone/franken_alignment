@@ -50,6 +50,31 @@ refuses checked publication histories before fresh intake or forwarding actor
 bytes; that refusal may follow an acknowledged recovery transaction. This flag
 is not a replacement for the explicit checked or learned workflows.
 
+## Exact promoted-policy and campaign expectations
+
+`fa.guarded-submit/2` adds mandatory `effective_policy` and `campaigns` fields to
+the same floor, input-anchor and optional output-anchor fields. `effective_policy`
+uses the complete existing Config policy grammar; `campaigns` is the non-null
+object `{cases,input_bytes,max_campaigns}` with nonzero native bounded integers.
+The original bootstrap configuration remains unchanged. Retain the current full
+policy independently: matching its generation alone is insufficient.
+
+Version two parses at most 2 MiB with depth 12, 16,384 items and 1 MiB strings;
+anchor paths retain their 4,096-byte bound. Version one keeps its original
+16 KiB/depth-four/32-item/4,096-byte-string decoder and expects the bootstrap
+policy with no campaign guard. Neither schema infers missing expectations.
+Ordinary and mediated guarded continuations consume the complete selected
+requirements. Specialised Andon recovery explicitly refuses version two before
+clock, custody or source acquisition instead of dropping its extra contracts.
+
+The original anchored cursor checks the exact effective policy, campaign limits,
+source guard, floors and reserve before recovery acknowledgment or staging-file
+cleanup. Recovery revokes pending campaigns and old keys; its fresh governor can
+approve only a new original campaign on the recovered owner. The ordinary
+[governed live-service selection](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody)
+returns that fresh role to a separate authenticated governor endpoint. It still
+refuses mediated and numerical governor composition.
+
 ## Original recovery and positive continuation
 
 After bounded configuration/document parsing, one start Instant and logical

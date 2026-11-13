@@ -16,6 +16,8 @@ mod multi;
 mod native;
 #[path = "actor_service/operator.rs"]
 mod operator;
+#[path = "actor_service/policy_recovery.rs"]
+mod policy_recovery;
 #[path = "actor_service/precheck.rs"]
 mod precheck;
 #[path = "actor_service/profile.rs"]
@@ -49,7 +51,7 @@ use profile::Profile;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE; plain and simple-witness checked scheduled Tower create also accept --governor-profile GOVERNOR_PROFILE with an independent promotion operator";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE; plain and simple-witness checked scheduled Tower modes also accept --governor-profile GOVERNOR_PROFILE with an independent promotion operator; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
