@@ -52,6 +52,31 @@ pub struct PeerProfile {
     candidates: u32,
 }
 impl PeerProfile {
+    /// Compare independent role admissions without disclosing any live handle.
+    #[cfg(target_os = "linux")]
+    pub(crate) fn reviewer_policy(
+        &self,
+    ) -> Result<fa_reference::action::consequence::oversight::actor_peer::PeerPolicy, String> {
+        fa_reference::action::consequence::oversight::actor_peer::PeerPolicy::new(
+            self.reviewer.uid,
+            self.reviewer.gid,
+            self.reviewer.pid,
+        )
+        .map_err(debug)
+    }
+
+    #[cfg(target_os = "linux")]
+    pub(crate) fn supervisor_policy(
+        &self,
+    ) -> Result<fa_reference::action::consequence::oversight::actor_peer::PeerPolicy, String> {
+        fa_reference::action::consequence::oversight::actor_peer::PeerPolicy::new(
+            self.supervisor.uid,
+            self.supervisor.gid,
+            self.supervisor.pid,
+        )
+        .map_err(debug)
+    }
+
     pub fn read(path: &Path) -> Result<Self, String> {
         supported()?;
         Self::decode(&read_regular(path, MAX_PROFILE_BYTES)?)

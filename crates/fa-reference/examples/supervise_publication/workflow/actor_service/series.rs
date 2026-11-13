@@ -157,6 +157,105 @@ where
     )
 }
 
+/// A separately authenticated governor exists only on a newly guarded owner.
+/// Every guard and the terminal reserve are in the first canonical image.
+pub(super) fn serve_tower_governed<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: &operator::Settings,
+    governor_settings: &governor::Settings,
+    mut time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileGuardSet;
+    if generation == 0 || requests.len() < 2 {
+        return Err("live governor creation requires a nonzero Tower generation and at least two scheduled requests".into());
+    }
+    validate(requests, actor, reviewer_profile)?;
+    let mut additional = requests
+        .iter()
+        .flat_map(|&request| {
+            [
+                reviewer_profile.socket(request),
+                super::super::control::socket_path(reviewer_profile, request),
+            ]
+        })
+        .collect::<Vec<_>>();
+    additional.push(governor_settings.socket.clone());
+    let additional = additional
+        .iter()
+        .map(|path| path.as_path())
+        .collect::<Vec<_>>();
+    operator_settings.check_host(&config, actor, reviewer_profile, &additional)?;
+    governor_settings.check_host(
+        &config,
+        actor,
+        reviewer_profile,
+        operator_settings,
+        requests,
+    )?;
+    let start = time();
+    let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
+    let deadline = Deadline {
+        logical: plus(start, runtime)?,
+        started: Instant::now(),
+        wall: Duration::from_millis(runtime),
+    };
+    let socket = BoundSocket::bind(&actor.socket, None)?;
+    actor.secure_socket()?;
+    let guards = FileGuardSet {
+        stream: None,
+        decoder: None,
+        decoder_stop: None,
+        source: Some(config.source_policy),
+        identity: None,
+        campaigns: Some(governor_settings.campaign_requirement()),
+        credential: None,
+    };
+    let (host, roles) = FileOversight::create_guarded_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        None,
+        RecoveryReserve::terminal(),
+    )
+    .map_err(debug)?;
+    check_deployment(&config, &host, None)?;
+    let governor = roles
+        .policy_governor
+        .ok_or("guarded bootstrap did not provision the selected governor")?;
+    let (port, driver) = host.into_supervised_driver();
+    serve_ready_driver_with_governor(
+        config,
+        actor,
+        reviewer_profile,
+        None,
+        Options {
+            requests,
+            open: false,
+            credibility: None,
+        },
+        Some(generation),
+        Some(operator_settings),
+        socket,
+        port,
+        driver,
+        roles.human,
+        None,
+        OwnerStart::Ordinary,
+        None,
+        Some((governor_settings, governor)),
+        deadline,
+        time,
+        |_, _, _| Ok(()),
+    )
+}
+
 /// An explicit schedule through the original atomically mediated bootstrap.
 /// One selected source and its cumulative work follow every final publication.
 pub(super) fn serve_tower_with_topology<F>(
@@ -343,15 +442,74 @@ where
 {
     let (port, driver) = host.into_supervised_driver();
     serve_ready_driver(
-        config, actor, reviewer_profile, publication, options, tower_generation,
-        operator_settings, socket, port, driver, reviewer, topology, owner_start,
-        None, deadline, time, retain,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        tower_generation,
+        operator_settings,
+        socket,
+        port,
+        driver,
+        reviewer,
+        topology,
+        owner_start,
+        None,
+        deadline,
+        time,
+        retain,
     )
 }
 
 /// Continue the SAME recovered gateway and first request's Stop transport.
 /// Later schedule entries acquire only their originally selected endpoints.
 pub(super) fn serve_ready_driver<F, R>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
+    socket: BoundSocket,
+    port: Port,
+    driver: FileSupervisedDriver,
+    reviewer: super::super::FileHumanReviewer,
+    topology: Option<FileDriverTopology>,
+    owner_start: OwnerStart,
+    early_control: Option<super::super::control::Control>,
+    deadline: Deadline,
+    time: F,
+    retain: R,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
+{
+    serve_ready_driver_with_governor(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        tower_generation,
+        operator_settings,
+        socket,
+        port,
+        driver,
+        reviewer,
+        topology,
+        owner_start,
+        early_control,
+        None,
+        deadline,
+        time,
+        retain,
+    )
+}
+
+fn serve_ready_driver_with_governor<F, R>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
@@ -366,6 +524,7 @@ pub(super) fn serve_ready_driver<F, R>(
     topology: Option<FileDriverTopology>,
     owner_start: OwnerStart,
     mut early_control: Option<super::super::control::Control>,
+    governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
     deadline: Deadline,
     mut time: F,
     retain: R,
@@ -380,14 +539,21 @@ where
         ..
     } = options;
     let result = (|| {
-        if topology::install(&mut driver, topology, &deadline, &mut time,
-            early_control.as_mut(), &reviewer)? {
+        if topology::install(
+            &mut driver,
+            topology,
+            &deadline,
+            &mut time,
+            early_control.as_mut(),
+            &reviewer,
+        )? {
             return Ok(());
         }
         // One independent read session spans this original owner lifetime. A new
         // selected request never reissues custody, clears a pending native cursor
         // or resets transport, query, candidate or elapsed allowances.
-        let await_abandonment = operator_settings.is_some_and(|settings| settings.abandonment.is_some());
+        let await_abandonment =
+            operator_settings.is_some_and(|settings| settings.abandonment.is_some());
         let mut operator = operator_settings
             .map(|settings| {
                 operator::Service::start(
@@ -400,6 +566,13 @@ where
                 )
             })
             .transpose()?;
+        if let Some((settings, role)) = governor {
+            let service = governor::Service::start(settings, actor, role, &deadline)?;
+            operator
+                .as_mut()
+                .ok_or("governor has no independently selected operator")?
+                .attach_governor(service)?;
+        }
         let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
         // Copy only immutable, bounded launch recipes per NEW review. Never duplicate
         // a child, socket, captured input, vote, approval or effect capability.
@@ -460,9 +633,8 @@ where
                         break;
                     }
                 } else {
-                    early_control = Some(super::super::control::Control::new(
-                        &config, request, None,
-                    )?);
+                    early_control =
+                        Some(super::super::control::Control::new(&config, request, None)?);
                 }
                 if recorded {
                     if owner_start == OwnerStart::Ordinary {
@@ -491,10 +663,13 @@ where
                             return Ok(());
                         }
                         if let Some(service) = &mut operator {
-                            service.checkpoint();
+                            service.checkpoint_driver(&mut driver);
                         }
-                        if early_control.as_mut().expect("original control")
-                            .native_stop(&mut driver, &mut time)? {
+                        if early_control
+                            .as_mut()
+                            .expect("original control")
+                            .native_stop(&mut driver, &mut time)?
+                        {
                             return Ok(());
                         }
                         frames_seen = frames_seen.saturating_add(ingress.admit_sequence(
@@ -545,7 +720,7 @@ where
                         let mut pump = |driver: &mut FileSupervisedDriver| {
                             // LiveControl services independent Stop before this pump.
                             if let Some(service) = &mut operator {
-                                service.checkpoint();
+                                service.checkpoint_driver(driver);
                             }
                             frames_seen = frames_seen
                                 .saturating_add(ingress.observe_sequence(driver, &completed)?);
@@ -601,18 +776,28 @@ where
                 // journal clock observation occurs merely because the wait polls.
                 while await_abandonment
                     && matches!(
-                        driver.supervisor().host().map_err(debug)?
-                            .request_status(request).map_err(debug)?.disposition,
-                        FileRequestDisposition::Admitted { stage: ActionState::Unknown, .. }
+                        driver
+                            .supervisor()
+                            .host()
+                            .map_err(debug)?
+                            .request_status(request)
+                            .map_err(debug)?
+                            .disposition,
+                        FileRequestDisposition::Admitted {
+                            stage: ActionState::Unknown,
+                            ..
+                        }
                     )
                 {
                     deadline.check(time())?;
-                    let control = early_control.as_mut().expect("original abandonment Stop control");
+                    let control = early_control
+                        .as_mut()
+                        .expect("original abandonment Stop control");
                     if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                         return Ok(());
                     }
                     if let Some(service) = &mut operator {
-                        service.checkpoint();
+                        service.checkpoint_driver(&mut driver);
                     }
                     if control.native_stop(&mut driver, &mut time)? {
                         return Ok(());
@@ -654,10 +839,12 @@ where
                     }
                 }
                 if let Some(service) = &mut operator {
-                    service.checkpoint();
+                    service.checkpoint_driver(&mut driver);
                 }
                 if let Some(control) = &mut early_control {
-                    if control.native_stop(&mut driver, &mut time)? { return Ok(()); }
+                    if control.native_stop(&mut driver, &mut time)? {
+                        return Ok(());
+                    }
                 }
                 frames_seen = ingress.observe_sequence(&mut driver, &completed)?;
                 if frames_seen == 0 {
@@ -668,7 +855,11 @@ where
         })();
         let mut automatic_cleanup_attempted = false;
         let mut failure = work.err().map(|error| {
-            if observational || early_control.as_ref().is_some_and(|control| control.native_cleanup_started()) {
+            if observational
+                || early_control
+                    .as_ref()
+                    .is_some_and(|control| control.native_cleanup_started())
+            {
                 error
             } else {
                 automatic_cleanup_attempted = true;

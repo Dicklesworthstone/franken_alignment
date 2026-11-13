@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; plain serve-create with an explicit schedule of at least two requests also accepts --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -39,6 +39,7 @@ struct Arguments<'a> {
     operator: Option<&'a Path>,
     topology: Option<&'a Path>,
     guarded: Option<&'a Path>,
+    governor: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -57,6 +58,7 @@ impl<'a> Arguments<'a> {
             positional + 6,
             positional + 8,
             positional + 10,
+            positional + 12,
         ]
         .contains(&args.len())
             || args[1..positional]
@@ -71,6 +73,7 @@ impl<'a> Arguments<'a> {
         let mut operator = None;
         let mut topology = None;
         let mut guarded = None;
+        let mut governor = None;
         // Each opt-in owns one complete pair. Operator read custody is separate
         // from admission-time precheck disclosure and cannot widen actor grants.
         for pair in args[positional..].chunks_exact(2) {
@@ -120,6 +123,12 @@ impl<'a> Arguments<'a> {
                     }
                     guarded = Some(Path::new(&pair[1]));
                 }
+                "--governor-profile" if governor.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    governor = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
         }
@@ -127,6 +136,14 @@ impl<'a> Arguments<'a> {
             || (topology.is_some() && precheck.is_some())
             || (guarded.is_some() && (!open || topology.is_none()))
             || (open && topology.is_some() && guarded.is_none())
+            || (governor.is_some()
+                && (open
+                    || checked
+                    || topology.is_some()
+                    || precheck.is_some()
+                    || guarded.is_some()
+                    || operator.is_none()
+                    || requests.as_ref().is_none_or(|requests| requests.len() < 2)))
         {
             return Err(USAGE.into());
         }
@@ -143,6 +160,7 @@ impl<'a> Arguments<'a> {
             operator,
             topology,
             guarded,
+            governor,
         })
     }
 }
@@ -180,6 +198,31 @@ where
         .operator
         .map(super::operator::Settings::read)
         .transpose()?;
+    if operator
+        .as_ref()
+        .is_some_and(|settings| settings.policy_promotion.is_some())
+        != selected.governor.is_some()
+    {
+        return Err("live policy promotion requires both an independent governor profile and an explicit operator promotion allowance".into());
+    }
+    if let Some(path) = selected.governor {
+        let governor = super::governor::Settings::read(path)?;
+        return super::series::serve_tower_governed(
+            config,
+            &actor,
+            &reviewer,
+            selected
+                .requests
+                .as_deref()
+                .expect("governor schedule checked before reads"),
+            selected.generation,
+            operator
+                .as_ref()
+                .expect("independent operator checked before reads"),
+            &governor,
+            time,
+        );
+    }
     if let Some(path) = selected.guarded {
         let recovery = SubmitProfile::read(path)?;
         let topology = RecoveryTopologySelection::read(

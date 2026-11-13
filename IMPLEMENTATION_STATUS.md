@@ -1,5 +1,79 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: independently approve and promote policy in a running publication service
+
+New plain scheduled Tower creation can provision a separate live governor with
+`--governor-profile`, paired with an explicit operator `policy_promotion`
+allowance. The first canonical image contains the original publication/source
+guards, campaign requirement and terminal recovery reserve. Governor credentials
+must be disjoint from actor, operator and human-review admissions; overlapping
+credentials or conflicting socket paths refuse before clock, source or store
+work. Existing journals and checked, mediated, precheck and numerical service
+combinations do not acquire this capability implicitly.
+
+The governor requests the original complete retained policy corpus at an exact
+predecessor. Its explicit approval must contain the exact canonical report and
+unchanged acknowledged revision; the original native governor rechecks campaign,
+source, Stop and shadow requirements. Only then is the original nonclone permit
+installed on the surviving independent operator session. The operator separately
+selects the original Tower Next/Promote action. Approval grants no effect key,
+and subsequent publication still requires current evidence, fresh helper work
+and independent human approval under the new policy epoch.
+
+The dedicated credential-authenticated transport retains finite connection,
+exchange, byte, I/O, cache and campaign allowances across reconnects. Exact
+historical retries retain their original result without recreating custody.
+Uncertain entered work remains an error, never evidence that approval rolled
+back. The single-document `policy-governor-exchange` client authenticates its
+server and validates the complete report, selected output bounds, original
+scope/cut, policies, cases, traces and summaries before output. Acknowledgments
+use the existing Known/value/basis contract; correlated command failures use a
+separate closed error code. Neither client performs automatic approval,
+promotion, reconnect or resend.
+
+The regression sources cover actual native campaign custody, socket reply loss,
+finite work, malformed or rebound reports, startup grammar and separate role
+admission. A full live scenario uses a distinct governor process between two
+original publications, removes the live source during replay/approval/promotion,
+requires a fresh second human decision and retries the old promotion while that
+new review is pending. Review also found and corrected an operator-availability
+race: an already disconnected session with no remaining admission cannot consume
+the one governor approval; an attached final connection remains usable.
+
+The qualified regular example check passed. The complete example harness,
+containing 1,452 registered tests, then compiled and linked against the frozen
+21-file source manifest with 256 codegen units and one frontend/backend/linker
+worker. No test module or assertion was disabled. An earlier code-generation
+attempt was killed; a redundant frontend-option setup failure was recorded
+separately. Three compiler-identified predecessor borrows were corrected without
+changing their assertions.
+
+The actual governor filter reported 6 passed and 15 failed. The six include the
+child-process helper's inactive parent invocation, two existing native governance
+cases, two startup grammar cases and the overlapping-identity preflight. The
+policy-promotion filter reported 4 passed and 6 failed; three original native
+plan/receipt/parser validators and the finite operator-profile case passed.
+These filters overlap and their counts are not a disjoint suite total. All
+listener-dependent cases failed before protocol work because this execution
+environment returns EPERM for `socket(AF_UNIX, SOCK_STREAM)` itself. An ordinary
+independent socket probe reproduced that refusal before bind. An existing
+two-publication schedule failed at the same operation, while its existing
+no-side-effect preflight passed. Missing sockets and the separate governor
+child's timeout were downstream failures, not successful live execution.
+
+The previously recorded 21 native driver/Tower/generated-operator integration
+tests remain passing; their authenticated peer cases use `socketpair`, which is
+available here. Socket permissions, role checks and runtime assertions were not
+weakened to accommodate the environment. Live listener/client/end-to-end results
+remain unverified. The final required `cargo run --locked -j1 -p xtask -- check`
+passed reference lock, source inventory, qualified compiler identity and admission
+contract, then exited 1 at the reviewed source snapshot: 143 refusals comprised
+85 unlisted files and 58 digest mismatches. Downstream workspace formatting,
+Clippy and full tests were not reached. No manifest was regenerated or Bead
+closed, and no full runtime or production qualification is claimed.
+
+Contract: `docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-13: provision a governed first image and attach approval to a live peer
 
 `FileOversight::create_guarded_reserved` composes the original guard inventory

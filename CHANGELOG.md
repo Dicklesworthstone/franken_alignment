@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-13: approve policy through an independent live governor
+
+- Provision a separately authenticated governor and complete campaign guard at
+  new plain scheduled Tower creation, with an independent operator allowance.
+- Request the complete original replay report and require explicit approval of
+  its exact bytes and predecessor before delegating one original opaque permit.
+- Install approval on the same finite operator session, preserving explicit
+  Next/Promote, current native gates and fresh human review for later effects.
+- Add the bounded single-document governor client, full report/acknowledgment
+  validation, historical retry behavior and separate command errors.
+- Add native, socket, profile, client and separate-process publication regressions;
+  correct the exhausted disconnected-operator approval race and three test
+  predecessor borrows without weakening original assertions.
+- Compile and link the complete 1,452-test example harness with the qualified
+  compiler. Record passing native validators/preflight cases and socket-dependent
+  failures caused by this environment's AF_UNIX socket-creation refusal; preserve
+  all assertions. Full live execution, workspace qualification and other governor
+  service modes remain open.
+
 ## 2026-11-13: provision governed owners and install approval on live peers
 
 - Compose the complete native guard set and terminal recovery reserve in the

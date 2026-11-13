@@ -22,7 +22,7 @@ impl Request {
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, CANDIDATE_BYTES)?)
     }
-    pub(super) fn decode(bytes: &[u8]) -> Result<Self, String> {
+    pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
         let value = strict_json::parse(
             bytes,
             Limits {

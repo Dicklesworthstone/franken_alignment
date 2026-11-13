@@ -14,6 +14,9 @@ explicit `next` and `narrow`, retaining allowed work and uncertain liabilities.
 A separately selected ordinary `convening` grant admits explicit fresh helper
 rounds for a held original request through `next` and `convene`, with the same
 helper recipe, original deadline and later independent human approval.
+A separately selected `policy_promotion` capability can receive one original
+permit from an independently authenticated governor during new plain scheduled
+creation, then perform explicit `next` / `promote` on that same session.
 A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
 compares a candidate against the original owner's retained policy corpus
@@ -22,8 +25,9 @@ admission, helper/human review, publication keys, independent Stop and cleanup p
 
 The explicit `tower-operator-exchange` client also validates `next` / `promote`
 documents for an [independently provisioned native policy-promotion endpoint](TOWER_POLICY_PROMOTION.md).
-Ordinary service profiles do not provision the separate governor or install an
-approval permit. The client/profile cannot turn policy replay into approval;
+New plain scheduled creation can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
+with `--governor-profile` and an independently selected operator allowance.
+The operator client/profile alone cannot turn policy replay into approval;
 it checks the complete audience and original response bindings and sends only
 the caller's explicit documents, with no automatic promotion or retry.
 
@@ -161,10 +165,18 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
-`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`
+`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`, `policy_promotion`
 and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
-disabled, so existing inspection/explanation profiles retain their behavior. Profile integers are unsigned JSON integers, as in the existing actor
+disabled, so existing inspection/explanation profiles retain their behavior.
+`policy_promotion` requires bounded positive `queries` and `max_replay_events`
+plus exactly `authority: "promote_approved_policy"`. It permits one independently
+approved campaign during the original service lifetime, without supplying the
+governor role or changing an existing session's counters. The executable ordinary
+service requires its separate governor profile; numerical operator modes refuse
+this selection. [Live governor setup](LIVE_POLICY_GOVERNOR.md) specifies the
+supported creation grammar and exact-report approval.
+Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
 allowance for this operator endpoint. Omitting it preserves the original
@@ -990,7 +1002,7 @@ Only the separate operator session receives operator access and its explicitly
 selected grants. Policy replay additionally selects `Experiment`; it does not
 grant `Permit`, a source callback, precheck disclosure, helper/human keys or a
 supervisor mutation capability. Resolution, cancellation, Unknown disposition,
-ordinary narrowing, held-review convening and Fence independently select `Permit` through restricted
+ordinary narrowing, held-review convening, approved-policy promotion and Fence independently select `Permit` through restricted
 operator constructors whose closed profiles refuse actor submission, ticket
 polling and precheck before native work. A proposal sent to an
 operator profile cannot acquire source evidence or create an action. The actor endpoint keeps its original grants and

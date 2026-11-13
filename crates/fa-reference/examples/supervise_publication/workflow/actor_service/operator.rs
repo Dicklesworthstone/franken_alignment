@@ -9,14 +9,13 @@ pub(crate) use profile::Settings;
 use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
+use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyPromotionPermit;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileGeneratedTextActorPort, FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure,
-    FileSupervisorCancellationGrant,
-    FileSupervisorAbandonmentGrant, FileSupervisorExplanationGrant,
-    FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
-    FileSupervisorJournalTailGrant, FileSupervisorPolicyReplayGrant,
-    FileSupervisorNarrowGrant,
-    FileSupervisorConveneGrant,
+    FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant, FileSupervisorConveneGrant,
+    FileSupervisorExplanationGrant, FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant,
+    FileSupervisorInspectionGrant, FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant,
+    FileSupervisorPolicyPromotionGrant, FileSupervisorPolicyReplayGrant,
     FileSupervisorRequestHistoryGrant, FileSupervisorResolutionGrant,
     FileSupervisorReviewExplanationGrant,
 };
@@ -49,6 +48,8 @@ struct Active {
     fence: Option<FileSupervisorFenceGrant>,
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
+    policy_promotion: Option<FileSupervisorPolicyPromotionGrant>,
+    promotion_settings: Option<profile::PolicyPromotionSettings>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,6 +70,7 @@ pub(super) struct Service {
     candidate_limit: u64,
     frames: usize,
     retirement: Option<Retirement>,
+    governor: Option<super::governor::Service>,
 }
 
 impl Service {
@@ -94,6 +96,7 @@ impl Service {
                     || settings.abandonment.is_some()
                     || settings.narrowing.is_some()
                     || settings.convening.is_some()
+                    || settings.policy_promotion.is_some()
                 {
                     PublicationTower::new_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -123,7 +126,10 @@ impl Service {
             generation,
             deadline,
             |mount, limits| {
-                if settings.fence.is_some() || settings.cancellation.is_some() || settings.abandonment.is_some() {
+                if settings.fence.is_some()
+                    || settings.cancellation.is_some()
+                    || settings.abandonment.is_some()
+                {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
                     PublicationTower::new_learned_reconciliation_operator(mount, port, limits)
@@ -410,6 +416,7 @@ impl Service {
             || narrowing.is_some()
             || convening.is_some()
             || fence.is_some()
+            || settings.policy_promotion.is_some()
         {
             purposes.push(PurposeTag::Permit);
         }
@@ -456,6 +463,8 @@ impl Service {
                 fence,
                 review_explanation,
                 policy_replay,
+                policy_promotion: None,
+                promotion_settings: settings.policy_promotion.clone(),
             }),
             started,
             wall,
@@ -463,6 +472,7 @@ impl Service {
             candidate_limit: settings.candidate_limit,
             frames: 0,
             retirement: None,
+            governor: None,
         };
         if service.started.elapsed() >= service.wall {
             service.retire_with(Retirement::Expired);
@@ -473,6 +483,81 @@ impl Service {
             settings.socket
         );
         Ok(service)
+    }
+
+    /// The separate governor may delegate one original approval into this
+    /// already selected operator. A connection never grants or replenishes it.
+    pub(super) fn promotion_available(&self) -> bool {
+        self.retirement.is_none()
+            && self.started.elapsed() < self.wall
+            && self.active.as_ref().is_some_and(|active| {
+                let status = active.session.status();
+                active.promotion_settings.is_some()
+                    && active.policy_promotion.is_none()
+                    && !status.revoked
+                    && active.session.remaining_exchanges() != 0
+                    // EOF may have disconnected the last admitted peer before
+                    // the next operator checkpoint retires its spent ingress.
+                    // The governor runs first and must not consume an approval
+                    // for a session that cannot admit another operator.
+                    && (status.active.is_some()
+                        || (self.candidates < self.candidate_limit
+                            && status.connections_admitted < status.connection_limit))
+            })
+    }
+
+    pub(super) fn install_policy_promotion(
+        &mut self,
+        driver: &FileSupervisedDriver,
+        permit: FilePolicyPromotionPermit,
+    ) -> Result<(), String> {
+        if !self.promotion_available() {
+            return Err("operator policy promotion is unavailable or already delegated".into());
+        }
+        let active = self.active.as_mut().expect("live operator checked above");
+        let selected = active
+            .promotion_settings
+            .as_ref()
+            .expect("explicit promotion selection");
+        let (port, grant) = driver
+            .supervisor()
+            .policy_promotion_port(permit, selected.queries, selected.max_replay_events)
+            .map_err(debug)?;
+        // This mutates only the original Tower's selected weak capability.
+        // Its peer identity, connection, queued output and quotas stay intact.
+        active
+            .session
+            .set_policy_promotion(Some(port))
+            .map_err(debug)?;
+        active.policy_promotion = Some(grant);
+        Ok(())
+    }
+
+    pub(super) fn attach_governor(
+        &mut self,
+        governor: super::governor::Service,
+    ) -> Result<(), String> {
+        if !self.promotion_available() || self.governor.is_some() {
+            return Err(
+                "governor requires one independently selected live promotion operator".into(),
+            );
+        }
+        self.governor = Some(governor);
+        Ok(())
+    }
+
+    /// Both independent sidecars run after the original Stop checkpoint. The
+    /// governor receives the live owner only for its explicitly selected turn.
+    pub(super) fn checkpoint_driver(&mut self, driver: &mut FileSupervisedDriver) {
+        if self.retirement.is_some() || self.started.elapsed() >= self.wall {
+            self.checkpoint();
+            return;
+        }
+        if let Some(mut governor) = self.governor.take() {
+            governor.checkpoint(driver, self);
+            self.governor = Some(governor);
+        }
+        self.checkpoint();
     }
 
     /// One bounded operator turn. Call only AFTER the original independent Stop
@@ -565,6 +650,9 @@ impl Service {
     }
 
     fn retire_with(&mut self, reason: Retirement) {
+        if let Some(mut governor) = self.governor.take() {
+            governor.retire();
+        }
         let Some(mut active) = self.active.take() else {
             return;
         };
@@ -613,14 +701,14 @@ impl Service {
                 grant.remaining_operations(),
                 grant.remaining_numerical_replay_events(),
             )),
-            active.narrowing.as_ref().map(|grant| (
-                grant.remaining_queries(),
-                grant.remaining_operations(),
-            )),
-            active.convening.as_ref().map(|grant| (
-                grant.remaining_queries(),
-                grant.remaining_operations(),
-            )),
+            active
+                .narrowing
+                .as_ref()
+                .map(|grant| (grant.remaining_queries(), grant.remaining_operations(),)),
+            active
+                .convening
+                .as_ref()
+                .map(|grant| (grant.remaining_queries(), grant.remaining_operations(),)),
             active.fence.as_ref().map(|grant| (
                 grant.remaining_operations(),
                 grant.remaining_numerical_replay_events(),

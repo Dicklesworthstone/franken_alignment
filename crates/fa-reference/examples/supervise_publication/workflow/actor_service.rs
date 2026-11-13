@@ -6,6 +6,8 @@ mod client;
 mod durable;
 #[path = "actor_service/generated.rs"]
 mod generated;
+#[path = "actor_service/governor.rs"]
+mod governor;
 #[path = "actor_service/learned.rs"]
 mod learned;
 #[path = "actor_service/multi.rs"]
@@ -47,7 +49,7 @@ use profile::Profile;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services alternatively accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE; plain scheduled Tower create also accepts --governor-profile GOVERNOR_PROFILE with an independent promotion operator";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -142,6 +144,13 @@ pub(crate) fn tower_policy_replay_command(
     tower::client::policy_replay_command(args, output)
 }
 
+pub(crate) fn policy_governor_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
+    governor::client::command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     // Learned services own their complete grammar, including a selected
     // observational Tower endpoint. Ordinary option parsers cannot consume it.
@@ -153,16 +162,20 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     // Native text retains its source-only actor wire. Its independently
     // selected Tower operator must not redirect it into ordinary Tower intake.
     if args.iter().any(|arg| arg == "--native-text")
-        && args.iter().any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation"))
+        && args
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation"))
     {
         return native::command(args, credibility);
     }
     // The selected wire format owns its complete ordinary-service grammar.
     // No other profile can consume this option and silently run actor JSON.
-    if args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--tower-generation" | "--operator-profile"))
-    {
+    if args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--tower-generation" | "--operator-profile" | "--governor-profile"
+        )
+    }) {
         return tower::command(args, credibility);
     }
     let (args, precheck_path) = take_precheck_option(args)?;
@@ -590,9 +603,24 @@ where
 {
     let (port, driver) = host.into_supervised_driver();
     serve_ready_driver(
-        config, actor, reviewer_profile, publication, credibility, precheck_settings,
-        tower_generation, operator_settings, socket, port, driver, reviewer, topology,
-        owner_start, None, deadline, time, retain,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        credibility,
+        precheck_settings,
+        tower_generation,
+        operator_settings,
+        socket,
+        port,
+        driver,
+        reviewer,
+        topology,
+        owner_start,
+        None,
+        deadline,
+        time,
+        retain,
     )
 }
 
@@ -666,7 +694,12 @@ where
             }
             // Never fall back to unqualified weights after recovery. This check is
             // read-only, and a never-qualified legacy journal retains its semantics.
-            driver.supervisor().host().map_err(debug)?.check_credibility().map_err(debug)?;
+            driver
+                .supervisor()
+                .host()
+                .map_err(debug)?
+                .check_credibility()
+                .map_err(debug)?;
         }
         if driver.topology().is_some() {
             deadline.check(time())?;

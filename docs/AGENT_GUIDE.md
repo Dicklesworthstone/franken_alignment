@@ -410,8 +410,12 @@ Trusted ordinary Rust embeddings can separately retain the original policy
 governor and delegate one independently approved native campaign to
 [`next` / `promote` on the live control Tower](TOWER_POLICY_PROMOTION.md).
 The complete original corpus and predecessor are rechecked at promotion; fresh
-work still requires both effect keys. Ordinary server CLI profiles do not
-provision this governor or approval, and selecting policy replay cannot do so.
+work still requires both effect keys. New plain scheduled ordinary creation can
+also select the [independently authenticated live governor](LIVE_POLICY_GOVERNOR.md)
+through `--governor-profile`, paired with the independent operator's
+`policy_promotion` allowance. `policy-governor-exchange` sends one explicit
+review or exact-report approval document; it does not auto-approve or promote.
+Selecting policy replay alone cannot provision governor approval.
 The existing `tower-operator-exchange` client can submit explicit Next/Promote
 documents to that independently provisioned endpoint. It validates the complete
 configured audience, campaign, predecessor and acknowledgment, and stops before

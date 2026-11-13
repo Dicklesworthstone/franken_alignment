@@ -393,8 +393,10 @@ fn native_generation_checkpoint_requires_an_authenticated_explicit_fence() {
                 native.request.clone(),
             )
             .unwrap();
-            host.begin_decoder_text(host.revision(), command).unwrap();
-            host.advance_decoder_text(host.revision(), native.generation, 0)
+            let revision = host.revision();
+            host.begin_decoder_text(revision, command).unwrap();
+            let revision = host.revision();
+            host.advance_decoder_text(revision, native.generation, 0)
                 .unwrap();
         }
         let before = driver.supervisor().host().unwrap().inspect();

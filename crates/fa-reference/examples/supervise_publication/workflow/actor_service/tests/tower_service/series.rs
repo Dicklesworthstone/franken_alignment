@@ -471,3 +471,5 @@ fn tower_schedule_checks_all_keys_and_socket_bindings_before_source_or_store() {
 mod abandonment;
 #[path = "series/narrowing.rs"]
 mod narrowing;
+#[path = "series/policy_governor.rs"]
+mod policy_governor;

@@ -4,11 +4,11 @@ use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
     MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
-    MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES,
-    MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES, MAX_FENCE_REPLAY_EVENTS,
-    MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS,
-    MAX_JOURNAL_TAIL_QUERIES, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
-    MAX_NARROW_OPERATIONS, MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS,
+    MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES, MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
+    MAX_FENCE_REPLAY_EVENTS, MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES,
+    MAX_JOURNAL_TAIL_PAGE_EVENTS, MAX_JOURNAL_TAIL_QUERIES, MAX_NARROW_OPERATIONS,
+    MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_POLICY_PROMOTION_QUERIES,
+    MAX_POLICY_PROMOTION_REPLAY_EVENTS, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
     MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
     MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
     MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
@@ -57,6 +57,43 @@ pub(crate) struct Settings {
     pub(crate) fence: Option<FenceSettings>,
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
+    pub(crate) policy_promotion: Option<PolicyPromotionSettings>,
+}
+
+/// One independently approved campaign, delegated once during this service.
+/// Selecting these bounds does not create a governor or an approval key.
+#[derive(Clone, Debug)]
+pub(crate) struct PolicyPromotionSettings {
+    pub(crate) queries: usize,
+    pub(crate) max_replay_events: usize,
+    pub(crate) authority: String,
+}
+
+impl PolicyPromotionSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_POLICY_PROMOTION_QUERIES
+            || self.max_replay_events == 0
+            || self.max_replay_events > MAX_POLICY_PROMOTION_REPLAY_EVENTS
+            || self.authority != "promote_approved_policy"
+        {
+            return Err("policy promotion requires explicit approved-policy authority and bounded queries and replay".into());
+        }
+        Ok(())
+    }
 }
 
 /// Direct original request-to-review relationships. This metadata selection
@@ -686,6 +723,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(PolicyReplaySettings::decode(value)?),
             },
+            policy_promotion: match fields.optional("policy_promotion") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(PolicyPromotionSettings::decode(value)?),
+            },
         };
         fields.end()?;
         settings.validate()?;
@@ -754,7 +795,8 @@ impl Settings {
                 && self.convening.is_none()
                 && self.fence.is_none()
                 && self.review_explanation.is_none()
-                && self.policy_replay.is_none())
+                && self.policy_replay.is_none()
+                && self.policy_promotion.is_none())
         {
             return Err("operator service work or lifetime limit is out of range".into());
         }
@@ -786,6 +828,9 @@ impl Settings {
             return Err("numerical admission explanation requires a positive cumulative event budget within the selected query and replay bounds".into());
         }
         if let Some(selected) = &self.policy_replay {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.policy_promotion {
             selected.validate()?;
         }
         if let Some(selected) = &self.journal_tail {
@@ -838,6 +883,11 @@ impl Settings {
 
     fn check_numerical_operator(&self, profile: &str) -> Result<(), String> {
         self.validate()?;
+        if self.policy_promotion.is_some() {
+            return Err(
+                "live policy promotion supports only original ordinary publication runs".into(),
+            );
+        }
         if self.convening.is_some() {
             return Err(
                 "held-review convening supports only original ordinary publication runs".into(),

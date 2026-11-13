@@ -4,8 +4,10 @@ The native publication Tower connects `next` and the registered `promote` verb
 to one independently approved campaign in the original durable owner. This is
 a trusted Rust embedding capability, including the existing authenticated Linux
 `PublicationPeerSession` transport. The ordinary `supervise_publication` server
-CLI does not provision a governor or install a promotion permit. Its existing
-policy-replay selection continues to grant comparison only.
+can now explicitly provision a [separate live governor](LIVE_POLICY_GOVERNOR.md)
+for a new plain scheduled run. Its ordinary policy-replay selection continues
+to grant comparison only; governor custody and operator promotion are separate
+startup selections and explicit authenticated decisions.
 
 ## Keep approval outside the operator
 
@@ -169,6 +171,15 @@ original Boolean retry metadata. A payload relabeled as a generic refusal cannot
 bypass validation. The profile supplies connection identity and finite transport
 limits; it does not provision a governor or install server-side promotion custody.
 
+For the executable ordinary service, select `--governor-profile` and the
+independent operator `policy_promotion` object at new plain scheduled creation.
+The separate `policy-governor-exchange` client sends one explicit review or
+approval document per invocation. The service requires approval to contain the
+exact complete report returned for that campaign. The original native key is installed into the surviving operator session
+before its approval acknowledgment. See [live governor setup and wire
+contracts](LIVE_POLICY_GOVERNOR.md). Open, checked, mediated and numerical
+combinations remain outside this new ordinary service selection.
+
 ### Native evidence and limits
 
 `PublicationResult::PolicyPromotionNext` encodes as
@@ -190,5 +201,5 @@ reconnection under the same finite grant.
 
 These tests are source coverage unless an exact execution result is recorded in
 `IMPLEMENTATION_STATUS.md`. They do not establish production governor identity,
-an independently administered governor service, cryptographic approval,
+administrative independence beyond the configured role admissions, cryptographic approval,
 anti-rollback storage, scientific policy efficacy or the full repository gate.
