@@ -101,7 +101,7 @@ pub use policy_replay::{
 pub mod learned_intake;
 pub mod receipt;
 mod recovery;
-pub use recovery::FileActorRecoveryPort;
+pub use recovery::{FileActorRecoveryPort, FileActorRecoverySetPort, MAX_RECOVERY_REQUESTS};
 pub(in crate::action::consequence::delivery::persistent) mod precheck;
 pub use precheck::wire as precheck_wire;
 pub use precheck::{

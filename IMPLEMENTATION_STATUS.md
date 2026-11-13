@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: recover a finite selection of original actor requests
+
+The native permanently non-admitting recovery port now narrows to a finite set
+of 1–64 independently selected request IDs. `FileActorRecoverySetPort` preserves
+the original exact-proposal retry, snapshot custody, ticket issuer, weak owner
+and cancellation accounting. Set descendants can only narrow. Unselected
+operations and selected missing records remain Withheld; they cannot allocate
+an action, consume admission evidence or disclose owner availability outside
+the selected scope. The original actor wire and peer stack need no new command.
+
+Four public regression functions and a compile-fail boundary are authored.
+They exercise both durable host types, original exact retries and conflicts,
+selected missing keys with a preserved admission snapshot, foreign tickets,
+maximum and invalid selections, weak-owner loss, session-local ticket recovery
+and actual publication of one request followed by cancellation of another.
+The executed effect's charge remains while only the unsent reservation is
+released. These are source cases, not passing runtime evidence.
+
+Independent source review found no concrete blocker. The required Rust
+toolchain and RCH are unavailable, so compilation, formatting, Clippy and runtime
+verification remain unclaimed. The existing single-request receipt service CLI
+is unchanged in this increment. No Beads state or qualification gate changes.
+
+Contract: `docs/NON_ADMITTING_ACTOR_RECOVERY.md`.
+
 ## 2026-11-13: continue new held work after guarded topology recovery
 
 Guarded ordinary mediated services now accept the existing independent convening

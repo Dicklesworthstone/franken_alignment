@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-13: add finite non-admitting actor recovery selections
+
+- Select up to 64 original request IDs under one durable recovery capability;
+  descendants can only narrow the original set.
+- Preserve exact retained-request retry, snapshot custody, ticket provenance,
+  weak ownership and native cancellation liabilities through the existing wire.
+- Add four public regression functions and a compile-fail boundary for positive
+  recovery, missing/excluded keys, changed bytes, limits and liability accounting.
+- Independent source review found no concrete blocker; the Rust toolchain and
+  RCH are unavailable, so formatting, compilation and execution are unverified.
+
 ## 2026-11-13: continue new held requests in guarded recovered services
 
 - Enable explicitly granted successor review for new ordinary held work after

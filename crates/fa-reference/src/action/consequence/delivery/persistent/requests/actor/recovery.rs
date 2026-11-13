@@ -1,5 +1,8 @@
 //! Recover only ORIGINAL retained requests through the existing actor protocol.
 //! No request allocation, evidence acquisition or alternative outcome reducer.
+mod selection;
+pub use selection::{FileActorRecoverySetPort, MAX_RECOVERY_REQUESTS};
+
 use super::{
     ActorError, ActorOutcome, ActorProposal, ActorRequestPort, Error, FileActorPort,
     FileActorTicket, FileDelivery, FileRequestHost, JournalError, Knowledge, backend, fmt,
