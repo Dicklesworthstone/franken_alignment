@@ -12,6 +12,9 @@ use fa_reference::tower::{ReadArguments, TowerRequest, Verb, encode_request};
 use std::process::{Child, Command as ProcessCommand, ExitStatus};
 use std::sync::mpsc;
 
+#[path = "policy_governor/checked.rs"]
+mod checked;
+
 const CHILD_ROOT: &str = "FA_POLICY_GOVERNOR_E2E_ROOT";
 const CHILD_TEST: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::independent_governor_process";
 const CAMPAIGN: u64 = 801;
@@ -267,9 +270,20 @@ fn known_operator<'a>(response: &'a Json, kind: &str) -> &'a Json {
 
 #[test]
 fn independent_live_governor_promotes_between_two_publications_and_requires_fresh_human_review() {
+    governed_pair(false);
+}
+
+#[test]
+fn independent_live_governor_preserves_checked_publication_across_policy_promotion() {
+    governed_pair(true);
+}
+
+fn governed_pair(checked: bool) {
     let root = Directory::new();
     let config = configured(&root);
     evidence(&root, &config);
+    let publication = checked.then(|| checked::prepare(&root, &config));
+    let second_capture = publication.as_ref().map(|(_, bytes)| bytes.clone());
     let (mut actor, reviewer) = profiles(&root, &config);
     actor.connections = 1;
     actor.candidates = 1;
@@ -409,6 +423,10 @@ fn independent_live_governor_promotes_between_two_publications_and_requires_fres
         assert!(!source.exists());
         assert!(executed(&raw_exchange(&mut actor, &first)));
         write_complete(&source, source_bytes);
+        if let Some(capture) = second_capture {
+            write_complete(&directory.join("original.bin"), &capture);
+            write_complete(&directory.join("current.bin"), &capture);
+        }
         let pending = raw_exchange(&mut actor, &second);
         assert_eq!(
             field(knowledge(&pending), "state").as_str(),
@@ -431,10 +449,11 @@ fn independent_live_governor_promotes_between_two_publications_and_requires_fres
         assert!(executed(&finish(&mut actor, &second_poll, &second_poll)));
     });
     let first_human = human_for(reviewer.clone(), 7);
-    let served = service::serve_tower_governed(
+    let served = service::serve_tower_governed_checked(
         config,
         &actor,
         &reviewer,
+        publication.as_ref().map(|(profile, _)| profile),
         &[7, 8],
         GENERATION,
         &operator,

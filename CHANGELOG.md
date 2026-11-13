@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-13: retain checked publication through live policy governance
+
+- Add guarded checked creation with witness limits, source/campaign guards and
+  terminal recovery reserve in the original first canonical image.
+- Compose simple-witness scheduled Tower creation with the independent governor
+  and promotion operator; retain the final witness gate and fresh human work.
+- Refuse stronger selected publication profiles before acquiring live resources.
+- Pass two native integration tests for real publication/promotion, final witness
+  change, original charges, invalid configurations and existing-store preservation.
+- Pass the qualified regular example and complete test-harness metadata checks;
+  add checked separate-process service and closed-option regressions. Live
+  listener execution and full qualification
+  remain open.
+
 ## 2026-11-13: approve policy through an independent live governor
 
 - Provision a separately authenticated governor and complete campaign guard at

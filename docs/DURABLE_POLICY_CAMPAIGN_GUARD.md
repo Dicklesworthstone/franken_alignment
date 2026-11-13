@@ -10,6 +10,14 @@ campaign and reserve requirements are never installed by a later actor request.
 The constructor uses the original prepared bootstrap and canonical replacement;
 it does not upgrade an existing store or revive approvals after recovery.
 
+`FileOversight::create_guarded_publication_reserved` additionally takes the
+original `PublicationLimits`, installing the plain witness gate in that same
+prepared first image. It returns the same separate roles and preserves the
+exact source/campaign/reserve requirements. Later policy promotion does not
+remove the witness gate, supply a new capture or waive either effect key. Invalid
+native witness/guard/reserve combinations refuse before store creation; the
+existing path-dependent encoding and storage failure semantics remain unchanged.
+
 `request_policy_campaign(revision, &PolicyUpdate)` replays the entire original current-policy corpus, including exact denials and applied congress reviews. The governor receives an immutable historical review. Its `approve` method requires explicit acceptance of observed newly-reviewable cases and refuses campaigns requiring unseen observations even when that flag is true. Approval, rejection and revocation are journaled inputs to the original native gate. A `FilePolicyPromotionPermit` is returned only after acknowledged storage; neither that key nor the governor is cloneable, and querying an approved campaign cannot regenerate a lost key.
 
 `promote_policy_campaign` checks the native exact candidate and full history stamp again. A newly recorded denied proposal can invalidate approval even without changing the control sequence. Promotion invokes the original policy transition, cancels only its eligible undispatched attempts, withdraws outstanding human effect keys, and records the existing `PolicyUpdateReceipt` in the SAME canonical replacement. The original policy-history book supplies current_policy and historical retry receipts. Admitted/unknown effects retain their charges and envelopes until original endpoint reconciliation supplies the outcome. Subsequent work still requires congress approval and the separate human effect key.

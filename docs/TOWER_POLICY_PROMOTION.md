@@ -5,7 +5,7 @@ to one independently approved campaign in the original durable owner. This is
 a trusted Rust embedding capability, including the existing authenticated Linux
 `PublicationPeerSession` transport. The ordinary `supervise_publication` server
 can now explicitly provision a [separate live governor](LIVE_POLICY_GOVERNOR.md)
-for a new plain scheduled run. Its ordinary policy-replay selection continues
+for a new ordinary plain or checked scheduled run. Its ordinary policy-replay selection continues
 to grant comparison only; governor custody and operator promotion are separate
 startup selections and explicit authenticated decisions.
 
@@ -60,6 +60,11 @@ bootstrap and sole canonical replacement. Native guard, reserve and profile
 validation precedes store creation; canonical path-dependent encoding and write
 failures retain the original store semantics. Existing directories are refused.
 This provides no late upgrade or restoration of a previously approved key.
+
+`FileOversight::create_guarded_publication_reserved` uses the same prepared
+bootstrap with explicit plain publication witness limits. The first image
+contains those limits together with the other guards and reserve, and every
+post-promotion effect remains subject to the original final witness validation.
 
 The caller also needs authenticated operator status, access to the original run
 and explicit `Permit` purpose. Actor, observation-only, legacy reconciliation,
@@ -172,12 +177,12 @@ bypass validation. The profile supplies connection identity and finite transport
 limits; it does not provision a governor or install server-side promotion custody.
 
 For the executable ordinary service, select `--governor-profile` and the
-independent operator `policy_promotion` object at new plain scheduled creation.
+independent operator `policy_promotion` object at new ordinary plain or checked scheduled creation.
 The separate `policy-governor-exchange` client sends one explicit review or
 approval document per invocation. The service requires approval to contain the
 exact complete report returned for that campaign. The original native key is installed into the surviving operator session
 before its approval acknowledgment. See [live governor setup and wire
-contracts](LIVE_POLICY_GOVERNOR.md). Open, checked, mediated and numerical
+contracts](LIVE_POLICY_GOVERNOR.md). Open, mediated and numerical
 combinations remain outside this new ordinary service selection.
 
 ### Native evidence and limits

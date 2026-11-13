@@ -167,6 +167,35 @@ pub(super) fn serve_tower_governed<F>(
     generation: u64,
     operator_settings: &operator::Settings,
     governor_settings: &governor::Settings,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_tower_governed_checked(
+        config,
+        actor,
+        reviewer_profile,
+        None,
+        requests,
+        generation,
+        operator_settings,
+        governor_settings,
+        time,
+    )
+}
+
+/// The independently selected plain witness profile remains mandatory through
+/// policy promotion and every later effect on this SAME original owner.
+pub(super) fn serve_tower_governed_checked<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: &operator::Settings,
+    governor_settings: &governor::Settings,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -176,6 +205,12 @@ where
     if generation == 0 || requests.len() < 2 {
         return Err("live governor creation requires a nonzero Tower generation and at least two scheduled requests".into());
     }
+    // Richer producer/feed/wait/snapshot/joint selections cannot silently lose
+    // their extra native gates at guarded bootstrap. Refuse before any clock,
+    // source read, listener or canonical store is entered.
+    let publication_limits = publication
+        .map(PublicationProfile::simple_limits)
+        .transpose()?;
     validate(requests, actor, reviewer_profile)?;
     let mut additional = requests
         .iter()
@@ -217,15 +252,25 @@ where
         campaigns: Some(governor_settings.campaign_requirement()),
         credential: None,
     };
-    let (host, roles) = FileOversight::create_guarded_reserved(
-        &config.store,
-        config.profile.clone(),
-        &guards,
-        None,
-        RecoveryReserve::terminal(),
-    )
+    let (host, roles) = match publication_limits {
+        Some(limits) => FileOversight::create_guarded_publication_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            RecoveryReserve::terminal(),
+            limits,
+        ),
+        None => FileOversight::create_guarded_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            RecoveryReserve::terminal(),
+        ),
+    }
     .map_err(debug)?;
-    check_deployment(&config, &host, None)?;
+    check_deployment(&config, &host, publication)?;
     let governor = roles
         .policy_governor
         .ok_or("guarded bootstrap did not provision the selected governor")?;
@@ -234,7 +279,7 @@ where
         config,
         actor,
         reviewer_profile,
-        None,
+        publication,
         Options {
             requests,
             open: false,

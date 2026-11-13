@@ -410,7 +410,7 @@ Trusted ordinary Rust embeddings can separately retain the original policy
 governor and delegate one independently approved native campaign to
 [`next` / `promote` on the live control Tower](TOWER_POLICY_PROMOTION.md).
 The complete original corpus and predecessor are rechecked at promotion; fresh
-work still requires both effect keys. New plain scheduled ordinary creation can
+work still requires both effect keys. New plain or checked scheduled ordinary creation can
 also select the [independently authenticated live governor](LIVE_POLICY_GOVERNOR.md)
 through `--governor-profile`, paired with the independent operator's
 `policy_promotion` allowance. `policy-governor-exchange` sends one explicit

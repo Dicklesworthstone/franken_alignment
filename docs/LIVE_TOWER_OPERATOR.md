@@ -15,7 +15,7 @@ A separately selected ordinary `convening` grant admits explicit fresh helper
 rounds for a held original request through `next` and `convene`, with the same
 helper recipe, original deadline and later independent human approval.
 A separately selected `policy_promotion` capability can receive one original
-permit from an independently authenticated governor during new plain scheduled
+permit from an independently authenticated governor during new ordinary plain or checked scheduled
 creation, then perform explicit `next` / `promote` on that same session.
 A separate
 `fence` selection permanently stops admission in that original owner. Policy replay
@@ -25,7 +25,7 @@ admission, helper/human review, publication keys, independent Stop and cleanup p
 
 The explicit `tower-operator-exchange` client also validates `next` / `promote`
 documents for an [independently provisioned native policy-promotion endpoint](TOWER_POLICY_PROMOTION.md).
-New plain scheduled creation can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
+New ordinary plain or checked scheduled creation can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
 with `--governor-profile` and an independently selected operator allowance.
 The operator client/profile alone cannot turn policy replay into approval;
 it checks the complete audience and original response bindings and sends only

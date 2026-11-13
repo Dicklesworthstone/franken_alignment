@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: govern checked publication without dropping the witness gate
+
+Simple-witness checked scheduled Tower creation now accepts the independently
+selected governor and promotion operator. The original prepared bootstrap writes
+publication validation limits, the complete source/campaign guard inventory and
+the terminal reserve in its first canonical image before issuing either role.
+Promotion uses the existing governor and operator paths; later effects still
+require current source evidence, fresh helper work, a fresh human decision and
+final publication witness validation. Advanced feed, wait, producer, snapshot,
+whole-input and joint profiles refuse before clock, store, source or socket work
+instead of silently selecting the simple guard.
+
+Two native public integration tests pass with the qualified dated nightly. The
+positive case actually publishes, promotes and demonstrates that a changed final
+negative witness blocks the next publication while its charge remains until the
+original outcome reconciliation. The paired negatives exercise incompatible
+bootstrap inputs and preservation of an existing store. The first execution
+caught a fixture using generic helper inputs where the source guard requires
+its actual captured headers; the corrected fixture uses the original
+EvidenceSnapshot::inputs_for, with all production checks and test assertions
+preserved. The regular supervise_publication example check and the complete
+example test-harness metadata check also pass.
+
+The new separate-process checked service regression retains original helper,
+human, governor and operator exchanges and fresh policy epochs. Its live execution
+remains unverified in this environment, whose previously measured AF_UNIX socket
+creation refusal is unchanged; no permission or authentication gate was weakened.
+The workspace-wide qualification and source-snapshot gate remain open.
+
+Contracts: docs/LIVE_POLICY_GOVERNOR.md and docs/DURABLE_POLICY_CAMPAIGN_GUARD.md.
+
 ## 2026-11-13: independently approve and promote policy in a running publication service
 
 New plain scheduled Tower creation can provision a separate live governor with

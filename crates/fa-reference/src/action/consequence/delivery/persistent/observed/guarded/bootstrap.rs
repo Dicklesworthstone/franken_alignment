@@ -359,6 +359,30 @@ impl FileOversight {
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
     }
+
+    /// Publish the original plain witness gate, all selected guards and the
+    /// terminal reserve together before exposing any owner or role. A checked
+    /// bootstrap never falls back to the weaker ordinary publication guard.
+    /// Stream, change-feed, snapshot and joint publication profiles require
+    /// their own complete constructors and are not implied by these limits.
+    pub fn create_guarded_publication_reserved(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        reserve: super::super::super::RecoveryReserve,
+        publication: crate::action::consequence::delivery::publication_gate::PublicationLimits,
+    ) -> Result<(Self, FileOversightRoles), JournalError> {
+        let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(
+            profile,
+            guards,
+            registration,
+            reserve,
+            publication,
+        )?;
+        let store = storage::Store::create(directory.as_ref())?;
+        prepared.publish(store)
+    }
 }
 
 #[cfg(test)]

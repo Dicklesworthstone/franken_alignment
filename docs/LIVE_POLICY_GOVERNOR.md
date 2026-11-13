@@ -19,19 +19,33 @@ supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
   --tower-generation 41 --requests 7,8 \
   --operator-profile OPERATOR_PROFILE \
   --governor-profile GOVERNOR_PROFILE
+
+supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --operator-profile OPERATOR_PROFILE \
+  --governor-profile GOVERNOR_PROFILE
 ```
 
-The closed selection requires plain `serve-create`, an explicit schedule of at
-least two requests, the Tower generation, and both independent profiles. It
-refuses checked publication, topology, precheck, generated/learned modes and
+The closed selection requires ordinary `serve-create` or `serve-create-checked`,
+an explicit schedule of at least two requests, the Tower generation, and both
+independent profiles. Checked creation requires the existing plain publication
+witness profile. Feed, wait, producer, snapshot fallback, whole-domain and joint
+profiles remain explicit refusals; a stronger selected verifier is never reduced
+to plain witness limits. The selection refuses topology, precheck, generated/learned modes and
 open/recovery combinations before reading their configuration. Existing
 journals are never upgraded to campaign governance by an actor or connection.
 
-The complete first canonical image contains the ordinary publication guard,
+The complete first canonical image contains the selected publication guard,
 configured file-source guard, campaign requirement and original terminal
 recovery reserve. Only its acknowledged creation returns the independent human
 and governor roles. The human role follows the original effect-review workflow;
 the governor role stays in the governor service.
+
+For checked creation the original publication witness limits are part of that
+same first image. Policy promotion preserves them: each later effect still binds
+its own original capture and passes final witness validation under its current
+policy epoch. An old human key or a changed required value, absence or range
+cannot be excused by the governor's policy approval.
 
 The governor profile is a closed JSON document. Profile counters use ordinary
 unsigned JSON numbers. This example's identities and paths must be replaced by
@@ -241,5 +255,5 @@ These are scoped Unix reference regressions; source coverage alone does not
 establish execution or full qualification. Kernel credentials
 identify the connecting local process under the trusted host assumptions; they
 do not prove evaluator competence or cryptographic independence. Recovery of a
-governor service, checked/mediated/numerical composition, policy efficacy and
+governor service, mediated/numerical composition, richer publication profiles, policy efficacy and
 full production/runtime qualification remain separate unfinished capabilities.

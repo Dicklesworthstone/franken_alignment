@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; plain serve-create with an explicit schedule of at least two requests also accepts --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; serve-create and plain-witness serve-create-checked with an explicit schedule of at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -138,7 +138,6 @@ impl<'a> Arguments<'a> {
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()
                 && (open
-                    || checked
                     || topology.is_some()
                     || precheck.is_some()
                     || guarded.is_some()
@@ -207,10 +206,11 @@ where
     }
     if let Some(path) = selected.governor {
         let governor = super::governor::Settings::read(path)?;
-        return super::series::serve_tower_governed(
+        return super::series::serve_tower_governed_checked(
             config,
             &actor,
             &reviewer,
+            publication.as_ref(),
             selected
                 .requests
                 .as_deref()
