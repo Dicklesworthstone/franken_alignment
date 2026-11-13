@@ -71,9 +71,12 @@ an arbitrary admitting server does not acquire it because a client intends
 recovery.
 
 The existing [receipt-only actor service](RECEIPT_ONLY_ACTOR_SERVICE.md)
-provides the runnable single-request recovery workflow. It accepts exact
-resubmission of an unanswered original request at that explicitly restricted
-receiver without creating a new action if no server record exists. This does
+provides the runnable recovery workflow for the original single request or an
+explicit finite selection through its final `--requests` option. The selected
+list must begin with the actor profile's request, and all keys share one owner,
+connection/exchange allowance and elapsed window. It accepts exact resubmission
+of unanswered original requests at that explicitly restricted receiver without
+creating an action when a server record is absent. This does
 not weaken the durable cancellation command's requirement for a recorded
 acknowledgment when connecting to an ordinary admitting service.
 
@@ -99,6 +102,6 @@ an admitting capability.
 
 The finite-selection increment has independent source review only. The required
 Rust toolchain and RCH are unavailable in the editing environment; compilation,
-tests, rustfmt and Clippy remain unverified, and no passing runtime result is claimed. These changes
-advance the FA-107/FA-014 reference recovery integration without claiming
+tests, rustfmt and Clippy remain unverified, and no passing runtime result is
+claimed. These changes advance the FA-107/FA-014 reference recovery integration without claiming
 whole-packet or roadmap qualification.

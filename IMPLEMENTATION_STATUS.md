@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: serve a selected set of original receipts in one bounded session
+
+The ordinary and checked receipt-only open commands now accept an optional final
+`--requests` list of 1–64 distinct nonzero request IDs. The first key must match
+the actor profile. The original no-option behavior remains a singleton. Complete
+option grammar is checked before configuration reads, and selection/profile
+binding precedes startup elapsed checks, socket binding and original recovery.
+
+The service uses `FileActorRecoverySetPort` inside its one original authenticated
+peer session. Every selected key shares the same candidate, connection, exchange
+and elapsed allowances; reconnects retain original tickets without extending
+those limits. Missing and excluded requests remain Withheld, changed proposals
+conflict, and Cancel obeys the original liability rules. No new admission,
+evidence acquisition, helper/reviewer launch, logical clock or reconciliation
+is introduced. Stream and learned receipt grammars remain separate.
+
+Four service regression functions use actual native owners and encoded Linux
+socket exchanges. They cover four original liability phases, multiple retained
+keys, missing/excluded requests, exact retries and conflicts, reconnect limits,
+unchanged service deadlines, plain/checked CLI recovery without live source or
+witness files, and invalid selections before recovery. The obsolete blanket
+selection-refusal assertion now checks duplicate keys; other refusals remain.
+
+Independent source reviews found no concrete blocker. The required Rust
+toolchain and RCH are unavailable, so compilation, formatting, Clippy and runtime
+execution remain unverified. No full gate, Beads closure or production
+qualification is claimed.
+
+Contracts: `docs/RECEIPT_ONLY_ACTOR_SERVICE.md`,
+`docs/NON_ADMITTING_ACTOR_RECOVERY.md`.
+
 ## 2026-11-13: recover a finite selection of original actor requests
 
 The native permanently non-admitting recovery port now narrows to a finite set

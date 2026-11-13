@@ -341,7 +341,7 @@ fn closed_flags_foreign_scope_and_socket_collision_refuse_without_recovery() {
             "/missing",
             "--receipts-only",
             "--requests",
-            "700",
+            "700,700",
         ],
         vec![
             "serve-open",
@@ -471,3 +471,6 @@ fn rejected_kernel_credentials_consume_quota_without_returning_request_data() {
     assert_eq!(p.payload, b"recovery");
     assert!(!a.socket.exists());
 }
+
+#[path = "tests/selected.rs"]
+mod selected;

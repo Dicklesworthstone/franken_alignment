@@ -3,14 +3,23 @@
 The Linux `supervise_publication` example accepts an explicit restricted mode:
 
 ```
-supervise_publication serve-open CONFIG ACTOR_PROFILE --receipts-only
-supervise_publication serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only
+supervise_publication serve-open CONFIG ACTOR_PROFILE --receipts-only [--requests 700,701]
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only [--requests 700,701]
 ```
 
+Without `--requests`, the original actor-profile request remains the only
+selected identity. The optional final `--requests` list selects 1–64 distinct,
+nonzero canonical decimal request IDs; its first ID must match the actor
+profile's request. The remaining IDs may be recovered in any order. This is a
+finite receipt-access selection, not an execution schedule. The operator supplies
+it before startup; actor frames cannot extend it.
+
 There is no create variant, implicit fallback, reviewer-profile argument, new
-credential capsule, numerical recipe, fleet selector, or request sequence. The
-whole option set is validated before any configuration read. Existing service
-and actor-submit command branches retain their behavior.
+credential capsule, numerical recipe or fleet selector. The whole option grammar
+is validated before any configuration read, and the complete key/profile binding
+is checked before socket binding or store recovery. Existing stream and learned
+receipt commands retain their separate grammar and do not accept this option.
+Other service and actor-submit command branches retain their behavior.
 
 This opens the same original live-service deployment through its existing plain
 or witness-checked recovery path, including its native recovery fence and exact
@@ -21,12 +30,16 @@ that acknowledgment cannot undo the fence. Other guarded/learned deployments
 must use their existing explicitly matched recovery interfaces, not ignored flags
 on this command.
 
-After recovery, the only actor ingress is the selected request's
-`FileActorRecoveryPort` inside the original `PeerSession`. The server checks
-actual Linux peer credentials before decoding actor traffic, preserves native
-connection/exchange limits across reconnections, and applies the selected key to
-Submit, Poll and Cancel. No fresh policy evidence, helper executable, reviewer
-socket, logical clock, generation or reconciliation is invoked. The configuration
+After recovery, the only actor ingress is a finite `FileActorRecoverySetPort`
+inside the original `PeerSession`, built from the original permanently
+non-admitting recovery port. The server checks actual Linux peer credentials
+before decoding actor traffic, preserves native connection/exchange limits
+across reconnections, and applies the selected set to Submit, Poll and Cancel.
+Changing the selected request used by a frame does not reset that session's
+allowances. Authenticated reconnects retain its original recovered tickets;
+a completely new wire session must reacquire tickets through exact Submit.
+No fresh policy evidence, helper executable, reviewer socket, logical clock,
+generation or reconciliation is invoked. The configuration
 still describes the original deployment, but helper files and live evidence need
 not be available. Historical replay is distinct from new source acquisition.
 
@@ -61,13 +74,22 @@ checkpoint; this is not preemptive cancellation, an independent watchdog, or a
 bound on kernel/disk latency. Unknown liabilities require separate native
 reconciliation after this exclusive owner has been released.
 
-Six added regression functions cover actual Linux receipt/cancel exchanges for
-reserved, sent, published and confirmed effects; original open with an unavailable
+The original six regression functions cover actual Linux receipt/cancel
+exchanges for reserved, sent, published and confirmed effects; original open with an unavailable
 live source and retained refusal; missing selected requests after recovery;
 closed flags/scope/path collisions; deadlines before open versus after its fence;
 and kernel credential rejection without request disclosure. They reuse original
-file owners, full-input congress and separate human approval. The native gateway
-increment also has six tests and one compile-fail boundary. These are authored
-assertions, not passing executions. RCH is unavailable here; compilation, tests,
-rustfmt and Clippy remain unverified. No existing assertions, dependencies, wire
-commands, journal formats, Beads states or qualification gates change.
+file owners, full-input congress and separate human approval. Four additional
+selected-service regression functions cover multiple exact retries under four
+native liability phases, reconnect and time limits shared across keys, plain and
+checked command startup without live assets, and invalid selections before
+recovery. They check selected missing keys, excluded retained keys, changed
+proposal conflicts, original ticket custody and cancellation accounting. The
+native finite selection has four further public regressions and a compile-fail
+boundary; see [the recovery capability contract](NON_ADMITTING_ACTOR_RECOVERY.md).
+These are authored assertions, not passing executions. Independent source
+reviews found no concrete blocker, but the required Rust toolchain and RCH are
+unavailable; compilation, tests, rustfmt and Clippy remain unverified. The obsolete assertion
+that every `--requests` selection is invalid is replaced with a malformed-list
+refusal. No dependencies, wire commands, journal formats, Beads states or
+qualification gates change.

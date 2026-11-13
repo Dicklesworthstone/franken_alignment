@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-13: recover selected receipts through one bounded actor service
+
+- Add an optional final `--requests` selection to ordinary and checked
+  receipt-only open commands, preserving the original singleton default.
+- Bind 1–64 unique keys to the original actor profile before socket/store work;
+  all selected keys share the original authenticated session and transport limits.
+- Preserve exact retries, missing-key refusal, native cancellation accounting
+  and receipt recovery without live evidence, helpers or witness capture files.
+- Add four service regression functions for actual peer exchanges, liability
+  phases, shared reconnect/deadline limits and closed startup grammar.
+- Independent source review is complete; Rust/RCH availability still blocks
+  formatting, compilation and runtime verification.
+
 ## 2026-11-13: add finite non-admitting actor recovery selections
 
 - Select up to 64 original request IDs under one durable recovery capability;

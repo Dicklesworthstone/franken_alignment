@@ -6,9 +6,10 @@ use super::{
 };
 use std::path::Path;
 use fa_reference::action::consequence::oversight::actor_wire::ActorRequestPort;
+use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_RECOVERY_REQUESTS;
 #[path = "receipts/stream.rs"] mod stream;
 
-const USAGE: &str = "serve-open CONFIG ACTOR_PROFILE --receipts-only | serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only";
+const USAGE: &str = "serve-open CONFIG ACTOR_PROFILE --receipts-only [--requests KEYS] | serve-open-checked CONFIG ACTOR_PROFILE WITNESS_PROFILE --receipts-only [--requests KEYS]";
 const EXPIRED: &str = "receipt-only startup deadline reached; no actor request was admitted";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
@@ -28,8 +29,10 @@ fn command_with(args: &[String], credibility: Option<&Path>,
         return stream::command_with(args, credibility, elapsed, wait);
     }
     // Own the complete flag grammar BEFORE config reads or shared flag removal.
-    // Creation, live qualification, recipes, reviewer, sequence and fleet flags
-    // must not silently select this less capable endpoint.
+    // Creation, live qualification, recipes, reviewer and fleet flags must not
+    // silently select this less capable endpoint. Reuse only the bounded key
+    // grammar; a receipt selection never becomes an execution schedule.
+    let (args, requests) = super::series::take_option(args).map_err(|_| USAGE.to_owned())?;
     let checked = match args.first().map(String::as_str) {
         Some("serve-open") if args.len() == 4 => false,
         Some("serve-open-checked") if args.len() == 5 => true,
@@ -50,7 +53,12 @@ fn command_with(args: &[String], credibility: Option<&Path>,
     } else {
         None
     };
-    let report = serve(&config, &actor, publication.as_ref(), elapsed, wait)?;
+    let report = match requests {
+        Some(requests) => serve_selected(
+            &config, &actor, publication.as_ref(), &requests, elapsed, wait,
+        )?,
+        None => serve(&config, &actor, publication.as_ref(), elapsed, wait)?,
+    };
     eprintln!(
         "Receipt-only service window ended: frames={}, candidates={}, revision={}; no new admission or reconciliation was attempted",
         report.frames, report.candidates, report.revision
@@ -73,6 +81,17 @@ fn serve(
     elapsed: &mut impl FnMut() -> Duration,
     wait: &mut impl FnMut(u64),
 ) -> Result<ServiceReport, String> {
+    serve_selected(config, actor, publication, &[actor.request], elapsed, wait)
+}
+fn serve_selected(
+    config: &Config,
+    actor: &Profile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    elapsed: &mut impl FnMut() -> Duration,
+    wait: &mut impl FnMut(u64),
+) -> Result<ServiceReport, String> {
+    validate_selection(actor, requests)?;
     let wall = Duration::from_millis(actor.runtime_ms.min(config.timing.runtime_ms));
     if elapsed() >= wall {
         return Err(EXPIRED.into());
@@ -93,8 +112,9 @@ fn serve(
     if elapsed() >= wall {
         return Err(EXPIRED.into());
     }
-    serve_owner(host, actor, socket, wall, elapsed, wait)
+    serve_owner_selected(host, actor, socket, requests, wall, elapsed, wait)
 }
+#[cfg(test)]
 fn serve_owner(
     host: FileOversight,
     actor: &Profile,
@@ -103,14 +123,48 @@ fn serve_owner(
     elapsed: &mut impl FnMut() -> Duration,
     wait: &mut impl FnMut(u64),
 ) -> Result<ServiceReport, String> {
+    serve_owner_selected(host, actor, socket, &[actor.request], wall, elapsed, wait)
+}
+fn serve_owner_selected(
+    host: FileOversight,
+    actor: &Profile,
+    socket: BoundSocket,
+    requests: &[u64],
+    wall: Duration,
+    elapsed: &mut impl FnMut() -> Duration,
+    wait: &mut impl FnMut(u64),
+) -> Result<ServiceReport, String> {
+    validate_selection(actor, requests)?;
     let (port, supervisor) = host.into_actor_gateway();
-    let port = port.recovery_only().for_request(actor.request).map_err(debug)?;
+    let port = port.recovery_only().for_requests(requests).map_err(debug)?;
     let mut session = PeerSession::new(actor.actor, ActorWire::new(port), actor.channels(), actor.connections).map_err(debug)?;
     let (frames, candidates) = serve_session(&mut session, actor, socket, wall, elapsed, wait)?;
     // The supervisor stays alive throughout service; dropping it now releases
     // original exclusive custody. A weak actor port cannot retain that lock.
     let revision = supervisor.host().map_err(debug)?.revision();
     Ok(ServiceReport { frames, candidates, revision })
+}
+
+// Validate the complete external selection before startup elapsed checks,
+// socket binding or store recovery.
+// The first key retains the original profile anchor; other keys only restrict
+// receipt access under that same authenticated owner and transport allowance.
+fn validate_selection(actor: &Profile, requests: &[u64]) -> Result<(), String> {
+    if requests.is_empty()
+        || requests.len() > MAX_RECOVERY_REQUESTS
+        || requests[0] != actor.request
+    {
+        return Err(
+            "receipt selection must begin with the actor profile request and contain 1..=64 keys"
+                .into(),
+        );
+    }
+    for (index, &request) in requests.iter().enumerate() {
+        if request == 0 || requests[..index].contains(&request) {
+            return Err("invalid receipt request selection".into());
+        }
+    }
+    Ok(())
 }
 
 // One original bounded peer loop for raw, stream and sealed learned receipts.
