@@ -295,6 +295,7 @@ fn block_reason(reason: FilePolicyPromotionBlockReason) -> &'static str {
         FilePolicyPromotionBlockReason::NumericalReplayUnsupported => {
             "numerical_replay_unsupported"
         }
+        FilePolicyPromotionBlockReason::NumericalReplayLimit => "numerical_replay_limit",
         FilePolicyPromotionBlockReason::ReplayLimit => "replay_limit",
         FilePolicyPromotionBlockReason::OperationLimit => "operation_limit",
         FilePolicyPromotionBlockReason::OperationAlreadyUsed => "operation_already_used",

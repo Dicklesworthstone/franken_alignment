@@ -122,6 +122,37 @@ ordinary profile refuses decoder and predictor histories instead of acquiring
 numerical work implicitly. Ordinary mediated owners retain their independent
 source and final-publication checks.
 
+### Explicit numerical reconstruction allowance
+
+Trusted embeddings can separately admit a nonpredictive native or learned
+decoder history through `policy_promotion_port_with_numerical_budget(permit,
+queries, max_replay_events, numerical_replay_events)`. The original constructor
+keeps its refusal. The numerical allowance must be positive and no greater than
+the one-operation replay ceiling; it belongs to the original nonclone grant and
+is shared by every weak port clone.
+
+Before entering Promote, the port reserves the complete current journal length
+plus its proposed event. A one-event-short allowance reports
+`numerical_replay_limit` and refuses before operation entry, native replay or
+admission snapshot invalidation. The complete-history ceiling remains a separate
+check. `Next` and exact retained retries consume no numerical allowance. Entered
+failure, unwind, warm replay and repaired storage never refund numerical work.
+The grant's `remaining_numerical_replay_events()` reports the remaining original
+reservation; it grants no new work. Units count admitted replay events rather
+than wall-clock time, scalar products or fresh generation.
+
+The original immutable numerical recipe, retained corpus, native issuer, source
+interruption and Stop checks still govern the transition. Required action
+predictors remain unsupported even with this allowance: their registration is
+bound to the original policy generation. A budget cannot replace that binding.
+
+Promotion leaves the original nonpredictive numerical draft intact. A completed
+but unsubmitted learned message can subsequently enter under the new policy
+epoch using a fresh source observation, original native helper review and a new
+independent human approval. An already admitted attempt remains bound to its
+original specification and is cancelled by the original transition. Activated
+helper credibility, when present, needs fresh qualification after promotion.
+
 The existing native transition advances the control sequence and revocation
 epoch, installs the exact approved policy, cancels eligible old undispatched
 attempts and withdraws old human effect keys. Only actual cancelled reservations
@@ -205,6 +236,14 @@ response envelopes, finite work, source interruption, numerical refusal and all
 five original storage barriers. Linux peer tests use actual kernel credential
 checks, a rejected identity paired with the selected identity, lost replies and
 reconnection under the same finite grant.
+
+`tests/learned_policy_promotion.rs` additionally exercises a real learned decoder
+draft through paid original promotion, native helper inference, independent
+human approval and actual publication. Its paired cases check absent and short
+allowances, preserved admission snapshots, historical retries during a newer
+native review, original issuer/scope and weak custody, entered storage failure,
+and terminal Stop. Synthetic model weights are controlled test inputs, not
+evidence of policy quality or detector effectiveness.
 
 These tests are source coverage unless an exact execution result is recorded in
 `IMPLEMENTATION_STATUS.md`. They do not establish production governor identity,

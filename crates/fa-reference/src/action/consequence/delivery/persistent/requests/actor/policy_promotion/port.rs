@@ -8,6 +8,7 @@ impl FileActorSupervisor<FileOversight> {
     /// the original issuer and complete current corpus without reading source,
     /// clock or journal bytes. It does not create/approve a campaign or consume
     /// an admission snapshot. A stale, revoked or already used key refuses.
+    /// This ordinary allowance never admits numerical reconstruction.
     pub fn policy_promotion_port(
         &self,
         permit: FilePolicyPromotionPermit,
@@ -20,11 +21,60 @@ impl FileActorSupervisor<FileOversight> {
         ),
         JournalError,
     > {
-        if queries == 0 || max_replay_events == 0 {
+        self.policy_promotion_port_with_limits(permit, queries, max_replay_events, None)
+    }
+
+    /// Delegate the original approval with an explicit numerical reconstruction
+    /// allowance for a nonpredictive native or learned decoder history. Before
+    /// the one entered Promote, reserve the complete acknowledged history plus
+    /// its proposed event. Warm replay, failure and unwind never refund work;
+    /// the original immutable recipe still enforces its own numerical ceilings.
+    ///
+    /// Next and exact acknowledged retries use no numerical allowance. A short
+    /// budget refuses before operation entry, admission snapshot loss or replay.
+    /// These units are event reservations, not CPU time or scalar products.
+    /// Required action predictors remain unsupported: their policy-generation
+    /// binding cannot be replaced by permission to reconstruct their history.
+    pub fn policy_promotion_port_with_numerical_budget(
+        &self,
+        permit: FilePolicyPromotionPermit,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: usize,
+    ) -> Result<
+        (
+            FileSupervisorPolicyPromotionPort,
+            FileSupervisorPolicyPromotionGrant,
+        ),
+        JournalError,
+    > {
+        self.policy_promotion_port_with_limits(
+            permit,
+            queries,
+            max_replay_events,
+            Some(numerical_replay_events),
+        )
+    }
+
+    fn policy_promotion_port_with_limits(
+        &self,
+        permit: FilePolicyPromotionPermit,
+        queries: usize,
+        max_replay_events: usize,
+        numerical_replay_events: Option<usize>,
+    ) -> Result<
+        (
+            FileSupervisorPolicyPromotionPort,
+            FileSupervisorPolicyPromotionGrant,
+        ),
+        JournalError,
+    > {
+        if queries == 0 || max_replay_events == 0 || numerical_replay_events == Some(0) {
             return Err(Error::InvalidInput.into());
         }
         if queries > MAX_POLICY_PROMOTION_QUERIES
             || max_replay_events > MAX_POLICY_PROMOTION_REPLAY_EVENTS
+            || numerical_replay_events.is_some_and(|events| events > max_replay_events)
         {
             return Err(Error::Limit.into());
         }
@@ -41,6 +91,7 @@ impl FileActorSupervisor<FileOversight> {
             queries: Cell::new(queries),
             operations: Cell::new(1),
             max_replay_events,
+            remaining_numerical_replay_events: numerical_replay_events.map(Cell::new),
             record: RefCell::new(None),
         });
         Ok((
@@ -164,6 +215,7 @@ impl FileSupervisorPolicyPromotionPort {
                     FilePolicyPromotionError::StalePredecessor
                 }
                 FilePolicyPromotionBlockReason::ReplayLimit
+                | FilePolicyPromotionBlockReason::NumericalReplayLimit
                 | FilePolicyPromotionBlockReason::OperationLimit => {
                     FilePolicyPromotionError::Capacity
                 }
@@ -172,6 +224,18 @@ impl FileSupervisorPolicyPromotionPort {
                 }
                 _ => FilePolicyPromotionError::Unsupported,
             });
+        }
+        if owner.host.decoder_required() {
+            let events = replay_events(&before).ok_or(FilePolicyPromotionError::Capacity)?;
+            let allowance = grant
+                .remaining_numerical_replay_events
+                .as_ref()
+                .ok_or(FilePolicyPromotionError::Unsupported)?;
+            let remaining = allowance
+                .get()
+                .checked_sub(events)
+                .ok_or(FilePolicyPromotionError::Capacity)?;
+            allowance.set(remaining);
         }
         grant.operations.set(0);
         *record = Some(Record {
@@ -284,7 +348,9 @@ fn blocked(
     {
         return Ok(Some(SourceUnavailable));
     }
-    if host.decoder_required() || host.action_consistency_required() {
+    if host.action_consistency_required()
+        || (host.decoder_required() && grant.remaining_numerical_replay_events.is_none())
+    {
         return Ok(Some(NumericalReplayUnsupported));
     }
     if let Err(error) = host.policy_promotion_preflight(&grant.permit) {
@@ -296,16 +362,28 @@ fn blocked(
             other => Err(native_error(other)),
         };
     }
-    let events = usize::try_from(state.revision)
-        .ok()
-        .and_then(|n| n.checked_add(1));
-    if events.is_none_or(|events| events > grant.max_replay_events) {
+    let Some(events) = replay_events(state) else {
+        return Ok(Some(ReplayLimit));
+    };
+    if events > grant.max_replay_events {
         return Ok(Some(ReplayLimit));
     }
     if grant.operations.get() == 0 {
         return Ok(Some(OperationLimit));
     }
+    if host.decoder_required()
+        && grant
+            .remaining_numerical_replay_events
+            .as_ref()
+            .is_none_or(|allowance| allowance.get() < events)
+    {
+        return Ok(Some(NumericalReplayLimit));
+    }
     Ok(None)
+}
+
+fn replay_events(state: &FileDeliverySnapshot) -> Option<usize> {
+    usize::try_from(state.revision).ok()?.checked_add(1)
 }
 
 fn native_error(error: JournalError) -> FilePolicyPromotionError {

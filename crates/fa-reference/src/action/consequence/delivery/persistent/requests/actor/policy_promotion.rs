@@ -42,6 +42,7 @@ pub enum FilePolicyPromotionBlockReason {
     StaleCampaign,
     SourceUnavailable,
     NumericalReplayUnsupported,
+    NumericalReplayLimit,
     ReplayLimit,
     OperationLimit,
     OperationAlreadyUsed,
@@ -180,6 +181,7 @@ struct Grant {
     queries: Cell<usize>,
     operations: Cell<usize>,
     max_replay_events: usize,
+    remaining_numerical_replay_events: Option<Cell<usize>>,
     record: RefCell<Option<Record>>,
 }
 
@@ -209,6 +211,15 @@ impl FileSupervisorPolicyPromotionGrant {
     pub fn max_replay_events(&self) -> usize {
         self.grant.max_replay_events
     }
+    /// None means numerical reconstruction was not granted. These units cover
+    /// a complete history plus its proposed Promote event, not CPU or products.
+    /// Entered work is never refunded, including after failed native promotion.
+    pub fn remaining_numerical_replay_events(&self) -> Option<usize> {
+        self.grant
+            .remaining_numerical_replay_events
+            .as_ref()
+            .map(Cell::get)
+    }
     pub fn revoke(self) {
         drop(self);
     }
@@ -219,6 +230,10 @@ impl fmt::Debug for FileSupervisorPolicyPromotionGrant {
             .field("campaign", &self.campaign())
             .field("remaining_queries", &self.remaining_queries())
             .field("remaining_operations", &self.remaining_operations())
+            .field(
+                "remaining_numerical_replay_events",
+                &self.remaining_numerical_replay_events(),
+            )
             .finish_non_exhaustive()
     }
 }

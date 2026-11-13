@@ -429,6 +429,7 @@ fn plan(
                 | "source_unavailable"
                 | "stale_campaign"
                 | "numerical_replay_unsupported"
+                | "numerical_replay_limit"
                 | "replay_limit"
                 | "operation_limit"
                 | "operation_already_used"

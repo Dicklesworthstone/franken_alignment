@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: pay explicitly for live native learned policy promotion
+
+The original supervisor promotion grant now admits nonpredictive decoder
+histories through `policy_promotion_port_with_numerical_budget`. The caller must
+retain the independent original campaign approval and select both the complete
+history ceiling and a separate numerical event allowance. Before one entered
+Promote, the original grant reserves the current journal length plus its new
+event. Missing or short allowances refuse before replay, operation entry or
+admission snapshot invalidation. Next and exact historical retries spend no
+numerical work; failure and unwind never refund entered work. Weak clones share
+that one original allowance and approval. Required action predictors remain
+unsupported because their original policy-generation binding is not changed by
+budget admission.
+
+Five public native integration tests pass with the qualified nightly. A real
+learned decoder draft reaches paid original promotion, native helper inference,
+fresh independent human approval and actual guarded publication of `OK` under
+the new policy. Exact promotion retry during the newer native review leaves its
+state and canonical bytes intact. Paired tests establish no-budget/one-short
+refusal with a still-usable admission snapshot, original issuer/scope and weak
+custody, no work refund after an entered storage failure, and terminal Stop.
+The initial test run exposed an incorrect fixture expectation of the ordinary
+Published event; the guarded owner correctly returned PublicationChecked with
+Executed/version 2. The corrected assertion requires that exact guarded success,
+with all original visible-output, execution, charge and numerical-state checks
+retained. Synthetic weights do not establish scientific policy efficacy.
+
+The required xtask gate passed reference lock, source inventory, qualified
+compiler identity and dependency admission, then refused the reviewed source
+snapshot with 161 findings (98 unlisted files and 63 digest mismatches).
+Downstream workspace formatting, Clippy and full tests were not reached. The
+manifest was not regenerated to convert that refusal into a pass.
+
+The live learned governor/service composition is a separate implementation
+increment. This native result does not qualify listener credentials, service
+composition, predictive promotion, or the full repository gate. No Bead or
+source-snapshot manifest is changed to claim those outcomes.
+
 ## 2026-11-13: recover governed publication with fresh custody and independent Stop
 
 Ordinary and simple-witness checked scheduled Tower services now accept explicit

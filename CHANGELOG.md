@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-13: admit paid native learned policy promotion
+
+- Add a separately budgeted original promotion grant for nonpredictive native
+  and learned decoder histories; preserve the default numerical refusal and
+  all required-predictor exclusions.
+- Reserve complete-history numerical work before operation entry and snapshot
+  loss; preserve no-refund failure semantics and free historical exact retries.
+- Expose the original remaining allowance and sealed numerical-replay-limit
+  evidence through Tower and its validating client.
+- Pass five native integration tests including actual guarded learned
+  publication after fresh native helper and independent human approval, original
+  numerical state, short-budget snapshot preservation, custody and Stop.
+- Run the required xtask gate: four prerequisites pass, followed by the reviewed
+  source-snapshot refusal (161 findings). Live learned service composition and
+  full repository qualification remain open.
+
 ## 2026-11-13: reopen governed services with exact policy and fresh approval custody
 
 - Add bounded `fa.guarded-submit/2` with complete effective-policy and exact
