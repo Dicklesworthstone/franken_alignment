@@ -97,6 +97,52 @@ together. Native/learned numerical operator profiles refuse this ordinary
 promotion selection. The operator can receive only one approved campaign during
 its original lifetime; reconnects and request-schedule handoffs do not renew it.
 
+## Discover the current cut through the independent governor endpoint
+
+The governor can obtain the exact predecessor and originally selected campaign
+bounds using its own authenticated endpoint. It needs no operator credential or
+read access to the authority store. Send one explicit inspection document:
+
+```sh
+supervise_publication policy-governor-exchange GOVERNOR_PROFILE GET_REQUEST_JSON
+```
+
+```json
+{
+  "schema": "fa.policy-governor-request/1",
+  "scope": {
+    "tenant": "1", "principal": "2", "run": "3",
+    "branch": "4", "authority": "5", "purpose": "effect"
+  },
+  "verb": "get",
+  "query": "501"
+}
+```
+
+The response uses the existing `fa.policy-governor-response/1` schema with
+`verb: "get"`, `phase: "inspect"`, and the same nonzero canonical decimal `query`.
+Its `Known` value contains `journal_revision`, `control_sequence`,
+`authority_epoch`, `policy_generation`, the originally selected
+`campaigns: {cases,input_bytes,max_campaigns}`, `campaign_limit`, `report_bytes`,
+`stopped`, and `source_interrupted`. All counters are canonical decimal strings;
+`stopped` is a Boolean, while `source_interrupted` is the original latch Boolean
+or `null` when the owner has no file-source guard. The acknowledgment basis binds
+the full scope, query and journal revision to `origin: "acknowledged_owner"`.
+The client checks these fields and the exact limits against its independently
+selected connection profile before displaying the document.
+
+Copy the returned four cut fields into the explicit replay request's `expected`
+object, and use the selected campaign bounds. The response records one immutable
+native cut. Intervening work can stale that predecessor; the subsequent native
+replay gate still checks it. Inspection performs no clock observation, source
+read, campaign request, approval or key issuance, and does not renew any limit.
+
+An exact query retry returns its original cached historical result. Select a new
+explicit query identity to observe a later cut. Query and campaign identities are
+separate even when their numbers match. Inspection spends the original finite
+transport/exchange/cache allowances but no campaign allowance. A discovered
+stopped or interrupted state is evidence of that state and grants no new work.
+
 ## Request and examine the complete original report
 
 The governor uses one explicit document per client invocation:

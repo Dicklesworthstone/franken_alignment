@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-13: discover the governor's current cut independently
+
+- Add authenticated read-only Get with full native predecessor, selected limits,
+  Stop and source-latch evidence through the existing single-document client.
+- Bind full scope/query/revision and exact connection-profile limits; preserve
+  historical retries, distinct query/campaign identities and finite cache use.
+- Add eight actual native/cache/client regression functions and an explicit
+  independent discovery-to-Review recipe.
+- Pass the complete qualified example test-harness metadata check. The first
+  full code-generation attempt was SIGKILLed; runtime execution remains pending
+  while a memory-reducing build is attempted with all tests retained.
+
 ## 2026-11-13: retain checked publication through live policy governance
 
 - Add guarded checked creation with witness limits, source/campaign guards and

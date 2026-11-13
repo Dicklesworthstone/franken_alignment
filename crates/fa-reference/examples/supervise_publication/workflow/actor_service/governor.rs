@@ -32,7 +32,7 @@ const MAX_CACHE_ENTRIES: usize = 32;
 
 struct Cached {
     request: Vec<u8>,
-    campaign: u64,
+    correlation: protocol::Correlation,
     phase: &'static str,
     entered: bool,
     // Marking entry precedes native work. An unwound/unacknowledged operation
@@ -342,6 +342,20 @@ impl Service {
         driver: &mut FileSupervisedDriver,
         operator: &mut operator::Service,
     ) -> Rc<Vec<u8>> {
+        self.respond_with(request, |service, index| match &request.command {
+            Command::Inspect { .. } => service.inspect(request, driver),
+            Command::Review { .. } => service.review(request, index, driver),
+            Command::Approve { .. } => service.approve(request, index, driver, operator),
+        })
+    }
+
+    /// All commands share the same finite canonical-request cache. Inspection
+    /// retries therefore preserve their original cut without repeating a read.
+    fn respond_with(
+        &mut self,
+        request: &Request,
+        apply: impl FnOnce(&mut Self, usize) -> Result<Vec<u8>, &'static str>,
+    ) -> Rc<Vec<u8>> {
         if request.scope != self.settings.scope {
             return frame(protocol::refused(request, "audience"));
         }
@@ -360,11 +374,12 @@ impl Service {
             cached.entered
                 && cached.phase == "review"
                 && request.phase() == "review"
-                && cached.campaign == request.campaign()
+                && cached.correlation == request.correlation()
         }) {
             return frame(protocol::refused(request, "idempotency_conflict"));
         }
         let maximum_reply = match request.command {
+            Command::Inspect { .. } => 4096,
             Command::Review { .. } => 2 * self.settings.report_bytes + 4096,
             Command::Approve { .. } => 1024,
         };
@@ -381,20 +396,50 @@ impl Service {
         self.cache_bytes += request.canonical.len();
         self.cache.push(Cached {
             request: request.canonical.clone(),
-            campaign: request.campaign(),
+            correlation: request.correlation(),
             phase: request.phase(),
             entered: false,
             response: None,
         });
-        let response = match &request.command {
-            Command::Review { .. } => self.review(request, index, driver),
-            Command::Approve { .. } => self.approve(request, index, driver, operator),
-        }
-        .unwrap_or_else(|reason| protocol::refused(request, reason));
+        let response =
+            apply(self, index).unwrap_or_else(|reason| protocol::refused(request, reason));
         let response = frame(response);
         self.cache_bytes += response.len();
         self.cache[index].response = Some(Rc::clone(&response));
         response
+    }
+
+    fn inspect(
+        &self,
+        request: &Request,
+        driver: &FileSupervisedDriver,
+    ) -> Result<Vec<u8>, &'static str> {
+        let host = driver.supervisor().host().map_err(|_| "unavailable")?;
+        if !host.policy_campaigns_required()
+            || host.decoder_required()
+            || host.action_consistency_required()
+        {
+            return Err("unsupported");
+        }
+        let cut = host.inspect();
+        let policy_generation = host.current_policy().map_err(native_reason)?.generation();
+        protocol::inspected(
+            request,
+            protocol::Inspection {
+                cut: protocol::Expected {
+                    journal_revision: cut.revision,
+                    control_sequence: cut.control.sequence,
+                    authority_epoch: cut.control.ledger.epoch,
+                    policy_generation,
+                },
+                campaigns: self.settings.campaign_requirement(),
+                campaign_limit: self.settings.campaign_limit,
+                report_bytes: self.settings.report_bytes,
+                stopped: cut.stop.is_some(),
+                source_interrupted: host.file_source_status().map(|source| source.interrupted),
+            },
+        )
+        .map_err(|_| "capacity")
     }
 
     fn review(

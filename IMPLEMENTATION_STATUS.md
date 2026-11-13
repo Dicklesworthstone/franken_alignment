@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: discover policy-governor predecessors through independent custody
+
+The governor can now request `get` through its own authenticated endpoint and
+single-document client. The immutable native response supplies the exact
+journal/control/authority/policy cut, originally selected campaign/report limits,
+Stop state and source-interruption latch. Its Known value and acknowledgment
+basis bind full scope, query and original revision. The client validates every
+closed field, canonical counter and independently selected bound before output.
+No operator credential, authority-store read, clock observation, source refresh,
+campaign attempt or approval is required for discovery.
+
+Nonzero query identities occupy a separate namespace from campaign IDs. An exact
+retry returns its original historical response; a new query observes a new cut.
+Discovery uses the same finite exchange/cache allowances without spending native
+campaign allowance or issuing authority. Intervening work can stale the returned
+predecessor and remains subject to the original replay refusal.
+
+Eight new regression functions use actual native owners, production responses and
+the original cache: usable discovery-to-Review, stale cuts, historical retries,
+independent identities, Stop/source state, finite cache, audience restrictions
+and hostile client documents. The complete updated example test-harness metadata
+check passes with the qualified nightly. The first complete code-generation
+attempt ended with SIGKILL after warnings and no Rust errors; those eight tests
+have not yet executed in this increment. The full harness is being retried with
+the compiler's memory-reducing LLVM-name option, without disabling modules or
+assertions. Existing pathname-listener limitations and full qualification remain
+open; no native observation is presented as a live socket exchange.
+
+Contract and explicit Get-to-Review recipe: docs/LIVE_POLICY_GOVERNOR.md.
+
 ## 2026-11-13: govern checked publication without dropping the witness gate
 
 Simple-witness checked scheduled Tower creation now accepts the independently

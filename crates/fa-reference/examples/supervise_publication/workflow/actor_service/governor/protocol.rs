@@ -1,6 +1,7 @@
 //! Closed custodian documents. Parsing supplies data, never a governor or key.
 use crate::config::debug;
 use crate::policy_replay::Request as Candidate;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
 use fa_reference::action::consequence::oversight::actor::Knowledge;
 use fa_reference::action::{Purpose, Scope};
 use fa_reference::strict_json::{self, Json, Limits};
@@ -39,6 +40,9 @@ pub(crate) struct Expected {
 }
 
 pub(crate) enum Command {
+    Inspect {
+        query: u64,
+    },
     Review {
         operation: u64,
         expected: Expected,
@@ -52,6 +56,38 @@ pub(crate) enum Command {
     },
 }
 
+/// A query identity is not a campaign identity, even when the counters match.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Correlation {
+    Query(u64),
+    Campaign(u64),
+}
+impl Correlation {
+    pub(crate) fn field(self) -> &'static str {
+        match self {
+            Self::Query(_) => "query",
+            Self::Campaign(_) => "campaign",
+        }
+    }
+    pub(crate) fn id(self) -> u64 {
+        match self {
+            Self::Query(id) | Self::Campaign(id) => id,
+        }
+    }
+}
+
+/// One immutable native cut and the custodian's originally selected bounds.
+/// Source interruption is the original latch, not a new source observation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Inspection {
+    pub(crate) cut: Expected,
+    pub(crate) campaigns: FileCampaignRequirement,
+    pub(crate) campaign_limit: usize,
+    pub(crate) report_bytes: usize,
+    pub(crate) stopped: bool,
+    pub(crate) source_interrupted: Option<bool>,
+}
+
 pub(crate) struct Request {
     pub(crate) scope: Scope,
     pub(crate) command: Command,
@@ -60,20 +96,23 @@ pub(crate) struct Request {
 }
 
 impl Request {
-    pub(crate) fn campaign(&self) -> u64 {
+    pub(crate) fn correlation(&self) -> Correlation {
         match &self.command {
-            Command::Review { operation, .. } => *operation,
-            Command::Approve { campaign, .. } => *campaign,
+            Command::Inspect { query } => Correlation::Query(*query),
+            Command::Review { operation, .. } => Correlation::Campaign(*operation),
+            Command::Approve { campaign, .. } => Correlation::Campaign(*campaign),
         }
     }
     pub(crate) fn verb(&self) -> &'static str {
         match self.command {
+            Command::Inspect { .. } => "get",
             Command::Review { .. } => "policy-replay",
             Command::Approve { .. } => "promote",
         }
     }
     pub(crate) fn phase(&self) -> &'static str {
         match self.command {
+            Command::Inspect { .. } => "inspect",
             Command::Review { .. } => "review",
             Command::Approve { .. } => "approve",
         }
@@ -105,6 +144,13 @@ pub(crate) fn decode(bytes: &[u8], max_report_bytes: usize) -> Result<Request, S
     let scope = decode_scope(fields.take("scope")?)?;
     let verb = fields.text("verb")?;
     let command = match verb.as_str() {
+        "get" => {
+            let query = fields.decimal("query")?;
+            if query == 0 {
+                return Err("governor inspection requires an explicit nonzero query".into());
+            }
+            Command::Inspect { query }
+        }
         "policy-replay" => {
             let operation = fields.decimal("operation")?;
             let mut expected = Fields::new(fields.take("expected")?)?;
@@ -198,11 +244,12 @@ pub(crate) fn decode_scope(value: Json) -> Result<Scope, String> {
 /// historical evidence; it is neither an effect permit nor a fresh journal cut.
 struct AcknowledgmentBasis {
     scope: Scope,
-    campaign: u64,
+    correlation: Correlation,
     journal_revision: u64,
 }
 
 enum Acknowledgment<'a> {
+    Inspected(Inspection),
     Reviewed(&'a str),
     Delegated,
 }
@@ -218,10 +265,18 @@ fn acknowledged(
             value,
             basis: AcknowledgmentBasis {
                 scope: request.scope,
-                campaign: request.campaign(),
+                correlation: request.correlation(),
                 journal_revision: revision,
             },
         }),
+    )
+}
+
+pub(crate) fn inspected(request: &Request, inspection: Inspection) -> Result<Vec<u8>, String> {
+    acknowledged(
+        request,
+        inspection.cut.journal_revision,
+        Acknowledgment::Inspected(inspection),
     )
 }
 
@@ -251,6 +306,28 @@ fn response(
         Ok(Knowledge::Known { value, basis }) => {
             let revision = basis.journal_revision;
             let value = match value {
+                Acknowledgment::Inspected(inspection) => format!(
+                    concat!(
+                        "{{\"journal_revision\":\"{}\",\"control_sequence\":\"{}\",",
+                        "\"authority_epoch\":\"{}\",\"policy_generation\":\"{}\",",
+                        "\"campaigns\":{{\"cases\":\"{}\",\"input_bytes\":\"{}\",\"max_campaigns\":\"{}\"}},",
+                        "\"campaign_limit\":\"{}\",\"report_bytes\":\"{}\",",
+                        "\"stopped\":{},\"source_interrupted\":{}}}"
+                    ),
+                    revision,
+                    inspection.cut.control_sequence,
+                    inspection.cut.authority_epoch,
+                    inspection.cut.policy_generation,
+                    inspection.campaigns.limits.cases,
+                    inspection.campaigns.limits.input_bytes,
+                    inspection.campaigns.max_campaigns,
+                    inspection.campaign_limit,
+                    inspection.report_bytes,
+                    inspection.stopped,
+                    inspection.source_interrupted.map_or("null", |interrupted| {
+                        if interrupted { "true" } else { "false" }
+                    }),
+                ),
                 Acknowledgment::Reviewed(report) => format!(
                     "{{\"journal_revision\":\"{revision}\",\"reviewed_report\":{}}}",
                     quote(report)
@@ -262,10 +339,11 @@ fn response(
             let basis = format!(
                 concat!(
                     "{{\"origin\":\"acknowledged_owner\",\"scope\":{},",
-                    "\"campaign\":\"{}\",\"journal_revision\":\"{}\"}}"
+                    "\"{}\":\"{}\",\"journal_revision\":\"{}\"}}"
                 ),
                 scope_json(basis.scope),
-                basis.campaign,
+                basis.correlation.field(),
+                basis.correlation.id(),
                 revision
             );
             format!("\"knowledge\":{{\"state\":\"known\",\"value\":{value},\"basis\":{basis}}}")
@@ -278,12 +356,13 @@ fn response(
     let bytes = format!(
         concat!(
             "{{\"schema\":\"fa.policy-governor-response/1\",",
-            "\"scope\":{},\"verb\":{},\"phase\":{},\"campaign\":\"{}\",{}}}"
+            "\"scope\":{},\"verb\":{},\"phase\":{},\"{}\":\"{}\",{}}}"
         ),
         scope_json(request.scope),
         quote(request.verb()),
         quote(request.phase()),
-        request.campaign(),
+        request.correlation().field(),
+        request.correlation().id(),
         result
     )
     .into_bytes();

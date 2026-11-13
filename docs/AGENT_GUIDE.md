@@ -414,7 +414,9 @@ work still requires both effect keys. New plain or checked scheduled ordinary cr
 also select the [independently authenticated live governor](LIVE_POLICY_GOVERNOR.md)
 through `--governor-profile`, paired with the independent operator's
 `policy_promotion` allowance. `policy-governor-exchange` sends one explicit
-review or exact-report approval document; it does not auto-approve or promote.
+`get`, review or exact-report approval document. Get discovers the current cut
+and selected bounds through the governor endpoint; exact query retries retain
+their historical response. The client does not auto-approve or promote.
 Selecting policy replay alone cannot provision governor approval.
 The existing `tower-operator-exchange` client can submit explicit Next/Promote
 documents to that independently provisioned endpoint. It validates the complete

@@ -3,7 +3,11 @@
 //! It neither approves a returned report nor follows a promotion action.
 use super::{Settings, protocol};
 use crate::config::{debug, policy_from_json, read_regular};
-use fa_reference::action::consequence::policy_campaign::ReplayCaseId;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
+use fa_reference::action::consequence::oversight::policy_governance::MAX_POLICY_CAMPAIGNS;
+use fa_reference::action::consequence::policy_campaign::{
+    MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES, ReplayCaseId, ReplayLimits,
+};
 use fa_reference::action::{Scope, VERSION};
 use fa_reference::strict_json::{self, Json, Limits};
 use std::collections::BTreeSet;
@@ -16,7 +20,7 @@ use std::time::{Duration, Instant};
 #[path = "client/tests.rs"]
 mod tests;
 
-const USAGE: &str = "policy-governor-exchange GOVERNOR_PROFILE REQUEST_JSON (one explicit review or approval; no automatic retry)";
+const USAGE: &str = "policy-governor-exchange GOVERNOR_PROFILE REQUEST_JSON (one explicit inspection, review or approval; no automatic retry)";
 const IO_CALLS: usize = 65_536;
 const IO_CHUNK: usize = 16_384;
 
@@ -67,7 +71,7 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
     }
     let mut response = vec![0; length];
     budget.read(&mut socket, &mut response)?;
-    validate_response(&request, &response, settings.report_bytes)?;
+    validate_selected_response(&request, &response, &settings)?;
     budget.check()?;
     output
         .write_all(&response)
@@ -196,11 +200,36 @@ fn decimal(value: &Json) -> Result<u64, String> {
     text.parse().map_err(debug)
 }
 
+enum ValidatedResponse {
+    Inspection(protocol::Inspection),
+    Review,
+    Approval,
+    Refusal,
+}
+
+fn validate_selected_response(
+    request: &protocol::Request,
+    bytes: &[u8],
+    settings: &Settings,
+) -> Result<(), String> {
+    if let ValidatedResponse::Inspection(inspection) =
+        validate_response(request, bytes, settings.report_bytes)?
+        && (inspection.campaigns != settings.campaign_requirement()
+            || inspection.campaign_limit != settings.campaign_limit
+            || inspection.report_bytes != settings.report_bytes)
+    {
+        return Err(
+            "governor inspection changed the independently selected campaign bounds".into(),
+        );
+    }
+    Ok(())
+}
+
 fn validate_response(
     request: &protocol::Request,
     bytes: &[u8],
     report_bytes: usize,
-) -> Result<(), String> {
+) -> Result<ValidatedResponse, String> {
     let reply = parse(
         bytes,
         protocol::MAX_RESPONSE_BYTES,
@@ -214,17 +243,24 @@ fn validate_response(
     };
     let root = object(
         &reply,
-        &["schema", "scope", "verb", "phase", "campaign", result_field],
+        &[
+            "schema",
+            "scope",
+            "verb",
+            "phase",
+            request.correlation().field(),
+            result_field,
+        ],
     )?;
     let scope = parse(protocol::scope_json(request.scope).as_bytes(), 512, 128, 32)?;
     if root["schema"].as_str() != Some("fa.policy-governor-response/1")
         || root["scope"] != scope
         || root["verb"].as_str() != Some(request.verb())
         || root["phase"].as_str() != Some(request.phase())
-        || decimal(&root["campaign"])? != request.campaign()
+        || decimal(&root[request.correlation().field()])? != request.correlation().id()
     {
         return Err(
-            "governor reply does not match the original audience, campaign and command".into(),
+            "governor reply does not match the original audience, identity and command".into(),
         );
     }
     if result_field == "error" {
@@ -235,7 +271,7 @@ fn validate_response(
         {
             return Err("unregistered governor refusal reason".into());
         }
-        return Ok(());
+        return Ok(ValidatedResponse::Refusal);
     }
     let fields = object(&root["knowledge"], &["state", "value", "basis"])?;
     if fields["state"].as_str() != Some("known") {
@@ -243,16 +279,87 @@ fn validate_response(
     }
     let basis = object(
         &fields["basis"],
-        &["origin", "scope", "campaign", "journal_revision"],
+        &[
+            "origin",
+            "scope",
+            request.correlation().field(),
+            "journal_revision",
+        ],
     )?;
     if basis["origin"].as_str() != Some("acknowledged_owner")
         || basis["scope"] != scope
-        || decimal(&basis["campaign"])? != request.campaign()
+        || decimal(&basis[request.correlation().field()])? != request.correlation().id()
     {
         return Err("governor acknowledgment changed its original owner evidence basis".into());
     }
     let basis_revision = decimal(&basis["journal_revision"])?;
     match &request.command {
+        protocol::Command::Inspect { .. } => {
+            let value = object(
+                &fields["value"],
+                &[
+                    "journal_revision",
+                    "control_sequence",
+                    "authority_epoch",
+                    "policy_generation",
+                    "campaigns",
+                    "campaign_limit",
+                    "report_bytes",
+                    "stopped",
+                    "source_interrupted",
+                ],
+            )?;
+            let cut = protocol::Expected {
+                journal_revision: decimal(&value["journal_revision"])?,
+                control_sequence: decimal(&value["control_sequence"])?,
+                authority_epoch: decimal(&value["authority_epoch"])?,
+                policy_generation: decimal(&value["policy_generation"])?,
+            };
+            if cut.journal_revision == 0
+                || cut.journal_revision != basis_revision
+                || cut.policy_generation == 0
+            {
+                return Err("governor inspection changed its acknowledged native cut".into());
+            }
+            let campaigns = object(
+                &value["campaigns"],
+                &["cases", "input_bytes", "max_campaigns"],
+            )?;
+            let bounded = |value: &Json, maximum: usize| -> Result<usize, String> {
+                let number = usize::try_from(decimal(value)?).map_err(debug)?;
+                if number == 0 || number > maximum {
+                    return Err("governor inspection exceeds its finite selected bounds".into());
+                }
+                Ok(number)
+            };
+            let campaigns = FileCampaignRequirement {
+                limits: ReplayLimits {
+                    cases: bounded(&campaigns["cases"], MAX_REPLAY_CASES)?,
+                    input_bytes: bounded(&campaigns["input_bytes"], MAX_REPLAY_INPUT_BYTES)?,
+                },
+                max_campaigns: bounded(&campaigns["max_campaigns"], MAX_POLICY_CAMPAIGNS)?,
+            };
+            let campaign_limit = bounded(
+                &value["campaign_limit"],
+                super::profile::MAX_CAMPAIGNS.min(campaigns.max_campaigns),
+            )?;
+            let stopped = value["stopped"]
+                .as_bool()
+                .ok_or("governor inspection Stop status must be Boolean")?;
+            let source_interrupted = match &value["source_interrupted"] {
+                Json::Null => None,
+                Json::Bool(interrupted) => Some(*interrupted),
+                _ => return Err("governor inspection source status must be Boolean or null".into()),
+            };
+            Ok(ValidatedResponse::Inspection(protocol::Inspection {
+                cut,
+                campaigns,
+                campaign_limit,
+                report_bytes: bounded(&value["report_bytes"], report_bytes)?,
+                stopped,
+                source_interrupted,
+            }))
+        }
         protocol::Command::Review {
             expected,
             candidate,
@@ -271,6 +378,7 @@ fn validate_response(
                 .as_str()
                 .ok_or("complete governor report must be text")?;
             validate_report(request, expected, candidate, report, report_bytes)?;
+            Ok(ValidatedResponse::Review)
         }
         protocol::Command::Approve {
             expected_journal_revision,
@@ -294,9 +402,9 @@ fn validate_response(
             {
                 return Err("governor approval acknowledgment claims an unrelated transition or effect authority".into());
             }
+            Ok(ValidatedResponse::Approval)
         }
     }
-    Ok(())
 }
 
 fn validate_report(

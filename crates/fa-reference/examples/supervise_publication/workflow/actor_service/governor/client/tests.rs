@@ -8,6 +8,9 @@ use std::os::unix::net::UnixListener;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[path = "tests/inspection.rs"]
+mod inspection;
+
 fn field<'a>(value: &'a mut Json, keys: &[&str]) -> &'a mut Json {
     if keys.is_empty() {
         return value;
