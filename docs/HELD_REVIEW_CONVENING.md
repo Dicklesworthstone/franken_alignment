@@ -25,14 +25,16 @@ last applied held round, journal revision, control sequence, authority epoch,
 input revision, recorded elapsed tick and unchanged action deadline. The chosen
 successor round is globally unused in the original broker and grant.
 
-Eligibility requires an ordinary, unmediated, non-generated owner, no active
-review session, an unsuspended and unstopped Reviewing action, and an actually
+Eligibility requires an ordinary non-generated owner, no active review
+session, an unsuspended and unstopped Reviewing action, and an actually
 applied Reviewing-to-Reviewing `HoldEffect` at the current control cut. The latest
 native Begin for that attempt must be that successful held round. A later
 failed review cannot borrow an older Hold. Recorded time must still precede the
 original deadline; this historical check does not replace launch-time clocks.
-Authorized actions, recovered/fenced histories, learned or topology-mediated
-reviews and unfinished congresses do not use this continuation.
+Authorized actions, recovered/fenced predecessors, learned/generated or other
+numerical/stream histories and unfinished congresses do not use this continuation.
+An ordinary mediated owner may admit a successor, but its original driver must
+retain the selected topology source before handing off the ticket.
 
 `convene(FileConveneRequest)` compares that exact predecessor again and admits
 at most one pending operation. It spends one original operation slot and reserves
@@ -73,6 +75,26 @@ existing checked file launchers to read a fresh complete source and start the
 original helper protocol. No old transcript or helper vote is reused. The
 host preserves the original fixed helper recipe, source configuration and
 overall deadline; neither the port nor ticket chooses a helper program.
+
+For an ordinary topology-mediated owner, the same launch methods first check
+the complete original ticket under an exclusive supervisor borrow, then refresh
+the original driver-owned topology source. Only a fresh native Verified cut
+without a source refusal permits policy-evidence capture or Begin. The check's
+own acknowledged journal event does not make its already-validated predecessor
+stale. No source is detached, replaced or inferred from an old certificate:
+paths, source expectations, last operation, cumulative check/read expenditure
+and failure diagnostics remain with the original custodian.
+
+A missing driver source leaves the admitted operation Pending and spent until
+that same original custodian is installed. A taken ticket whose topology read,
+binding, budget or cut check fails becomes Failed without launching another
+congress. Repairing files, recreating a facade or retrying the same request cannot
+refund or relaunch it. Successful successor qualification does not reserve work
+for, or replace, the separately required topology check at final publication.
+A later unresolved effect retains its charge until the original endpoint supplies
+a receipt supporting settlement. The numerical and stream exclusions are
+independent of this ordinary mediated capability; target narrowing keeps its
+existing narrower supported history.
 
 Fresh evidence may have the same bytes, for example when independently operated
 helpers recover from an outage. Availability changes, edits, actor polling and

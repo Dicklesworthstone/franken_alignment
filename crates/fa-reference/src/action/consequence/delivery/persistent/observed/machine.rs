@@ -30,6 +30,7 @@ use crate::action::consequence::gate::containment::ResetReceipt;
 mod campaigns;
 mod consistency;
 mod containment;
+mod convening;
 mod credential;
 mod credibility;
 mod decoder;

@@ -7,6 +7,7 @@ use super::super::mediation::source::{FileTopologySource, TopologyRefresh,
 use crate::action::consequence::delivery::TopologyChange;
 use crate::perimeter_inventory::topology::LoadedAuthorityTopology;
 use crate::Error;
+use crate::action::consequence::mediation::CutCheck;
 
 pub mod checkpoint;
 
@@ -54,6 +55,22 @@ impl FileDriverTopology {
     {
         let revision = host.revision();
         self.refresh(host, revision, Some((request, attempt))).map(|_| ())
+    }
+
+    /// Qualify a requested successor BEFORE policy capture and native Begin.
+    /// The original fixed source, spent work and diagnostic receipt stay owned
+    /// even when a read/check fails. Historical cuts cannot replace this check.
+    pub(super) fn refresh_for_review(&mut self, host: &mut FileOversight,
+        request: u64, attempt: u64) -> Result<(), JournalError>
+    {
+        let revision = host.revision();
+        let report = self.refresh(host, revision, Some((request, attempt)))?;
+        if report.refusal.is_none()
+            && matches!(report.checked, Some(Ok(CutCheck::Verified(_)))) {
+            Ok(())
+        } else {
+            Err(Error::Incomplete.into())
+        }
     }
 
     fn refresh(&mut self, host: &mut FileOversight, revision: u64,

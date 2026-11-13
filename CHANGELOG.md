@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-12: extend explicit held reviews to original mediated topology
+
+- Admit ordinary mediated held-review successors through a distinct history
+  predicate, preserving existing numerical/stream and target-narrowing limits.
+- Validate the full original ticket before refreshing the same selected topology
+  source; require a fresh native Verified cut before evidence capture and Begin.
+- Keep source custody, cumulative work and diagnostics through every failure;
+  failed handoffs remain spent and final publication still rechecks topology.
+- Add six public regression functions covering real publication, changed/missing
+  inputs, exhausted work, exact source reattachment, stale predecessors and
+  receipt-bound final accounting. Independent source review is complete;
+  execution checks remain unavailable after workspace loss.
+
 ## 2026-11-12: connect authenticated held-review continuation end to end
 
 - Connect separately granted Next/Convene to exact original held predecessors,

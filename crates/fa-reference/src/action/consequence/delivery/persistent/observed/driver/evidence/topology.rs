@@ -80,7 +80,7 @@ impl FileSupervisedDriver {
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut reports = Vec::with_capacity(1);
         let result = self.start_file_review_checked(source, launch, clock,
-            |host| require_topology(host, topology, &mut reports));
+            |host, _| require_topology(host, topology, &mut reports));
         TopologyReport { topology: reports, result }
     }
 
@@ -92,7 +92,7 @@ impl FileSupervisedDriver {
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let mut reports = Vec::with_capacity(1);
         let result = self.start_file_process_review_checked(source, launch, clock,
-            |host| require_topology(host, topology, &mut reports));
+            |host, _| require_topology(host, topology, &mut reports));
         TopologyReport { topology: reports, result }
     }
 }

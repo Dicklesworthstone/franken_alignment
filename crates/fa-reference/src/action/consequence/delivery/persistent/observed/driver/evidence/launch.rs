@@ -1,5 +1,6 @@
 //! Review launch captures through the same live source gate as later steps.
 use super::{FileOversight, FileReviewLaunch, FileSourceReviewError, durable_capture};
+use super::super::topology::FileDriverTopology;
 use super::super::{FileDriverLaunch, FileSupervisedDriver, admitted};
 use crate::Error;
 use crate::action::consequence::delivery::persistent::JournalError;
@@ -27,12 +28,13 @@ impl FileSupervisedDriver {
     pub fn start_file_review<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<UnixStream>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        self.start_file_review_checked(source, launch, clock, |_| Ok(()))
+        self.start_file_review_checked(source, launch, clock, |_, _| Ok(()))
     }
 
     pub(in super::super) fn start_file_review_checked<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<UnixStream>, mut clock: F,
-        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        before_capture: impl FnOnce(&mut FileOversight, Option<&mut FileDriverTopology>)
+            -> Result<(), JournalError>)
         -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
@@ -61,12 +63,13 @@ impl FileSupervisedDriver {
     pub fn start_file_process_review<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<HelperProgram>, clock: F) -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
-        self.start_file_process_review_checked(source, launch, clock, |_| Ok(()))
+        self.start_file_process_review_checked(source, launch, clock, |_, _| Ok(()))
     }
 
     pub(in super::super) fn start_file_process_review_checked<S, F>(&mut self, source: &mut S,
         launch: FileReviewLaunch<HelperProgram>, mut clock: F,
-        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        before_capture: impl FnOnce(&mut FileOversight, Option<&mut FileDriverTopology>)
+            -> Result<(), JournalError>)
         -> Result<EvidenceIdentity, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         let prepared = self.file_review_inputs(source, &launch, &mut clock, before_capture)?;
@@ -90,7 +93,8 @@ impl FileSupervisedDriver {
     }
 
     fn file_review_inputs<S, W, F>(&mut self, source: &mut S, launch: &FileReviewLaunch<W>, clock: &mut F,
-        before_capture: impl FnOnce(&mut FileOversight) -> Result<(), JournalError>)
+        before_capture: impl FnOnce(&mut FileOversight, Option<&mut FileDriverTopology>)
+            -> Result<(), JournalError>)
         -> Result<PreparedInput, FileSourceReviewError>
     where S: EvidenceFile + ?Sized, F: FnMut() -> ElapsedTick {
         if self.job.is_some() { return Err(Error::WrongState.into()); }
@@ -114,7 +118,10 @@ impl FileSupervisedDriver {
             return Err(Error::Binding.into());
         }
         let action = host.request_action(launch.request)?.clone();
-        before_capture(&mut host)?;
+        // The selected topology remains in this driver. The hook can qualify
+        // it under the same exclusive owner borrow without detaching custody,
+        // resetting its work, or checking a successor against its own writes.
+        before_capture(&mut host, self.topology.as_mut())?;
         // Retain the exclusive original owner across the read. A stale caller
         // cannot hide behind a subsequent source-driven input revision change.
         let captured = if host.file_source_required() {

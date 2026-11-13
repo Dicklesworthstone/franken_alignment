@@ -12,6 +12,10 @@ use crate::action::consequence::Consequence;
 use crate::action::consequence::oversight::broker::MAX_OBSERVED_ROUNDS;
 
 impl FileOversight {
+    pub(crate) fn convening_requires_topology(&self) -> bool {
+        self.machine.convening_requires_topology()
+    }
+
     pub(crate) fn convene_round_used(&self, round: u64) -> bool {
         self.machine.broker.review_round_used(round)
     }
@@ -45,7 +49,7 @@ impl FileOversight {
             recorded_at: state.control.ledger.elapsed,
             deadline: action.spec().deadline,
         };
-        let blocked = if !self.authority_narrowing_supported() || self.machine.generated_text_only {
+        let blocked = if !self.machine.convening_supported() {
             Some(UnsupportedHistory)
         } else if state.stop.is_some() {
             Some(Stopped)

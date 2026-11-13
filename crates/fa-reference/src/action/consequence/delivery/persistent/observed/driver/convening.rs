@@ -1,7 +1,8 @@
 //! Consume a separately requested held successor through the ORIGINAL source,
 //! round, helper and later two-key publication path. No automatic retry exists.
 use super::evidence::{FileReviewLaunch, FileSourceReviewError};
-use super::{FileSupervisedDriver, JournalError};
+use super::topology::FileDriverTopology;
+use super::{FileOversight, FileSupervisedDriver, JournalError};
 use crate::Error;
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::requests::actor::FileConveneTicket;
@@ -23,7 +24,13 @@ impl FileSupervisedDriver {
         if self.job.is_some() || !self.helpers_reaped() {
             return Ok(None);
         }
-        if self.learned_review.is_some() || self.topology.is_some() {
+        if self.learned_review.is_some() {
+            return Err(Error::Incomplete.into());
+        }
+        // A mediated host needs its original fixed source custodian before a
+        // ticket can leave the queue. A retained certificate alone is not a
+        // source, and no alternate source can be selected by the operator.
+        if self.supervisor.host()?.convening_requires_topology() && self.topology.is_none() {
             return Err(Error::Incomplete.into());
         }
         self.supervisor.take_convene(request)
@@ -33,6 +40,8 @@ impl FileSupervisedDriver {
     /// current successful Hold and full predecessor are checked before source
     /// capture. Identical fresh complete evidence is allowed; no old vote, key,
     /// completed transcript or automatic reservation becomes the new review.
+    /// A mediated owner first requalifies its ORIGINAL driver-owned topology
+    /// source; its final publication check remains separately mandatory.
     pub fn start_file_convened_review<S, F>(
         &mut self,
         source: &mut S,
@@ -45,7 +54,9 @@ impl FileSupervisedDriver {
         F: FnMut() -> ElapsedTick,
     {
         let result = self.check_convened_launch(&ticket, &launch).and_then(|()| {
-            self.start_file_review_checked(source, launch, clock, |host| ticket.check(host))
+            self.start_file_review_checked(source, launch, clock, |host, topology| {
+                prepare_convened_capture(host, topology, &ticket)
+            })
         });
         self.finish_convened_launch(&mut ticket, result)
     }
@@ -67,7 +78,9 @@ impl FileSupervisedDriver {
         F: FnMut() -> ElapsedTick,
     {
         let result = self.check_convened_launch(&ticket, &launch).and_then(|()| {
-            self.start_file_process_review_checked(source, launch, clock, |host| ticket.check(host))
+            self.start_file_process_review_checked(source, launch, clock, |host, topology| {
+                prepare_convened_capture(host, topology, &ticket)
+            })
         });
         self.finish_convened_launch(&mut ticket, result)
     }
@@ -86,7 +99,7 @@ impl FileSupervisedDriver {
         if launch.expected_input_revision != ticket.expected().input_revision {
             return Err(Error::Stale.into());
         }
-        if self.learned_review.is_some() || self.topology.is_some() {
+        if self.learned_review.is_some() {
             return Err(Error::Incomplete.into());
         }
         if launch.window.commit_by >= launch.window.reveal_by
@@ -128,5 +141,24 @@ impl FileSupervisedDriver {
                 Err(error)
             }
         }
+    }
+}
+
+fn prepare_convened_capture(
+    host: &mut FileOversight,
+    topology: Option<&mut FileDriverTopology>,
+    ticket: &FileConveneTicket,
+) -> Result<(), JournalError> {
+    // Compare the full expected held predecessor before ANY topology source,
+    // policy source or clock work. The exclusively owned topology refresh may
+    // append a native check, so do not compare the old ticket against that
+    // refresh's own acknowledged journal revision afterward.
+    ticket.check(host)?;
+    match topology {
+        Some(topology) => {
+            topology.refresh_for_review(host, ticket.request(), ticket.expected().attempt)
+        }
+        None if host.convening_requires_topology() => Err(Error::Incomplete.into()),
+        None => Ok(()),
     }
 }

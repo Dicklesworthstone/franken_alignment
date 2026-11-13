@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: requalify original topology for explicit held-review successors
+
+The ordinary file driver now consumes an explicitly admitted held-review ticket
+under the same retained topology source as the original mediated publication.
+A dedicated convening history predicate admits ordinary mediation without
+broadening target narrowing or numerical/generated/stream support. Before any
+topology, policy-source or clock work, the exclusive original supervisor checks
+the full held predecessor. A fresh native Verified cut then precedes fresh
+policy evidence and the new helper Begin; the qualification's own acknowledged
+journal write does not invalidate its already-checked ticket.
+
+The original fixed source, spent checks/read bytes, operation sequence and
+failure diagnostics stay with the driver. Missing source custody leaves the
+queued operation Pending and spent; any failure after taking the one-use ticket
+records Failed and cannot automatically retry. The unchanged final-publication
+topology check, independent human key, original deadline and endpoint receipt
+accounting still apply. No journal format, dependency or authority reducer changes.
+
+Six public regression functions are authored for actual socket-backed Hold and
+fresh two-key publication, five changed/missing source variants, exhausted
+source allowance, missing-custody refusal with reattachment of the exact
+original custodian, Stop/expiry/input drift before reads, and final topology
+loss with charges retained until native nonexecution reconciliation. These are
+controlled protocol fixtures, not detector or deployment evidence.
+
+Independent source review found no blocking defect in the implementation or
+authored cases. The execution workspace became unavailable before compilation
+or runtime checks; syntax, formatting, type checking and test execution of this
+increment remain unverified. No full gate, RCH, Beads closure or production
+qualification is claimed. The live create/scheduled service connection is a
+separate increment.
+
+Contract: `docs/HELD_REVIEW_CONVENING.md`.
+
 ## 2026-11-12: connect explicit held-review continuation through the live Tower
 
 The registered Convene operation now reaches the original ordinary supervisor
