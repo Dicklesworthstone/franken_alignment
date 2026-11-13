@@ -63,9 +63,11 @@ separate incompatible admission profile. See the
 
 Explicit `--guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE`
 on the Tower open modes preserves the original owner and source-work custody
-before installing operator grants. It supports fresh checked publication and
-recorded observations without letting operator traffic refresh source evidence
-or start a new request. See [live mediated recovery](LIVE_TOWER_RECOVERY.md) for
+before installing operator grants. It supports fresh checked publication,
+recorded observations and explicitly granted successor review for a new request
+that reaches Hold after recovery. Operator observation alone cannot refresh
+source evidence or start a new request; an old pre-recovery Hold stays stale.
+See [live mediated recovery](LIVE_TOWER_RECOVERY.md) for
 exact paired custody, independent Stop and failure-retention boundaries.
 
 ## Observe a finite publication sequence
@@ -532,10 +534,12 @@ Select a separate optional `convening` profile member:
 Queries must be 1–1024 and operations 1–128. The selection is independent of
 inspection or other mutation grants; it may be the only selected capability.
 Omitted/null selection preserves the ordinary service's existing post-Hold
-cancellation behavior. Ordinary topology-mediated create and explicitly
-scheduled create services also accept the selection, with the existing plain
-checked witness profile where selected. Numerical/generated services and
-guarded topology-recovery profiles continue to reject it before startup.
+cancellation behavior. Ordinary topology-mediated create, explicitly scheduled
+create and guarded recovered services also accept the selection, with the
+existing plain checked witness profile where selected. Recovered services
+require a new post-recovery request and fresh Hold; the recovery fence still
+invalidates old held predecessors. Numerical/generated services continue to
+reject the selection before startup.
 
 While the original ordinary request is held, send a complete Tower request
 using `tower-operator-exchange`, for example:
@@ -569,14 +573,17 @@ independent human approval and both original publication keys. Checked
 publication retains its original prepared witness configuration. Later scheduled
 requests skip consumed successor round IDs without changing their external keys.
 
-For a topology-mediated create service, each successor refreshes the original
+For an ordinary topology-mediated service, each successor refreshes the original
 selected topology source before policy evidence or helper Begin. Its full
 expected held predecessor is checked first. The same source keeps its fixed
 paths, expected graph, diagnostics and spent check/read allowance; a source
 failure or exhausted allowance terminally fails that handoff. No reconnect,
 new congress or later scheduled request renews it. Successful review still
 requires the original separate topology check at final publication. Retained
-creation checkpoints bind the actual ending source/history pair.
+creation checkpoints bind the actual ending source/history pair. Guarded
+recovered services preserve their original independently selected history and
+topology custody, cumulative source work and one-time source rebind; both
+retained outputs include failed successor work at the actual acknowledged cut.
 
 Stop remains first at each cooperative boundary. An expired deadline, unavailable
 fresh source or failed launch follows original failure cleanup. Failed and

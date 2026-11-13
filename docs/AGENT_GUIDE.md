@@ -272,12 +272,14 @@ edits, polling and another Hold never select one automatically. The operation
 allowance and original deadline remain cumulative across reconnects and
 scheduled requests. Failed/abandoned operations remain spent; a new Continue
 still needs fresh independent human approval. Omitted capability selection
-preserves the original service behavior. Ordinary topology-mediated create
-services and their explicit create schedules retain the same source and spend
-a fresh topology check before every successor review, in addition to the
+preserves the original service behavior. Ordinary topology-mediated create,
+explicit create schedules and guarded recovered services retain the same source
+and spend a fresh topology check before every successor review, in addition to the
 separate final-publication check. Missing/changed topology or exhausted source
-work fails the consumed handoff without renewal. Numerical/generated and
-guarded mediated-recovery service selection remains unsupported; see the
+work fails the consumed handoff without renewal. In guarded recovery, select
+only a new request that reaches a fresh Hold after the original recovery fence;
+old held predecessors stay stale, and both custody outputs include spent
+successor work. Numerical/generated service selection remains unsupported; see the
 [exact contract](HELD_REVIEW_CONVENING.md).
 
 ### P2. Investigating an incident

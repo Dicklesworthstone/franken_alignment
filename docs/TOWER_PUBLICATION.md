@@ -142,12 +142,15 @@ explicit exact retries observe the same operation and never relaunch it.
 Actor polling, source edits and helper outcomes do not request a successor.
 A new Continue still requires fresh independent human approval.
 
-Ordinary mediated create services and create schedules also consume this same
-explicit operation. Their original driver checks the full held predecessor,
-refreshes its retained topology source to a native Verified cut, and only then
-captures evidence and begins the successor. Source custody and work remain
-cumulative; final publication still checks topology independently. This does
-not enable numerical/generated or guarded mediated-recovery service selection.
+Ordinary mediated create services, create schedules and guarded recovered
+services also consume this same explicit operation. Their original driver
+checks the full held predecessor, refreshes its retained topology source to a
+native Verified cut, and only then captures evidence and begins the successor.
+Source custody and work remain cumulative; final publication still checks
+topology independently. Guarded recovery requires a new post-recovery request
+and fresh Hold, retains both independent custody outputs, and cannot revive an
+old fenced predecessor. Numerical/generated service selection remains
+unsupported.
 
 ## Observe an original learned stream owner
 

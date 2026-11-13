@@ -5,6 +5,8 @@
 mod sequence;
 #[path = "recovery/stop.rs"]
 mod stop;
+#[path = "recovery/convening.rs"]
+mod convening;
 
 use super::*;
 use crate::workflow::actor_service::{operator::Settings, tower::command_with_clock};

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-13: continue new held requests in guarded recovered services
+
+- Enable explicitly granted successor review for new ordinary held work after
+  guarded topology recovery, preserving the original fence and stale-predecessor
+  refusal.
+- Retain the original topology source and cumulative work, independent human
+  approval, final publication check and both independently selected custody
+  outputs through success and failure.
+- Add four plain/checked recovery scenarios and four native evidence, stale-ticket
+  and source-custody boundary tests. Independent source review is complete;
+  formatting, compilation and runtime execution remain unverified while the
+  execution workspace is unavailable.
+
 ## 2026-11-12: connect mediated held-review continuation to live Tower services
 
 - Enable explicit convening in ordinary mediated create and create schedules,

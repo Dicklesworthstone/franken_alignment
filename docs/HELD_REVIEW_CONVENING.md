@@ -121,10 +121,12 @@ The registered `convene` verb connects only through a restricted original
 control-operator mount with Permit purpose and its own same-owner
 `FileSupervisorConvenePort`, installed with `set_convene`. Actor, ordinary
 observer, legacy reconciliation, imported-snapshot and foreign-owner routes do
-not gain this capability. Ordinary topology-mediated create services and their
-explicit create schedules accept it, including the existing plain checked
-witness profile. Learned/generated profiles and guarded topology-recovery
-services still reject this selection before startup.
+not gain this capability. Ordinary topology-mediated create services, their
+explicit schedules and guarded recovered services accept it, including the
+existing plain checked witness profile. In a recovered service, only a newly
+admitted request that reaches a fresh Hold after the original recovery fence is
+eligible; an old pre-recovery held predecessor remains stale. Learned/generated
+profiles still reject this selection before startup.
 
 At the exact native request address, send `next` with
 `{"action":"convene_held","round":"8"}`. All Tower integers are canonical
@@ -179,6 +181,16 @@ allowance. Exhaustion refuses the new work rather than creating another source
 or expanding a configured budget. Version-2 creation retains the final source
 checkpoint at the acknowledged owner cut on success and ordinary failure.
 
+Guarded recovery first reacquires the original owner and independently selected
+history/topology custody, settles the existing liabilities required by that
+path, and rebinds the retained source exactly once for new work. A new held
+request then uses that same source for every explicitly selected successor and
+final publication. The source's earlier work remains charged. Both independent
+custody outputs retain the actual final history and source work, including
+failed successor checks. A fully recorded recovery schedule remains receipt
+observation only; it cannot revive an old held predecessor or invent new source
+custody.
+
 The service consumes one ticket only after old helper children are reaped,
 builds a fresh bounded review window within the unchanged lifetime, captures
 fresh evidence and launches the original helper protocol once. If a later
@@ -229,6 +241,15 @@ actual helper processes and authenticated operator/human sockets across plain
 and checked single/create schedules, spent failure dispositions, round-ID
 collision avoidance and topology changes after both keys. They do not measure
 detector quality or establish a complete deployed egress inventory.
+
+The guarded recovery extension adds one service regression function with four
+plain/checked success and late-topology-bypass scenarios, plus a subprocess
+helper entrypoint. It checks fresh independent human approval, preservation of
+an earlier confirmed effect, cumulative source work and matching independently
+retained custody outputs. Four further native boundary tests check changed
+evidence reaching the new helper input, retained source work after policy-source
+loss, a stale ticket after an intervening topology acknowledgement, and refusal
+when original source custody is detached after ticket selection.
 
 Earlier ordinary native/Tower/client increments received qualified-nightly
 syntax parsing as recorded in their implementation entries. The mediated

@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: continue new held work after guarded topology recovery
+
+Guarded ordinary mediated services now accept the existing independent convening
+profile for newly admitted work that reaches Hold after recovery. The original
+anchored recovery, settled-liability requirements, one-time topology-source
+rebind, cumulative work, fixed helper recipe, fresh independent human approval
+and final topology check remain authoritative. Historical pre-recovery held
+predecessors remain stale. Both independently retained custody outputs capture
+the actual final acknowledged owner and source work on success and failure.
+
+One service regression function authors four plain/checked recovered-service
+scenarios, plus its subprocess helper entrypoint. It checks actual helper
+recovery, explicit successor selection, fresh human approval, preservation of
+an earlier confirmed effect, late topology-bypass refusal and exact dual custody
+retention. Four additional native boundary tests cover changed successor
+evidence, source-work retention after policy-source loss, stale tickets after
+an intervening topology acknowledgement and detached source custody after
+selection.
+
+Independent source reviews found no concrete blocker. Formatting, compilation,
+Clippy and runtime tests remain unexecuted because the execution workspace is
+unavailable. No verification gate, RCH result, Beads closure or production
+qualification is claimed.
+
+Contracts: `docs/HELD_REVIEW_CONVENING.md`, `docs/LIVE_TOWER_OPERATOR.md`,
+`docs/TOWER_PUBLICATION.md`, `docs/AGENT_GUIDE.md`.
+
 ## 2026-11-12: connect mediated held-review successors through live operators
 
 Ordinary topology-mediated Tower create services and explicit create schedules

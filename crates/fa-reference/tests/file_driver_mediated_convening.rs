@@ -6,6 +6,8 @@
 mod fixture;
 #[path = "file_driver_mediated_convening/support.rs"]
 mod mediated;
+#[path = "file_driver_mediated_convening/boundaries.rs"]
+mod boundaries;
 
 use fa_reference::Error;
 use fa_reference::action::{ActionState, ElapsedTick};
