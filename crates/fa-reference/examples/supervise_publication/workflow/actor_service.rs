@@ -414,9 +414,6 @@ where
     if topology.is_some() && open {
         return Err("topology-supervised live service requires an explicit create mode".into());
     }
-    if topology.is_some() && operator_settings.is_some_and(|settings| settings.convening.is_some()) {
-        return Err("held-review convening does not support mediated topology services".into());
-    }
     if precheck_settings.is_some() && topology.is_some() {
         return Err("precheck disclosure has no topology-service fallback".into());
     }

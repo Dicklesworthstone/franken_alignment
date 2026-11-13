@@ -686,48 +686,4 @@ fn convening_profile_is_closed_bounded_and_refuses_numerical_selection() {
         assert!(Settings::decode(selected_document(&old, &invalid).as_bytes()).is_err());
     }
     assert!(!config.store.exists());
-    for scheduled in [false, true] {
-        let root = Directory::new();
-        let config = held_config(&root);
-        let (actor, reviewer) = profiles(&root, &config);
-        let selected = settings(&root, &config, 1);
-        let topology = crate::workflow::continuation::creation::topology::Selection::decode(
-            br#"{"schema_version":"fa.mediated-create/1","topology_path":"/unread-convene-topology","inventory_path":"/unread-convene-inventory"}"#,
-        ).unwrap();
-        let result = if scheduled {
-            service::serve_tower_with_topology(
-                config,
-                &actor,
-                &reviewer,
-                None,
-                Options {
-                    requests: &[7],
-                    open: false,
-                    credibility: None,
-                },
-                GENERATION,
-                Some(&selected),
-                topology,
-                || panic!("unsupported topology convening sampled time"),
-            )
-        } else {
-            serve_selected_ingress(
-                config,
-                &actor,
-                &reviewer,
-                None,
-                false,
-                None,
-                None,
-                Some(topology),
-                Some(GENERATION),
-                Some(&selected),
-                || panic!("unsupported topology convening sampled time"),
-            )
-        };
-        assert!(result.unwrap_err().contains("held-review convening"));
-        assert!(!root.0.join("store").exists());
-        assert!(!actor.socket.exists());
-        assert!(!selected.socket.exists());
-    }
 }

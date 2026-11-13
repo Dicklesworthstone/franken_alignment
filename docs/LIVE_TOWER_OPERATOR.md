@@ -532,8 +532,10 @@ Select a separate optional `convening` profile member:
 Queries must be 1–1024 and operations 1–128. The selection is independent of
 inspection or other mutation grants; it may be the only selected capability.
 Omitted/null selection preserves the ordinary service's existing post-Hold
-cancellation behavior. The service rejects this selection for numerical,
-generated-text and topology-mediated profiles before starting work.
+cancellation behavior. Ordinary topology-mediated create and explicitly
+scheduled create services also accept the selection, with the existing plain
+checked witness profile where selected. Numerical/generated services and
+guarded topology-recovery profiles continue to reject it before startup.
 
 While the original ordinary request is held, send a complete Tower request
 using `tower-operator-exchange`, for example:
@@ -566,6 +568,15 @@ round stays in native history, and a later Continue still waits for fresh
 independent human approval and both original publication keys. Checked
 publication retains its original prepared witness configuration. Later scheduled
 requests skip consumed successor round IDs without changing their external keys.
+
+For a topology-mediated create service, each successor refreshes the original
+selected topology source before policy evidence or helper Begin. Its full
+expected held predecessor is checked first. The same source keeps its fixed
+paths, expected graph, diagnostics and spent check/read allowance; a source
+failure or exhausted allowance terminally fails that handoff. No reconnect,
+new congress or later scheduled request renews it. Successful review still
+requires the original separate topology check at final publication. Retained
+creation checkpoints bind the actual ending source/history pair.
 
 Stop remains first at each cooperative boundary. An expired deadline, unavailable
 fresh source or failed launch follows original failure cleanup. Failed and

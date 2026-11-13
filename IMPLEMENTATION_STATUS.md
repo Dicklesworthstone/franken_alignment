@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-12: connect mediated held-review successors through live operators
+
+Ordinary topology-mediated Tower create services and explicit create schedules
+now accept the existing independent convening profile. The original source is
+installed before actor admission and retained through held waiting, explicit
+successor launch, fresh independent human approval, checked publication and
+later requests. Successor review requalifies that source before evidence/Begin;
+actual publication still performs its separate final topology check. Fixed
+helper recipes, original deadlines, cumulative source/operator allowances and
+one-time Stop/drain remain with their existing owners. Guarded mediated-recovery
+and numerical/generated service profiles keep their explicit refusals.
+
+Three service regression functions author twelve scenario rows using real
+helper processes and authenticated actor, operator and human sockets: plain and
+checked single/scheduled publication after helper recovery; changed, missing or
+exhausted topology before successor Begin; and unchanged versus changed topology
+after both approval keys. They check exact retries, collision-free later round
+identities, finite failure dispositions, retained checkpoint/history alignment
+and endpoint-bound liability settlement. Existing numerical profile refusal
+coverage remains; obsolete mediated-create refusal assertions are replaced by
+these positive and causal-negative cases.
+
+Independent source review covers the service changes and authored tests.
+The execution workspace remains unavailable, so no formatting, compiler or test
+pass is claimed. Together with the native increment, nine substantive new
+regression functions cover twenty-four scenario rows; these source cases are
+not execution or detector-quality evidence. No full Tower, roadmap, Beads, RCH
+or production qualification is promoted.
+
+Contracts and operator guidance: `docs/HELD_REVIEW_CONVENING.md`,
+`docs/LIVE_TOWER_OPERATOR.md`, `docs/TOWER_PUBLICATION.md`, `docs/AGENT_GUIDE.md`.
+
 ## 2026-11-12: requalify original topology for explicit held-review successors
 
 The ordinary file driver now consumes an explicitly admitted held-review ticket

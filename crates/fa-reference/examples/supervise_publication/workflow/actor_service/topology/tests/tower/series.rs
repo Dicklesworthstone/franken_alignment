@@ -2,6 +2,8 @@
 //! its own source check, fresh independent review and one-shot publication keys.
 #[path = "series/cancellation.rs"]
 mod cancellation;
+#[path = "series/convening.rs"]
+mod convening;
 
 use super::*;
 use crate::workflow::actor_service::series::{self as service, Options};

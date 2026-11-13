@@ -121,8 +121,10 @@ The registered `convene` verb connects only through a restricted original
 control-operator mount with Permit purpose and its own same-owner
 `FileSupervisorConvenePort`, installed with `set_convene`. Actor, ordinary
 observer, legacy reconciliation, imported-snapshot and foreign-owner routes do
-not gain this capability. Learned and generated-text service profiles reject
-its selection, as do topology-mediated ordinary create/open/schedule profiles.
+not gain this capability. Ordinary topology-mediated create services and their
+explicit create schedules accept it, including the existing plain checked
+witness profile. Learned/generated profiles and guarded topology-recovery
+services still reject this selection before startup.
 
 At the exact native request address, send `next` with
 `{"action":"convene_held","round":"8"}`. All Tower integers are canonical
@@ -168,6 +170,15 @@ checked-publication preparation are retained from before the initial review.
 Every successor still requires a separate explicit operator admission. Without
 this selection, the existing post-Hold cancellation behavior is unchanged.
 
+Mediated creation keeps the topology source selected before initial actor
+admission. Each explicit successor spends a fresh check from that same source
+before policy capture and helper launch; every eventual publication spends its
+own final check. A one-request successful successor therefore needs the initial,
+successor and final checks. Scheduled later requests keep the same cumulative
+allowance. Exhaustion refuses the new work rather than creating another source
+or expanding a configured budget. Version-2 creation retains the final source
+checkpoint at the acknowledged owner cut on success and ordinary failure.
+
 The service consumes one ticket only after old helper children are reaped,
 builds a fresh bounded review window within the unchanged lifetime, captures
 fresh evidence and launches the original helper protocol once. If a later
@@ -209,9 +220,20 @@ and unsupported startup refusal; and one-time cleanup
 through single-request and scheduled terminal replies. The protocol-only Stop
 refusal test also asserts that automatic failure cleanup remains necessary.
 
-Independent source review and qualified-nightly syntax parsing passed for the
-changed native, Tower, client and service source/test files; new files are
-formatted. Compilation and runtime of these increments remain
-unverified: the existing library compiler was killed by the environment while
-emitting metadata, before reaching integration targets. No whole-repository,
-RCH, production or roadmap qualification is claimed.
+The mediated extension adds six public native regression functions and three
+live service regression functions, covering twelve native and twelve service
+scenario rows. Native cases exercise real socket review and independent
+publication, changed/missing sources, source exhaustion, exact source
+reattachment, stale predecessors and final receipt accounting. Live cases use
+actual helper processes and authenticated operator/human sockets across plain
+and checked single/create schedules, spent failure dispositions, round-ID
+collision avoidance and topology changes after both keys. They do not measure
+detector quality or establish a complete deployed egress inventory.
+
+Earlier ordinary native/Tower/client increments received qualified-nightly
+syntax parsing as recorded in their implementation entries. The mediated
+extension has independent source review only: the execution workspace became
+unavailable before formatting, parsing, compilation or runtime verification.
+The prior library compiler memory failure is historical evidence, not a new
+test result. No whole-repository, RCH, production or roadmap qualification is
+claimed.

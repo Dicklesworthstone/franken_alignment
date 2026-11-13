@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-12: connect mediated held-review continuation to live Tower services
+
+- Enable explicit convening in ordinary mediated create and create schedules,
+  including the original plain checked witness profile, with no source renewal.
+- Keep original helper recipes, independent human approval, deadlines, final
+  topology checks and retained source/history checkpoints across successors.
+- Replace obsolete mediated-create refusal tests with three service regression
+  functions covering twelve positive and causal-negative scenario rows.
+- Preserve numerical/generated and guarded mediated-recovery refusals. Independent
+  source review is complete; formatting, compilation and runtime remain
+  unverified while the execution workspace is unavailable.
+
 ## 2026-11-12: extend explicit held reviews to original mediated topology
 
 - Admit ordinary mediated held-review successors through a distinct history

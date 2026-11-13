@@ -142,6 +142,13 @@ explicit exact retries observe the same operation and never relaunch it.
 Actor polling, source edits and helper outcomes do not request a successor.
 A new Continue still requires fresh independent human approval.
 
+Ordinary mediated create services and create schedules also consume this same
+explicit operation. Their original driver checks the full held predecessor,
+refreshes its retained topology source to a native Verified cut, and only then
+captures evidence and begins the successor. Source custody and work remain
+cumulative; final publication still checks topology independently. This does
+not enable numerical/generated or guarded mediated-recovery service selection.
+
 ## Observe an original learned stream owner
 
 `PublicationTower::new_learned_observer(mount, learned_port, limits)` mounts the

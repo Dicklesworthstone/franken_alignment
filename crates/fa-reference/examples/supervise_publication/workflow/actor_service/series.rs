@@ -215,11 +215,6 @@ where
     if operator_settings.is_some() && tower_generation.is_none() {
         return Err("operator request schedules require an explicit Tower generation".into());
     }
-    if topology_selection.is_some()
-        && operator_settings.is_some_and(|settings| settings.convening.is_some())
-    {
-        return Err("held-review convening does not support mediated topology services".into());
-    }
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
