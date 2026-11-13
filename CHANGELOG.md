@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-11-13: connect independent live governance to learned sequences
+
+- Add explicit new-sequence `--governor-profile` selection with matching original
+  campaign limits, independent actor/operator/reviewer credentials and at least
+  two Messages; retain the original first-image governor.
+- Add separate governor Request/Approve and operator Promote numerical work
+  allowances, preserving exact-cut replay, snapshot-safe short-budget refusal,
+  no-refund failures and historical retries.
+- Service that same supervisor during generation, native/process helper review,
+  human review, publication and sequence handoffs after independent Stop checks.
+- Discover and validate the selected/remaining numerical allowance through Get
+  without changing ordinary reply shapes or acquiring any new authority.
+- Preserve completed learned drafts across promotion and require fresh source,
+  native helper and independent human work for later publication; keep predictive,
+  mediated, recovered and joint-credibility compositions explicitly out of scope.
+- Add genuine native predictive refusal and six governor, two client, separate-
+  process learned publication/human-rejection and pre-asset custody regressions.
+- Pass the additional native predictor test, production compilation/linking,
+  complete test-harness type checking and ten production CLI refusal checks.
+  Valid governor connection creation is still refused by this environment;
+  authored example runtime cases and full repository qualification remain open.
+- Run the required xtask gate: four prerequisites pass, followed by the unchanged
+  source-snapshot enforcement refusing 177 current findings; later checks are
+  not reached and the manifest is not regenerated.
+
 ## 2026-11-13: admit paid native learned policy promotion
 
 - Add a separately budgeted original promotion grant for nonpredictive native

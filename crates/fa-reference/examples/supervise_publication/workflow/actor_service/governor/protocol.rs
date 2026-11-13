@@ -86,6 +86,14 @@ pub(crate) struct Inspection {
     pub(crate) report_bytes: usize,
     pub(crate) stopped: bool,
     pub(crate) source_interrupted: Option<bool>,
+    pub(crate) numerical_replay: Option<NumericalReplayInspection>,
+}
+
+/// Observed remaining work, never an allowance created by reading this value.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NumericalReplayInspection {
+    pub(crate) selected: super::profile::NumericalReplaySettings,
+    pub(crate) remaining_events: usize,
 }
 
 pub(crate) struct Request {
@@ -312,7 +320,7 @@ fn response(
                         "\"authority_epoch\":\"{}\",\"policy_generation\":\"{}\",",
                         "\"campaigns\":{{\"cases\":\"{}\",\"input_bytes\":\"{}\",\"max_campaigns\":\"{}\"}},",
                         "\"campaign_limit\":\"{}\",\"report_bytes\":\"{}\",",
-                        "\"stopped\":{},\"source_interrupted\":{}}}"
+                        "\"stopped\":{},\"source_interrupted\":{}{}}}"
                     ),
                     revision,
                     inspection.cut.control_sequence,
@@ -327,6 +335,12 @@ fn response(
                     inspection.source_interrupted.map_or("null", |interrupted| {
                         if interrupted { "true" } else { "false" }
                     }),
+                    inspection.numerical_replay.map_or_else(String::new, |numerical| format!(
+                        ",\"numerical_replay\":{{\"max_replay_events\":\"{}\",\"events\":\"{}\",\"remaining_events\":\"{}\"}}",
+                        numerical.selected.max_replay_events,
+                        numerical.selected.events,
+                        numerical.remaining_events,
+                    )),
                 ),
                 Acknowledgment::Reviewed(report) => format!(
                     "{{\"journal_revision\":\"{revision}\",\"reviewed_report\":{}}}",

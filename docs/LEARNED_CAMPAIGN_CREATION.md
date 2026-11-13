@@ -37,7 +37,11 @@ The original guarded constructor composes campaigns with the numerical recipe,
 stream, mandatory policy source, terminal reserve, any registered identity and
 credential guards, and either original predictor mode. It returns the existing
 human and observer roles through their existing custody paths. The creation
-flag grants no governor, reusable campaign approval or effect permit. Ungoverned
+flag alone exposes no governor, reusable campaign approval or effect permit. An
+eligible new nonpredictive resident sequence can separately select
+`--governor-profile` and a paid promotion operator to retain that original
+first-image role in the [live governor service](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence).
+Ungoverned
 policy replacement refuses once the campaign guard is installed.
 
 Creation with the flag still performs actual model generation, native sidecar

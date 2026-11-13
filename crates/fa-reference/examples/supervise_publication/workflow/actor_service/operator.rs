@@ -9,15 +9,16 @@ pub(crate) use profile::Settings;
 use super::{
     BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Port, Profile, debug, io,
 };
+use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyPromotionPermit;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
-    FileGeneratedTextActorPort, FileLearnedTextStreamActorPort, FileRequestHistoryDisclosure,
-    FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant, FileSupervisorConveneGrant,
-    FileSupervisorExplanationGrant, FileSupervisorFenceGrant, FileSupervisorHoldDiagnosisGrant,
-    FileSupervisorInspectionGrant, FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant,
-    FileSupervisorPolicyPromotionGrant, FileSupervisorPolicyReplayGrant,
-    FileSupervisorRequestHistoryGrant, FileSupervisorResolutionGrant,
-    FileSupervisorReviewExplanationGrant,
+    FileActorSupervisor, FileGeneratedTextActorPort, FileLearnedTextStreamActorPort,
+    FileRequestHistoryDisclosure, FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant,
+    FileSupervisorConveneGrant, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
+    FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
+    FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant, FileSupervisorPolicyPromotionGrant,
+    FileSupervisorPolicyReplayGrant, FileSupervisorRequestHistoryGrant,
+    FileSupervisorResolutionGrant, FileSupervisorReviewExplanationGrant,
 };
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
@@ -119,6 +120,31 @@ impl Service {
         deadline: &Deadline,
     ) -> Result<Self, String> {
         settings.check_learned_operator()?;
+        Self::start_learned_with(settings, actor, port, driver, generation, deadline)
+    }
+
+    /// A new campaign-enabled learned sequence explicitly selects the governor
+    /// and both independent numerical work allowances before owner creation.
+    pub(super) fn start_learned_governed(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileLearnedTextStreamActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
+        settings.check_governed_learned_operator()?;
+        Self::start_learned_with(settings, actor, port, driver, generation, deadline)
+    }
+
+    fn start_learned_with(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileLearnedTextStreamActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
         Self::start_with(
             settings,
             actor,
@@ -129,6 +155,7 @@ impl Service {
                 if settings.fence.is_some()
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
+                    || settings.policy_promotion.is_some()
                 {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -506,9 +533,9 @@ impl Service {
             })
     }
 
-    pub(super) fn install_policy_promotion(
+    pub(super) fn install_policy_promotion_supervisor(
         &mut self,
-        driver: &FileSupervisedDriver,
+        supervisor: &FileActorSupervisor<FileOversight>,
         permit: FilePolicyPromotionPermit,
     ) -> Result<(), String> {
         if !self.promotion_available() {
@@ -519,10 +546,20 @@ impl Service {
             .promotion_settings
             .as_ref()
             .expect("explicit promotion selection");
-        let (port, grant) = driver
-            .supervisor()
-            .policy_promotion_port(permit, selected.queries, selected.max_replay_events)
-            .map_err(debug)?;
+        let (port, grant) = match selected.numerical_replay_events {
+            Some(events) => supervisor.policy_promotion_port_with_numerical_budget(
+                permit,
+                selected.queries,
+                selected.max_replay_events,
+                events,
+            ),
+            None => supervisor.policy_promotion_port(
+                permit,
+                selected.queries,
+                selected.max_replay_events,
+            ),
+        }
+        .map_err(debug)?;
         // This mutates only the original Tower's selected weak capability.
         // Its peer identity, connection, queued output and quotas stay intact.
         active
@@ -549,12 +586,21 @@ impl Service {
     /// Both independent sidecars run after the original Stop checkpoint. The
     /// governor receives the live owner only for its explicitly selected turn.
     pub(super) fn checkpoint_driver(&mut self, driver: &mut FileSupervisedDriver) {
+        self.checkpoint_supervisor(driver.supervisor_mut());
+    }
+
+    /// Native and process helper wrappers retain this same original supervisor.
+    /// Servicing its governor does not unwrap, replace or reconstruct a driver.
+    pub(super) fn checkpoint_supervisor(
+        &mut self,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
+    ) {
         if self.retirement.is_some() || self.started.elapsed() >= self.wall {
             self.checkpoint();
             return;
         }
         if let Some(mut governor) = self.governor.take() {
-            governor.checkpoint(driver, self);
+            governor.checkpoint_supervisor(supervisor, self);
             self.governor = Some(governor);
         }
         self.checkpoint();

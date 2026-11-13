@@ -19,6 +19,12 @@ invocation and input files must be provisioned separately from the actor,
 helpers and human **effect** reviewer. This is not a new signed-identity or
 remote governance authentication protocol.
 
+New nonpredictive resident sequences can instead retain the original first-image
+governor and expose its [separately authenticated live endpoint](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence).
+That selection requires both a governor Request/Approve numerical allowance and
+an independent operator Promote allowance. The offline anchored operation below
+keeps its original complete grammar and atomic three-event replacement.
+
 ## Provision the original guard
 
 The history must already require campaigns with an independently retained exact

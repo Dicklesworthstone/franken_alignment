@@ -4,6 +4,8 @@
 use super::{Settings, protocol};
 use crate::config::{debug, policy_from_json, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
+use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_POLICY_PROMOTION_REPLAY_EVENTS;
+use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
 use fa_reference::action::consequence::oversight::policy_governance::MAX_POLICY_CAMPAIGNS;
 use fa_reference::action::consequence::policy_campaign::{
     MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES, ReplayCaseId, ReplayLimits,
@@ -216,7 +218,11 @@ fn validate_selected_response(
         validate_response(request, bytes, settings.report_bytes)?
         && (inspection.campaigns != settings.campaign_requirement()
             || inspection.campaign_limit != settings.campaign_limit
-            || inspection.report_bytes != settings.report_bytes)
+            || inspection.report_bytes != settings.report_bytes
+            || inspection
+                .numerical_replay
+                .map(|numerical| numerical.selected)
+                != settings.numerical_replay)
     {
         return Err(
             "governor inspection changed the independently selected campaign bounds".into(),
@@ -295,20 +301,21 @@ fn validate_response(
     let basis_revision = decimal(&basis["journal_revision"])?;
     match &request.command {
         protocol::Command::Inspect { .. } => {
-            let value = object(
-                &fields["value"],
-                &[
-                    "journal_revision",
-                    "control_sequence",
-                    "authority_epoch",
-                    "policy_generation",
-                    "campaigns",
-                    "campaign_limit",
-                    "report_bytes",
-                    "stopped",
-                    "source_interrupted",
-                ],
-            )?;
+            let mut expected_fields = vec![
+                "journal_revision",
+                "control_sequence",
+                "authority_epoch",
+                "policy_generation",
+                "campaigns",
+                "campaign_limit",
+                "report_bytes",
+                "stopped",
+                "source_interrupted",
+            ];
+            if fields["value"].get("numerical_replay").is_some() {
+                expected_fields.push("numerical_replay");
+            }
+            let value = object(&fields["value"], &expected_fields)?;
             let cut = protocol::Expected {
                 journal_revision: decimal(&value["journal_revision"])?,
                 control_sequence: decimal(&value["control_sequence"])?,
@@ -351,6 +358,34 @@ fn validate_response(
                 Json::Bool(interrupted) => Some(*interrupted),
                 _ => return Err("governor inspection source status must be Boolean or null".into()),
             };
+            let numerical_replay = match value.get("numerical_replay") {
+                None => None,
+                Some(value) => {
+                    let numerical =
+                        object(value, &["max_replay_events", "events", "remaining_events"])?;
+                    let max_replay_events = bounded(
+                        &numerical["max_replay_events"],
+                        MAX_POLICY_PROMOTION_REPLAY_EVENTS,
+                    )?;
+                    let maximum = usize::try_from(MAX_CHANNEL_EXCHANGES)
+                        .map_err(debug)?
+                        .checked_mul(max_replay_events)
+                        .ok_or("numerical replay bound overflow")?;
+                    let events = bounded(&numerical["events"], maximum)?;
+                    let remaining_events =
+                        usize::try_from(decimal(&numerical["remaining_events"])?).map_err(debug)?;
+                    if remaining_events > events {
+                        return Err("governor inspection replenished numerical replay work".into());
+                    }
+                    Some(protocol::NumericalReplayInspection {
+                        selected: super::profile::NumericalReplaySettings {
+                            max_replay_events,
+                            events,
+                        },
+                        remaining_events,
+                    })
+                }
+            };
             Ok(ValidatedResponse::Inspection(protocol::Inspection {
                 cut,
                 campaigns,
@@ -358,6 +393,7 @@ fn validate_response(
                 report_bytes: bounded(&value["report_bytes"], report_bytes)?,
                 stopped,
                 source_interrupted,
+                numerical_replay,
             }))
         }
         protocol::Command::Review {

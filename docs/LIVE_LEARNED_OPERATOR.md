@@ -89,6 +89,16 @@ kernel process identities, not executable identities or human authentication.
 Naming the same identity for multiple roles gives those processes the
 corresponding explicitly selected access.
 
+For new nonpredictive, nonmediated resident sequences, an explicit
+`--governor-profile` can pair this operator with a separate original campaign
+governor. The operator's `policy_promotion` selection must include its own
+`numerical_replay_events`, and the governor must independently select Request/
+Approve work. Every actor, the operator and the human reviewer must have
+credentials disjoint from that governor. Only its original approved permit can
+populate the operator's live promotion grant. Ordinary learned/native-text
+selections continue to refuse promotion. The [live governor contract](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
+defines the complete composition and its unchanged two-key publication gates.
+
 The socket directory must be supervisor-owned and not group/other writable.
 Admission compares the canonical path with the authority store subtree, selected
 policy source, actor/reviewer/Stop/precheck sockets, retained history output and

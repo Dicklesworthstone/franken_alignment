@@ -216,7 +216,11 @@ exact complete report returned for that campaign. The original native key is ins
 before its approval acknowledgment. See [live governor setup and wire
 contracts](LIVE_POLICY_GOVERNOR.md). Governed open requires the exact independent
 `fa.guarded-submit/2` policy/campaign expectations and returns only fresh governor
-custody. Mediated and numerical governor combinations remain outside this selection.
+custody. New nonpredictive learned sequences instead select the explicit
+`serve-learned-generated` governor composition with their original campaign
+profile and separate governor/operator numerical allowances. Mediated,
+predictive and recovered learned governor combinations remain outside that
+selection; see the same live governor contract for its complete grammar.
 
 ### Native evidence and limits
 

@@ -153,7 +153,7 @@ impl Intake {
             // explicit Finish preparation. Stop wins before its source capture.
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
-            super::operator::checkpoint(operator);
+            super::operator::checkpoint_driver(operator, driver);
             if control.native_stop(driver, time)? { return Ok(false); }
             precheck = Some(super::precheck::Service::start_learned(&selected.settings,
                 &self.profile, &selected.reviewer, config, driver, deadline, time, self.release)?);
@@ -161,7 +161,7 @@ impl Intake {
         let result = (|| loop {
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
-            super::operator::checkpoint(operator);
+            super::operator::checkpoint_driver(operator, driver);
             if control.native_stop(driver, time)? { return Ok(false); }
             if let Some(service) = &mut precheck { service.checkpoint(driver, time()); }
             self.accept()?;
@@ -277,7 +277,7 @@ impl Intake {
                 // from a quarantined owner. This phase admits no new work.
                 failure.get_or_insert(error);
             }
-            super::operator::checkpoint(operator);
+            super::operator::checkpoint_driver(operator, driver);
             if let Err(error) = control.native_stop(driver, time) {
                 // Keep flushing the original historical reply after cleanup
                 // failure; the shared control will not repeat its drain.

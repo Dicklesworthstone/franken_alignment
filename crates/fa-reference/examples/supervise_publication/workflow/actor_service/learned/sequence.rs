@@ -3,6 +3,7 @@
 //! needs its own original forecast, native/process congress and human permit.
 #[path = "sequence/profile.rs"] mod profile;
 #[path = "sequence/precheck.rs"] mod disclosure;
+#[path = "sequence/governor.rs"] mod governor;
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
@@ -15,7 +16,7 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; new nonpredictive, nonmediated sequences with at least two Messages also accept --governor-profile PATH paired with the original campaign profile and explicit numerical operator promotion allowance";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -34,11 +35,21 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     command_with_clock(args, credibility, clock)
 }
 
-pub(super) fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
-where F: FnMut() -> ElapsedTick {
+pub(super) fn command_with_clock<F>(
+    args: &[String],
+    credibility: Option<&Path>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let (args, governor_path) = governor::take_option(args)?;
+    if governor_path.is_some() && credibility.is_some() {
+        return Err("new learned governor cannot activate recovery credibility".into());
+    }
     // The operator pair owns the complete live grammar before another option
     // parser can erase an incompatible historical or maintenance selection.
-    let (args, operator_path) = operator::take_option(args)?;
+    let (args, operator_path) = operator::take_option(&args)?;
     let (args, checkpoint_path) = checkpoint_on_generation::take_option(&args)?;
     let (args, campaign_path) = campaigns::take_option(&args)?;
     let (args, anchors) = anchors::take_options(&args)?;
@@ -56,27 +67,75 @@ where F: FnMut() -> ElapsedTick {
         Config::read_learned_generation(Path::new(&args[1]))?
     };
     let peers = PeerProfile::read(Path::new(&args[3]))?;
-    let mut entries = profile::load(Path::new(&args[2]), &config)?;
+    let operator = operator_path
+        .map(|(path, generation)| {
+            if governor_path.is_some() {
+                operator::Selection::read_governed(&path, generation)
+            } else {
+                operator::Selection::read(&path, generation)
+            }
+        })
+        .transpose()?;
+    let governor = governor_path
+        .as_deref()
+        .map(governor::Settings::read)
+        .transpose()?;
+    let campaign = campaign_path
+        .as_deref()
+        .map(|path| campaigns::read(&config, path))
+        .transpose()?;
+    governor::check_selection(governor.as_ref(), operator.as_ref(), campaign)?;
+    let mut entries = if let Some(governor) = governor.as_ref() {
+        profile::load_governed(
+            Path::new(&args[2]),
+            &config,
+            governor,
+            operator
+                .as_ref()
+                .expect("complete governor operator selection checked above"),
+            &peers,
+        )?
+    } else {
+        profile::load(Path::new(&args[2]), &config)?
+    };
     validate(&config, &entries, &peers)?;
     // First compare every independently supplied recovery inventory. A creation
     // selection cannot erase a different later requirement. Then install ONE
     // original first-image guard and carry its expected inventory through the
     // resident entries; only entry one holds the creation selection.
-    campaigns::admit(&config, &mut entries[0].loaded, campaign_path.as_deref(), continuing)?;
+    if let Some(campaign) = campaign {
+        campaigns::admit_selected(&mut entries[0].loaded, campaign)?;
+    }
     if let Some(selected) = entries[0].loaded.creation_campaigns {
         for entry in &mut entries[1..] {
             entry.loaded.expected_campaigns = Some(selected);
         }
     }
     entries[0].loaded.checkpoint_on_generation = checkpoint_path
-        .map(checkpoint_on_generation::Selection::read).transpose()?;
-    anchors.admit(&config, &mut entries[0].loaded, continuing)?;
-    topology::admit(&config, &mut entries[0].loaded, topology_path.as_deref(),
-        if continuing { topology::Mode::Live } else { topology::Mode::Create })?;
-    let operator = operator_path.map(|(path, generation)| operator::Selection::read(&path, generation))
+        .map(checkpoint_on_generation::Selection::read)
         .transpose()?;
-    let result = run_with_operator(config, entries, &peers, continuing, after, credibility,
-        operator.as_ref(), time)?;
+    anchors.admit(&config, &mut entries[0].loaded, continuing)?;
+    topology::admit(
+        &config,
+        &mut entries[0].loaded,
+        topology_path.as_deref(),
+        if continuing {
+            topology::Mode::Live
+        } else {
+            topology::Mode::Create
+        },
+    )?;
+    let result = run_with_services(
+        config,
+        entries,
+        &peers,
+        continuing,
+        after,
+        credibility,
+        operator.as_ref(),
+        governor.as_ref(),
+        time,
+    )?;
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -212,16 +271,28 @@ fn confirmed(driver: &FileSupervisedDriver, request: u64, response: &WireRespons
 
 /// Retain both original child owners while polling. A failed or interrupted
 /// cleanup can be stopped and reported; it never grants the next cohort a slot.
-fn retire<F>(driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
-    process: &mut Option<process::ProcessHistory>, request: u64, config: &Config,
-    control: &mut Control, deadline: &Deadline, operator: &mut Option<operator::Service>,
-    actor: &Profile, time: &mut F) -> Result<bool, String>
-where F: FnMut() -> ElapsedTick {
+fn retire<F>(
+    driver: &mut FileSupervisedDriver,
+    reviewer: &FileHumanReviewer,
+    process: &mut Option<process::ProcessHistory>,
+    request: u64,
+    config: &Config,
+    control: &mut Control,
+    deadline: &Deadline,
+    operator: &mut Option<operator::Service>,
+    actor: &Profile,
+    time: &mut F,
+) -> Result<bool, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     let started = Instant::now();
     loop {
         deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, time)? { return Ok(false); }
-        if let Some(service) = operator.as_mut() { service.checkpoint(); }
+        if control.checkpoint(driver, reviewer, deadline, time)? {
+            return Ok(false);
+        }
+        operator::checkpoint_driver(operator, driver);
         let stopping = control.native_stop(driver, time);
         if !matches!(&stopping, Ok(false)) {
             // A Fence may arrive between completed requests, after the prior
@@ -230,56 +301,158 @@ where F: FnMut() -> ElapsedTick {
             let reply = Instant::now();
             let window = Duration::from_millis(actor.reply_ms);
             while reply.elapsed() < window && deadline.check(time()).is_ok() {
-                operator::checkpoint(operator);
-                if let Some(history) = process.as_mut() { history.reap(); }
+                operator::checkpoint_driver(operator, driver);
+                if let Some(history) = process.as_mut() {
+                    history.reap();
+                }
                 let remaining = window.saturating_sub(reply.elapsed());
-                let pause = actor.poll_ms.min(50)
+                let pause = actor
+                    .poll_ms
+                    .min(50)
                     .min(u64::try_from(remaining.as_millis()).unwrap_or(u64::MAX));
-                if pause == 0 { break; }
+                if pause == 0 {
+                    break;
+                }
                 crate::workflow::pause(pause);
             }
             return stopping.map(|_| false);
         }
-        if let Some(history) = process.as_mut() { history.reap(); }
+        if let Some(history) = process.as_mut() {
+            history.reap();
+        }
         let direct = driver.retire_completed_request(request).map_err(debug)?;
-        if direct && process.as_ref().is_none_or(|history| history.pending() == 0) {
+        if direct
+            && process
+                .as_ref()
+                .is_none_or(|history| history.pending() == 0)
+        {
             *process = None;
             return Ok(true);
         }
         if started.elapsed() >= Duration::from_millis(config.timing.cleanup_ms) {
-            return Err("previous learned helper cohort is not confirmed reaped; no successor admitted".into());
+            return Err(
+                "previous learned helper cohort is not confirmed reaped; no successor admitted"
+                    .into(),
+            );
         }
         crate::workflow::pause(config.timing.poll_ms.clamp(1, 50));
     }
 }
 
 #[cfg(test)]
-pub(super) fn run<F>(config: Config, entries: Vec<Entry>, peers: &PeerProfile,
-    continuing: bool, after_message: Option<u64>, credibility: Option<&Path>, time: F)
-    -> Result<SequenceResult, String>
-where F: FnMut() -> ElapsedTick {
-    run_with_operator(config, entries, peers, continuing, after_message, credibility, None, time)
+pub(super) fn run<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    peers: &PeerProfile,
+    continuing: bool,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    time: F,
+) -> Result<SequenceResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_operator(
+        config,
+        entries,
+        peers,
+        continuing,
+        after_message,
+        credibility,
+        None,
+        time,
+    )
 }
 
 /// One independently provisioned operator session follows the original owner,
 /// including every helper handoff. New messages never reissue its grants or
 /// replenish its query, connection, framing or elapsed allowance.
-pub(super) fn run_with_operator<F>(mut config: Config, entries: Vec<Entry>, peers: &PeerProfile,
-    continuing: bool, after_message: Option<u64>, credibility: Option<&Path>,
-    selected_operator: Option<&operator::Selection>, mut time: F)
-    -> Result<SequenceResult, String>
-where F: FnMut() -> ElapsedTick {
+pub(super) fn run_with_operator<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    peers: &PeerProfile,
+    continuing: bool,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    selected_operator: Option<&operator::Selection>,
+    time: F,
+) -> Result<SequenceResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_services(
+        config,
+        entries,
+        peers,
+        continuing,
+        after_message,
+        credibility,
+        selected_operator,
+        None,
+        time,
+    )
+}
+
+/// Retain the same explicitly issued governor and numerical operator for every
+/// message in the original finite sequence; no later entry can provision one.
+pub(super) fn run_with_services<F>(
+    mut config: Config,
+    entries: Vec<Entry>,
+    peers: &PeerProfile,
+    continuing: bool,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    selected_operator: Option<&operator::Selection>,
+    selected_governor: Option<&governor::Settings>,
+    mut time: F,
+) -> Result<SequenceResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     validate(&config, &entries, peers)?;
+    governor::check_selection(
+        selected_governor,
+        selected_operator,
+        entries[0].loaded.creation_campaigns,
+    )?;
+    if let Some(governor) = selected_governor {
+        governor::check(
+            governor,
+            selected_operator.expect("paired selection checked above"),
+            &config,
+            &entries,
+            peers,
+            continuing,
+        )?;
+    }
     if let Some(selected) = selected_operator {
         // The first entry owns retained outputs; every entry contributes its
         // independently selected actor, human-review and Stop socket names.
         // Admit all of them before sampling time or creating any owner/listener.
         for entry in &entries {
-            selected.check(&config, &entry.loaded, &entry.actor, peers, entry.precheck.as_ref())?;
+            if selected_governor.is_some() {
+                selected.check_governed(
+                    &config,
+                    &entry.loaded,
+                    &entry.actor,
+                    peers,
+                    entry.precheck.as_ref(),
+                )?;
+            } else {
+                selected.check(
+                    &config,
+                    &entry.loaded,
+                    &entry.actor,
+                    peers,
+                    entry.precheck.as_ref(),
+                )?;
+            }
         }
     }
     if !continuing && (after_message.is_some() || credibility.is_some()) {
-        return Err("sequence predecessor and credibility activation require explicit live recovery".into());
+        return Err(
+            "sequence predecessor and credibility activation require explicit live recovery".into(),
+        );
     }
     if continuing && entries[0].loaded.creation_campaigns.is_some() {
         return Err("resident recovery cannot install a creation campaign guard".into());
@@ -291,35 +464,97 @@ where F: FnMut() -> ElapsedTick {
         super::continuation::check_ids(entries[0].loaded.request, after)?;
     }
     let start = time();
-    let lifetime = entries.iter().map(|entry| entry.actor.runtime_ms)
-        .min().unwrap().min(config.timing.runtime_ms);
-    let global = Deadline { logical: plus(start, lifetime)?, started: Instant::now(),
-        wall: Duration::from_millis(lifetime) };
+    let lifetime = entries
+        .iter()
+        .map(|entry| entry.actor.runtime_ms)
+        .min()
+        .unwrap()
+        .min(config.timing.runtime_ms);
+    let global = Deadline {
+        logical: plus(start, lifetime)?,
+        started: Instant::now(),
+        wall: Duration::from_millis(lifetime),
+    };
     let first = &entries[0];
     let deadline = entry_deadline(&global, first, start)?;
     // The whole fixed sequence retains ONE original credential capability.
     // Preflight its independent inputs before any socket/store/recovery work.
-    let mut credential = super::credential::prepare(&first.loaded, continuing, &deadline, &mut time)?;
+    let mut credential =
+        super::credential::prepare(&first.loaded, continuing, &deadline, &mut time)?;
     // Only this fixed operation names the authenticated stop endpoint. Sharing
     // it with each request preserves one socket, candidate quota and outcome.
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
-    let topology::Started { custody: (host, reviewer, observer, identity_observer), source, output } =
-        topology::start(&config, &first.loaded, continuing, &mut control, &deadline, &mut time)?;
+    let (started, governor_role) = if selected_governor.is_some() {
+        let (custody, role) = super::recovery::create_governed(&config, &first.loaded)?;
+        (
+            topology::Started {
+                custody,
+                source: None,
+                output: None,
+            },
+            Some(role),
+        )
+    } else {
+        (
+            topology::start(
+                &config,
+                &first.loaded,
+                continuing,
+                &mut control,
+                &deadline,
+                &mut time,
+            )?,
+            None,
+        )
+    };
+    let topology::Started {
+        custody: (host, reviewer, observer, identity_observer),
+        source,
+        output,
+    } = started;
     if let Some(selected) = first.loaded.checkpoint_on_generation {
         selected.check_owner(&host)?;
     }
     let mut initial_deadline = Some(deadline);
-    let mut prediction = observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
+    let mut prediction =
+        observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
     let mut identity = identity_observer.map(identity::Session::new);
     prediction::check(&host, prediction.as_ref())?;
-    let mut initial_continuation = request_preflight(&host, &first.loaded, continuing,
-        None, after_message, credibility)?;
-    let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
+    let mut initial_continuation = request_preflight(
+        &host,
+        &first.loaded,
+        continuing,
+        None,
+        after_message,
+        credibility,
+    )?;
+    let (port, supervisor) = host
+        .into_learned_text_stream_actor_gateway()
+        .map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     topology::attach(&mut driver, source)?;
-    let mut operator = selected_operator.map(|selected|
-        selected.start(&first.actor, port.clone(), &driver, &global)).transpose()?;
+    let mut operator = selected_operator
+        .map(|selected| {
+            if selected_governor.is_some() {
+                selected.start_governed(&first.actor, port.clone(), &driver, &global)
+            } else {
+                selected.start(&first.actor, port.clone(), &driver, &global)
+            }
+        })
+        .transpose()?;
+    if let Some((settings, role)) = selected_governor.zip(governor_role) {
+        let service = crate::workflow::actor_service::governor::Service::start(
+            settings,
+            &first.actor,
+            role,
+            &global,
+        )?;
+        operator
+            .as_mut()
+            .ok_or("learned governor has no original promotion operator")?
+            .attach_governor(service)?;
+    }
     let mut wire = ActorWire::new(port.clone());
     let mut responses = Vec::with_capacity(entries.len());
     let mut histories = Vec::with_capacity(entries.len());
@@ -329,26 +564,55 @@ where F: FnMut() -> ElapsedTick {
     let mut previous = after_message;
     for (index, entry) in entries.iter().enumerate() {
         if index != 0 {
-            match retire(&mut driver, &reviewer, &mut process, previous.unwrap(),
-                &config, &mut control, &global, &mut operator, &entries[index - 1].actor, &mut time) {
-                Ok(true) => {},
-                Ok(false) => { terminal = Some("learned sequence stopped before its next request".into()); break; }
-                Err(error) => { failure = Some(error); break; }
+            match retire(
+                &mut driver,
+                &reviewer,
+                &mut process,
+                previous.unwrap(),
+                &config,
+                &mut control,
+                &global,
+                &mut operator,
+                &entries[index - 1].actor,
+                &mut time,
+            ) {
+                Ok(true) => {}
+                Ok(false) => {
+                    terminal = Some("learned sequence stopped before its next request".into());
+                    break;
+                }
+                Err(error) => {
+                    failure = Some(error);
+                    break;
+                }
             }
         }
-        let finishing = if matches!(entry.release, LearnedTextRelease::Finish) { previous } else { None };
+        let finishing = if matches!(entry.release, LearnedTextRelease::Finish) {
+            previous
+        } else {
+            None
+        };
         let prepared = (|| {
             let now = time();
             let deadline = match initial_deadline.take() {
-                Some(deadline) => { deadline.check(now)?; deadline },
+                Some(deadline) => {
+                    deadline.check(now)?;
+                    deadline
+                }
                 None => entry_deadline(&global, entry, now)?,
             };
             let continuation: Option<MessageContinuation> = if index == 0 {
                 initial_continuation.take()
             } else {
                 let host = driver.supervisor().host().map_err(debug)?;
-                let command = request_preflight(&host, &entry.loaded, true, finishing,
-                    if finishing.is_none() { previous } else { None }, None)?;
+                let command = request_preflight(
+                    &host,
+                    &entry.loaded,
+                    true,
+                    finishing,
+                    if finishing.is_none() { previous } else { None },
+                    None,
+                )?;
                 if let Some(prediction) = prediction.as_mut() {
                     prediction.select_request(&host, entry.loaded.request)?;
                 }
@@ -368,44 +632,88 @@ where F: FnMut() -> ElapsedTick {
             Ok::<_, String>((deadline, continuation, intake))
         })();
         let (mut deadline, message_continuation, mut intake) = match prepared {
-            Ok(value) => value, Err(error) => { failure = Some(error); break; },
+            Ok(value) => value,
+            Err(error) => {
+                failure = Some(error);
+                break;
+            }
         };
-        let cycle = execute_request(driver, &mut config, &entry.loaded,
-            RequestServices { peers, reviewer: &reviewer, prediction: &mut prediction,
-                identity: &mut identity, credential: &mut credential,
-                intake: &mut intake, operator: &mut operator, wire: &mut wire, finishing, message_continuation,
+        let cycle = execute_request(
+            driver,
+            &mut config,
+            &entry.loaded,
+            RequestServices {
+                peers,
+                reviewer: &reviewer,
+                prediction: &mut prediction,
+                identity: &mut identity,
+                credential: &mut credential,
+                intake: &mut intake,
+                operator: &mut operator,
+                wire: &mut wire,
+                finishing,
+                message_continuation,
                 credibility: if index == 0 { credibility } else { None },
-                stop_operation: first.loaded.request },
-            &mut control, &mut deadline, &mut time);
-        let RequestCycle { driver: current, response, failure: failed, history, process: cohort } = cycle;
-        driver = current; process = cohort;
-        if let Some(history) = history { histories.push(history); }
+                stop_operation: first.loaded.request,
+            },
+            &mut control,
+            &mut deadline,
+            &mut time,
+        );
+        let RequestCycle {
+            driver: current,
+            response,
+            failure: failed,
+            history,
+            process: cohort,
+        } = cycle;
+        driver = current;
+        process = cohort;
+        if let Some(history) = history {
+            histories.push(history);
+        }
         let accepted = confirmed(&driver, entry.loaded.request, &response);
         responses.push(response);
         // The response service is already closed. Its old credentials and
         // request selection cannot flow into a successor admission.
         drop(intake);
-        if let Some(error) = failed { failure = Some(error); break; }
+        if let Some(error) = failed {
+            failure = Some(error);
+            break;
+        }
         match accepted {
-            Ok(true) => {},
+            Ok(true) => {}
             Ok(false) => {
-                terminal = Some(format!("learned sequence ended at request {} without an Executed receipt",
-                    entry.loaded.request));
+                terminal = Some(format!(
+                    "learned sequence ended at request {} without an Executed receipt",
+                    entry.loaded.request
+                ));
                 break;
             }
-            Err(error) => { failure = Some(error); break; }
+            Err(error) => {
+                failure = Some(error);
+                break;
+            }
         }
         previous = Some(entry.loaded.request);
     }
     // The observational endpoint ends with this finite service. Retirement
     // revokes its original custodians, not publication rights or receipts.
-    if let Some(service) = operator.as_mut() { service.retire(); }
+    if let Some(service) = operator.as_mut() {
+        service.retire();
+    }
     if let Some(error) = failure.take() {
-        let already_stopped = driver.supervisor().host().ok()
+        let already_stopped = driver
+            .supervisor()
+            .host()
+            .ok()
             .is_some_and(|host| host.inspect().stop.is_some());
-        failure = Some(if already_stopped { error } else {
+        failure = Some(if already_stopped {
+            error
+        } else {
             match stop(&mut driver, first.loaded.request, &mut time) {
-                Ok(()) => error, Err(stopping) => format!("{error}; sequence stop/drain: {stopping}"),
+                Ok(()) => error,
+                Err(stopping) => format!("{error}; sequence stop/drain: {stopping}"),
             }
         });
     }
@@ -420,12 +728,19 @@ where F: FnMut() -> ElapsedTick {
     };
     let started = Instant::now();
     let cleanup_pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
-    let remaining = config.timing.cleanup_ms.saturating_sub(
-        u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX));
-    let cleanup_pending = cleanup_pending.saturating_add(process.map_or(0,
-        |history| history.cleanup(remaining, config.timing.poll_ms)));
+    let remaining = config
+        .timing
+        .cleanup_ms
+        .saturating_sub(u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX));
+    let cleanup_pending = cleanup_pending.saturating_add(process.map_or(0, |history| {
+        history.cleanup(remaining, config.timing.poll_ms)
+    }));
     drop(histories);
-    Ok(SequenceResult { responses, failure, cleanup_pending })
+    Ok(SequenceResult {
+        responses,
+        failure,
+        cleanup_pending,
+    })
 }
 
 fn emit(result: SequenceResult, output: &mut impl Write) -> Result<(), String> {

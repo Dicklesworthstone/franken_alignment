@@ -3,6 +3,7 @@ use super::super::{Config, PeerProfile, Profile, operator};
 use super::protocol::MAX_REPORT_BYTES;
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
+use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_POLICY_PROMOTION_REPLAY_EVENTS;
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
 use fa_reference::action::consequence::oversight::policy_governance::MAX_POLICY_CAMPAIGNS;
@@ -19,6 +20,14 @@ use std::path::{Component, Path, PathBuf};
 
 pub(crate) const MAX_CAMPAIGNS: usize = 8;
 
+/// Independent cumulative admission for native Request/Approve reconstruction.
+/// Each entered transition also has a separately bounded complete-history cost.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NumericalReplaySettings {
+    pub(crate) max_replay_events: usize,
+    pub(crate) events: usize,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct Settings {
     pub(crate) scope: Scope,
@@ -32,6 +41,7 @@ pub(crate) struct Settings {
     pub(crate) poll_ms: u64,
     pub(crate) campaign_limit: usize,
     pub(crate) report_bytes: usize,
+    pub(crate) numerical_replay: Option<NumericalReplaySettings>,
     campaigns: FileCampaignRequirement,
 }
 
@@ -75,6 +85,18 @@ impl Settings {
         let poll_ms = fields.number("poll_ms")?;
         let campaign_limit = fields.size("campaign_limit")?;
         let report_bytes = fields.size("report_bytes")?;
+        let numerical_replay = match fields.0.remove("numerical_replay") {
+            None => None,
+            Some(value) => {
+                let mut numerical = Fields::new(value)?;
+                let selected = NumericalReplaySettings {
+                    max_replay_events: numerical.size("max_replay_events")?,
+                    events: numerical.size("events")?,
+                };
+                numerical.end()?;
+                Some(selected)
+            }
+        };
         let mut campaign = Fields::new(fields.take("campaigns")?)?;
         let campaigns = FileCampaignRequirement {
             limits: ReplayLimits {
@@ -97,6 +119,7 @@ impl Settings {
             poll_ms,
             campaign_limit,
             report_bytes,
+            numerical_replay,
             campaigns,
         };
         settings.validate()?;
@@ -162,6 +185,18 @@ impl Settings {
                 "governor campaign work or report bounds exceed the original finite limits".into(),
             );
         }
+        if let Some(selected) = self.numerical_replay {
+            let maximum = usize::try_from(self.exchange_limit)
+                .ok()
+                .and_then(|count| count.checked_mul(selected.max_replay_events));
+            if selected.max_replay_events == 0
+                || selected.max_replay_events > MAX_POLICY_PROMOTION_REPLAY_EVENTS
+                || selected.events == 0
+                || maximum.is_none_or(|maximum| selected.events > maximum)
+            {
+                return Err("governor numerical replay requires finite per-transition and cumulative event allowances".into());
+            }
+        }
         Ok(())
     }
 
@@ -192,6 +227,39 @@ impl Settings {
         operator: &operator::Settings,
         requests: &[u64],
     ) -> Result<(), String> {
+        if self.numerical_replay.is_some() {
+            return Err(
+                "numerical governor work requires an explicitly governed learned sequence".into(),
+            );
+        }
+        self.check_host_roles(config, actor, reviewer, operator, requests)
+    }
+
+    pub(crate) fn check_learned_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+    ) -> Result<(), String> {
+        if self.numerical_replay.is_none() {
+            return Err(
+                "learned governor requires its own explicit numerical replay allowance".into(),
+            );
+        }
+        operator.check_governed_learned_operator()?;
+        self.check_host_roles(config, actor, reviewer, operator, requests)
+    }
+
+    fn check_host_roles(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+    ) -> Result<(), String> {
         actor.check_host(config)?;
         reviewer.check_host(config)?;
         self.check_actor(actor)?;
@@ -211,7 +279,7 @@ impl Settings {
             || selected.contains(&0)
             || !selected.contains(&actor.request)
         {
-            return Err("governor requires the explicit nonzero ordinary request schedule".into());
+            return Err("governor requires an explicit nonzero resident request schedule".into());
         }
         let socket = resolved(&self.socket)?;
         let store = resolved(&config.store)?;

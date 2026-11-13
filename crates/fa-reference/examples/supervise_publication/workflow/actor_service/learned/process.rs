@@ -164,7 +164,7 @@ where F: FnMut() -> ElapsedTick {
         result => return Reviewed { driver, history: None, process: None,
             stop_requested: matches!(result, Ok(true)), failure: result.err() },
     }
-    super::operator::checkpoint(operator);
+    super::operator::checkpoint_driver(operator, &mut driver);
     match control.native_stop(&mut driver, time) {
         Ok(false) => {},
         result => return Reviewed { driver, history: None, process: None,
@@ -190,7 +190,7 @@ where F: FnMut() -> ElapsedTick {
                 if active(run.review().status()) { run.cancel(run.review().revision()).map_err(debug)?; }
                 break;
             }
-            super::operator::checkpoint(operator);
+            super::operator::checkpoint_supervisor(operator, run.supervisor_mut());
             if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
                 stop_requested = true;
                 // Retire the original numerical/process owner before handing

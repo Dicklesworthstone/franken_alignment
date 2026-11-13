@@ -9,11 +9,15 @@ pub(crate) use profile::Settings;
 #[path = "governor/client.rs"]
 pub(crate) mod client;
 
-use super::{BoundSocket, Deadline, Duration, FileSupervisedDriver, Instant, Profile, operator};
+#[cfg(test)]
+use super::FileSupervisedDriver;
+use super::{BoundSocket, Deadline, Duration, Instant, Profile, operator};
 use fa_reference::Error;
+use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
 use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::{
     FilePolicyCampaignReview, FilePolicyGovernor,
 };
+use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError, governance::PolicyUpdate,
 };
@@ -86,6 +90,7 @@ pub(super) struct Service {
     io_calls: usize,
     campaigns_entered: usize,
     approval_entered: bool,
+    remaining_numerical_replay_events: Option<usize>,
     prepared: BTreeMap<u64, Prepared>,
     cache: Vec<Cached>,
     cache_bytes: usize,
@@ -127,6 +132,9 @@ impl Service {
             io_calls: 0,
             campaigns_entered: 0,
             approval_entered: false,
+            remaining_numerical_replay_events: settings
+                .numerical_replay
+                .map(|selected| selected.events),
             prepared: BTreeMap::new(),
             cache: Vec::new(),
             cache_bytes: 0,
@@ -138,9 +146,18 @@ impl Service {
     /// This acquires no source snapshot or native clock observation. A dropped
     /// transport preserves native/cache quotas; retiring this sidecar never
     /// drops an already delegated grant held by the independent operator.
+    #[cfg(test)]
     pub(super) fn checkpoint(
         &mut self,
         driver: &mut FileSupervisedDriver,
+        operator: &mut operator::Service,
+    ) {
+        self.checkpoint_supervisor(driver.supervisor_mut(), operator);
+    }
+
+    pub(super) fn checkpoint_supervisor(
+        &mut self,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
         operator: &mut operator::Service,
     ) {
         if self.retired {
@@ -321,7 +338,7 @@ impl Service {
                 self.retire();
                 return;
             }
-            let response = self.respond(&request, driver, operator);
+            let response = self.respond_supervisor(&request, supervisor, operator);
             connection.output = Some((response, 0));
         }
         self.connection = Some(connection);
@@ -336,16 +353,26 @@ impl Service {
         true
     }
 
+    #[cfg(test)]
     fn respond(
         &mut self,
         request: &Request,
         driver: &mut FileSupervisedDriver,
         operator: &mut operator::Service,
     ) -> Rc<Vec<u8>> {
+        self.respond_supervisor(request, driver.supervisor_mut(), operator)
+    }
+
+    fn respond_supervisor(
+        &mut self,
+        request: &Request,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
+        operator: &mut operator::Service,
+    ) -> Rc<Vec<u8>> {
         self.respond_with(request, |service, index| match &request.command {
-            Command::Inspect { .. } => service.inspect(request, driver),
-            Command::Review { .. } => service.review(request, index, driver),
-            Command::Approve { .. } => service.approve(request, index, driver, operator),
+            Command::Inspect { .. } => service.inspect(request, supervisor),
+            Command::Review { .. } => service.review(request, index, supervisor),
+            Command::Approve { .. } => service.approve(request, index, supervisor, operator),
         })
     }
 
@@ -412,11 +439,11 @@ impl Service {
     fn inspect(
         &self,
         request: &Request,
-        driver: &FileSupervisedDriver,
+        supervisor: &FileActorSupervisor<FileOversight>,
     ) -> Result<Vec<u8>, &'static str> {
-        let host = driver.supervisor().host().map_err(|_| "unavailable")?;
+        let host = supervisor.host().map_err(|_| "unavailable")?;
         if !host.policy_campaigns_required()
-            || host.decoder_required()
+            || (host.decoder_required() && self.settings.numerical_replay.is_none())
             || host.action_consistency_required()
         {
             return Err("unsupported");
@@ -437,6 +464,14 @@ impl Service {
                 report_bytes: self.settings.report_bytes,
                 stopped: cut.stop.is_some(),
                 source_interrupted: host.file_source_status().map(|source| source.interrupted),
+                numerical_replay: self.settings.numerical_replay.map(|selected| {
+                    protocol::NumericalReplayInspection {
+                        selected,
+                        remaining_events: self
+                            .remaining_numerical_replay_events
+                            .expect("selected original numerical allowance"),
+                    }
+                }),
             },
         )
         .map_err(|_| "capacity")
@@ -446,7 +481,7 @@ impl Service {
         &mut self,
         request: &Request,
         cache: usize,
-        driver: &mut FileSupervisedDriver,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
     ) -> Result<Vec<u8>, &'static str> {
         let Command::Review {
             operation,
@@ -465,12 +500,9 @@ impl Service {
         if candidate.limits != self.settings.campaign_requirement().limits {
             return Err("binding");
         }
-        let mut host = driver
-            .supervisor_mut()
-            .host_mut()
-            .map_err(|_| "unavailable")?;
+        let host = supervisor.host().map_err(|_| "unavailable")?;
         if !host.policy_campaigns_required()
-            || host.decoder_required()
+            || (host.decoder_required() && self.settings.numerical_replay.is_none())
             || host.action_consistency_required()
         {
             return Err("unsupported");
@@ -505,6 +537,12 @@ impl Service {
             candidate.candidate.clone(),
         )
         .map_err(|_| "binding")?;
+        let numerical = host.decoder_required();
+        drop(host);
+        self.reserve_numerical_replay(before.revision, numerical)?;
+        // All exact native/source/Stop checks and work admission precede this
+        // privileged borrow, which consumes an unused admission snapshot.
+        let mut host = supervisor.host_mut().map_err(|_| "unavailable")?;
         self.cache[cache].entered = true;
         self.campaigns_entered += 1;
         let review = host
@@ -534,7 +572,7 @@ impl Service {
         &mut self,
         request: &Request,
         cache: usize,
-        driver: &mut FileSupervisedDriver,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
         operator: &mut operator::Service,
     ) -> Result<Vec<u8>, &'static str> {
         let Command::Approve {
@@ -556,10 +594,13 @@ impl Service {
         if prepared.report.as_bytes() != reviewed_report.as_bytes() {
             return Err("report_mismatch");
         }
-        let mut host = driver
-            .supervisor_mut()
-            .host_mut()
-            .map_err(|_| "unavailable")?;
+        let host = supervisor.host().map_err(|_| "unavailable")?;
+        if !host.policy_campaigns_required()
+            || host.action_consistency_required()
+            || (host.decoder_required() && self.settings.numerical_replay.is_none())
+        {
+            return Err("unsupported");
+        }
         if host.revision() != *expected_journal_revision
             || prepared.review.observed_revision() != *expected_journal_revision
         {
@@ -574,7 +615,18 @@ impl Service {
         if host.inspect().stop.is_some() {
             return Err("unsupported");
         }
-        let role = self.role.as_ref().ok_or("unavailable")?;
+        if self.role.is_none() {
+            return Err("unavailable");
+        }
+        let numerical = host.decoder_required();
+        drop(host);
+        self.reserve_numerical_replay(*expected_journal_revision, numerical)?;
+        let mut host = supervisor.host_mut().map_err(|_| "unavailable")?;
+        let role = self.role.as_ref().expect("original governor checked above");
+        let prepared = self
+            .prepared
+            .get(campaign)
+            .expect("original review checked above");
         self.approval_entered = true;
         self.cache[cache].entered = true;
         let key = match role.approve(
@@ -601,9 +653,35 @@ impl Service {
         // Install once BEFORE acknowledgment output. The operator owns the
         // grant independently of this socket, its reply and governor lifetime.
         operator
-            .install_policy_promotion(driver, key)
+            .install_policy_promotion_supervisor(supervisor, key)
             .map_err(|_| "unconfirmed")?;
         protocol::approved(request, revision).map_err(|_| "unconfirmed")
+    }
+
+    /// Reserve every entered native reconstruction from the original lifetime
+    /// allowance. Cache hits never reach this method; failures never refund it.
+    fn reserve_numerical_replay(
+        &mut self,
+        revision: u64,
+        numerical: bool,
+    ) -> Result<(), &'static str> {
+        if !numerical {
+            return Ok(());
+        }
+        let selected = self.settings.numerical_replay.ok_or("unsupported")?;
+        let work = usize::try_from(revision)
+            .ok()
+            .and_then(|revision| revision.checked_add(1))
+            .ok_or("capacity")?;
+        let remaining = self
+            .remaining_numerical_replay_events
+            .as_mut()
+            .ok_or("unsupported")?;
+        if work > selected.max_replay_events || work > *remaining {
+            return Err("capacity");
+        }
+        *remaining -= work;
+        Ok(())
     }
 
     pub(super) fn retire(&mut self) {

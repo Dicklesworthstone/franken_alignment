@@ -120,7 +120,22 @@ impl Selection {
         }
         let settings = operator::Settings::read(path)?;
         settings.check_learned_operator()?;
-        Ok(Self { settings, generation })
+        Ok(Self {
+            settings,
+            generation,
+        })
+    }
+
+    pub(super) fn read_governed(path: &Path, generation: u64) -> Result<Self, String> {
+        if generation == 0 {
+            return Err(USAGE.into());
+        }
+        let settings = operator::Settings::read(path)?;
+        settings.check_governed_learned_operator()?;
+        Ok(Self {
+            settings,
+            generation,
+        })
     }
 
     /// Admission inspects only selected names and host identities. It precedes
@@ -133,10 +148,47 @@ impl Selection {
         peers: &PeerProfile,
         precheck: Option<&precheck::Settings>,
     ) -> Result<(), String> {
+        if self.settings.policy_promotion.is_some() {
+            return Err(
+                "learned promotion requires an explicitly governed resident sequence".into(),
+            );
+        }
+        self.check_selected(config, loaded, actor, peers, precheck, false)
+    }
+
+    pub(super) fn check_governed(
+        &self,
+        config: &Config,
+        loaded: &Loaded,
+        actor: &Profile,
+        peers: &PeerProfile,
+        precheck: Option<&precheck::Settings>,
+    ) -> Result<(), String> {
+        if self.settings.policy_promotion.is_none() {
+            return Err(
+                "learned governor requires an explicit numerical promotion allowance".into(),
+            );
+        }
+        self.check_selected(config, loaded, actor, peers, precheck, true)
+    }
+
+    fn check_selected(
+        &self,
+        config: &Config,
+        loaded: &Loaded,
+        actor: &Profile,
+        peers: &PeerProfile,
+        precheck: Option<&precheck::Settings>,
+        governed: bool,
+    ) -> Result<(), String> {
         if self.generation == 0 {
             return Err(USAGE.into());
         }
-        self.settings.check_learned_operator()?;
+        if governed {
+            self.settings.check_governed_learned_operator()?;
+        } else {
+            self.settings.check_learned_operator()?;
+        }
         let extra = precheck
             .map(|settings| settings.socket_path())
             .into_iter()
@@ -192,6 +244,23 @@ impl Selection {
             deadline,
         )
     }
+
+    pub(super) fn start_governed(
+        &self,
+        actor: &Profile,
+        port: FileLearnedTextStreamActorPort,
+        driver: &FileSupervisedDriver,
+        deadline: &Deadline,
+    ) -> Result<Service, String> {
+        Service::start_learned_governed(
+            &self.settings,
+            actor,
+            port,
+            driver,
+            self.generation,
+            deadline,
+        )
+    }
 }
 
 /// Broken or exhausted peers retire only their original sidecar. A separately
@@ -200,5 +269,26 @@ impl Selection {
 pub(super) fn checkpoint(service: &mut Option<Service>) {
     if let Some(service) = service {
         service.checkpoint();
+    }
+}
+
+/// The original Stop checkpoint must precede this bounded turn. It drives both
+/// explicitly selected custodians against this same owner without renewing any
+/// role, campaign, numerical replay or transport allowance.
+pub(super) fn checkpoint_driver(service: &mut Option<Service>, driver: &mut FileSupervisedDriver) {
+    if let Some(service) = service {
+        service.checkpoint_driver(driver);
+    }
+}
+
+/// Native and process review own the driver until their original handoff.
+/// Their existing supervisor borrow retains the same governor and operator;
+/// no driver accessor or second owner is introduced for a transport turn.
+pub(super) fn checkpoint_supervisor(
+    service: &mut Option<Service>,
+    supervisor: &mut fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor<super::FileOversight>,
+) {
+    if let Some(service) = service {
+        service.checkpoint_supervisor(supervisor);
     }
 }

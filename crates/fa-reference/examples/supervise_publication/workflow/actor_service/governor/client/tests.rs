@@ -10,6 +10,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 #[path = "tests/inspection.rs"]
 mod inspection;
+#[path = "tests/numerical.rs"]
+mod numerical;
 
 fn field<'a>(value: &'a mut Json, keys: &[&str]) -> &'a mut Json {
     if keys.is_empty() {

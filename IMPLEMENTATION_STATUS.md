@@ -1,5 +1,77 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: govern a live learned resident sequence with original paid custody
+
+A newly created nonpredictive, nonmediated `serve-learned-generated` sequence
+can select `--governor-profile` together with its original campaign profile and
+paid promotion operator. At least two Messages are required, with the existing
+optional Finish. Every recipe retains the exact campaign inventory; every actor
+is checked against independent governor credentials and the complete scheduled
+reviewer/Stop destinations. Recipe documents are admitted before numerical
+assets, and unsupported recovery, prediction and joint credibility selections
+refuse before live startup. Ordinary learned/native-text operator callers retain
+their existing promotion refusal.
+
+The guarded learned constructor supplies the governor from the first canonical
+image with the original stream, source, campaign, learned-generation and terminal
+reserve contracts. One operator and one separately authenticated governor retain
+the same original owner, deadlines, transport counters, cache and work budgets
+through every message handoff. Generation, actor, native/process helper review,
+human review, publication and helper retirement service the original supervisor
+after the independent Stop checkpoint. No role getter, late guard, second owner
+or recreated numerical engine is introduced.
+
+Governor profiles can explicitly select `numerical_replay` with a complete
+per-transition ceiling and a cumulative lifetime event allowance. Request and
+Approve each reserve current revision plus one before native reconstruction or
+snapshot loss. The independent operator separately selects
+`policy_promotion.numerical_replay_events` for its original one-use Promote.
+Missing/short budgets refuse before mutation, entered failures never refund,
+and exact cached retries perform no new numerical work. Get reports optional
+original/remaining work evidence, and the client binds those limits exactly to
+its independently selected profile while preserving ordinary response shapes.
+
+A completed, unsubmitted learned message survives promotion. New intake derives
+its current policy epoch through the original stream builder; fresh policy-source
+capture, native helper work, independent human approval and the selected final
+publication check remain mandatory. Already admitted requests retain their
+original frozen specs and native cancellation behavior. Numerical advancement
+stales the campaign rather than rebasing it. Predictive, mediated and recovered
+learned governance, plus joint credibility requalification, remain outside this
+initial live selection.
+
+Verification: the qualified production executable compiles and links, and the
+complete updated example test harness passes metadata/type checking. A test-only
+non-Send source-reader capture was corrected by constructing that original
+reader inside its thread; no authority type was weakened. The five standalone
+learned promotion tests from the preceding increment pass. One additional public
+predictor test passes: genuine request-keyed forecasts remain intact when even a
+maximum paid allowance refuses policy-bound predictors, and the original next
+forecast and snapshot subsequently admit their actual successor. Its fixture
+was corrected to reserve the payload's full resource units; original assertions
+remain in force.
+
+The new production executable also passes seven unsupported/malformed mode
+checks before missing configuration or assets, and three closed numerical-budget
+refusal checks. A valid numerical governor profile reaches Unix connection
+creation, which returns EPERM before any request is sent in this environment.
+These command checks do not establish authenticated service execution.
+
+Authored and type-checked example tests cover real separate-process learned
+Get/Review/Approve/Promote with two Messages and Finish, actual human-rejection
+consequences, preserved numerical draws, six governor native-work cases, two
+selected-budget client cases, seven pre-asset selection cases and five later-entry
+custody collisions. They are not reported as executed: the full example test
+executable was not rebuilt after the previous three SIGKILL attempts, and the
+independent AF_UNIX restriction still prevents live listener execution. Full
+repository qualification and roadmap completion remain open.
+
+The required xtask gate passes reference lock, source inventory, qualified
+compiler identity and dependency admission, then refuses the reviewed source
+snapshot with 177 findings (103 unlisted files, 74 digest mismatches). Downstream
+workspace formatting, Clippy and full tests are not reached. No Bead is closed,
+and no manifest or test gate is weakened or regenerated to claim qualification.
+
 ## 2026-11-13: pay explicitly for live native learned policy promotion
 
 The original supervisor promotion grant now admits nonpredictive decoder

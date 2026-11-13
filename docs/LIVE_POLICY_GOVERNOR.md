@@ -1,14 +1,15 @@
 # Independently approve policy changes in a running publication service
 
 The Linux reference executable can provision a separate governor endpoint for a
-new or independently recovered ordinary Tower publication run. The governor
+new or independently recovered ordinary Tower publication run, or a newly
+created nonpredictive learned sequence with explicit numerical allowances. The governor
 requests a replay of the
 complete original policy corpus and explicitly approves the exact returned
 report. That approval delegates one original opaque permit to the independently
 selected operator. The operator then uses the existing `next` / `promote` path.
 Approval alone changes neither policy nor effect authority.
 
-This implements the live ordinary reference path for plan §22.7 / FA-130. The
+This implements live reference compositions for plan §22.7 / FA-130. The
 existing [native campaign gate](DURABLE_POLICY_CAMPAIGN_GUARD.md),
 [Tower promotion contract](TOWER_POLICY_PROMOTION.md) and original two-key effect
 workflow remain the decision and authority implementations.
@@ -177,6 +178,108 @@ and returned failure paths, including failures before intake. A retention or
 response error cannot undo a known effect or authorize a resend. Keep the old
 independent anchor until its successor is acknowledged.
 
+## Govern a new resident learned sequence
+
+The learned service has its own explicit selection:
+
+```sh
+supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --campaign-profile CAMPAIGN_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41 \
+  --governor-profile GOVERNOR_PROFILE
+```
+
+The sequence must contain at least two Messages, with an optional final Finish.
+This selection creates a new nonpredictive, nonmediated learned owner. It refuses
+continuation, recovery, topology, forecast and joint credibility selections
+before model/helper assets or live resources are acquired. The closed argv also
+admits the existing optional checkpoint before generation and new output history
+anchor. A version-two sequence may select its original per-entry precheck
+listeners; those remain observations and cannot create governor authority.
+
+The campaign profile, governor profile and every recipe's recovery expectations
+must select exactly the same original campaign limits. Before reading model
+assets, the command checks every actor's audience, credentials and scheduled
+human/Stop endpoints against the separately selected governor. Later actors
+cannot inherit the governor's identity. The original source path, disclosure
+listeners and retained output paths cannot alias the governor socket. Ordinary
+learned and native-text services keep their existing default promotion refusal.
+
+The original guarded learned constructor installs the stream, source, campaign
+guard, learned configuration and terminal reserve in its first canonical image.
+Only that acknowledged creation returns the governor retained by the new live
+service. There is no late campaign enable, reopened role getter, replacement
+numerical owner or approval reconstructed from report bytes.
+
+### Pay for Request/Approve separately from Promote
+
+Add the following optional object to the governor profile. Its values are JSON
+numbers, like the other profile counters:
+
+```json
+"numerical_replay": {
+  "max_replay_events": 4096,
+  "events": 8192
+}
+```
+
+`max_replay_events` is the largest complete history plus proposed event admitted
+by one governor Request or Approve. `events` is the cumulative allowance across
+every entered numerical operation in that original service. Both are positive;
+the per-operation limit cannot exceed the native journal ceiling, and the total
+cannot exceed `exchange_limit * max_replay_events`. Choose bounds for the actual
+retained history and campaign attempts; these examples promise no universal
+capacity. Refused native contracts after entry still consume the reservation.
+
+The independent operator requires its own promotion allowance:
+
+```json
+"policy_promotion": {
+  "queries": 16,
+  "max_replay_events": 4096,
+  "numerical_replay_events": 4096,
+  "authority": "promote_approved_policy"
+}
+```
+
+This second numerical allowance is positive and no larger than its one-Promote
+history ceiling. The governor cannot spend it to request or approve a campaign;
+the operator cannot spend the governor's remaining work. Each native transition
+reserves its current journal revision plus one before reconstruction, operation
+entry and admission snapshot invalidation. A short allowance refuses without
+consuming the snapshot. Get, Next and exact retained retries perform no numerical
+reconstruction. Entered failure, warm replay, lost replies and reconnects never
+refund or refill either allowance. Units count admitted replay events, not
+elapsed time or scalar products; the original recipe's numerical limits also
+remain in force.
+
+### Promote at an unchanged original learned cut
+
+Use the same explicit Get, complete-report Review, exact-report Approve and
+operator Next/Promote documents described below. After a first publication has
+supplied retained cases, wait for the later learned message to finish generation
+and withhold its actor Submit until the policy transition completes. The optional
+original precheck listener can expose this existing post-generation wait point.
+Numerical advancement changes the actor revision and stales an earlier campaign;
+the service never silently rebases its report or approval.
+
+Promotion preserves the original completed numerical draft, KV state, sampled
+draws, source accounting and immutable recipe. New intake builds its action at
+the current native policy epoch. It requires fresh current source evidence,
+original native helper review, a new independent human approval and the selected
+final publication check. Previously admitted attempts keep their original
+specifications and are cancelled by the native promotion transition. Publication
+or source checks are not waived by a policy report or by available replay work.
+
+The same governor and operator survive sequence handoffs with their original
+deadlines, connection counts, caches and work budgets. They run after the
+independent Stop check at generation, actor, helper review, human review,
+publication and helper-retirement checkpoints. Native and process helper wrappers
+expose their existing supervisor for this bounded turn; no wrapper or driver is
+reconstructed. Predictive promotion still needs a separately reviewed successor
+predictor binding. Installed joint credibility likewise needs a fresh
+qualification after policy change and is outside this initial live selection.
+
 ## Discover the current cut through the independent governor endpoint
 
 The governor can obtain the exact predecessor and originally selected campaign
@@ -210,6 +313,14 @@ or `null` when the owner has no file-source guard. The acknowledgment basis bind
 the full scope, query and journal revision to `origin: "acknowledged_owner"`.
 The client checks these fields and the exact limits against its independently
 selected connection profile before displaying the document.
+
+An explicitly numerical governor adds `numerical_replay` to the Known value,
+containing canonical decimal strings `max_replay_events`, `events` and
+`remaining_events`. The first two must exactly match the independent connection
+profile, and the remaining value cannot exceed the original total. Ordinary
+profiles omit the entire object and reject an unselected object; numerical
+profiles reject its omission. A cached Get retains its historical remaining
+count. Neither a nonzero count nor a discovery response creates a grant.
 
 Copy the returned four cut fields into the explicit replay request's `expected`
 object, and use the selected campaign bounds. The response records one immutable
@@ -373,14 +484,24 @@ promotion. Paired refusals cover overlapping identities, mismatched reports,
 stale complete cuts, foreign audiences, finite custody and malformed frames.
 Client negatives use genuine native reports with specific fields altered or
 removed. Exact executed results are recorded in `IMPLEMENTATION_STATUS.md`.
-The qualified compiler built the complete example test harness. In the current
-execution environment, AF_UNIX socket creation itself is refused, so the live
-listener/client/end-to-end cases did not reach their intended protocol work.
+Learned cases additionally retain a separate governor process through two real
+Messages and Finish, promote after generation while actor submission waits, and
+require fresh native and human review. Budget cases exercise real decoder
+history, exact complete-history charging, one-short snapshot preservation and
+nonrefundable native/storage/report-output failures. The actual standalone native
+promotion targets execute separately from the example harness.
+
+Current revision-specific compilation and execution results are recorded in
+`IMPLEMENTATION_STATUS.md`. The complete production executable and test-harness
+metadata are separate checks from linking and executing that large harness. In
+this execution environment, AF_UNIX socket creation itself is refused; real
+listener/client/end-to-end execution remains unverified. No assertion is removed
+or replaced to turn that environment refusal into protocol evidence.
 
 These are scoped Unix reference regressions; source coverage alone does not
 establish execution or full qualification. Kernel credentials
 identify the connecting local process under the trusted host assumptions; they
 do not prove evaluator competence or cryptographic independence. Live recovered
-service execution, mediated/numerical governor composition, richer publication
-profiles, policy efficacy and
+service execution, mediated or predictive learned governor composition, live
+learned recovery, joint credibility requalification, policy efficacy and
 full production/runtime qualification remain separate unfinished capabilities.

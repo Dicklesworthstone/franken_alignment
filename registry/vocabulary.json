@@ -38,7 +38,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "Knowledge<Object>",
-      "note": "Live policy governor: authenticated read of the original immutable owner cut and independently selected campaign bounds. Explicit nonzero query identities retain historical exact retries under finite exchange/cache limits; no clock, source read, campaign attempt or authority is issued."
+      "note": "Live policy governor: authenticated read of the original immutable owner cut and independently selected campaign bounds. Explicit nonzero query identities retain historical exact retries under finite exchange/cache limits; no clock, source read, campaign attempt or authority is issued. An explicitly numerical governor additionally reports its original per-transition, total and remaining work bounds, matched to the independently selected client profile."
     },
     {
       "verb": "related",
@@ -358,7 +358,7 @@
       "idempotency": "campaign id",
       "cost_class": "expensive",
       "response": "PolicyReplayCampaign",
-      "note": "Native publication profile: separately granted complete current-policy corpus comparison; exact campaign retries retain the original cut, missing observations require shadow, no promotion authority. The separately authenticated live governor custodian can request this original report at an exact predecessor; comparison never supplies its explicit approval decision."
+      "note": "Native publication profile: separately granted complete current-policy corpus comparison; exact campaign retries retain the original cut, missing observations require shadow, no promotion authority. The separately authenticated live governor custodian can request this original report at an exact predecessor; comparison never supplies its explicit approval decision. A newly created nonpredictive learned sequence explicitly pays for each complete numerical Request/Approve reconstruction from a separate original cumulative governor allowance."
     },
     {
       "verb": "promote",
@@ -368,7 +368,7 @@
       "idempotency": "expected predecessor",
       "cost_class": "cheap",
       "response": "GovernanceTransition",
-      "note": "refused without report (FA-INV-032/036); native ordinary publication profile delegates one independently approved original policy campaign through a finite revocable grant, with full-corpus and exact-predecessor revalidation. New plain or simple-witness checked scheduled creation and independently anchored governed recovery can provision a fresh independent kernel-authenticated governor custodian whose explicit approve phase requires the exact complete reviewed report; the separately selected operator then performs the original Tower promotion. An explicitly paid native promotion grant can reconstruct a nonpredictive decoder history; it reserves complete-history work before entry and never refunds failures or replays exact retries. Predictive histories remain unsupported. Replay or connection profiles alone supply no approval authority."
+      "note": "refused without report (FA-INV-032/036); native ordinary publication profile delegates one independently approved original policy campaign through a finite revocable grant, with full-corpus and exact-predecessor revalidation. New plain or simple-witness checked scheduled creation and independently anchored governed recovery can provision a fresh independent kernel-authenticated governor custodian whose explicit approve phase requires the exact complete reviewed report; the separately selected operator then performs the original Tower promotion. A new nonpredictive learned sequence can retain its original first-image governor through generation, review and publication with independently selected governor/operator numerical work budgets. An explicitly paid native promotion grant can reconstruct a nonpredictive decoder history; it reserves complete-history work before entry and never refunds failures or replays exact retries. Predictive histories remain unsupported. Replay or connection profiles alone supply no approval authority."
     },
     {
       "verb": "rotate",

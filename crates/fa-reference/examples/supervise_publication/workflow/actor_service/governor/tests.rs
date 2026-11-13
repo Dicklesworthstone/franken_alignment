@@ -18,6 +18,9 @@ static NEXT: AtomicU64 = AtomicU64::new(0);
 #[path = "tests/inspection.rs"]
 pub(super) mod inspection;
 
+#[path = "numerical_tests.rs"]
+pub(super) mod numerical_tests;
+
 struct Directory(PathBuf);
 impl Directory {
     fn new() -> Self {

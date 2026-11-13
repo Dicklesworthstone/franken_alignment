@@ -120,6 +120,40 @@ pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result
     load_recipe(recipe, config, require_native, &mut assets)
 }
 
+/// A complete original recipe document admitted before ANY sequence asset.
+/// Keeping this decoded value prevents a second read from substituting a
+/// predictive or differently governed recipe after the preflight succeeds.
+pub(super) struct GovernedRecipe(Recipe);
+
+impl GovernedRecipe {
+    pub(super) fn read(
+        file: &Path,
+        config: &Config,
+        campaigns: FileCampaignRequirement,
+    ) -> Result<Self, String> {
+        let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
+        if recipe.files.forecast.is_some() || recipe.joint.is_some() || !recipe.continuation {
+            return Err("live learned governor requires nonpredictive finite message continuation without joint credibility activation".into());
+        }
+        if recipe
+            .expected_policy
+            .as_ref()
+            .is_some_and(|policy| policy != &config.profile.delivery.policy)
+            || recipe
+                .expected_campaigns
+                .is_some_and(|expected| expected != campaigns)
+        {
+            return Err("new learned governor recipe disagrees with independent bootstrap policy or campaign limits".into());
+        }
+        Ok(Self(recipe))
+    }
+
+    pub(super) fn load(self, config: &Config) -> Result<Loaded, String> {
+        let mut assets = Assets::new(self.0.assets_bytes)?;
+        load_recipe(self.0, config, true, &mut assets)
+    }
+}
+
 /// A recovery expectation verifies an acknowledged replacement; it cannot
 /// create a new history under a policy absent from its bootstrap configuration.
 pub(super) fn check_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {

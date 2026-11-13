@@ -73,6 +73,72 @@ pub(super) fn load(path: &Path, config: &Config) -> Result<Vec<Entry>, String> {
     Ok(entries)
 }
 
+/// Admit every original recipe's supported mode before the first model/helper
+/// asset is read. The same frozen documents then enter the ordinary loaders.
+pub(super) fn load_governed(
+    path: &Path,
+    config: &Config,
+    governor: &super::governor::Settings,
+    operator: &super::super::operator::Selection,
+    peers: &super::PeerProfile,
+) -> Result<Vec<Entry>, String> {
+    let plan = decode(&read_regular(path, MAX_PROFILE_BYTES)?)?;
+    if plan
+        .iter()
+        .filter(|input| input.release == LearnedTextRelease::Message)
+        .count()
+        < 2
+    {
+        return Err("live learned governor requires at least two selected Messages".into());
+    }
+    let prepared = plan
+        .into_iter()
+        .map(|input| {
+            let recipe = recipe::GovernedRecipe::read(
+                &input.recipe,
+                config,
+                governor.campaign_requirement(),
+            )?;
+            let actor = Profile::read(&input.actor)?;
+            let precheck = input
+                .precheck
+                .as_deref()
+                .map(super::super::precheck::Settings::read)
+                .transpose()?;
+            Ok((input.release, recipe, actor, precheck))
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    let requests = prepared
+        .iter()
+        .map(|(_, _, actor, _)| actor.request)
+        .collect::<Vec<_>>();
+    for (_, _, actor, _) in &prepared {
+        governor.check_learned_host(config, actor, peers, &operator.settings, &requests)?;
+    }
+    let mut entries: Vec<Entry> = Vec::with_capacity(prepared.len());
+    for (release, recipe, actor, precheck) in prepared {
+        let mut loaded = recipe.load(config)?;
+        if let Some(original) = entries.first() {
+            if loaded.generation != original.loaded.generation
+                || loaded.stream != original.loaded.stream
+            {
+                return Err(
+                    "sequence recipes disagree on the complete original generation or stream"
+                        .into(),
+                );
+            }
+            loaded.generation = original.loaded.generation.clone();
+        }
+        entries.push(Entry {
+            loaded,
+            actor,
+            release,
+            precheck,
+        });
+    }
+    Ok(entries)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

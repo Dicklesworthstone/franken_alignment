@@ -75,6 +75,7 @@ impl Native {
             io_calls: 0,
             campaigns_entered: 0,
             approval_entered: false,
+            remaining_numerical_replay_events: None,
             prepared: BTreeMap::new(),
             cache: Vec::new(),
             cache_bytes: 0,
@@ -102,8 +103,10 @@ impl Native {
         let response =
             self.service
                 .respond_with(&request, |service, index| match &request.command {
-                    Command::Inspect { .. } => service.inspect(&request, driver),
-                    Command::Review { .. } => service.review(&request, index, driver),
+                    Command::Inspect { .. } => service.inspect(&request, driver.supervisor()),
+                    Command::Review { .. } => {
+                        service.review(&request, index, driver.supervisor_mut())
+                    }
                     Command::Approve { .. } => panic!("inspection fixture has no operator"),
                 });
         response[4..].to_vec()

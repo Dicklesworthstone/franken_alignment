@@ -66,6 +66,8 @@ pub(crate) struct Settings {
 pub(crate) struct PolicyPromotionSettings {
     pub(crate) queries: usize,
     pub(crate) max_replay_events: usize,
+    /// One separately admitted complete numerical history plus Promote.
+    pub(crate) numerical_replay_events: Option<usize>,
     pub(crate) authority: String,
 }
 
@@ -76,6 +78,15 @@ impl PolicyPromotionSettings {
             queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
             max_replay_events: usize::try_from(fields.number("max_replay_events")?)
                 .map_err(debug)?,
+            numerical_replay_events: match fields.optional("numerical_replay_events") {
+                None => None,
+                Some(value) => Some(
+                    usize::try_from(value.as_u64().ok_or(
+                        "policy promotion numerical replay events must be an unsigned integer",
+                    )?)
+                    .map_err(debug)?,
+                ),
+            },
             authority: fields.text("authority")?,
         };
         fields.end()?;
@@ -88,6 +99,9 @@ impl PolicyPromotionSettings {
             || self.queries > MAX_POLICY_PROMOTION_QUERIES
             || self.max_replay_events == 0
             || self.max_replay_events > MAX_POLICY_PROMOTION_REPLAY_EVENTS
+            || self
+                .numerical_replay_events
+                .is_some_and(|events| events == 0 || events > self.max_replay_events)
             || self.authority != "promote_approved_policy"
         {
             return Err("policy promotion requires explicit approved-policy authority and bounded queries and replay".into());
@@ -872,20 +886,36 @@ impl Settings {
     /// numerical work admission before clock/source acquisition, owner startup
     /// or listener creation.
     pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
-        self.check_numerical_operator("learned")
+        self.check_numerical_operator("learned", false)
+    }
+
+    /// Only the separately selected learned governor composition may delegate
+    /// a paid original approval into this learned operator.
+    pub(crate) fn check_governed_learned_operator(&self) -> Result<(), String> {
+        if self
+            .policy_promotion
+            .as_ref()
+            .is_none_or(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(
+                "governed learned promotion requires an explicit numerical replay budget".into(),
+            );
+        }
+        self.check_numerical_operator("learned", true)
     }
 
     /// Native decoder histories require the same independent numerical work
     /// reservations. An ordinary allowance cannot silently fund reconstruction.
     pub(crate) fn check_generated_operator(&self) -> Result<(), String> {
-        self.check_numerical_operator("native text")
+        self.check_numerical_operator("native text", false)
     }
 
-    fn check_numerical_operator(&self, profile: &str) -> Result<(), String> {
+    fn check_numerical_operator(&self, profile: &str, governed: bool) -> Result<(), String> {
         self.validate()?;
-        if self.policy_promotion.is_some() {
+        if self.policy_promotion.is_some() && !governed {
             return Err(
-                "live policy promotion supports only original ordinary publication runs".into(),
+                "numerical policy promotion requires the separately selected learned governor"
+                    .into(),
             );
         }
         if self.convening.is_some() {

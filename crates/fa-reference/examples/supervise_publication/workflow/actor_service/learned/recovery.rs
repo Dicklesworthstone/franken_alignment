@@ -85,6 +85,43 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
     Ok((host, human, None, None))
 }
 
+/// Keep the original first-image governor only for an explicitly governed new
+/// resident run. No getter, late Enable, reopen or saved approval supplies it.
+pub(super) fn create_governed(config: &Config, loaded: &Loaded)
+    -> Result<(Custody, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor), String>
+{
+    super::recipe::check_creation(config, loaded)?;
+    super::credential::check_creation(loaded)?;
+    if loaded.creation_campaigns.is_none()
+        || loaded.topology.is_some()
+        || loaded.generation.required_pre_output_forecast().is_some()
+        || loaded
+            .generation
+            .required_owned_pre_output_forecast()
+            .is_some()
+        || loaded.generation.required_held_out_joint().is_some()
+    {
+        return Err(
+            "live learned governor requires a new nonpredictive, nonmediated campaign owner".into(),
+        );
+    }
+    let guards = requirements(config, loaded).guards;
+    let registration = super::credential::registration(loaded)?;
+    let (host, roles) = FileOversight::create_guarded_with_learned_generation_reserved(
+        &config.store,
+        config.profile.clone(),
+        &guards,
+        registration,
+        loaded.generation.clone(),
+        RecoveryReserve::terminal(),
+    )
+    .map_err(debug)?;
+    let governor = roles
+        .policy_governor
+        .ok_or("original learned bootstrap did not provision the selected governor")?;
+    Ok(((host, roles.human, None, roles.identity_observer), governor))
+}
+
 // Keep mutually exclusive native constructors out of the ordinary startup
 // frame. Each path retains its original reserve, guards and separate roles.
 fn create_with_guards(config: &Config, loaded: &Loaded) -> Result<Custody, String> {

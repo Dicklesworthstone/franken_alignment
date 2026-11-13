@@ -15,6 +15,15 @@ renewed. Every scheduled actor/reviewer/Stop path and retained output is checked
 for collision before startup. Operator traffic cannot approve or advance a
 release, and independent Stop retains priority.
 
+A new nonpredictive, nonmediated sequence with at least two Messages can also
+select `--governor-profile GOVERNOR_PROFILE` together with `--campaign-profile`
+and that same operator pair. The original first-image governor remains separate
+from actor, helper and human effect-review custody. Independent numerical
+allowances pay for campaign Request/Approve and operator Promote; one original
+service retains those allowances across every message and helper handoff. See
+[live learned governance](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
+for complete profiles, mode exclusions and the stable post-generation cut.
+
 This is scoped implementation toward FA-027 and plan sections 8.5, 8.7, 9.3,
 9.11, 11.2 and 16.4. Compilation and execution qualification remain pending.
 The full roadmap packet, including long-horizon and isolated-branch acceptance,
