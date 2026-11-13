@@ -1,8 +1,9 @@
 //! Bounded Linux peer ingress for the original publication Tower session.
 //!
 //! The existing kernel-credential policy authenticates each socket before any
-//! byte is read. The host fixes Tower grants at construction. Neither requests
-//! nor reconnections can choose grants, replace the native owner, replenish
+//! byte is read. The host fixes Tower grants and can install an independently
+//! approved original promotion on this same session. Neither requests nor
+//! reconnections can choose grants, replace the native owner, replenish
 //! disclosure work or reset the lifetime exchange allowance.
 
 mod channel;
@@ -11,7 +12,9 @@ mod connection;
 use super::PublicationTower;
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
-use crate::action::consequence::delivery::persistent::requests::actor::FileActorPort;
+use crate::action::consequence::delivery::persistent::requests::actor::{
+    FileActorPort, FileSupervisorPolicyPromotionPort,
+};
 use crate::action::consequence::oversight::actor::{ActorError, ActorProposal};
 use crate::action::consequence::oversight::actor_peer::{
     MAX_PEER_CONNECTIONS, PeerAdmission, PeerPolicy, PeerRefusal, PeerSessionStatus, PeerSetupStage,
@@ -106,6 +109,23 @@ impl PublicationPeerSession {
 
     pub fn remaining_exchanges(&self) -> u64 {
         self.channel.remaining_exchanges()
+    }
+
+    /// Host-only installation of an independently approved original campaign,
+    /// including while a socket or reply is retained. The same Tower checks the
+    /// original owner and withdraws its previous installation on a foreign
+    /// replacement. This does not recreate the channel, reset counters, discard
+    /// a pending reply, approve a policy or revive a revoked ingress.
+    pub fn set_policy_promotion(
+        &mut self,
+        port: Option<FileSupervisorPolicyPromotionPort>,
+    ) -> Result<(), Error> {
+        if self.revoked {
+            return Err(Error::WrongState);
+        }
+        self.tower
+            .set_policy_promotion(port)
+            .map_err(|_| Error::Binding)
     }
 
     pub fn socket_fd(&self) -> Option<BorrowedFd<'_>> {

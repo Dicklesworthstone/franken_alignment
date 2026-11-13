@@ -2,6 +2,14 @@
 
 `FileOversight::enable_policy_campaigns(revision, limits, max_campaigns)` installs the original broker's mandatory policy-campaign mode before any proposal or actor request and returns a separately held `FilePolicyGovernor`. The roles and review handles are under `persistent::observed::governance::campaigns`. A configured owner cannot bypass the mode with ordinary `replace_policy`; legacy unconfigured owners retain their explicit original behavior. The standalone replay report is not an approval.
 
+`FileOversight::create_guarded_reserved(directory, profile, guards, registration, reserve)`
+can instead provision the exact complete guard set and recovery reserve together
+in the first canonical image. When `guards.campaigns` is selected, its returned
+`FileOversightRoles` contains the original separate governor. Source, publication,
+campaign and reserve requirements are never installed by a later actor request.
+The constructor uses the original prepared bootstrap and canonical replacement;
+it does not upgrade an existing store or revive approvals after recovery.
+
 `request_policy_campaign(revision, &PolicyUpdate)` replays the entire original current-policy corpus, including exact denials and applied congress reviews. The governor receives an immutable historical review. Its `approve` method requires explicit acceptance of observed newly-reviewable cases and refuses campaigns requiring unseen observations even when that flag is true. Approval, rejection and revocation are journaled inputs to the original native gate. A `FilePolicyPromotionPermit` is returned only after acknowledged storage; neither that key nor the governor is cloneable, and querying an approved campaign cannot regenerate a lost key.
 
 `promote_policy_campaign` checks the native exact candidate and full history stamp again. A newly recorded denied proposal can invalidate approval even without changing the control sequence. Promotion invokes the original policy transition, cancels only its eligible undispatched attempts, withdraws outstanding human effect keys, and records the existing `PolicyUpdateReceipt` in the SAME canonical replacement. The original policy-history book supplies current_policy and historical retry receipts. Admitted/unknown effects retain their charges and envelopes until original endpoint reconciliation supplies the outcome. Subsequent work still requires congress approval and the separate human effect key.

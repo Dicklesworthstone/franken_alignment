@@ -150,9 +150,10 @@ fn native_observation_preserves_real_generation_and_original_two_key_publication
     {
         let mut host = supervisor.host_mut().unwrap();
         oversight::dispatch(&mut host, &keys);
+        let revision = host.revision();
         let outcome = host
             .publish_checked(
-                host.revision(),
+                revision,
                 keys.automatic.attempt(),
                 Some(&keys.inputs),
                 snapshot(),
@@ -160,8 +161,8 @@ fn native_observation_preserves_real_generation_and_original_two_key_publication
             )
             .unwrap();
         assert!(matches!(outcome.outcome, EndpointOutcome::Executed { .. }));
-        host.reconcile(host.revision(), keys.automatic.attempt())
-            .unwrap();
+        let revision = host.revision();
+        host.reconcile(revision, keys.automatic.attempt()).unwrap();
     }
     let original = image(&root);
     let completed = situation(&mut tower);
@@ -346,7 +347,8 @@ fn generated_control_fences_active_native_work_only_with_the_original_complete_n
     begin(&mut supervisor);
     {
         let mut host = supervisor.host_mut().unwrap();
-        host.advance_decoder_text(host.revision(), 7, 0).unwrap();
+        let revision = host.revision();
+        host.advance_decoder_text(revision, 7, 0).unwrap();
     }
     let command = fence_command(&supervisor);
     let before = supervisor.host().unwrap().inspect();
@@ -472,9 +474,10 @@ fn native_reconciliation_observes_one_real_publication_with_separately_bounded_r
     {
         let mut host = supervisor.host_mut().unwrap();
         oversight::dispatch(&mut host, &keys);
+        let revision = host.revision();
         let outcome = host
             .publish_checked(
-                host.revision(),
+                revision,
                 keys.automatic.attempt(),
                 Some(&keys.inputs),
                 snapshot(),

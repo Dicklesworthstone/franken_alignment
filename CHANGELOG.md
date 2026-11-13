@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-13: provision governed owners and install approval on live peers
+
+- Compose the complete native guard set and terminal recovery reserve in the
+  first canonical image, returning the original separate role custodians.
+- Install or withdraw an independently approved campaign on the same peer
+  session while retaining its queued reply and cumulative transport limits.
+- Add six guarded-bootstrap and authenticated-peer regression functions for
+  real campaign use, recovery, write failures, custody and retry behavior.
+- Fix seven compiler-identified test call sites without weakening assertions.
+  Correct two denial fixtures to fit their declared unit allocation while
+  retaining the intended policy witness. All 21 driver, Tower and generated-
+  operator integration tests pass. The four new bootstrap unit functions and
+  full workspace qualification remain open.
+
 ## 2026-11-13: validate explicit policy promotion in the operator client
 
 - Accept original native promotion plans and acknowledgments through the existing

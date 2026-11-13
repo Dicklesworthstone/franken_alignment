@@ -96,7 +96,7 @@ fn guarded(
     // reservation or effect key, so promotion cannot cancel or refund it.
     let mut denied = snapshot();
     denied.values.insert(7, b"denied".to_vec());
-    let seed = oversight::spec(&host, b"exactly denied policy campaign baseline");
+    let seed = oversight::spec(&host, b"seed denial");
     host.propose(host.revision(), SEED_ATTEMPT, seed, denied)
         .unwrap();
     assert_eq!(

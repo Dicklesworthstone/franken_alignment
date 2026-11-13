@@ -10,6 +10,9 @@ use fa_reference::tower::publication::peer::PublicationPeerSession;
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 
+#[path = "dynamic_install.rs"]
+mod dynamic_install;
+
 fn credentials() -> PeerCredentials {
     let (socket, _peer) = UnixStream::pair().unwrap();
     PeerCredentials::observe(&socket).unwrap()

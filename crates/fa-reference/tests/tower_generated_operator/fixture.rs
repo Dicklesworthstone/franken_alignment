@@ -179,14 +179,16 @@ pub(super) fn begin(supervisor: &mut Supervisor) {
         },
     )
     .unwrap();
-    host.begin_decoder_text(host.revision(), command).unwrap();
+    let revision = host.revision();
+    host.begin_decoder_text(revision, command).unwrap();
 }
 
 pub(super) fn generate(supervisor: &mut Supervisor) -> FileTextMessageRequest {
     begin(supervisor);
     let mut host = supervisor.host_mut().unwrap();
     for revision in 0..4 {
-        host.advance_decoder_text(host.revision(), 7, revision)
+        let journal_revision = host.revision();
+        host.advance_decoder_text(journal_revision, 7, revision)
             .unwrap();
     }
     assert_eq!(

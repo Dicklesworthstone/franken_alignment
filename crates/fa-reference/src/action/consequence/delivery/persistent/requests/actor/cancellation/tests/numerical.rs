@@ -323,7 +323,10 @@ fn numerical_storage_failure_keeps_its_full_reservation_and_plain_cancel_does_no
         .cancellation_port_with_numerical_budget(1, 1, events, events)
         .unwrap();
     let input = plan(port.next(701, 1401)).request().unwrap();
-    supervisor.host().unwrap().store.fail_once(JournalIo::Write);
+    supervisor
+        .host()
+        .unwrap()
+        .fail_storage_once(JournalIo::Write);
     assert_eq!(port.cancel(input), Err(FileCancellationError::Unavailable));
     assert_eq!(grant.remaining_operations(), 0);
     assert_eq!(grant.remaining_numerical_replay_events(), Some(0));

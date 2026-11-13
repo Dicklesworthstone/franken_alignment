@@ -42,6 +42,23 @@ allowance; reconstructing a facade or reconnecting cannot replenish them.
 Dropping the custodian revokes every weak port. Installing a foreign port clears
 the previous installation and refuses, even when numeric scopes match.
 
+An already running `PublicationPeerSession` can receive that original weak port
+through its host-only `set_policy_promotion(Some(port))` method. Installation
+uses the same Tower ownership check and does not replace the authenticated
+session, channel, connected socket, pending reply, registration, access profile
+or cumulative connection/exchange limits. Removing a port withdraws future
+access without rewriting an already queued historical response. A revoked
+session cannot be revived by installing a new port. This setter never provisions
+a governor or reconstructs an approval from a response.
+
+For a new ordinary owner, `FileOversight::create_guarded_reserved` provisions the
+explicit `FileGuardSet` and original `RecoveryReserve` in the first canonical
+image, returning the separate `FileOversightRoles`. It uses the existing guarded
+bootstrap and sole canonical replacement. Native guard, reserve and profile
+validation precedes store creation; canonical path-dependent encoding and write
+failures retain the original store semantics. Existing directories are refused.
+This provides no late upgrade or restoration of a previously approved key.
+
 The caller also needs authenticated operator status, access to the original run
 and explicit `Permit` purpose. Actor, observation-only, legacy reconciliation,
 imported-snapshot and branch mounts do not acquire this authority. A governor

@@ -363,7 +363,7 @@ fn new_exact_denial_invalidates_campaign_without_changing_sequence_or_killing_he
         let sequence = host.inspect().control.sequence;
         let mut denied = snapshot();
         denied.values.insert(7, b"bad".to_vec());
-        let spec = helper::spec(&host, b"exact denial outside the reviewed corpus");
+        let spec = helper::spec(&host, b"new exact denial");
         let revision = host.revision();
         host.propose(revision, 2, spec, denied).unwrap();
         assert_eq!(host.inspect().control.sequence, sequence);

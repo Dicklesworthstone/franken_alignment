@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: provision a governed first image and attach approval to a live peer
+
+`FileOversight::create_guarded_reserved` composes the original guard inventory
+and terminal recovery reserve in the first canonical image. The same prepared
+bootstrap provisions separate human and policy-governor roles only after its
+sole canonical replacement. Invalid native guard/reserve inputs refuse before
+store creation; path-dependent encoding and replacement failures retain the
+existing storage semantics. Existing stores cannot be upgraded by this call.
+
+`PublicationPeerSession::set_policy_promotion` installs an independently issued
+original weak promotion port on the surviving session. It preserves kernel peer
+admission, registration, access, connected transport, queued replies and all
+connection/exchange counters. Foreign ownership withdraws the installation and
+refuses; revoked ingress cannot be revived. The original approval custodian and
+one-operation budget remain separate from the peer.
+
+Four guarded-bootstrap unit functions and two actual peer integration functions
+cover native campaign use, guarded recovery, invalid configuration, every
+original storage barrier, attached/unattached installation, pending replies,
+exact promotion retry, foreign ownership and revoked ingress. This increment
+also fixes seven compiler-identified test call sites: six RefMut predecessor
+borrows and one use of the existing scoped storage-fault hook. Assertions and
+native contracts are unchanged.
+
+All ten changed Rust files pass the qualified dated formatter. The qualified
+compiler built and executed three focused integration targets: all six driver
+policy-promotion tests, all ten Tower promotion tests (including the two new
+live-installation cases), and all five generated-operator tests pass. Execution
+also exposed two policy-denial fixtures whose payloads exceeded their declared
+16-unit allocation before reaching the intended gate. Their shorter payloads
+preserve the actual negative policy witness and all assertions; both failed
+attempts were retained before the corrected passes.
+
+The broader all-target attempt found the preserved compiler errors; its
+subsequent monolithic library-test check was interrupted under memory pressure.
+The four new guarded-bootstrap library unit functions remain unexecuted. The
+required full workspace gate remains blocked by the previously recorded source
+snapshot drift; no manifest was regenerated, Bead closed or production
+qualification claimed.
+
+Contracts: `docs/TOWER_POLICY_PROMOTION.md`,
+`docs/DURABLE_POLICY_CAMPAIGN_GUARD.md`.
+
 ## 2026-11-13: validate explicit policy promotion through the authenticated client
 
 `tower-operator-exchange` now accepts the sealed native policy-promotion plan
