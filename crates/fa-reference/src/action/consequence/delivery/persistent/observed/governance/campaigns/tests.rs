@@ -417,3 +417,120 @@ fn campaign_codec_rejects_unknown_decisions_and_preserves_exact_update_identity(
         Some(Error::InvalidInput)
     );
 }
+
+#[test]
+fn selected_promotion_observes_the_original_interrupted_source_latch_without_spending_approval() {
+    use crate::action::consequence::delivery::persistent::observed::source::FileSourcePolicy;
+    use crate::action::consequence::delivery::persistent::requests::actor::{
+        FilePolicyPromotionBlockReason, FilePolicyPromotionError, FilePolicyPromotionRequest,
+        MAX_POLICY_PROMOTION_REPLAY_EVENTS,
+    };
+    use crate::action::consequence::oversight::actor::Knowledge;
+    use crate::action::consequence::oversight::evidence_source::{
+        EvidenceIdentity, EvidenceSnapshot, FileEvidenceSource,
+    };
+    use crate::action::consequence::oversight::policy_state::{
+        StateFreshness, StateLimits, StateSource,
+    };
+    let root = Directory::new();
+    let (mut host, _) = FileOversight::create(root.store(), profile()).unwrap();
+    let governor = host
+        .enable_policy_campaigns(host.revision(), limits(), 8)
+        .unwrap();
+    host.enable_file_source(
+        host.revision(),
+        FileSourcePolicy {
+            source: StateSource {
+                scope: profile().delivery.scope,
+                source: 51,
+                generation: 1,
+            },
+            limits: StateLimits::default(),
+            freshness: StateFreshness::new(5).unwrap(),
+        },
+    )
+    .unwrap();
+    let capture = EvidenceSnapshot::new(
+        EvidenceIdentity {
+            source: 51,
+            generation: 1,
+            scope: profile().delivery.scope,
+        },
+        Snapshot {
+            semantic_epoch: 1,
+            complete: true,
+            values: BTreeMap::from([(7, b"ok".to_vec())]),
+        },
+        BTreeMap::from([("helper".to_owned(), b"original policy case".to_vec())]),
+    )
+    .unwrap();
+    let source_path = root.0.join("source.json");
+    std::fs::write(&source_path, capture.encode()).unwrap();
+    let mut source =
+        FileEvidenceSource::new(source_path, 51, profile().delivery.scope, 1_048_576).unwrap();
+    host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1))
+        .unwrap();
+    host.propose(
+        host.revision(),
+        1,
+        ActionSpec {
+            version: VERSION,
+            scope: profile().delivery.scope,
+            target: Some(host.inspect().target),
+            payload: b"case".to_vec(),
+            required_witnesses: Vec::new(),
+            policy_epoch: 0,
+            deadline: ElapsedTick(100),
+            units: 8,
+        },
+        capture.snapshot().clone(),
+    )
+    .unwrap();
+    let review = request(&mut host);
+    let revision = host.revision();
+    let key = governor
+        .approve(&mut host, revision, &review, false)
+        .unwrap();
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor
+        .policy_promotion_port(key, 2, MAX_POLICY_PROMOTION_REPLAY_EVENTS)
+        .unwrap();
+    // The exact native latch is set before a source reader is entered. This
+    // unit fault injection does not claim to execute a source reader or repair.
+    supervisor.host_mut().unwrap().source_interrupted = true;
+    let before = supervisor.host().unwrap().inspect();
+    let Ok(Knowledge::Known { value: blocked, .. }) = port.next(9, 90) else {
+        panic!("expected original source refusal");
+    };
+    assert_eq!(
+        blocked.block_reason(),
+        Some(FilePolicyPromotionBlockReason::SourceUnavailable)
+    );
+    assert_eq!(
+        port.promote(FilePolicyPromotionRequest::new(90, blocked.basis()).unwrap()),
+        Err(FilePolicyPromotionError::Unsupported)
+    );
+    assert_eq!(grant.remaining_operations(), 1);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert!(
+        supervisor
+            .host()
+            .unwrap()
+            .file_source_status()
+            .unwrap()
+            .interrupted
+    );
+    // Paired control of that same predicate: no journal, corpus or approval
+    // field changes, and no replacement approval is issued.
+    supervisor.host_mut().unwrap().source_interrupted = false;
+    let Ok(Knowledge::Known { value: allowed, .. }) = port.next(9, 90) else {
+        panic!("expected original positive control");
+    };
+    assert!(allowed.can_promote());
+    let Ok(Knowledge::Known { value: receipt, .. }) = port.promote(allowed.request().unwrap())
+    else {
+        panic!("expected acknowledged original promotion");
+    };
+    assert_eq!(receipt.after().policy_generation, 2);
+    assert_eq!(grant.remaining_operations(), 0);
+}

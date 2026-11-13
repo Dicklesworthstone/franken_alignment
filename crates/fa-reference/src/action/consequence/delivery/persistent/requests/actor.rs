@@ -23,26 +23,26 @@ pub use convening::{
     MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES,
 };
 mod narrowing;
-pub use narrowing::{
-    FileNarrowBasis, FileNarrowBlockReason, FileNarrowError, FileNarrowObservation,
-    FileNarrowPlan, FileNarrowPlanObservation, FileNarrowPlanResult, FileNarrowReceipt,
-    FileNarrowRequest, FileNarrowResult, FileSupervisorNarrowGrant, FileSupervisorNarrowPort,
-    MAX_NARROW_OPERATIONS, MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_NARROW_TARGETS,
-};
 pub use abandonment::{
     FileAbandonmentBlockReason, FileAbandonmentError, FileAbandonmentObservation,
     FileAbandonmentPlan, FileAbandonmentPlanObservation, FileAbandonmentPlanResult,
     FileAbandonmentReceipt, FileAbandonmentRequest, FileAbandonmentResult,
-    FileSupervisorAbandonmentGrant, FileSupervisorAbandonmentPort,
-    MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
+    FileSupervisorAbandonmentGrant, FileSupervisorAbandonmentPort, MAX_ABANDONMENT_OPERATIONS,
+    MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
+};
+pub use narrowing::{
+    FileNarrowBasis, FileNarrowBlockReason, FileNarrowError, FileNarrowObservation, FileNarrowPlan,
+    FileNarrowPlanObservation, FileNarrowPlanResult, FileNarrowReceipt, FileNarrowRequest,
+    FileNarrowResult, FileSupervisorNarrowGrant, FileSupervisorNarrowPort, MAX_NARROW_OPERATIONS,
+    MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_NARROW_TARGETS,
 };
 mod cancellation;
 pub use cancellation::{
     FileCancellationBlockReason, FileCancellationError, FileCancellationObservation,
     FileCancellationPlan, FileCancellationPlanObservation, FileCancellationPlanResult,
     FileCancellationReceipt, FileCancellationRequest, FileCancellationResult,
-    FileSupervisorCancellationGrant, FileSupervisorCancellationPort,
-    MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
+    FileSupervisorCancellationGrant, FileSupervisorCancellationPort, MAX_CANCELLATION_OPERATIONS,
+    MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
 };
 mod resolution;
 pub use resolution::{
@@ -88,7 +88,16 @@ pub use request_history::{
     FileRequestReviewLink, FileSupervisorRequestHistoryGrant, FileSupervisorRequestHistoryPort,
     MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
 };
+mod policy_promotion;
 mod policy_replay;
+pub use policy_promotion::{
+    FilePolicyPromotionBasis, FilePolicyPromotionBlockReason, FilePolicyPromotionError,
+    FilePolicyPromotionObservation, FilePolicyPromotionPlan, FilePolicyPromotionPlanObservation,
+    FilePolicyPromotionPlanResult, FilePolicyPromotionReceipt, FilePolicyPromotionRequest,
+    FilePolicyPromotionResult, FileSupervisorPolicyPromotionGrant,
+    FileSupervisorPolicyPromotionPort, MAX_POLICY_PROMOTION_QUERIES,
+    MAX_POLICY_PROMOTION_REPLAY_EVENTS,
+};
 pub use policy_replay::{
     FilePolicyReplay, FilePolicyReplayBasis, FilePolicyReplayCursor, FilePolicyReplayObservation,
     FilePolicyReplayPage, FilePolicyReplayPageObservation, FilePolicyReplayPageResult,

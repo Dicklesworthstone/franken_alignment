@@ -5,14 +5,15 @@
 //! a global Tower generation, control sequence, or proof of effect admission.
 
 mod abandonment;
-mod explanation;
 mod cancellation;
 mod convening;
+mod explanation;
 mod fence;
-mod narrowing;
 mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
+mod narrowing;
+mod policy_promotion;
 mod policy_replay;
 mod request_history;
 mod resolution;
@@ -195,13 +196,43 @@ impl PublicationResponse {
             ),
             PublicationResult::ConveneNext(linked) => (
                 "convene-next",
-                convening::encode_next(linked, &self.envelope.address,
-                    &self.envelope.operation_id, self.envelope.idempotency_key.as_deref(), &encoder)?,
+                convening::encode_next(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
             ),
             PublicationResult::Convene(linked) => (
                 "convene",
-                convening::encode_convene(linked, &self.envelope.address,
-                    &self.envelope.operation_id, self.envelope.idempotency_key.as_deref(), &encoder)?,
+                convening::encode_convene(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::PolicyPromotionNext(linked) => (
+                "policy-promotion-next",
+                policy_promotion::encode_next(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::PolicyPromotion(linked) => (
+                "policy-promotion",
+                policy_promotion::encode_promotion(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
             ),
             PublicationResult::NarrowingNext(linked) => (
                 "narrowing-next",

@@ -8,12 +8,14 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Write};
 
 #[cfg(unix)]
-pub(super) mod fence;
-#[cfg(unix)]
 pub(super) mod convening;
+#[cfg(unix)]
+pub(super) mod fence;
 #[cfg(unix)]
 pub(super) mod narrowing;
 pub(super) mod policy;
+#[cfg(unix)]
+pub(super) mod policy_promotion;
 #[cfg(unix)]
 pub(super) mod resolution;
 
@@ -222,7 +224,9 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             if text(args, "action")? != "convene_held" {
                 return Err(TowerDecodingError::MalformedRequest);
             }
-            Ok(ReadArguments::ConveneNext { round: decimal(args, "round")? })
+            Ok(ReadArguments::ConveneNext {
+                round: decimal(args, "round")?,
+            })
         }
         #[cfg(unix)]
         Verb::Convene => {
@@ -235,11 +239,21 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         #[cfg(unix)]
         Verb::Next if args.contains_key("operation") => {
             if args.contains_key("action") {
+                if text(args, "action")? == "promote_policy" {
+                    fields(args, &["action", "campaign", "operation"])?;
+                    return Ok(ReadArguments::PolicyPromotionNext {
+                        campaign: decimal(args, "campaign")?,
+                        operation: decimal(args, "operation")?,
+                    });
+                }
                 if text(args, "action")? == "narrow_authority" {
                     fields(args, &["action", "operation", "retained_targets"])?;
                     return Ok(ReadArguments::NarrowingNext {
                         operation: decimal(args, "operation")?,
-                        retained_targets: narrowing::decode_targets(field(args, "retained_targets")?)?,
+                        retained_targets: narrowing::decode_targets(field(
+                            args,
+                            "retained_targets",
+                        )?)?,
                     });
                 }
                 fields(args, &["action", "operation"])?;
@@ -268,12 +282,14 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 let operation = decimal(args, "operation")?;
                 let expected = resolution::decode_basis(field(args, "expected")?)?;
                 return match text(args, "action")? {
-                    "cancel_undispatched" => {
-                        Ok(ReadArguments::CancelUndispatched { operation, expected })
-                    }
-                    "abandon_unknown" => {
-                        Ok(ReadArguments::AbandonUnknown { operation, expected })
-                    }
+                    "cancel_undispatched" => Ok(ReadArguments::CancelUndispatched {
+                        operation,
+                        expected,
+                    }),
+                    "abandon_unknown" => Ok(ReadArguments::AbandonUnknown {
+                        operation,
+                        expected,
+                    }),
                     _ => Err(TowerDecodingError::MalformedRequest),
                 };
             }
@@ -290,6 +306,14 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 operation: decimal(args, "operation")?,
                 expected: narrowing::decode_basis(field(args, "expected")?)?,
                 retained_targets: narrowing::decode_targets(field(args, "retained_targets")?)?,
+            })
+        }
+        #[cfg(unix)]
+        Verb::Promote => {
+            fields(args, &["operation", "expected"])?;
+            Ok(ReadArguments::Promote {
+                operation: decimal(args, "operation")?,
+                expected: policy_promotion::decode_basis(field(args, "expected")?)?,
             })
         }
         #[cfg(unix)]
@@ -420,8 +444,11 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         }
         #[cfg(unix)]
         (Verb::Next, ReadArguments::ConveneNext { round }) => {
-            if *round == 0 || request.idempotency_key.as_ref()
-                .is_some_and(|key| key != &round.to_string())
+            if *round == 0
+                || request
+                    .idempotency_key
+                    .as_ref()
+                    .is_some_and(|key| key != &round.to_string())
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
@@ -431,7 +458,10 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             convening::validate_expected(*expected)?;
             if *round == 0
                 || request.idempotency_key.as_deref() != Some(round.to_string().as_str())
-                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
@@ -442,10 +472,12 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             ReadArguments::Resolve {
                 operation,
                 expected,
-            } | ReadArguments::CancelUndispatched {
+            }
+            | ReadArguments::CancelUndispatched {
                 operation,
                 expected,
-            } | ReadArguments::AbandonUnknown {
+            }
+            | ReadArguments::AbandonUnknown {
                 operation,
                 expected,
             },
@@ -462,22 +494,82 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
         }
         #[cfg(unix)]
-        (Verb::Next, ReadArguments::NarrowingNext { operation, retained_targets }) => {
+        (
+            Verb::Next,
+            ReadArguments::NarrowingNext {
+                operation,
+                retained_targets,
+            },
+        ) => {
             narrowing::validate_targets(retained_targets)?;
             if *operation == 0
                 || request.address.kind != crate::address_resolver::Noun::Run
-                || request.idempotency_key.as_ref().is_some_and(|key| key != &operation.to_string())
+                || request
+                    .idempotency_key
+                    .as_ref()
+                    .is_some_and(|key| key != &operation.to_string())
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
         }
         #[cfg(unix)]
-        (Verb::Narrow, ReadArguments::Narrow { operation, expected, retained_targets }) => {
+        (
+            Verb::Next,
+            ReadArguments::PolicyPromotionNext {
+                campaign,
+                operation,
+            },
+        ) => {
+            if *campaign == 0
+                || *operation == 0
+                || request
+                    .idempotency_key
+                    .as_ref()
+                    .is_some_and(|key| key != &operation.to_string())
+                || request.address.kind != crate::address_resolver::Noun::Run
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (
+            Verb::Promote,
+            ReadArguments::Promote {
+                operation,
+                expected,
+            },
+        ) => {
+            policy_promotion::validate_expected(*expected)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.address.tenant != expected.scope.tenant.to_string()
+                || request.address.id != expected.scope.run.to_string()
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (
+            Verb::Narrow,
+            ReadArguments::Narrow {
+                operation,
+                expected,
+                retained_targets,
+            },
+        ) => {
             narrowing::validate_expected(*expected)?;
             narrowing::validate_targets(retained_targets)?;
             if *operation == 0
                 || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
-                || request.address.generation.is_none_or(|generation| generation == 0)
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
                 || request.address.kind != crate::address_resolver::Noun::Run
                 || request.address.tenant != expected.scope.tenant.to_string()
                 || request.address.id != expected.scope.run.to_string()
@@ -599,7 +691,10 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             return Err(TowerDecodingError::MalformedRequest);
         }
         #[cfg(unix)]
-        (Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene, ReadArguments::None) => {
+        (
+            Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote,
+            ReadArguments::None,
+        ) => {
             return Err(TowerDecodingError::MalformedRequest);
         }
         (_, ReadArguments::None) => {}
@@ -857,7 +952,10 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("expected", convening::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
-        ReadArguments::CancelUndispatched { operation, expected } => object_json(&[
+        ReadArguments::CancelUndispatched {
+            operation,
+            expected,
+        } => object_json(&[
             ("action", quote("cancel_undispatched")),
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
@@ -868,7 +966,10 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("operation", quote(&operation.to_string())),
         ]),
         #[cfg(unix)]
-        ReadArguments::AbandonUnknown { operation, expected } => object_json(&[
+        ReadArguments::AbandonUnknown {
+            operation,
+            expected,
+        } => object_json(&[
             ("action", quote("abandon_unknown")),
             ("operation", quote(&operation.to_string())),
             ("expected", resolution::encode_basis(*expected)),
@@ -882,16 +983,46 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("expected", resolution::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
-        ReadArguments::NarrowingNext { operation, retained_targets } => object_json(&[
+        ReadArguments::NarrowingNext {
+            operation,
+            retained_targets,
+        } => object_json(&[
             ("action", quote("narrow_authority")),
             ("operation", quote(&operation.to_string())),
-            ("retained_targets", narrowing::encode_targets(retained_targets)),
+            (
+                "retained_targets",
+                narrowing::encode_targets(retained_targets),
+            ),
         ]),
         #[cfg(unix)]
-        ReadArguments::Narrow { operation, expected, retained_targets } => object_json(&[
+        ReadArguments::Narrow {
+            operation,
+            expected,
+            retained_targets,
+        } => object_json(&[
             ("operation", quote(&operation.to_string())),
             ("expected", narrowing::encode_basis(*expected)),
-            ("retained_targets", narrowing::encode_targets(retained_targets)),
+            (
+                "retained_targets",
+                narrowing::encode_targets(retained_targets),
+            ),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::PolicyPromotionNext {
+            campaign,
+            operation,
+        } => object_json(&[
+            ("action", quote("promote_policy")),
+            ("campaign", quote(&campaign.to_string())),
+            ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::Promote {
+            operation,
+            expected,
+        } => object_json(&[
+            ("operation", quote(&operation.to_string())),
+            ("expected", policy_promotion::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
         ReadArguments::Fence {

@@ -19,6 +19,15 @@ impl Machine {
         self.campaigns.as_ref()?.requests.get(&id)
     }
 
+    pub(in super::super) fn check_policy_promotion(&self, id: u64) -> Result<(), Error> {
+        if self.broker.stop_receipt().is_some() {
+            return Err(Error::WrongState);
+        }
+        let state = self.campaigns.as_ref().ok_or(Error::Incomplete)?;
+        self.broker
+            .check_policy_promotion(state.permits.get(&id).ok_or(Error::Missing)?)
+    }
+
     pub(super) fn apply_campaign(&mut self, event: &CampaignEvent) -> Result<Transition, Error> {
         match event {
             CampaignEvent::Enable(limits, maximum) => {

@@ -406,6 +406,13 @@ the complete retained current-policy corpus, not a caller-selected sample.
 `newly_reviewable` conveys no helper approval or promotion permission, and
 `requires_shadow` is a missing-observation result, not an executed shadow run.
 
+Trusted ordinary Rust embeddings can separately retain the original policy
+governor and delegate one independently approved native campaign to
+[`next` / `promote` on the live control Tower](TOWER_POLICY_PROMOTION.md).
+The complete original corpus and predecessor are rechecked at promotion; fresh
+work still requires both effect keys. Ordinary server CLI profiles do not
+provision this governor or approval, and selecting policy replay cannot do so.
+
 ### P7. Running an experiment
 
 1. `fa preregister H<n> --protocol <file>` before any confirmatory data; the ledger records the digest and date.

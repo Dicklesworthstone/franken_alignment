@@ -37,8 +37,8 @@ use dispatch_replay::{CachedReplay, ReplayRegistration};
 pub use dispatch_replay::{MAX_REPLAY_OPERATIONS, MAX_REPLAY_RECORDS, MAX_REPLAY_RETAINED_BYTES};
 pub use replay::{ObservedReplayRecord, ObservedReplayReport, ReplayPlanMetadata};
 pub use request::{
-    MAX_NARROWING_TARGETS, MAX_REQUEST_BYTES, MAX_REQUEST_DEPTH, MAX_REQUEST_ITEMS, MAX_REQUEST_STRING_BYTES,
-    REQUEST_SCHEMA, TowerDecodingError, decode_request, encode_request,
+    MAX_NARROWING_TARGETS, MAX_REQUEST_BYTES, MAX_REQUEST_DEPTH, MAX_REQUEST_ITEMS,
+    MAX_REQUEST_STRING_BYTES, REQUEST_SCHEMA, TowerDecodingError, decode_request, encode_request,
 };
 pub use vocabulary::{ENVELOPE_FIELDS, ReasonCode, UnknownVerb, Verb, VerbClass};
 pub use wire::TowerEncodingError;
@@ -263,6 +263,20 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileNarrowBasis,
         retained_targets: Vec<crate::action::ResolvedTarget>,
+    },
+    /// Inspect one separately installed, independently approved policy campaign.
+    /// This read neither approves a candidate nor spends the promotion permit.
+    #[cfg(unix)]
+    PolicyPromotionNext {
+        campaign: u64,
+        operation: u64,
+    },
+    /// Promote the exact original campaign under its independently retained key.
+    /// No policy bytes, governor role or effect approval cross this interface.
+    #[cfg(unix)]
+    Promote {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FilePolicyPromotionBasis,
     },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
@@ -699,6 +713,8 @@ impl ReferenceTower {
                 | (Verb::Next, ReadArguments::NarrowingNext { .. })
                 | (Verb::Next, ReadArguments::ConveneNext { .. })
                 | (Verb::Narrow, ReadArguments::Narrow { .. })
+                | (Verb::Next, ReadArguments::PolicyPromotionNext { .. })
+                | (Verb::Promote, ReadArguments::Promote { .. })
         ) {
             // Original disposition and authority narrowing require the live
             // owner and separate control grants. Imported history supplies neither.

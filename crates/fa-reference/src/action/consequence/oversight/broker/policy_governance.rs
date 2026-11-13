@@ -271,28 +271,8 @@ impl OversightBroker {
         &mut self,
         permit: &PolicyPromotionPermit,
     ) -> Result<PolicyPromotion, Error> {
-        let gate = self.policy_campaigns.as_ref().ok_or(Error::Incomplete)?;
+        self.check_policy_promotion(permit)?;
         let binding = &permit.binding;
-        if !Rc::ptr_eq(&gate.issuer, &binding.issuer)
-            || !gate
-                .reviews
-                .get(&binding.id)
-                .is_some_and(|actual| Rc::ptr_eq(actual, binding))
-        {
-            return Err(Error::Binding);
-        }
-        if binding.disposition.get() != CampaignDisposition::Approved {
-            return Err(Error::WrongState);
-        }
-        if self.policy_campaign_stamp() != binding.stamp {
-            return Err(Error::Stale);
-        }
-        if binding.report.requires_shadow() {
-            return Err(Error::Incomplete);
-        }
-        if !permit.accepted_relaxations && !binding.report.newly_reviewable().is_empty() {
-            return Err(Error::Binding);
-        }
         // Invoke the original transaction; it preserves dispatched liabilities,
         // narrower ceilings and suspension while fencing/refunding old reservations.
         // No user callback or interleaving can change the approval in this model.
@@ -317,6 +297,37 @@ impl OversightBroker {
             .promotions
             .push(promotion.clone());
         Ok(promotion)
+    }
+
+    /// One read-only original approval/corpus check, shared by observation and
+    /// actual promotion. A successful read neither reserves nor consumes a key.
+    pub(crate) fn check_policy_promotion(
+        &self,
+        permit: &PolicyPromotionPermit,
+    ) -> Result<(), Error> {
+        let gate = self.policy_campaigns.as_ref().ok_or(Error::Incomplete)?;
+        let binding = &permit.binding;
+        if !Rc::ptr_eq(&gate.issuer, &binding.issuer)
+            || !gate
+                .reviews
+                .get(&binding.id)
+                .is_some_and(|actual| Rc::ptr_eq(actual, binding))
+        {
+            return Err(Error::Binding);
+        }
+        if binding.disposition.get() != CampaignDisposition::Approved {
+            return Err(Error::WrongState);
+        }
+        if self.policy_campaign_stamp() != binding.stamp {
+            return Err(Error::Stale);
+        }
+        if binding.report.requires_shadow() {
+            return Err(Error::Incomplete);
+        }
+        if !permit.accepted_relaxations && !binding.report.newly_reviewable().is_empty() {
+            return Err(Error::Binding);
+        }
+        Ok(())
     }
 
     pub fn policy_promotions(&self) -> Result<&[PolicyPromotion], Error> {

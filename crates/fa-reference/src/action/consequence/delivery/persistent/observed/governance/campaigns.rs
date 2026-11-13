@@ -167,6 +167,35 @@ impl FileOversight {
         })
     }
 
+    /// Validate the original opaque key before exposing its campaign metadata
+    /// to the separately granted native supervisor port. No approval is minted.
+    pub(crate) fn policy_promotion_review(
+        &self,
+        key: &FilePolicyPromotionPermit,
+    ) -> Result<FilePolicyCampaignReview, JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &key.issuer) {
+            return Err(Error::Binding.into());
+        }
+        self.policy_campaign(key.campaign)
+    }
+
+    /// Observe the same complete native approval/corpus predicate that actual
+    /// promotion checks. This is not a durable transition or a retained lease.
+    pub(crate) fn policy_promotion_preflight(
+        &self,
+        key: &FilePolicyPromotionPermit,
+    ) -> Result<(), JournalError> {
+        let review = self.policy_promotion_review(key)?;
+        if review.report().candidate_policy().generation() <= self.current_policy()?.generation() {
+            return Err(Error::Stale.into());
+        }
+        self.check_source_admission(&Event::Campaign(CampaignEvent::Promote(key.campaign)))?;
+        Ok(self.machine.check_policy_promotion(key.campaign)?)
+    }
+
     /// The original native one-shot promotion, old-reservation cancellations,
     /// human-key withdrawal and policy receipt commit in one canonical replacement.
     /// Exact retry returns only an already acknowledged receipt. It never promotes

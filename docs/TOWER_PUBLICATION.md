@@ -1,6 +1,6 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects fifteen
+On Unix, `fa_reference::tower::publication::PublicationTower` connects sixteen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
@@ -9,7 +9,8 @@ planning/reconciliation, independently granted undispatched-request cancellation
 or explicit Unknown disposition through `next` and `resolve`, independently
 granted ordinary target-ceiling restriction through `next` and `narrow`, explicit
 ordinary held-review admission through `next` and `convene`, separately granted
-original journal `tail`, request-to-review `related`, and original-domain `fence` through its restricted
+original journal `tail`, request-to-review `related`, independently approved
+policy `promote`, and original-domain `fence` through its restricted
 control mount.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
@@ -55,6 +56,13 @@ The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the native
 route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy
 or publication authority.
+
+The [policy-promotion contract](TOWER_POLICY_PROMOTION.md) connects a separately
+provisioned original approval permit through `next` and `promote` on the native
+control mount. The governor stays outside the Tower. Complete native corpus and
+predecessor checks, finite single-operation custody and historical retries remain
+mandatory. This embedding capability does not enable promotion in the ordinary
+server CLI or turn its policy-replay selection into approval.
 
 ## Plan and reconcile an original outcome
 

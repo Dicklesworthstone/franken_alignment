@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: delegate an approved native policy campaign through the Tower
+
+A separately retained original `FilePolicyPromotionPermit` now provisions a
+finite `FileSupervisorPolicyPromotionPort` and nonclone grant. The native port
+can observe and promote only that independently approved campaign. It owns no
+governor, cannot approve/recreate a key, and accepts no candidate policy bytes.
+Weak clones share cumulative queries and one entered mutation. Exact historical
+retries recover the original result without cancelling newer work.
+
+The native publication Tower connects the registered `promote` verb and explicit
+`next` action under the restricted control mount, authenticated operator scope,
+Permit purpose, exact registration generation and complete native predecessor.
+The original full-corpus gate, source-interruption latch, finite journal replay
+and Stop remain enforced. Numerical reconstruction is not implicitly granted.
+Entered promotion uses the original durable transition, preserves all charged
+admitted/Unknown obligations, and requires fresh evidence, helper review and
+independent human approval for later work.
+
+The two sealed response profiles bind the original query, campaign, operation,
+registration and before/after native cuts without disclosing policy literals or
+payload. The existing Linux credential-authenticated peer transport carries the
+same capability through lost replies and bounded reconnects. This is a native
+Rust embedding API; ordinary server CLI profiles do not provision a governor or
+install approval, and policy replay remains observational.
+
+Eight native unit functions and eight public Tower/peer functions are authored.
+They cover actual new-policy two-key publication, old-key withdrawal, Unknown
+charge conservation, full-corpus changes, every predecessor coordinate, custody,
+roles, malformed and rebound wire data, finite work, numerical/source barriers,
+all five storage barriers, wrong peer identity and reply-loss retries. Independent
+review corrected empty-corpus fixtures by recording actual native policy cases;
+the original empty-corpus and source checks were not weakened.
+
+The 18 changed Rust files pass `rustfmt` from `nightly-2026-09-08`, with child
+traversal disabled. The combined library metadata check was killed by SIGKILL
+even with one frontend/backend worker and MIR optimization disabled; no targeted
+test was compiled or run. Earlier ordinary metadata and executable builds were
+also killed. Two rejected compiler-flag setup attempts remain recorded separately.
+Independent source review found no remaining blocker in the reviewed production
+path and corrected the identified fixture defects. No passing compiler/runtime
+gate, Beads closure or production qualification is claimed.
+
+Contract: `docs/TOWER_POLICY_PROMOTION.md`.
+
 ## 2026-11-13: promote independently approved policy campaigns through the live driver
 
 `FileSupervisedDriver::promote_policy_campaign` connects the original durable

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-13: connect one independently approved policy campaign to the Tower
+
+- Delegate one original nonclone approval through finite revocable supervisor
+  custody, exact full predecessors and safe historical retry records.
+- Connect explicit `next` / `promote` to the original durable policy gate through
+  the restricted control Tower and existing authenticated Linux peer transport.
+- Preserve full-corpus staleness, original source and Stop barriers, finite replay,
+  old-key withdrawal, new two-key work and all admitted/Unknown charges.
+- Add sealed response profiles and native/public/socket regression cases for
+  actual publication, failed custody, stale cuts, storage faults and lost replies.
+- Keep ordinary server governor provisioning and numerical replay outside this
+  explicitly selected native embedding capability. Execution remains unqualified.
+
 ## 2026-11-13: apply independent campaign approval through the running driver
 
 - Connect the original policy-promotion permit to supervised driver execution

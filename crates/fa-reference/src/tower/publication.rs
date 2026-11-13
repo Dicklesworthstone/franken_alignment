@@ -8,8 +8,8 @@
 
 mod abandonment;
 pub use abandonment::{LinkedAbandonment, LinkedAbandonmentNext};
-mod capabilities;
 mod cancellation;
+mod capabilities;
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
 mod convening;
 pub use convening::{LinkedConvene, LinkedConveneNext};
@@ -34,6 +34,8 @@ pub use request_history::LinkedRequestHistory;
 pub mod peer;
 mod policy_replay;
 pub use policy_replay::{LinkedPolicyReplay, LinkedPolicyReplayPage};
+mod policy_promotion;
+pub use policy_promotion::{LinkedPolicyPromotion, LinkedPolicyPromotionNext};
 mod precheck;
 
 use super::{
@@ -42,15 +44,14 @@ use super::{
 };
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileInspectionCursor,
-    FileInspectionResult, FileJournalTailCursor, FileLearnedTextStreamActorPort,
-    FileGeneratedTextActorPort,
-    FilePolicyReplayCursor, FileSupervisorExplanationPort, FileSupervisorFencePort,
-    FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort, FileSupervisorJournalTailPort,
+    FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileGeneratedTextActorPort,
+    FileInspectionCursor, FileInspectionResult, FileJournalTailCursor,
+    FileLearnedTextStreamActorPort, FilePolicyReplayCursor, FileSupervisorAbandonmentPort,
+    FileSupervisorCancellationPort, FileSupervisorConvenePort, FileSupervisorExplanationPort,
+    FileSupervisorFencePort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
+    FileSupervisorJournalTailPort, FileSupervisorNarrowPort, FileSupervisorPolicyPromotionPort,
     FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
-    FileSupervisorReviewExplanationPort, FileSupervisorCancellationPort,
-    FileSupervisorAbandonmentPort, FileSupervisorNarrowPort,
-    FileSupervisorConvenePort,
+    FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
 use crate::action::consequence::oversight::actor::{
@@ -65,7 +66,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 15] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 16] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -81,6 +82,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 15] = [
     Verb::Convene,
     Verb::Fence,
     Verb::PolicyReplay,
+    Verb::Promote,
 ];
 
 /// Smallest native response allowance; also the compatibility default.
@@ -140,6 +142,8 @@ pub enum PublicationResult {
     RefinementExplanation(LinkedRefinementExplanation),
     PolicyReplay(LinkedPolicyReplay),
     PolicyReplayPage(LinkedPolicyReplayPage),
+    PolicyPromotionNext(LinkedPolicyPromotionNext),
+    PolicyPromotion(LinkedPolicyPromotion),
     Refused(Knowledge<()>),
 }
 
@@ -189,6 +193,7 @@ pub struct PublicationTower {
     fence: Option<FileSupervisorFencePort>,
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
+    policy_promotion: Option<FileSupervisorPolicyPromotionPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
     limits: PublicationLimits,
 }
@@ -238,6 +243,7 @@ impl PublicationTower {
             fence: None,
             review_explanation: None,
             policy_replay: None,
+            policy_promotion: None,
             policy_replay_cursors: BTreeMap::new(),
             limits,
         })
@@ -476,7 +482,11 @@ impl PublicationTower {
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) && !(self.control_operator && matches!(request.verb, Verb::Fence | Verb::Narrow | Verb::Convene))
+            ) && !(self.control_operator
+                && matches!(
+                    request.verb,
+                    Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote
+                ))
             {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -495,7 +505,13 @@ impl PublicationTower {
             .is_some_and(|g| Some(g) != self.mount.generation)
             || (matches!(
                 request.verb,
-                Verb::Propose | Verb::PolicyReplay | Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene
+                Verb::Propose
+                    | Verb::PolicyReplay
+                    | Verb::Resolve
+                    | Verb::Fence
+                    | Verb::Narrow
+                    | Verb::Convene
+                    | Verb::Promote
             ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -545,6 +561,16 @@ impl PublicationTower {
             return self.dispatch_narrowing(access, request);
         }
 
+        if request.verb == Verb::Promote
+            || (request.verb == Verb::Next
+                && matches!(request.arguments, ReadArguments::PolicyPromotionNext { .. }))
+        {
+            if !self.control_operator {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+            return self.dispatch_policy_promotion(access, request);
+        }
+
         if matches!(request.verb, Verb::Next | Verb::Resolve) {
             if matches!(
                 request.arguments,
@@ -558,7 +584,8 @@ impl PublicationTower {
                 }
                 return self.dispatch_abandonment(access, request);
             }
-            if matches!(request.arguments,
+            if matches!(
+                request.arguments,
                 ReadArguments::CancellationNext { .. } | ReadArguments::CancelUndispatched { .. }
             ) {
                 if self.reconciliation_operator && !self.control_operator {
