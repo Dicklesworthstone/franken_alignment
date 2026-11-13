@@ -9,7 +9,7 @@ use super::{Event, FileOversight};
 use crate::Error;
 use crate::action::ActionState;
 use crate::action::consequence::Consequence;
-use crate::action::consequence::oversight::broker::MAX_OBSERVED_ROUNDS;
+use crate::action::consequence::oversight::MAX_OBSERVED_ROUNDS;
 
 impl FileOversight {
     pub(crate) fn convening_requires_topology(&self) -> bool {

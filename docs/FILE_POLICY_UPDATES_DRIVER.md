@@ -5,6 +5,30 @@ workers, mandatory independent human key and publication owner. The driver now
 exposes the same replace_policy operation as that owner, with no new journal
 format, policy authority, control loop or actor-visible vocabulary.
 
+## Independently approved campaigns during live execution
+
+For an owner configured with `enable_policy_campaigns`, the driver now exposes
+`promote_policy_campaign(revision, &FilePolicyPromotionPermit)`. The trusted
+embedding must first request an exact native campaign and obtain its nonclone
+permit from the separately retained `FilePolicyGovernor`. The driver neither
+creates campaigns nor approves candidates. Ordinary `replace_policy` remains
+unable to bypass an installed campaign guard.
+
+Promotion enters the original durable gate and then runs the same live-ledger
+helper maintenance described below, on success and failure. The original full
+corpus stamp is checked again: even a newly recorded exact denial can invalidate
+approval without advancing the control sequence. Successful promotion withdraws
+old undispatched work and human effect keys. A fresh policy epoch still requires
+new source evidence, helper congress and independent human approval. Historical
+promotion retries preserve newer healthy work; dispatched and unknown effects
+remain charged until their original endpoint supplies an outcome.
+
+Six new public driver regression functions cover real socket-worker retirement,
+fresh new-policy publication, old reservation/key withdrawal, historical retry,
+stale/foreign/revoked keys, exact-denial corpus changes and dispatched/unknown
+liability conservation. These use the original native governor and journal.
+Their execution status is recorded in `IMPLEMENTATION_STATUS.md`.
+
 ## Govern the owner; derive cleanup from its live ledger
 
 The operation checks any active job's original owner brand, then performs the

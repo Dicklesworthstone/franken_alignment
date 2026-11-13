@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-13: apply independent campaign approval through the running driver
+
+- Connect the original policy-promotion permit to supervised driver execution
+  and immediate cleanup using current native dispositions.
+- Preserve complete-corpus approval checks, fresh two-key work, historical retry
+  safety and all dispatched/unknown charges.
+- Add six public driver regression functions with actual helper socket and
+  publication paths, including stale, foreign and revoked approval controls.
+- Correct two held-review imports that the qualified compiler identified as
+  invalid private-module access; retain the original public constant.
+- Record SIGKILL in both test-build and focused metadata compilation before
+  execution; compiler and runtime qualification remain open.
+
 ## 2026-11-13: recover selected receipts through one bounded actor service
 
 - Add an optional final `--requests` selection to ordinary and checked

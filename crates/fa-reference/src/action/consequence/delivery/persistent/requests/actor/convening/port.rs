@@ -1,6 +1,6 @@
 use super::super::{FileActorPort, UnknownReason};
 use super::*;
-use crate::action::consequence::oversight::broker::MAX_OBSERVED_ROUNDS;
+use crate::action::consequence::oversight::MAX_OBSERVED_ROUNDS;
 
 impl FileActorSupervisor<FileOversight> {
     /// Select one original, non-renewable ordinary held-review grant. Provision

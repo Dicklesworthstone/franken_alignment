@@ -3,6 +3,7 @@ mod settlement;
 use super::super::super::governance::{PolicyUpdate, PolicyUpdateReceipt};
 use super::super::super::requests::FileRequestStatus;
 use super::super::super::{FileStopSweep, JournalError, Reconciliation};
+use super::super::governance::campaigns::FilePolicyPromotionPermit;
 use super::{FileSupervisedDriver, Job, Phase, admitted, stage};
 use crate::Error;
 use crate::action::consequence::delivery::{StopReceipt, StopRequest};
@@ -151,6 +152,32 @@ impl FileSupervisedDriver {
 }
 
 impl FileSupervisedDriver {
+    /// Promote an independently approved ORIGINAL campaign through its native
+    /// durable gate, then retire workers according to the live ledger. This
+    /// does not request a campaign, approve one, or recover a lost governor key.
+    /// New history, revoked approval and foreign keys retain the native refusal.
+    ///
+    /// Acknowledged promotion withdraws old undispatched work and human keys.
+    /// An exact historical retry cannot cancel a newer review, and admitted or
+    /// unknown effects retain their original publication/reconciliation phase
+    /// and charge. Ambiguous storage still triggers owned-worker cleanup without
+    /// asserting a committed transition, refund or drained child process.
+    pub fn promote_policy_campaign(
+        &mut self,
+        revision: u64,
+        key: &FilePolicyPromotionPermit,
+    ) -> Result<PolicyUpdateReceipt, JournalError> {
+        let result = (|| {
+            let mut host = self.supervisor.host_mut()?;
+            if let Some(job) = &self.job {
+                job.check_owner(&host)?;
+            }
+            host.promote_policy_campaign(revision, key)
+        })();
+        self.reap_helpers();
+        result
+    }
+
     /// Commit trusted governance without asking the actor, helper or human-effect
     /// reviewer to change policy. Its original owner cancels undispatched work;
     /// then existing maintenance retires its workers before any later clock/I/O.

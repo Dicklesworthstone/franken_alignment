@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: promote independently approved policy campaigns through the live driver
+
+`FileSupervisedDriver::promote_policy_campaign` connects the original durable
+campaign gate to immediate driver helper cleanup. It consumes no actor-supplied
+policy or replay result and obtains no governor role. The independent native
+approval, complete corpus stamp, original owner and journal predecessor remain
+mandatory. Eligible old work and human keys are withdrawn; newer healthy work
+survives exact historical retries. Dispatched and unknown obligations retain
+original phases and charges.
+
+Six public regression functions (nine scenario arms) cover actual helper socket
+retirement before clock/evidence work, fresh two-key publication, exact-once
+reservation/key withdrawal, healthy-review preservation after refusal, an added
+denial that stales the full corpus, and dispatched/unknown liability accounting.
+The qualified dated compiler also found two existing held-review imports through
+a private module; both now use the existing public constant re-export.
+
+Validation used `nightly-2026-09-08` (`cea272fa356e`). The initial current-main
+library check found those two import errors. Both the subsequent targeted test
+build and the focused driver/library metadata check were killed by SIGKILL while
+compiling the library, before tests were compiled or executed. The focused driver
+changes and tests pass the dated formatter with child traversal disabled. No
+passing compiler/test gate, Beads closure or production qualification is claimed.
+
+Contracts: `docs/FILE_POLICY_UPDATES_DRIVER.md`,
+`docs/DURABLE_POLICY_CAMPAIGN_GUARD.md`.
+
 ## 2026-11-13: serve a selected set of original receipts in one bounded session
 
 The ordinary and checked receipt-only open commands now accept an optional final
