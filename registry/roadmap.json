@@ -461,7 +461,9 @@
         "docs/LIVE_POLICY_GOVERNOR.md",
         "crates/fa-reference/tests/governed_learned_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_admission.rs"
       ]
     },
     {
@@ -3353,7 +3355,9 @@
         "docs/LIVE_POLICY_GOVERNOR.md",
         "crates/fa-reference/tests/governed_learned_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_admission.rs"
       ],
       "founding_ideas": [
         "FI-A14",

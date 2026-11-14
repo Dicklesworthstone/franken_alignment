@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14: cover governed learned restart through live peers
+
+- Add actual resident-command recovery scenarios for a confirmed Message prefix
+  and an already generated, unsubmitted draft. Both use a separate authenticated
+  governor, paid operator promotion, and fresh actor/native/human publication.
+- Assert the original finite numerical draws, campaign custody, effect charges,
+  confirmed prefix, final Message/Finish completion and anchor retention.
+- Pair pre-asset policy/campaign/anchor refusals with the same admitted suffix
+  reaching its original asset boundary; preserve canonical and staging bytes.
+- Cover a post-Fence startup refusal with exact successor-anchor retention, plus
+  an output-path race that preserves the competing custodian's bytes and reports
+  both failures.
+- Record independent source review only. Rust compilation and runtime execution
+  remain unavailable; do not promote qualification or close the broader packets.
+
 ## 2026-11-13: recover governed learned sequences with fresh custody
 
 - Retain the governor returned by the original independently anchored learned

@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: exercise recovered governance through live command peers
+
+Additional authored resident-command regressions cover both supported recovery
+routes: an already confirmed first Message followed by its original remaining
+Message/Finish suffix, and an already generated but unsubmitted second Message.
+Each uses a separate authenticated governor process, explicit paid operator
+promotion, the original retained numerical owner, and fresh actor/native/human
+publication work. The assertions preserve the confirmed prefix, require new
+human authority after promotion, and keep total sampled draws unchanged when
+resuming the completed draft.
+
+A paired startup-refusal regression reaches the original recovery Fence before
+refusing a nonexistent predecessor receipt. It checks exact successor-anchor
+retention, unchanged effect accounting, no reconstruction of source evidence,
+and no second recovery. Its output-path race preserves the independent custodian's file and
+reports both the startup refusal and retention failure.
+
+A command-admission matrix pairs exact full-policy/campaign selections with
+a deliberately inadmissible numerical asset. Missing policy, campaign or anchor
+expectations and a later recipe's conflicting same-generation policy or campaign
+limits must refuse before that asset, before the clock, and without altering
+the original canonical store, unacknowledged staging or retained input anchor.
+Restoring the exact documents must reach the same original asset diagnostic.
+
+These are authored regression specifications, not executed results. The
+execution workspace remains unavailable, and the required RCH gate still has
+not compiled or run this change. No qualification status or Bead is closed.
+
 ## 2026-11-13: recover governed learned sequences through original custody
 
 The learned live-recovery adapter has a sealed governed selection that keeps

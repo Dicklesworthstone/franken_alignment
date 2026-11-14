@@ -1,6 +1,11 @@
 //! Actual learned Messages, a separate authenticated governor process, paid
 //! numerical promotion and fresh native/human review in one resident owner.
 //! Tiny imported fixtures exercise custody and accounting, not model quality.
+#[path = "sequence_governor_recovery.rs"]
+mod governed_recovery;
+#[path = "sequence_governor_admission.rs"]
+mod governed_admission;
+
 use super::super::super::operator as learned_operator;
 use super::*;
 use crate::workflow::actor_service::governor as live_governor;
