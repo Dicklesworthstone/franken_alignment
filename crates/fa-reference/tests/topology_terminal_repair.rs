@@ -6,6 +6,8 @@
 #[path = "support/learned_text_model.rs"]
 #[allow(dead_code)]
 mod numerical;
+#[path = "topology_terminal_repair/recovery_fence.rs"]
+mod recovery_fence;
 
 use fa_reference::Error;
 use fa_reference::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};

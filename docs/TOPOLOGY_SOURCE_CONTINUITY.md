@@ -1,5 +1,38 @@
 # Preserve source-work continuity through topology recovery
 
+## Retain a recovery Fence before source binding
+
+`TopologyCheckpoint::after_recovery_fence` carries an independently retained
+source checkpoint across exactly one acknowledged recovery Fence on the same
+healthy original owner. Its consumer is live learned startup: a missing next
+source document or refused source rebind must not strand an otherwise valid
+history at a newer cut than its independently retained source accounting.
+
+The original profile, canonical store identity, complete history prefix, graph
+and historical availability must agree. The successor must contain only that
+one Fence, retain the same graph and have withdrawn native availability. Source
+documents, spent checks and read bytes, and the last operation remain unchanged;
+the actual acknowledged history and native control/authority floors advance.
+No credential guard is required. Empty suffixes, multiple Fences, intervening
+source work, changed graphs, other events and poisoned owners refuse.
+
+Capture performs no filesystem read, source refresh, numerical replay, clock
+call or journal write. It grants no source freshness or effect authority. The
+caller must export the new checkpoint independently and keep the previous one
+until that export succeeds. Corrected recovery selects the new complete pair,
+then still requires an explicitly newer graph and inventory, original finite
+source allowances, fresh source checks and independent publication approval.
+
+Five native unit regressions and one public regression across plain, raw
+predictive and owned predictive learned recovery are authored for this boundary.
+They include corrected source reinstatement, source/journal absence, stale or
+foreign history, graph/floor mismatches and all five storage barriers. A scoped
+Rust formatter parsed the new local files before the execution workspace
+disconnected. The source was preserved through GitHub after that disconnection;
+compilation and runtime execution remain pending the required RCH qualification.
+
+## Reconnect the original source
+
 Native guarded recovery deliberately withdraws topology coverage and fences old
 roles. Native `bind_withdrawn_topology_source` admits a new custodian with a
 recorded operation floor and new-custodian work counters. To instead carry forward

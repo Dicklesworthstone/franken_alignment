@@ -3,6 +3,7 @@
 mod credential;
 mod credential_recovery;
 mod recovery;
+mod recovery_fence;
 mod reconciled;
 mod abandonment;
 mod terminal;

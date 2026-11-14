@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: preserve source accounting across an exact recovery Fence
+
+The native `TopologyCheckpoint::after_recovery_fence` method advances an
+independently held source checkpoint across exactly one acknowledged Fence on
+the same healthy original owner. This supplies the recovery evidence needed
+when learned live startup fails before binding its next source. It requires the
+complete original prefix, profile, canonical identity, graph and availability;
+other suffixes, lower floors and poisoned owners refuse.
+
+The successor retains the original input documents, source work and last
+operation. Its history, withdrawn availability and floors come from the actual
+acknowledged owner. It performs no I/O, source checks, numerical replay, clock
+calls, journal writes or authority changes. Independent export is still required.
+
+Five native unit regression functions and one public regression across plain,
+raw predictive and owned predictive learned owners are authored. Their controls
+include corrected recovery after a refused source bind, unchanged numerical and
+effect charges, same-counter divergent history, absent original files, later
+source/time/topology work, and all five storage failure barriers. Independent
+source review found no concrete blocker. The three new local Rust files passed
+a scoped formatter parse before the execution workspace disconnected; their
+reviewed source was then preserved through GitHub. One native test file was
+restored from its authored text and needs formatting again. This preservation
+is not a new compiler or test result.
+
+The required RCH runner was unavailable before the disconnection. Compilation,
+runtime execution, Clippy and the canonical gate remain unverified. This does
+not close FA-014/FA-073 or the scoped startup-custody work. The live workflow
+composition is a separate increment.
+
+Contract: `docs/TOPOLOGY_SOURCE_CONTINUITY.md`.
+
 ## 2026-11-14: keep unresolved external effects visible in journal situations
 
 The reference Tower's original journal fold now records Dispatch as an addressed

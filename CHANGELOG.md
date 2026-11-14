@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: retain exact topology custody after a recovery Fence
+
+- Add a native checkpoint successor for exactly one acknowledged recovery Fence
+  on the same healthy owner, without requiring a credential guard.
+- Preserve original source documents, counters and operation floor while
+  advancing the actual history and withdrawn-availability cut.
+- Author five native regression functions and one public three-lane learned
+  regression, including corrected restart, foreign/stale custody, changed work,
+  absent source files and every original storage-failure barrier.
+- Preserve reviewed source through GitHub after the execution workspace
+  disconnected. Compilation, runtime tests and full RCH qualification remain
+  pending; no dependency, journal format or acceptance gate was changed.
+
 ## 2026-11-14: expose unresolved external effects in journal situations
 
 - Keep dispatched, unknown and irrecoverably unknown effects visible as addressed

@@ -20,6 +20,8 @@ mod credential;
 mod reconciled;
 #[path = "tests/terminal.rs"]
 mod terminal;
+#[path = "tests/recovery_fence.rs"]
+mod recovery_fence;
 
 const INVENTORY: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/authority_topology_inventory.json"));
