@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-14: preserve single-request learned startup recovery custody
+
+- Retain the requested independently checked successor on single-request
+  Message and Finish startup failures after the original recovery Fence.
+- Cover request/forecast checks, checkpoint-owner checks, actor-gateway and
+  intake construction, and optional operator startup without replay or effects.
+- Preserve the original failure and report any archive failure alongside it;
+  keep successful final-owner retention and other recovery modes unchanged.
+- Add two regression functions exercising missing predecessors and late listener
+  collisions, retained-anchor retries, fresh review, original charges and finite
+  numerical work through actual Message2 and Finish3 workflows.
+- Record source and content review only; required Rust/RCH execution remains
+  blocked by absent tools, with no qualification or tracker closure.
+
 ## 2026-11-14: resume single remaining governed learned releases
 
 - Accept 1–16 remaining entries only for explicitly governed anchored recovery;

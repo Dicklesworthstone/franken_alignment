@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: retain single-request learned recovery through startup refusal
+
+The single-request create-learned-generated workflow now preserves its requested
+acknowledged successor anchor on post-Fence startup failures, matching the
+resident recovery contract. This applies only to explicitly continuing,
+independently anchored, nonmediated recovery with a selected output path.
+The original owner supplies history_anchor_after before request/forecast checks,
+checkpoint-owner checks, consuming actor-gateway conversion, intake setup and
+optional operator-listener startup.
+
+Every operation in that boundary is read-only for the selected native history.
+Fresh source access, credibility activation, numerical generation, review and
+publication remain in the later request cycle. A startup error exports the
+original checked successor and preserves the triggering diagnostic, appending
+any archive failure. It does not reopen or replay the store, restore spent work
+or retry an effect. Successful startup still exports from the final live owner.
+
+Two authored regressions start from actual confirmed Message1. Both exercise
+failure and corrected recovery for Message2 and Finish3: one uses nonexistent
+predecessors and the other injects a real operator-path collision after static
+preflight. They assert the sole recovery Fence and retained successor with source
+and helper files absent, unchanged original charges and publication, and foreign
+collision-file preservation. Corrected invocations use the retained anchors,
+original native helpers and fresh actor/human sessions to finish the same AA
+stream with its original four draws and precisely accounted recovery epochs.
+
+Production and regression source received independent review; Git blob integrity
+and added-line whitespace checks completed. Rust compilation, runtime tests,
+rustfmt, Clippy and the required RCH gate remain unverified because the required
+tools are absent. This is scoped FA-014 recovery work; broader qualification,
+acceptance and tracker status remain unchanged.
+
 ## 2026-11-14: recover a single remaining governed learned release
 
 Explicitly governed, independently anchored resident recovery now accepts

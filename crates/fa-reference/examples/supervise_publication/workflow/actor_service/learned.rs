@@ -375,22 +375,51 @@ where F: FnMut() -> ElapsedTick {
     let topology::Started { custody: (host, reviewer, observer, identity_observer), source: topology_source,
         output: topology_output } = topology::start(&config, &loaded, continuing,
             &mut control, &deadline, &mut time)?;
+    // The original recovery Fence is already acknowledged. Nonmediated startup
+    // only checks the owner and constructs local transport/grants; credibility
+    // activation, source reads and native work begin inside execute_request.
+    // Keep the exact independently anchored successor for any startup refusal,
+    // including a gateway conversion that consumes the original owner.
+    let startup_anchor = if continuing && loaded.topology.is_none()
+        && loaded.recovery_anchor.is_some() && loaded.anchor_output.is_some()
+    {
+        Some(host.history_anchor_after(loaded.recovery_anchor.as_ref()
+            .expect("anchored recovery retention requires independent history custody"))
+            .map_err(debug)?)
+    } else {
+        None
+    };
+    let retain_startup = |error: String| {
+        if let Some(anchor) = startup_anchor.as_ref() {
+            let path = loaded.anchor_output.as_deref()
+                .expect("startup anchor is captured only for selected retention");
+            if let Err(retention) = anchors::export_acknowledged(anchor, path) {
+                return format!("{error}; acknowledged recovery history retention failed: {retention}; preserve the previous anchor and original store");
+            }
+        }
+        error
+    };
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let mut identity = identity_observer.map(identity::Session::new);
-    prediction::check(&host, prediction.as_ref())?;
+    prediction::check(&host, prediction.as_ref()).map_err(retain_startup)?;
     let message_continuation = request_preflight(&host, &loaded, continuing,
-        finishing, after_message, credibility)?;
-    if let Some(selected) = loaded.checkpoint_on_generation { selected.check_owner(&host)?; }
-    let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
+        finishing, after_message, credibility).map_err(retain_startup)?;
+    if let Some(selected) = loaded.checkpoint_on_generation {
+        selected.check_owner(&host).map_err(retain_startup)?;
+    }
+    let (port, supervisor) = host.into_learned_text_stream_actor_gateway()
+        .map_err(debug).map_err(retain_startup)?;
     let release = if finishing.is_some() { LearnedTextRelease::Finish } else { LearnedTextRelease::Message };
-    let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical)).transpose()?;
+    let mut intake = bound_actor.map(|bound| bound.attach(port.clone(), release, deadline.logical))
+        .transpose().map_err(retain_startup)?;
     if let (Some(intake), Some(settings)) = (&mut intake, precheck) {
         intake.select_precheck(settings, peers);
     }
     let mut driver = FileSupervisedDriver::new(supervisor);
-    topology::attach(&mut driver, topology_source)?;
+    topology::attach(&mut driver, topology_source).map_err(retain_startup)?;
     let mut operator = selected_operator.map(|selected| selected.start(
-        actor.expect("operator actor was validated before startup"), port.clone(), &driver, &deadline)).transpose()?;
+        actor.expect("operator actor was validated before startup"), port.clone(), &driver, &deadline))
+        .transpose().map_err(retain_startup)?;
     let mut wire = ActorWire::new(port);
     let RequestCycle { driver, response, failure, history, process } = execute_request(
         driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,

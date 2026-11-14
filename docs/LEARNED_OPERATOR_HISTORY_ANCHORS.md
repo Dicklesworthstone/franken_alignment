@@ -97,13 +97,16 @@ response and the original effect state, and still performs normal cleanup. It
 does not start another forecast, review, publication or effect retry.
 
 Retention happens at the final workflow or receipt path before driver cleanup.
-Independently anchored, nonmediated resident `serve-learned-generated` recovery
-also retains its acknowledged successor when post-Fence startup fails. This
-includes an invalid request predecessor or a failed optional operator listener,
-with or without a selected governor. The original checked successor is captured
-before these read-only startup steps and exported on their returned error;
-the original failure and any retention failure are both reported. It never
-reopens the store, acquires new source evidence or retries an effect.
+Independently anchored, nonmediated `create-learned-generated` and resident
+`serve-learned-generated` recovery also retain their acknowledged successor when
+post-Fence startup fails. This includes an invalid Message or Finish predecessor
+or a failed optional operator listener, with or without a resident governor.
+The original checked successor is captured before these read-only startup steps
+and exported on their returned error; the original failure and any retention
+failure are both reported. This also covers consuming actor-gateway conversion
+and intake setup. It never reopens the store, acquires new source evidence,
+replays numerical work or retries an effect. Successful startup retains its
+original final-workflow archive after any live effects.
 
 Retention is not a transaction spanning publication and independent custodian
 storage. A process crash, failed retention or an earlier failure in another

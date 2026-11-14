@@ -12,6 +12,8 @@ use std::path::PathBuf;
 
 #[path = "continuation/native.rs"]
 mod native;
+#[path = "continuation/startup.rs"]
+mod startup;
 
 pub(super) fn write(root: &Root) -> PathBuf {
     let path = fixture::write(root, b"allow");
