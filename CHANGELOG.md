@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-14: expose unresolved external effects in journal situations
+
+- Keep dispatched, unknown and irrecoverably unknown effects visible as addressed
+  hard-floor situation items with their original producing-event basis.
+- Require explicit confirmation of the same full attempt identity to retire a
+  liability; permits and generic workflow completion cannot hide it.
+- Preserve incomplete subject/outcome evidence, original caller filtering and
+  undispatched Hold compatibility without changing authority or native receipts.
+- Add eight independent public regressions, including the actual Tower response.
+  Source review is complete; compiler/runtime and RCH qualification are pending.
+
 ## 2026-11-14: correct recovery regression operator selections
 
 - Align both disabled-explanation fixtures with the existing zero-replay,

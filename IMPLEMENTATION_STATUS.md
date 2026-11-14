@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: keep unresolved external effects visible in journal situations
+
+The reference Tower's original journal fold now records Dispatch as an addressed
+UnknownEffects hard floor and retains unknown or irrecoverably unknown outcomes.
+An explicit confirmed, verified_success or confirmed_not_executed outcome can
+retire only the matching complete attempt address and generation, while an
+irrecoverably unknown disposition remains permanent. Permits and
+legacy workflow completion labels cannot erase an already observed external
+liability; legacy undispatched Hold retirement remains compatible.
+
+Missing/conflicting subjects and unrecognized outcome classes preserve
+incompleteness. Each retained item keeps its producing event's control sequence,
+and the existing caller filtering, exact report cut and gap semantics remain.
+This changes the historical read projection, not rights, native reconciliation,
+publication authority or the live durable owner's accounting.
+
+Eight authored public regression functions check exact expected liabilities and
+provenance independently of the shared batch-fold implementation, including
+actual Tower serialization, genuine settlement, abandonment, malformed subjects
+and unrelated attempt/generation outcomes. Independent source review and Git
+content verification are separate from execution: the workspace disconnected
+before compilation, so Rust tests, rustfmt, Clippy and the required RCH gate have
+not run for this increment. No packet, Bead or production qualification is closed.
+
 ## 2026-11-14: admit the intended recovery regression fixtures
 
 Final source review found two operator fixtures selecting zero explanation

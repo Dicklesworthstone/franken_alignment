@@ -166,6 +166,22 @@ later unrelated events advance the snapshot. Their imported generation and
 epoch context come from the host's snapshot basis. Gaps preserve uncertainty and
 downgrade a declared-complete snapshot proof to `Gapped`.
 
+The situation fold keeps every dispatched attempt visible in `unknown_effects`
+until an explicit `confirmed`, `verified_success` or
+`confirmed_not_executed` outcome names the same complete attempt address and
+generation. Dispatch without an outcome, `unknown` and
+`irrecoverably_unknown` retain an addressed hard-floor item. A Permit or a
+generic workflow label such as `resolved`, `refused` or `cancelled` cannot
+settle an observed external liability. Legacy workflow labels can still retire
+an undispatched Hold. Unrecognized outcome classes preserve uncertainty instead
+of being interpreted as successful execution. Missing or conflicting subject
+evidence remains explicitly incomplete. An explicitly irrecoverable outcome
+remains visible even if a later event claims confirmation.
+
+These are historical observations from the imported journal, with the original
+event basis and caller filtering. They do not refund rights, reconcile an
+endpoint, establish current eligibility or supply a publication permit.
+
 Imported predicate trees are reconstructed and checked against their declared
 node count and depth. IDs must be unique and bounded. A nested `Known` predicate
 must match the explanation's generation, policy/model/tokenizer/codec epochs and

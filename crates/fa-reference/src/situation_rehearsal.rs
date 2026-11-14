@@ -29,7 +29,7 @@
 //! }
 //! ```
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::action::consequence::{Consequence, DecisionInputs, Restriction};
 use crate::address_resolver::{
@@ -163,6 +163,7 @@ fn default_report_basis(control_seq: u64) -> Basis {
 #[derive(Default)]
 pub struct SituationReportFold {
     active_items: BTreeMap<String, (SituationItem, u64)>,
+    irrecoverable_effects: BTreeSet<u64>,
     open_frontiers: BTreeMap<u64, u64>,
     gaps: Vec<JournalGapRange>,
     incomplete_subject: bool,
@@ -177,6 +178,143 @@ impl SituationReportFold {
             self.incomplete_subject = true;
         }
         address.cloned()
+    }
+
+    // An outcome's numeric ID alone cannot retire another addressed liability.
+    // Once an attempt has a held or unresolved item, its complete address must
+    // occur in the event. A new effect with several distinct Attempt addresses
+    // has no unambiguous subject and cannot manufacture a Known item.
+    fn effect_subject(&mut self, event: &JournalEvent, attempt_id: u64) -> Option<Address> {
+        let unknown_key = format!("unknown-{attempt_id}");
+        let held_key = format!("hold-{attempt_id}");
+        if let Some((item, _)) = self
+            .active_items
+            .get(&unknown_key)
+            .or_else(|| self.active_items.get(&held_key))
+        {
+            if event.addresses.contains(&item.address) {
+                return Some(item.address.clone());
+            }
+            self.incomplete_subject = true;
+            return None;
+        }
+        let mut addresses = event
+            .addresses
+            .iter()
+            .filter(|address| address.kind == Noun::Attempt);
+        let Some(subject) = addresses.next() else {
+            self.incomplete_subject = true;
+            return None;
+        };
+        if addresses.any(|address| address != subject) {
+            self.incomplete_subject = true;
+            return None;
+        }
+        Some(subject.clone())
+    }
+
+    fn retire_hold(&mut self, event: &JournalEvent, attempt_id: u64) {
+        let key = format!("hold-{attempt_id}");
+        if let Some((held, _)) = self.active_items.get(&key) {
+            // Related addresses can precede the exact subject.
+            if event.addresses.contains(&held.address) {
+                self.active_items.remove(&key);
+            } else {
+                self.incomplete_subject = true;
+            }
+        } else if !event
+            .addresses
+            .iter()
+            .any(|address| address.kind == Noun::Attempt)
+        {
+            self.incomplete_subject = true;
+        }
+    }
+
+    fn record_unresolved_effect(
+        &mut self,
+        event: &JournalEvent,
+        attempt_id: u64,
+        address: Address,
+        description: &str,
+    ) {
+        self.active_items.insert(
+            format!("unknown-{attempt_id}"),
+            (
+                SituationItem {
+                    address,
+                    section: SituationSectionKind::UnknownEffects,
+                    summary: format!("attempt {attempt_id} {description}"),
+                    decision_relevance_voi: 90,
+                    is_hard_floor: true,
+                },
+                event.control_seq,
+            ),
+        );
+    }
+
+    fn apply_outcome(&mut self, event: &JournalEvent, attempt_id: u64, outcome_class: &str) {
+        let Some(subject) = self.effect_subject(event, attempt_id) else {
+            return;
+        };
+        let key = format!("unknown-{attempt_id}");
+        if self.irrecoverable_effects.contains(&attempt_id) {
+            // Explicit abandonment is a permanent uncertainty disposition.
+            // Neither a later success label nor a repeated dispatch erases it.
+            if outcome_class != "irrecoverably_unknown" {
+                self.incomplete_subject = true;
+            }
+            return;
+        }
+        match outcome_class {
+            // Preserve the reference journal's established positive labels,
+            // plus the explicit confirmed no-effect settlement. These are
+            // imported declarations, not receipt authentication by this fold.
+            "confirmed" | "verified_success" | "confirmed_not_executed" => {
+                self.retire_hold(event, attempt_id);
+                self.active_items.remove(&key);
+            }
+            // The legacy "resolved" label retires a held item. Like a refusal
+            // or cancellation, it is not proof about an already dispatched
+            // effect; that liability still needs an explicit confirmed outcome.
+            "resolved" | "refused" | "cancelled" => {
+                self.retire_hold(event, attempt_id);
+                if self.active_items.contains_key(&key) {
+                    self.incomplete_subject = true;
+                }
+            }
+            "unknown" | "outcome_unknown" | "irrecoverably_unknown" => {
+                self.retire_hold(event, attempt_id);
+                if outcome_class == "irrecoverably_unknown" {
+                    self.irrecoverable_effects.insert(attempt_id);
+                    self.record_unresolved_effect(
+                        event,
+                        attempt_id,
+                        subject,
+                        "is irrecoverably unknown; liability remains unresolved",
+                    );
+                } else {
+                    self.record_unresolved_effect(
+                        event,
+                        attempt_id,
+                        subject,
+                        "has an unknown outcome; reconciliation is required",
+                    );
+                }
+            }
+            _ => {
+                // Outcome classes are extensible text in the original event
+                // format. An unfamiliar label must never imply successful
+                // settlement or absence of an external effect.
+                self.incomplete_subject = true;
+                self.record_unresolved_effect(
+                    event,
+                    attempt_id,
+                    subject,
+                    "has an unrecognized outcome; reconciliation is required",
+                );
+            }
+        }
     }
 
     fn apply_event(&mut self, event: &JournalEvent) {
@@ -202,24 +340,32 @@ impl SituationReportFold {
                     ),
                 );
             }
-            JournalEventKind::Permit { attempt_id, .. }
-            | JournalEventKind::Outcome { attempt_id, .. } => {
-                let key = format!("hold-{attempt_id}");
-                if let Some((held, _)) = self.active_items.get(&key) {
-                    // Match the complete held identity anywhere in the event, including generation.
-                    if event.addresses.contains(&held.address) {
-                        self.active_items.remove(&key);
-                    } else {
-                        self.incomplete_subject = true;
-                    }
-                } else if !event
-                    .addresses
-                    .iter()
-                    .any(|address| address.kind == Noun::Attempt)
-                {
-                    self.incomplete_subject = true;
-                }
+            JournalEventKind::Permit { attempt_id, .. } => {
+                self.retire_hold(event, *attempt_id);
             }
+            JournalEventKind::Dispatch { attempt_id, .. } => {
+                let Some(subject) = self.effect_subject(event, *attempt_id) else {
+                    return;
+                };
+                let key = format!("unknown-{attempt_id}");
+                if self.active_items.contains_key(&key) {
+                    // A repeated dispatch cannot replace a recorded outcome
+                    // with a fresher-looking, less specific pending state.
+                    self.incomplete_subject = true;
+                    return;
+                }
+                self.retire_hold(event, *attempt_id);
+                self.record_unresolved_effect(
+                    event,
+                    *attempt_id,
+                    subject,
+                    "was dispatched; its outcome has not been observed",
+                );
+            }
+            JournalEventKind::Outcome {
+                attempt_id,
+                outcome_class,
+            } => self.apply_outcome(event, *attempt_id, outcome_class),
             JournalEventKind::Reset {
                 checkpoint_id,
                 incident_counter,
