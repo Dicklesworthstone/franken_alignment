@@ -9,6 +9,36 @@ mod fixture;
 use fixture::*;
 
 #[test]
+fn admission_disclosure_cannot_follow_an_equal_scope_host_replacement() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let mut host = owner(&root);
+    let mut replacement = owner(&replacement_root);
+    host.submit_request(host.revision(), 901, spec(b"ok"), snapshot()).unwrap();
+    replacement.submit_request(replacement.revision(), 901, spec(b"blocked"), snapshot()).unwrap();
+    assert_eq!(host.revision(), replacement.revision());
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.explanation_port_with_numerical_budget(4, 128, 512).unwrap();
+    let original = known(port.explain_request(901));
+    assert_eq!(original.initial_state(), ActionState::Reviewing);
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = (grant.remaining_queries(), grant.remaining_numerical_replay_events());
+    unknown(port.explain_request(901));
+    unknown(port.clone().explain_request(901));
+    assert_eq!((grant.remaining_queries(), grant.remaining_numerical_replay_events()), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    // A newly selected disclosure reads the live replacement's actual denial.
+    let (fresh, _fresh_grant) = supervisor.explanation_port(1).unwrap();
+    assert_eq!(known(fresh.explain_request(901)).initial_state(), ActionState::Denied);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    assert_eq!(known(port.explain_request(901)), original);
+    drop(displaced);
+}
+
+#[test]
 fn admitted_and_denied_requests_preserve_original_predicates_without_live_reads() {
     for (payload, truth, state) in [
         (b"ok".as_slice(), Truth::Satisfied, ActionState::Reviewing),

@@ -92,6 +92,83 @@ fn uncertain(root: &Root, executed: bool) -> FileOversight {
 }
 
 #[test]
+fn unused_abandonment_grant_cannot_follow_an_equal_cut_host_replacement() {
+    let root = Root::new();
+    let host = uncertain(&root, false);
+    let before = host.inspect();
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor
+        .abandonment_port_with_numerical_budget(
+            3, 1, MAX_ABANDONMENT_REPLAY_EVENTS, MAX_ABANDONMENT_REPLAY_EVENTS,
+        )
+        .unwrap();
+    let input = plan(port.next(701, 4101)).request().unwrap();
+
+    let other = Root::new();
+    let replacement = uncertain(&other, false);
+    assert_eq!(replacement.inspect(), before);
+    // The original issuer is still alive, but its gateway now holds another
+    // independently bootstrapped history with equal public coordinates.
+    let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+    let files = other.files();
+    unknown(port.next(701, 4102));
+    unknown(port.clone().abandon(input));
+    assert_eq!(grant.remaining_queries(), 2);
+    assert_eq!(grant.remaining_operations(), 1);
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(MAX_ABANDONMENT_REPLAY_EVENTS));
+    assert!(supervisor.owner.borrow().snapshot.is_some());
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(other.files(), files);
+    assert_eq!(original.inspect(), before);
+
+    let (fresh, _custody) = supervisor.abandonment_port(1, 1, MAX_ABANDONMENT_REPLAY_EVENTS).unwrap();
+    let selected = plan(fresh.next(701, 4102)).request().unwrap();
+    assert_eq!(receipt(fresh.abandon(selected)).charged_units(), 8);
+    assert_eq!(supervisor.host().unwrap().inspect().control.ledger.charged, 8);
+}
+
+#[test]
+fn cached_abandonment_receipt_does_not_follow_replaced_or_reopened_native_owners() {
+    for reopen in [false, true] {
+        let root = Root::new();
+        let (_, mut supervisor) = uncertain(&root, false).into_actor_gateway();
+        let (port, grant) = supervisor.abandonment_port(2, 1, MAX_ABANDONMENT_REPLAY_EVENTS).unwrap();
+        let input = plan(port.next(701, 4201)).request().unwrap();
+        let acknowledged = receipt(port.abandon(input));
+        let after = supervisor.host().unwrap().inspect();
+        supervisor.set_snapshot(after.revision, Some(snapshot())).unwrap();
+        let original_files = root.files();
+        assert_eq!(receipt(port.clone().abandon(input)), acknowledged);
+        assert_eq!(root.files(), original_files);
+        assert!(supervisor.owner.borrow().snapshot.is_some());
+
+        let other = Root::new();
+        let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), uncertain(&other, false));
+        let retained_original = if reopen {
+            drop(original);
+            let (reopened, _) = FileOversight::open(root.store(), profile()).unwrap();
+            *supervisor.host_mut().unwrap() = reopened;
+            None
+        } else {
+            Some(original)
+        };
+        let before = supervisor.host().unwrap().inspect();
+        supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+        let files = if reopen { root.files() } else { other.files() };
+        unknown(port.clone().abandon(input));
+        unknown(port.next(701, 4202));
+        assert_eq!(grant.remaining_queries(), 1);
+        assert_eq!(grant.remaining_operations(), 0);
+        assert!(supervisor.owner.borrow().snapshot.is_some());
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(supervisor.host().unwrap().inspect().control.ledger.charged, 8);
+        assert_eq!(if reopen { root.files() } else { other.files() }, files);
+        drop(retained_original);
+    }
+}
+
+#[test]
 fn real_executed_and_unexecuted_uncertainty_remain_charged_after_explicit_abandonment() {
     for executed in [false, true] {
         let root = Root::new();

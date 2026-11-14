@@ -6,6 +6,7 @@ use super::{
     UnknownReason,
 };
 use crate::Error;
+use crate::action::Scope;
 use crate::action::consequence::delivery::persistent::observed::{
     FileOversight,
     replay::situation::{
@@ -182,6 +183,8 @@ impl fmt::Debug for FileSupervisorInspectionGrant {
 #[derive(Clone)]
 pub struct FileSupervisorInspectionPort {
     owner: Weak<OwnerRef<FileOversight>>,
+    issuer: Weak<()>,
+    scope: Scope,
     grant: Weak<Grant>,
 }
 
@@ -196,7 +199,8 @@ impl FileActorSupervisor<FileOversight> {
     /// submission and policy disclosure. No source/time read, admission snapshot
     /// consumption, immutable situation capture or journal write occurs here.
     /// The grant follows this owner across later acknowledged transitions; it
-    /// cannot follow a reopened owner or renew itself through a port clone.
+    /// cannot follow a reopened or replaced native host, even through the same
+    /// mutable gateway slot, or renew itself through a port clone.
     pub fn inspection_port(
         &self,
         queries: usize,
@@ -221,6 +225,8 @@ impl FileActorSupervisor<FileOversight> {
         Ok((
             FileSupervisorInspectionPort {
                 owner: Rc::downgrade(&self.owner),
+                issuer: owner.host.journal_tail_identity(),
+                scope: owner.host.actor_explanation_scope(),
                 grant: Rc::downgrade(&grant),
             },
             FileSupervisorInspectionGrant { grant },
@@ -230,7 +236,7 @@ impl FileActorSupervisor<FileOversight> {
 
 impl FileSupervisorInspectionPort {
     pub(crate) fn belongs_to(&self, actor: &FileActorPort<FileOversight>) -> bool {
-        Weak::ptr_eq(&self.owner, &actor.owner)
+        Weak::ptr_eq(&self.owner, &actor.owner) && self.scope == actor.scope
     }
 
     /// Read the first bounded page of a fresh original acknowledged situation.
@@ -279,7 +285,10 @@ impl FileSupervisorInspectionPort {
             *capture = None;
             return Ok(unknown());
         };
-        if owner.host.storage_failure().is_some() {
+        if owner.host.storage_failure().is_some()
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
+            || owner.host.actor_explanation_scope() != self.scope
+        {
             *capture = None;
             return Ok(unknown());
         }

@@ -253,6 +253,112 @@ fn cached_results_do_not_adopt_a_replacement_grant_or_reopened_owner() {
 }
 
 #[test]
+fn equal_scope_host_replacement_cannot_adopt_an_unused_resolution_grant() {
+    let root = Root::new();
+    let host = dispatched(&root, true);
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.resolution_port(3, 1, MAX_RESOLUTION_REPLAY_EVENTS).unwrap();
+    let input = plan(port.next(701, 151)).request().unwrap();
+
+    // Two independent real congresses and human approvals produce numerically
+    // equal predecessors. Equality of the public basis cannot transfer custody.
+    let replacement_root = Root::new();
+    let replacement = dispatched(&replacement_root, true);
+    let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let (fresh, fresh_grant) =
+        supervisor.resolution_port(2, 1, MAX_RESOLUTION_REPLAY_EVENTS).unwrap();
+    let fresh_input = plan(fresh.next(701, 151)).request().unwrap();
+    assert_eq!(fresh_input, input);
+    let before = supervisor.host().unwrap().inspect();
+    supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+    let original_files = root.files();
+    let replacement_files = replacement_root.files();
+
+    // The original native host remains alive outside its mutable gateway slot.
+    // These calls must refuse before spending work or touching either journal.
+    assert!(port.issuer.upgrade().is_some());
+    unknown(port.clone().next(701, 151));
+    unknown(port.resolve(input));
+    assert_eq!(grant.remaining_queries(), 2);
+    assert_eq!(grant.remaining_operations(), 1);
+    assert!(supervisor.owner.borrow().snapshot.is_some());
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(root.files(), original_files);
+    assert_eq!(replacement_root.files(), replacement_files);
+
+    // Only an independently selected grant can settle the replacement's own
+    // retained receipt. It still performs no second publication or refund.
+    let resolved = receipt(fresh.resolve(fresh_input));
+    assert_eq!(resolved.stage(), ActionState::Confirmed);
+    assert_eq!(fresh_grant.remaining_operations(), 0);
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 1);
+    assert_eq!(supervisor.host().unwrap().inspect().control.ledger.charged, 8);
+    unknown(port.resolve(input));
+
+    // Returning the unchanged original host preserves its original grant; the
+    // fix does not turn an unrelated allocation check into a stale-basis rule.
+    let _replacement = std::mem::replace(&mut *supervisor.host_mut().unwrap(), original);
+    let original_receipt = receipt(port.resolve(input));
+    assert_eq!(original_receipt.stage(), ActionState::Confirmed);
+    assert_eq!(grant.remaining_operations(), 0);
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 1);
+    assert_eq!(supervisor.host().unwrap().inspect().control.ledger.charged, 8);
+}
+
+#[test]
+fn replaced_host_cannot_replay_the_original_cached_acknowledgment() {
+    let root = Root::new();
+    let host = dispatched(&root, false);
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.resolution_port(3, 2, MAX_RESOLUTION_REPLAY_EVENTS).unwrap();
+    let input = plan(port.next(701, 161)).request().unwrap();
+    let unresolved = receipt(port.resolve(input));
+    assert_eq!(unresolved.stage(), ActionState::Unknown);
+    assert_eq!(unresolved.outcome(), Reconciliation::AwaitingResolution);
+    {
+        let mut host = supervisor.host_mut().unwrap();
+        let revision = host.revision();
+        host.observe_time(revision, ElapsedTick(2)).unwrap();
+    }
+    let original_cut = supervisor.host().unwrap().inspect();
+    let original_files = root.files();
+    assert_eq!(receipt(port.clone().resolve(input)), unresolved);
+    assert_eq!(supervisor.host().unwrap().inspect(), original_cut);
+    assert_eq!(root.files(), original_files);
+
+    let replacement_root = Root::new();
+    let replacement = dispatched(&replacement_root, true);
+    let _original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+    let replacement_files = replacement_root.files();
+    assert!(port.issuer.upgrade().is_some());
+    unknown(port.clone().resolve(input));
+    unknown(port.next(701, 162));
+    assert_eq!(grant.remaining_queries(), 2);
+    assert_eq!(grant.remaining_operations(), 1);
+    assert!(supervisor.owner.borrow().snapshot.is_some());
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(root.files(), original_files);
+    assert_eq!(replacement_root.files(), replacement_files);
+
+    let (fresh, fresh_grant) =
+        supervisor.resolution_port(1, 1, MAX_RESOLUTION_REPLAY_EVENTS).unwrap();
+    let current = plan(fresh.next(701, 162));
+    assert_eq!(current.stage(), ActionState::Dispatching);
+    let resolved = receipt(fresh.resolve(current.request().unwrap()));
+    assert_eq!(resolved.stage(), ActionState::Confirmed);
+    assert!(matches!(resolved.outcome(), Reconciliation::Resolved(
+        EndpointOutcome::Executed { .. }
+    )));
+    assert_eq!(fresh_grant.remaining_operations(), 0);
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 1);
+    assert_eq!(supervisor.host().unwrap().inspect().control.ledger.charged, 8);
+    unknown(port.resolve(input));
+    assert_eq!(grant.remaining_operations(), 1);
+}
+
+#[test]
 fn a_reopened_historical_tick_cannot_replace_a_new_supervisor_time_observation() {
     let root = Root::new();
     let host = dispatched(&root, true);

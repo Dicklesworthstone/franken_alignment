@@ -105,6 +105,7 @@ impl FileActorSupervisor<FileOversight> {
                 owner: Rc::downgrade(&self.owner),
                 grant: Rc::downgrade(&grant),
                 scope: owner.host.actor_explanation_scope(),
+                issuer: owner.host.journal_tail_identity(),
             },
             FileSupervisorCancellationGrant { grant },
         ))
@@ -133,7 +134,10 @@ impl FileSupervisorCancellationPort {
         let Ok(owner) = owner.try_borrow() else {
             return Ok(unknown());
         };
-        if owner.host.storage_failure().is_some() {
+        if owner.host.storage_failure().is_some()
+            || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
+        {
             return Ok(unknown());
         }
         let remaining = grant.queries.get();
@@ -193,6 +197,7 @@ impl FileSupervisorCancellationPort {
         };
         if owner.host.storage_failure().is_some()
             || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
         {
             return Ok(unknown());
         }

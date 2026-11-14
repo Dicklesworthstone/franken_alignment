@@ -226,6 +226,7 @@ pub struct FileSupervisorPolicyReplayPort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     scope: Scope,
+    issuer: Weak<()>,
 }
 
 impl fmt::Debug for FileSupervisorPolicyReplayPort {
@@ -313,6 +314,7 @@ impl FileActorSupervisor<FileOversight> {
                 owner: Rc::downgrade(&self.owner),
                 grant: Rc::downgrade(&grant),
                 scope: owner.host.actor_explanation_scope(),
+                issuer: owner.host.journal_tail_identity(),
             },
             FileSupervisorPolicyReplayGrant { grant },
         ))
@@ -364,6 +366,7 @@ impl FileSupervisorPolicyReplayPort {
         };
         if owner.host.storage_failure().is_some()
             || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
         {
             return unknown();
         }

@@ -69,6 +69,35 @@ fn unknown(result: FileHoldDiagnosisResult) {
 }
 
 #[test]
+fn hold_diagnosis_cannot_transfer_to_an_equal_scope_owner_in_the_same_gateway() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let mut host = owner(&root);
+    let mut replacement = owner(&replacement_root);
+    host.submit_request(host.revision(), 701, spec(b"ok"), snapshot()).unwrap();
+    replacement.submit_request(replacement.revision(), 701, spec(b"blocked"), snapshot()).unwrap();
+    assert_eq!(host.revision(), replacement.revision());
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.hold_diagnosis_port(4).unwrap();
+    let original = known(port.why_held(701));
+    assert_eq!(original.stage(), ActionState::Reviewing);
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = grant.remaining_queries();
+    unknown(port.why_held(701));
+    unknown(port.clone().why_held(701));
+    assert_eq!(grant.remaining_queries(), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    let (fresh, _fresh_grant) = supervisor.hold_diagnosis_port(1).unwrap();
+    assert_eq!(known(fresh.why_held(701)).stage(), ActionState::Denied);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    assert_eq!(known(port.why_held(701)), original);
+    drop(displaced);
+}
+
+#[test]
 fn live_cut_preserves_source_work_and_an_unused_real_admission_snapshot() {
     let root = Root::new();
     let (host, source) = source_owner(&root);

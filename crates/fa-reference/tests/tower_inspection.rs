@@ -428,6 +428,60 @@ fn foreign_owner_replacement_withdraws_previous_inspection_without_spending_eith
 }
 
 #[test]
+fn mutable_host_replacement_requires_new_custody_and_matching_original_mount_scope() {
+    for foreign_tenant in [false, true] {
+        let root = Directory::new();
+        let (actor, mut supervisor, _reviewer, proposal) = create(&root);
+        let mut adapter = tower(actor.clone());
+        let (port, grant) = supervisor.inspection_port(2).unwrap();
+        adapter.set_inspection(Some(port)).unwrap();
+        observe(&mut supervisor);
+        actor.submit(701, &proposal).unwrap();
+        assert_eq!(known(&inspect(&mut adapter)).summary().attempts, 1);
+
+        let replacement_root = Directory::new();
+        let mut selected = profile();
+        if foreign_tenant {
+            selected.delivery.scope.tenant += 1;
+        }
+        let (mut replacement, _reviewer) =
+            FileOversight::create(replacement_root.store(), selected).unwrap();
+        replacement.observe_time(replacement.revision(), ElapsedTick(1)).unwrap();
+        let _original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+        let before = supervisor.host().unwrap().inspect();
+        let original_files = files(&root);
+        let replacement_files = files(&replacement_root);
+
+        // A stale route cannot disclose even an equal-scope replacement, and
+        // its old native owner is still alive outside the mutable gateway slot.
+        unknown(&inspect(&mut adapter));
+        assert_eq!(grant.remaining_queries(), 1);
+
+        let (fresh, fresh_grant) = supervisor.inspection_port(2).unwrap();
+        if foreign_tenant {
+            assert_eq!(
+                adapter.set_inspection(Some(fresh)),
+                Err(fa_reference::tower::TowerInstallError::SnapshotMismatch)
+            );
+            refused(&inspect(&mut adapter), ReasonCode::CapabilityUnsupported);
+            assert_eq!(fresh_grant.remaining_queries(), 2);
+        } else {
+            adapter.set_inspection(Some(fresh)).unwrap();
+            let observation = inspect(&mut adapter);
+            let current = known(&observation);
+            assert_eq!(current.summary().attempts, 0);
+            assert_eq!(current.basis().journal_revision, before.revision);
+            assert!(current.enumeration_complete());
+            assert_eq!(fresh_grant.remaining_queries(), 1);
+        }
+        assert_eq!(grant.remaining_queries(), 1);
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(files(&root), original_files);
+        assert_eq!(files(&replacement_root), replacement_files);
+    }
+}
+
+#[test]
 fn borrow_fault_owner_loss_and_reopen_never_fall_back_to_a_cached_or_disk_situation() {
     for faulted in [false, true] {
         let root = Directory::new();

@@ -11,6 +11,35 @@ mod fixture;
 use fixture::*;
 
 #[test]
+fn completed_review_disclosure_requires_the_original_host_not_matching_coordinates() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let mut host = owner(&root);
+    let mut replacement = owner(&replacement_root);
+    completed(&mut host, 901, 101);
+    completed(&mut replacement, 901, 101);
+    assert_eq!(host.inspect(), replacement.inspect());
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.review_explanation_port_with_numerical_budget(4, 128, 512).unwrap();
+    let original = known(port.explain_review(901, 101));
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = (grant.remaining_queries(), grant.remaining_numerical_replay_events());
+    unknown(port.explain_review(901, 101));
+    assert!(matches!(port.clone().explain_review_completion(901, 101),
+        Ok(Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable })));
+    assert_eq!((grant.remaining_queries(), grant.remaining_numerical_replay_events()), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    let (fresh, _fresh_grant) = supervisor.review_explanation_port(1).unwrap();
+    assert_eq!(known(fresh.explain_review(901, 101)), original);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    assert_eq!(known(port.explain_review(901, 101)), original);
+    drop(displaced);
+}
+
+#[test]
 fn original_completed_review_preserves_exact_trace_and_three_native_cuts_without_live_reads() {
     let root = Root::new();
     let (mut host, source) = source_owner(&root);

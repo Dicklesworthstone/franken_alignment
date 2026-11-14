@@ -61,6 +61,7 @@ impl FileActorSupervisor<FileOversight> {
                 owner: Rc::downgrade(&self.owner),
                 grant: Rc::downgrade(&grant),
                 scope: owner.host.actor_explanation_scope(),
+                issuer: owner.host.journal_tail_identity(),
             },
             FileSupervisorFenceGrant { grant },
         ))
@@ -94,6 +95,7 @@ impl FileSupervisorFencePort {
         };
         if owner.host.storage_failure().is_some()
             || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
         {
             return Ok(unknown());
         }

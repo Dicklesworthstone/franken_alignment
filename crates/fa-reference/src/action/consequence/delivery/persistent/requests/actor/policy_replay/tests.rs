@@ -37,6 +37,37 @@ fn assert_unknown(result: FilePolicyReplayResult) {
 }
 
 #[test]
+fn replacing_the_gateway_host_cannot_reuse_an_old_campaign_or_its_allowance() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let mut host = owner(&root);
+    let mut replacement = owner(&replacement_root);
+    host.submit_request(host.revision(), 901, spec(b"ok"), snapshot()).unwrap();
+    replacement.submit_request(replacement.revision(), 901, spec(b"blocked"), snapshot()).unwrap();
+    assert_eq!(host.revision(), replacement.revision());
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.policy_replay_port(3, limits()).unwrap();
+    let original = known(port.replay_candidate_policy(1, 1, candidate()));
+    assert!(original.report().newly_reviewable().is_empty());
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = (grant.remaining_queries(), grant.retained_bytes());
+    assert_unknown(port.replay_candidate_policy(1, 1, candidate()));
+    assert_unknown(port.clone().replay_candidate_policy(2, 1, candidate()));
+    assert_eq!((grant.remaining_queries(), grant.retained_bytes()), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    let (fresh, _fresh_grant) = supervisor.policy_replay_port(1, limits()).unwrap();
+    let fresh = known(fresh.replay_candidate_policy(1, 1, candidate()));
+    assert_eq!(fresh.report().newly_reviewable(), [ReplayCaseId::Proposal(1)]);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    assert_eq!(known(port.replay_candidate_policy(1, 1, candidate())), original);
+    assert_eq!((grant.remaining_queries(), grant.retained_bytes()), remaining);
+    drop(displaced);
+}
+
+#[test]
 fn original_denials_and_admissions_are_compared_without_source_or_snapshot_spending() {
     let root = Root::new();
     let (mut host, source) = source_owner(&root);

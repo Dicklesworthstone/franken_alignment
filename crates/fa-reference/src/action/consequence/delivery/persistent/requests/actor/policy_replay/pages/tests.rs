@@ -40,6 +40,40 @@ fn known(result: FilePolicyReplayPageResult) -> FilePolicyReplayPage {
 }
 
 #[test]
+fn cached_headers_and_page_cursors_cannot_follow_a_replaced_host() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let (mut supervisor, source) = corpus(&root);
+    let (mut replacement, replacement_source) = source_owner(&replacement_root);
+    replacement.submit_request(replacement.revision(), 901, spec(b"ok"), snapshot()).unwrap();
+    replacement.submit_request(replacement.revision(), 902, spec(b"blocked"), snapshot()).unwrap();
+    assert_eq!(supervisor.host().unwrap().inspect(), replacement.inspect());
+    let (port, grant) = supervisor.policy_replay_port_with_pages(2, limits(), 4).unwrap();
+    let header = known(port.replay_candidate_policy_page(9, 1, candidate()));
+    let cursor = header.continuation().unwrap();
+    let page = known(port.continue_policy_replay(9, cursor));
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = (grant.remaining_queries(), grant.remaining_pages(),
+        grant.retained_bytes(), grant.retained_page_bytes());
+    assert_eq!(port.replay_candidate_policy_page(9, 1, candidate()), unknown());
+    assert_eq!(port.replay_candidate_policy_page(10, 1, candidate()), unknown());
+    assert_eq!(port.clone().continue_policy_replay(9, cursor), unknown());
+    assert_eq!((grant.remaining_queries(), grant.remaining_pages(),
+        grant.retained_bytes(), grant.retained_page_bytes()), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    assert_eq!(known(port.replay_candidate_policy_page(9, 1, candidate())), header);
+    assert_eq!(known(port.continue_policy_replay(9, cursor)), page);
+    assert_eq!((grant.remaining_queries(), grant.remaining_pages(),
+        grant.retained_bytes(), grant.retained_page_bytes()), remaining);
+    assert_eq!(source.status().read_attempts, replacement_source.status().read_attempts);
+    drop(displaced);
+}
+
+#[test]
 fn page_handles_share_one_original_report_and_once_computed_complete_summary() {
     let root = Root::new();
     let (supervisor, source) = corpus(&root);

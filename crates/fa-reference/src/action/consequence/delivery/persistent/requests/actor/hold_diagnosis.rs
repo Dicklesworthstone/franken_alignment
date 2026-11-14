@@ -174,6 +174,7 @@ pub struct FileSupervisorHoldDiagnosisPort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     scope: Scope,
+    issuer: Weak<()>,
 }
 
 impl fmt::Debug for FileSupervisorHoldDiagnosisPort {
@@ -217,6 +218,7 @@ impl FileActorSupervisor<FileOversight> {
                 owner: Rc::downgrade(&self.owner),
                 grant: Rc::downgrade(&grant),
                 scope: owner.host.actor_explanation_scope(),
+                issuer: owner.host.journal_tail_identity(),
             },
             FileSupervisorHoldDiagnosisGrant { grant },
         ))
@@ -255,7 +257,9 @@ impl FileSupervisorHoldDiagnosisPort {
         let Ok(owner) = owner.try_borrow() else {
             return Ok(unknown());
         };
-        if owner.host.storage_failure().is_some() {
+        if owner.host.storage_failure().is_some()
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
+        {
             return Ok(unknown());
         }
         let remaining = grant.remaining.get();

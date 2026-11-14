@@ -302,6 +302,75 @@ fn owner_loss_clears_pending_pages_without_retaining_file_authority_or_reviving_
 }
 
 #[test]
+fn native_host_replacement_withdraws_old_capture_and_fresh_disclosure() {
+    for foreign_tenant in [false, true] {
+        let root = Root::new();
+        let (mut host, _reviewer) = create(&root);
+        populate(&mut host, 17);
+        let (actor, mut supervisor) = host.into_actor_gateway();
+        let (port, grant) = supervisor.inspection_port(5).unwrap();
+        let first = known(port.situation());
+        let original_cursor = first.continuation().unwrap();
+        {
+            let mut host = supervisor.host_mut().unwrap();
+            let revision = host.revision();
+            host.observe_time(revision, ElapsedTick(2)).unwrap();
+        }
+        // An actual transition of the same native owner keeps the old cut
+        // usable; a new allocation will not, even at equal numeric scope.
+        let tail = known(port.situation_page(Some(original_cursor)));
+        assert_eq!(tail.basis(), first.basis());
+        assert!(tail.enumeration_complete());
+        let current = known(port.situation());
+        let cursor = current.continuation().unwrap();
+        assert!(current.basis().journal_revision > first.basis().journal_revision);
+
+        let replacement_root = Root::new();
+        let mut selected = profile();
+        if foreign_tenant {
+            selected.delivery.scope.tenant += 1;
+        }
+        let replacement_scope = selected.delivery.scope;
+        let (mut replacement, _reviewer) =
+            FileOversight::create(replacement_root.store(), selected).unwrap();
+        replacement.observe_time(replacement.revision(), ElapsedTick(3)).unwrap();
+        let _original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+        let before = supervisor.host().unwrap().inspect();
+        supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+        let original_files = root.files();
+        let replacement_files = replacement_root.files();
+
+        assert!(port.issuer.upgrade().is_some());
+        unknown(port.clone().situation_page(Some(cursor)));
+        assert!(grant.grant.capture.borrow().is_none());
+        assert!(cursor.page.upgrade().is_none());
+        unknown(port.situation());
+        assert_eq!(grant.remaining_queries(), 2);
+        assert!(supervisor.owner.borrow().snapshot.is_some());
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(root.files(), original_files);
+        assert_eq!(replacement_root.files(), replacement_files);
+
+        // The independently retained replacement custodian can observe its
+        // own real state; neither a refusal nor an empty journal is fabricated.
+        let (fresh, fresh_grant) = supervisor.inspection_port(1).unwrap();
+        assert_eq!(fresh.belongs_to(&actor), !foreign_tenant);
+        let Ok(Knowledge::Known { value, basis }) = fresh.situation() else {
+            panic!("expected independently granted replacement situation");
+        };
+        assert_eq!(basis.scope, replacement_scope);
+        assert_eq!(value.basis(), basis);
+        assert_eq!(value.summary().attempts, 0);
+        assert!(value.enumeration_complete());
+        assert_eq!(fresh_grant.remaining_queries(), 0);
+        unknown(port.situation_page(Some(cursor)));
+        assert_eq!(grant.remaining_queries(), 2);
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(replacement_root.files(), replacement_files);
+    }
+}
+
+#[test]
 fn conflicting_owner_borrow_invalidates_pending_capture_without_spending() {
     let root = Root::new();
     let (mut host, _reviewer) = create(&root);

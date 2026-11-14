@@ -227,6 +227,7 @@ impl FileSupervisorPolicyReplayPort {
         };
         if owner.host.storage_failure().is_some()
             || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
         {
             return unknown();
         }
@@ -290,6 +291,7 @@ impl FileSupervisorPolicyReplayPort {
         };
         if owner.host.storage_failure().is_some()
             || owner.host.actor_explanation_scope() != self.scope
+            || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
         {
             return unknown();
         }

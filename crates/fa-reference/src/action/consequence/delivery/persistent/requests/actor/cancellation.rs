@@ -283,6 +283,7 @@ pub struct FileSupervisorCancellationPort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     scope: Scope,
+    issuer: Weak<()>,
 }
 
 impl fmt::Debug for FileSupervisorCancellationPort {

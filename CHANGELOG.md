@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14: preserve original-host control and disclosure custody
+
+- Bind legacy supervisor control and disclosure ports, plus ordinary/learned
+  precheck, to the private original native-host identity rather than only the
+  replaceable gateway slot or matching public coordinates.
+- Refuse replacement-host reads, numerical work, cached acknowledgments and
+  mutations before spending allowances or changing the native ledger.
+- Protect policy-replay pages and inspection continuations; reject a fresh
+  foreign-scope inspection grant at the original Tower mount.
+- Add sixteen native/public regressions pairing real allowed behavior with
+  replacement, reopening, cross-tenant and cached-result isolation boundaries.
+- Preserve all wire/journal formats and existing same-host retry behavior.
+  Source review and Rust grammar checks are complete; Rust/RCH execution,
+  formatting, Clippy and full qualification remain pending.
+
 ## 2026-11-14: expose paid narrowing in live learned and generated services
 
 - Admit explicit cumulative numerical narrowing allowances in operator profiles

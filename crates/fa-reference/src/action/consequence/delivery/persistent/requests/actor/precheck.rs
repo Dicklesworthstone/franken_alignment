@@ -110,6 +110,7 @@ impl fmt::Debug for FilePrecheckDisclosure {
 pub struct FileActorPrecheckPort {
     owner: Weak<OwnerRef<FileOversight>>,
     disclosure: Weak<Disclosure>,
+    issuer: Weak<()>,
 }
 impl fmt::Debug for FileActorPrecheckPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -150,7 +151,8 @@ impl FileActorSupervisor<FileOversight> {
         };
         let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache,
             learned: None });
-        let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner), disclosure: Rc::downgrade(&grant) };
+        let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner),
+            disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity() };
         Ok((port, FilePrecheckDisclosure { disclosure: grant }))
     }
 }
@@ -234,6 +236,7 @@ impl FileActorPrecheckPort {
         };
         let projection = &grant.projection;
         if state.host.storage_failure().is_some()
+            || !Weak::ptr_eq(&self.issuer, &state.host.journal_tail_identity())
             || state.host.revision() != projection.revision
             || state.host.capture_file_policy_state().is_err()
         {

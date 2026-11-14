@@ -272,6 +272,7 @@ pub struct FileSupervisorAbandonmentPort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     scope: Scope,
+    issuer: Weak<()>,
 }
 
 impl fmt::Debug for FileSupervisorAbandonmentPort {

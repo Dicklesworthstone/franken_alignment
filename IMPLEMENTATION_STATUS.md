@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: bind live operator grants to their original native host
+
+Older inspection, explanation, hold-diagnosis, review-explanation, policy-replay,
+resolution, cancellation, abandonment, admission-Fence and exact-precheck ports
+now retain the original native issuer identity. Previously, privileged host
+replacement inside a surviving gateway could leave those grants attached to a
+different history with equal public coordinates. Inspection could also disclose
+a replacement tenant through the old mount. Matching scope, revision, request
+or policy values no longer substitute for native custody.
+
+Each affected read and mutation rejects the replacement before spending queries,
+numerical reservations or operations, returning cached results or entering the
+native transition. Policy replay protects both whole campaigns and retained
+page/header retries. Inspection clears its pending capture and checks actual
+scope when a newly provisioned grant is mounted. The ordinary and selected
+learned precheck constructors bind the same issuer before evaluation/discovery.
+Same-host advancement, exact retries and freshly selected compatible replacement
+grants retain their original behavior. Existing journal formats and ledgers are
+unchanged; unknown liabilities remain charged.
+
+Sixteen new native and public Tower regression functions pair actual original
+behavior with equal-cut replacement, cross-tenant mounting, cached acknowledgments,
+retained pages and reopened-journal negatives. They assert real state, journal,
+snapshot and work-accounting preservation. Independent source/API review and
+Rust grammar parsing completed; these are not runtime evidence. The canonical
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` attempt
+exits 127 because `rch` is absent, and no Rust toolchain is installed. Compilation,
+runtime tests, rustfmt, Clippy and full qualification remain pending. No Bead or
+roadmap acceptance is closed. Contract: `docs/TOWER_PUBLICATION.md`.
+
 ## 2026-11-14: expose paid narrowing in live learned and generated services
 
 The authenticated operator profile now accepts an optional positive cumulative

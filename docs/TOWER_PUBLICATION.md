@@ -52,6 +52,31 @@ the original automatic and human keys, and invokes dispatch and publication.
 The Tower retains a weak actor port, so dropping the supervisor releases the
 original authority lock and makes further observations explicitly unavailable.
 
+### Native owner identity survives only its original host
+
+Supervisor inspection, admission and completed-review explanation, hold
+diagnosis, policy replay, receipt reconciliation, request cancellation, Unknown
+abandonment and admission Fence bind the original native host's private
+incarnation identity as well as their gateway and scope. Exact-policy precheck
+and capability discovery use that same native identity boundary, including the
+selected learned-release disclosure. The existing journal-tail, request-history,
+narrowing, convening and promotion grants retain their original identity checks.
+
+Privileged `host_mut` access can replace the host inside a surviving gateway.
+An equal tenant/run, journal revision, request ID, policy epoch or acknowledged
+receipt does not transfer the old grants into that replacement. Old ports return
+`Unknown(ControllerUnavailable)` before lookup, cached-result disclosure,
+numerical replay, operation expenditure or native mutation. Inspection also
+withdraws its pending capture. Newly selected inspection custody records the
+replacement's actual scope and cannot mount under a foreign original actor.
+
+Ordinary transitions of the same native host preserve the existing grant and
+retry semantics. Returning that exact still-live host to its slot preserves its
+original custody; reopening its journal creates a new incarnation and cannot
+revive old grants. A replacement needs independently selected custody and a
+compatible route. This changes no public request/response format, journal
+encoding, resource-refund rule or production qualification.
+
 The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the native
 route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy

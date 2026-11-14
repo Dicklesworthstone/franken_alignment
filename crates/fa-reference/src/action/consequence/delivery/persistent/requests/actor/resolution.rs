@@ -256,6 +256,8 @@ impl fmt::Debug for FileSupervisorResolutionGrant {
 
 /// Weak access to a separately granted reconciliation operation on the original
 /// owner. There is no host, source, clock, publication or ordinary intake getter.
+/// The grant follows that native host through acknowledged transitions, not a
+/// replacement placed into the same gateway slot, even at an identical scope.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::delivery::persistent::{
@@ -275,6 +277,7 @@ pub struct FileSupervisorResolutionPort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     scope: Scope,
+    issuer: Weak<()>,
 }
 
 impl fmt::Debug for FileSupervisorResolutionPort {

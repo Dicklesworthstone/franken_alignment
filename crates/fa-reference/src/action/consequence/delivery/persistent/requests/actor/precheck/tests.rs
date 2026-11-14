@@ -251,6 +251,34 @@ fn unknown(port: &FileActorPrecheckPort) {
 }
 
 #[test]
+fn precheck_and_discovery_do_not_adopt_an_equal_revision_replacement() {
+    let root = Root::new();
+    let replacement_root = Root::new();
+    let (host, source) = owner(&root);
+    let (replacement, replacement_source) = owner(&replacement_root);
+    assert_eq!(host.inspect(), replacement.inspect());
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = disclose(&supervisor, 4);
+    known(port.check(1, &proposal(b"ok")).unwrap(), FilePrecheckOutcome::PrecheckPassed, 1);
+    let saved = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    let before = supervisor.host().unwrap().inspect();
+    let files = replacement_root.files();
+    let remaining = grant.remaining_queries();
+    unknown(&port);
+    assert!(matches!(port.clone().capabilities(2, 0),
+        Ok(Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable })));
+    assert_eq!(grant.remaining_queries(), remaining);
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(replacement_root.files(), files);
+    let (fresh, _fresh_grant) = disclose(&supervisor, 1);
+    known(fresh.check(1, &proposal(b"ok")).unwrap(), FilePrecheckOutcome::PrecheckPassed, 1);
+    let displaced = std::mem::replace(&mut *supervisor.host_mut().unwrap(), saved);
+    known(port.check(3, &proposal(b"ok")).unwrap(), FilePrecheckOutcome::PrecheckPassed, 3);
+    assert_eq!(source.status().read_attempts, replacement_source.status().read_attempts);
+    drop(displaced);
+}
+
+#[test]
 fn precheck_matches_exact_admission_but_never_submits_reserves_or_calls_a_helper() {
     for (payload, outcome, stage) in [
         (

@@ -60,6 +60,77 @@ fn unknown(result: FileFenceResult) {
 }
 
 #[test]
+fn unused_fence_grant_cannot_follow_an_equal_cut_host_replacement() {
+    let root = Root::new();
+    let (host, _) = reserved(&root);
+    let before = host.inspect();
+    let (_, mut supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor
+        .fence_port_with_numerical_budget(MAX_FENCE_REPLAY_EVENTS, MAX_FENCE_REPLAY_EVENTS)
+        .unwrap();
+    let input = request(&supervisor, 4101);
+    let other = Root::new();
+    let (replacement, _) = reserved(&other);
+    assert_eq!(replacement.inspect(), before);
+    // Retain the old issuer while replacing only the publicly mutable host
+    // slot. Equal scope, control cut and terminal reserve are not a delegation.
+    let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+    supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+    let files = other.files();
+    unknown(port.clone().fence(input));
+    assert_eq!(grant.remaining_operations(), 1);
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(MAX_FENCE_REPLAY_EVENTS));
+    assert!(supervisor.owner.borrow().snapshot.is_some());
+    assert_eq!(supervisor.host().unwrap().inspect(), before);
+    assert_eq!(other.files(), files);
+    assert_eq!(original.inspect(), before);
+
+    let (fresh, _custody) = supervisor.fence_port(MAX_FENCE_REPLAY_EVENTS).unwrap();
+    let selected = request(&supervisor, 4102);
+    assert_eq!(receipt(fresh.fence(selected)).operation(), 4102);
+    assert!(supervisor.host().unwrap().inspect().stop.is_some());
+}
+
+#[test]
+fn cached_fence_receipt_does_not_follow_replaced_or_reopened_native_owners() {
+    for reopen in [false, true] {
+        let root = Root::new();
+        let (host, _) = reserved(&root);
+        let (_, mut supervisor) = host.into_actor_gateway();
+        let (port, grant) = supervisor.fence_port(MAX_FENCE_REPLAY_EVENTS).unwrap();
+        let input = request(&supervisor, 4201);
+        let acknowledged = receipt(port.fence(input));
+        let after = supervisor.host().unwrap().inspect();
+        supervisor.set_snapshot(after.revision, Some(snapshot())).unwrap();
+        let original_files = root.files();
+        assert_eq!(receipt(port.clone().fence(input)), acknowledged);
+        assert_eq!(root.files(), original_files);
+        assert!(supervisor.owner.borrow().snapshot.is_some());
+
+        let other = Root::new();
+        let (replacement, _) = reserved(&other);
+        let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+        let retained_original = if reopen {
+            drop(original);
+            let (reopened, _) = FileOversight::open(root.store(), profile()).unwrap();
+            *supervisor.host_mut().unwrap() = reopened;
+            None
+        } else {
+            Some(original)
+        };
+        let before = supervisor.host().unwrap().inspect();
+        supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
+        let files = if reopen { root.files() } else { other.files() };
+        unknown(port.clone().fence(input));
+        assert_eq!(grant.remaining_operations(), 0);
+        assert!(supervisor.owner.borrow().snapshot.is_some());
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(if reopen { root.files() } else { other.files() }, files);
+        drop(retained_original);
+    }
+}
+
+#[test]
 fn original_fence_cancels_reviewing_and_two_key_authorized_work() {
     for authorized in [false, true] {
         let root = Root::new();
