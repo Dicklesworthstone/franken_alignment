@@ -7,24 +7,6 @@ pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
 use std::{collections::BTreeSet, path::PathBuf};
 
-/// Explicit recovery selection for the original remaining sequence. Creation
-/// keeps the ordinary minimum; an exact receipt predecessor can also close a
-/// final singleton Finish without manufacturing another Message.
-#[derive(Clone, Copy)]
-pub(super) enum Recovery {
-    Generation,
-    AfterMessage(u64),
-}
-
-impl Recovery {
-    pub(super) fn selected(continuing: bool, after_message: Option<u64>) -> Option<Self> {
-        continuing.then_some(match after_message {
-            Some(after) => Self::AfterMessage(after),
-            None => Self::Generation,
-        })
-    }
-}
-
 const INVALID: &str = "learned governor requires a new nonpredictive, nonmediated resident sequence with --campaign-profile, or explicit nonpredictive, nonmediated recovery with --history-anchor; both require paired --operator-profile/--tower-generation";
 
 /// Own the whole selected grammar before another option stripper can erase a

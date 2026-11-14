@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: resume single remaining ordinary learned releases
+
+Explicitly anchored resident recovery now accepts one remaining Message or its
+receipt-bound final Finish without requiring policy-governor selection. The
+closed manifest and direct resident entry point share the same neutral recovery
+selection. Creation and unanchored sequences retain their two-entry minimum;
+all modes retain the original sixteen-entry ceiling.
+
+A first Finish requires explicit --after-message with a nonzero original
+confirmed predecessor and cannot select a generation checkpoint. Unsupported
+singleton selections refuse during manifest admission before recipe/model
+assets. The normal original-owner preflight, native/process review and fresh
+human approval still control every release. No numerical draw, campaign
+allowance, authority charge or confirmed audience prefix is reset.
+
+Six authored regression functions cover both manifest versions, real Message1
+followed by singleton Message2 and separately recovered Finish3, fresh human
+rejection, exhausted-generation refusal with retained successor custody,
+unanchored/direct admission and an actually published Unknown predecessor.
+The positive workflow asserts the original four sampled draws and conserved
+charges through the final stream state. These are authored expectations, not
+executed results.
+
+Independent source/API review and Git content checks completed. The execution
+workspace disconnected before compilation; Rust tests, rustfmt, Clippy and the
+required RCH gate have not run for this increment. Broader packet/Bead acceptance
+and production qualification remain unchanged.
+
 ## 2026-11-14: preserve source accounting across an exact recovery Fence
 
 The native `TopologyCheckpoint::after_recovery_fence` method advances an

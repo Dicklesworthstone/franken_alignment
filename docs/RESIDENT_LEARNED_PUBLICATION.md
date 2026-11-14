@@ -82,16 +82,27 @@ must pass the original exact recovery requirements and predecessor checks.
 }
 ```
 
-The manifest contains 2 through 16 entries for creation and ordinary sequences.
-Explicitly governed recovery permits 1 through 16 remaining entries under the
-[recovery contract](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
+The manifest contains 2 through 16 entries for creation and unanchored sequences.
+Explicit recovery with an independently selected `--history-anchor` permits
+1 through 16 remaining entries, with or without a governor. Governed recovery
+also retains its complete independent policy/campaign
+[requirements](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
 Each selects its own existing
 [learned publication recipe](LEARNED_OPERATOR_PUBLICATION.md) and mandatory
 [authenticated actor profile](LIVE_LEARNED_ACTOR.md). Recipes must admit finite
 continuation, as supported by versions 4, 5 and 6. The first entry is a Message,
-except for a sole remaining Finish under explicit governed `--after-message`
+except for a sole remaining Finish under explicit anchored `--after-message`
 recovery. Finish is optional and can appear only once, last. Ending after a
 Message retains an open confirmed stream; it does not imply Finish.
+
+A singleton Message can resume the original admitted generation or follow its
+exact confirmed predecessor. A singleton Finish must name that predecessor with
+`--after-message`; `--continue-generation` cannot infer it. Finish also rejects
+`--checkpoint-before-generation` before recipe/model loading. A missing anchor
+does not relax the original two-entry minimum. These selections preserve the
+original finite numerical allowance, cumulative charges and stream prefix.
+Each remaining release still needs fresh actor ingress, native/process review
+and independent human approval; an Unknown predecessor cannot authorize Finish.
 
 Every recipe must encode the exact same complete original generation and
 stream. The comparison uses the original encoded configuration bytes. Prompt,
@@ -392,6 +403,13 @@ before new numerical work. These additions have independent source review but
 no new compiler or runtime qualification while the executor is unavailable.
 Human rejection is asserted as its original `CancelledBeforeDispatch` outcome;
 changed-source admission is asserted separately as `Denied`.
+
+Six additional authored regression functions cover ordinary anchored singleton
+Message and Finish recovery through actual command, actor, native-helper and
+human-review paths; fresh human rejection; exhausted original generation; a
+genuinely published but unresolved predecessor; direct unanchored admission;
+and both closed manifest versions. Compiler and runtime qualification of these
+additions remain pending because the execution workspace disconnected.
 
 Implementation:
 [`learned/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs),

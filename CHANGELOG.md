@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-14: resume single remaining ordinary learned releases
+
+- Permit 1–16 remaining entries for explicitly anchored ordinary resident
+  recovery, reusing the original stream and complete native recovery guards.
+- Require an explicit confirmed predecessor for a sole Finish; preserve
+  creation/unanchored minimums, finite generation, fresh review and human approval.
+- Add six authored regression functions covering real singleton Message/Finish,
+  human rejection, exhausted work, Unknown predecessors and pre-asset admission.
+- Record source review separately from pending compiler/runtime/RCH qualification.
+
 ## 2026-11-14: retain exact topology custody after a recovery Fence
 
 - Add a native checkpoint successor for exactly one acknowledged recovery Fence

@@ -25,6 +25,7 @@ use std::{collections::BTreeSet, io::Write, os::unix::net::UnixStream,
     path::{Path, PathBuf}, thread::{self, JoinHandle}};
 
 #[path = "sequence/functional.rs"] mod functional;
+#[path = "sequence/recovery.rs"] mod anchored_recovery;
 #[path = "sequence_operator.rs"] mod operator;
 #[path = "sequence_precheck.rs"] mod prechecks;
 #[path = "sequence_governor.rs"] mod governor;

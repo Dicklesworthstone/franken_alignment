@@ -16,7 +16,26 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe and may select a single remaining Message or an explicit --after-message Finish";
+
+/// Explicit recovery selection for the original remaining sequence. Creation
+/// keeps the ordinary minimum; an exact receipt predecessor can also close a
+/// final singleton Finish without manufacturing another Message.
+#[derive(Clone, Copy)]
+pub(super) enum Recovery {
+    Generation,
+    AfterMessage(u64),
+}
+
+impl Recovery {
+    pub(super) fn selected(continuing: bool, after_message: Option<u64>) -> Option<Self> {
+        continuing.then_some(match after_message {
+            Some(after) => Self::AfterMessage(after),
+            None => Self::Generation,
+        })
+    }
+}
+
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; explicitly anchored recovery may select a single remaining Message or an explicit --after-message Finish; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -85,8 +104,11 @@ where
         .map(|path| campaigns::read(&config, path))
         .transpose()?;
     governor::check_selection(governor.as_ref(), operator.as_ref(), campaign, continuing)?;
-    let governed_recovery = governor.as_ref()
-        .and_then(|_| governor::Recovery::selected(continuing, after));
+    let recovery = if anchors.has_input() {
+        Recovery::selected(continuing, after)
+    } else {
+        None
+    };
     let mut entries = if let Some(governor) = governor.as_ref() {
         profile::load_governed(
             Path::new(&args[2]),
@@ -96,14 +118,14 @@ where
                 .as_ref()
                 .expect("complete governor operator selection checked above"),
             &peers,
-            governed_recovery,
+            recovery,
             checkpoint_path.is_some(),
         )?
     } else {
-        profile::load(Path::new(&args[2]), &config)?
+        profile::load(Path::new(&args[2]), &config, recovery, checkpoint_path.is_some())?
     };
-    if governed_recovery.is_some() {
-        validate_entries(&config, &entries, &peers, governed_recovery)?;
+    if recovery.is_some() {
+        validate_entries(&config, &entries, &peers, recovery)?;
     } else {
         validate(&config, &entries, &peers)?;
     }
@@ -173,22 +195,22 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
     validate_entries(config, entries, peers, None)
 }
 
-/// Only explicit governed recovery can admit a singleton remaining release.
+/// Only explicitly anchored recovery can admit a singleton remaining release.
 /// Keep the same validation for direct callers as for the closed manifest;
 /// neither a small manifest nor a recorded predecessor grants live authority.
 fn validate_entries(
     config: &Config,
     entries: &[Entry],
     peers: &PeerProfile,
-    recovery: Option<governor::Recovery>,
+    recovery: Option<Recovery>,
 ) -> Result<(), String> {
-    if matches!(recovery, Some(governor::Recovery::AfterMessage(0))) {
-        return Err("governed learned recovery requires a nonzero original message predecessor".into());
+    if matches!(recovery, Some(Recovery::AfterMessage(0))) {
+        return Err("anchored learned recovery requires a nonzero original message predecessor".into());
     }
     let minimum = if recovery.is_some() { 1 } else { 2 };
     if !(minimum..=MAX_ENTRIES).contains(&entries.len()) {
         return Err(if recovery.is_some() {
-            "governed learned recovery requires 1..=16 independently selected remaining entries".into()
+            "anchored learned recovery requires 1..=16 independently selected remaining entries".into()
         } else {
             "a learned sequence requires 2..=16 independently selected entries".into()
         });
@@ -250,7 +272,7 @@ fn validate_entries(
         if matches!(entry.release, LearnedTextRelease::Finish) {
             if index + 1 != entries.len()
                 || (index == 0 && !matches!(recovery,
-                    Some(governor::Recovery::AfterMessage(_))))
+                    Some(Recovery::AfterMessage(_))))
             {
                 return Err("sequence Finish is permitted only as the last entry after a Message".into());
             }
@@ -444,10 +466,15 @@ pub(super) fn run_with_services<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let governed_recovery = selected_governor
-        .and_then(|_| governor::Recovery::selected(continuing, after_message));
-    if governed_recovery.is_some() {
-        validate_entries(&config, &entries, peers, governed_recovery)?;
+    let recovery = if selected_governor.is_some()
+        || entries.first().is_some_and(|entry| entry.loaded.recovery_anchor.is_some())
+    {
+        Recovery::selected(continuing, after_message)
+    } else {
+        None
+    };
+    if recovery.is_some() {
+        validate_entries(&config, &entries, peers, recovery)?;
     } else {
         validate(&config, &entries, peers)?;
     }

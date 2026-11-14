@@ -3,7 +3,7 @@
 //! recipe asset intake is at most 1 GiB, plus the separately bounded profile
 //! documents. These admission reads never replenish live numerical, source,
 //! predictor, topology or publication allowances.
-use super::{Config, Entry, LearnedTextRelease, MAX_ENTRIES, governor::Recovery};
+use super::{Config, Entry, LearnedTextRelease, MAX_ENTRIES, Recovery};
 use super::super::{fields::Fields, recipe};
 use super::super::super::Profile;
 use crate::config::read_regular;
@@ -14,20 +14,21 @@ const MAX_PROFILE_BYTES: usize = 64 * 1024;
 struct Input { recipe: PathBuf, actor: PathBuf, release: LearnedTextRelease,
     precheck: Option<PathBuf> }
 
+#[cfg(test)]
 fn decode(bytes: &[u8]) -> Result<Vec<Input>, String> {
     decode_selected(bytes, None, false)
 }
 
 /// The original closed schemas permit a smaller remaining suffix only after
-/// explicit governed recovery selection. No ordinary or creation loader uses
-/// this relaxation, and Finish still needs its independently named predecessor.
+/// explicit anchored recovery selection. Creation keeps its original minimum,
+/// and Finish still needs its independently named receipt predecessor.
 fn decode_selected(
     bytes: &[u8],
     recovery: Option<Recovery>,
     checkpoint_before_generation: bool,
 ) -> Result<Vec<Input>, String> {
     if matches!(recovery, Some(Recovery::AfterMessage(0))) {
-        return Err("governed learned recovery requires a nonzero original message predecessor".into());
+        return Err("anchored learned recovery requires a nonzero original message predecessor".into());
     }
     let mut fields = Fields::parse(bytes, MAX_PROFILE_BYTES)?;
     let with_prechecks = match fields.text("schema")?.as_str() {
@@ -39,7 +40,7 @@ fn decode_selected(
     fields.end()?;
     if values.is_empty() || (recovery.is_none() && values.len() < 2) {
         return Err(if recovery.is_some() {
-            "governed learned recovery requires 1..=16 remaining entries".into()
+            "anchored learned recovery requires 1..=16 remaining entries".into()
         } else {
             "a learned sequence requires 2..=16 entries".into()
         });
@@ -77,8 +78,17 @@ fn decode_selected(
     Ok(entries)
 }
 
-pub(super) fn load(path: &Path, config: &Config) -> Result<Vec<Entry>, String> {
-    let plan = decode(&read_regular(path, MAX_PROFILE_BYTES)?)?;
+pub(super) fn load(
+    path: &Path,
+    config: &Config,
+    recovery: Option<Recovery>,
+    checkpoint_before_generation: bool,
+) -> Result<Vec<Entry>, String> {
+    let plan = decode_selected(
+        &read_regular(path, MAX_PROFILE_BYTES)?,
+        recovery,
+        checkpoint_before_generation,
+    )?;
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     for input in plan {
         // All generation and helper artifacts use their original strict
@@ -281,5 +291,44 @@ mod tests {
         assert!(decode(document(&too_many).replace("sequence/1", "sequence/2").as_bytes()).is_err());
         let early_finish = [selected(1, "finish", "null"), selected(2, "message", "null")];
         assert!(decode(document(&early_finish).replace("sequence/1", "sequence/2").as_bytes()).is_err());
+    }
+
+    #[test]
+    fn anchored_remaining_manifest_keeps_creation_and_receipt_requirements() {
+        for (version, message, finish) in [
+            (1, entry(2, "message"), entry(3, "finish")),
+            (2, selected(2, "message", "null"), selected(3, "finish", "null")),
+        ] {
+            let document = |entries: &[String]| {
+                document(entries).replace("sequence/1", &format!("sequence/{version}"))
+            };
+            let message = document(&[message]);
+            let finish = document(&[finish]);
+            assert!(decode(message.as_bytes()).is_err());
+            assert!(decode(finish.as_bytes()).is_err());
+            for recovery in [Recovery::Generation, Recovery::AfterMessage(1)] {
+                let parsed = decode_selected(message.as_bytes(), Some(recovery), false).unwrap();
+                assert_eq!(parsed.len(), 1);
+                assert_eq!(parsed[0].release, LearnedTextRelease::Message);
+            }
+            let parsed = decode_selected(
+                finish.as_bytes(), Some(Recovery::AfterMessage(2)), false,
+            ).unwrap();
+            assert_eq!(parsed.len(), 1);
+            assert_eq!(parsed[0].release, LearnedTextRelease::Finish);
+            assert!(decode_selected(
+                finish.as_bytes(), Some(Recovery::Generation), false,
+            ).is_err());
+            assert!(decode_selected(
+                finish.as_bytes(), Some(Recovery::AfterMessage(0)), false,
+            ).is_err());
+            assert!(decode_selected(
+                finish.as_bytes(), Some(Recovery::AfterMessage(2)), true,
+            ).is_err());
+            let invalid = message.replace("\"entries\":[", "\"entries\":[],\"entries\":[");
+            assert!(decode_selected(
+                invalid.as_bytes(), Some(Recovery::AfterMessage(1)), false,
+            ).is_err());
+        }
     }
 }

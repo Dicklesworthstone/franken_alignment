@@ -48,6 +48,8 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Options), St
 }
 
 impl Options {
+    pub(super) fn has_input(&self) -> bool { self.input.is_some() }
+
     pub(super) fn admit(
         self,
         config: &Config,
