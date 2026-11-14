@@ -18,6 +18,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+#[path = "tests/follow.rs"]
+mod follow;
 #[path = "../../../../../../../tests/support/file_oversight_actor.rs"]
 mod native;
 #[path = "tests/pagination.rs"]

@@ -249,6 +249,13 @@ basis, complete scope, contiguous rows and cursors before output or the next
 query. It returns success only for explicit enumeration completion; valid
 partial lines remain output on an incomplete failure. The existing authenticated
 `tower-operator-exchange` command also supports explicit native Tail documents.
+Add `--follow-captures N` to request 1–1,024 successive captures, including the
+first. Each fully validated and flushed capture supplies the next starting
+revision. The original `poll_ms` sets the pause between captures; all pages,
+queries, exchanges, bytes and elapsed time share the original bounds on the
+same connection. Empty captures count without asserting continuing absence.
+Partial results, Unknown, output failure or deadline expiry stop follow rather
+than renewing work. Success requires the entire requested finite capture count.
 See [the native journal and command contract](TOWER_JOURNAL_TAIL.md).
 
 The independent `hold_diagnosis` object requires exactly `queries` (1–1,024)

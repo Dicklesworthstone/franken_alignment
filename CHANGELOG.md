@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14: follow bounded live journal captures through Tower
+
+- Add explicit `tower-tail --follow-captures N` while retaining one capture by
+  default and one total page/query/exchange/runtime budget on the same connection.
+- Advance only from a fully validated and flushed capture to its exact ending
+  revision; preserve arrivals during pagination and honest empty observations.
+- Validate bases and cursor identity across captures; stop on partial results,
+  lost custody, malformed output, I/O failure or deadline without reconnecting.
+- Add nine native-owner/socket regression functions and update command usage
+  and operator contracts. Scoped formatting, whitespace and independent source
+  review passed; compilation, runtime tests and Clippy await required RCH.
+
 ## 2026-11-14: govern ordinary topology-supervised Tower publication
 
 - Connect plain/checked scheduled creation and anchored recovery to the original

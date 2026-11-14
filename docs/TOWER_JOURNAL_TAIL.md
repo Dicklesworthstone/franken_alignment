@@ -146,8 +146,9 @@ command opens one authenticated connection and follows one native capture. It
 caps requests by the smallest of caller max-pages, selected Tail queries and
 the original transport exchange allowance. Existing cumulative byte, I/O and
 elapsed bounds also apply. No reconnect, retry, fresh capture or hidden
-follow-polling is performed. To observe later history, explicitly start another
-capture after the previous captured end using remaining service work.
+follow-polling is performed by default. To observe later history, explicitly
+start another capture after the previous captured end using remaining service
+work, or select the finite follow option below.
 
 Every response is checked before output and before any subsequent request:
 closed schema and event labels, original registration/query, complete scope,
@@ -158,6 +159,45 @@ captured suffix. A valid partial prefix remains output if a bound, missing
 continuation, Unknown, Withheld or native refusal stops the command, which
 returns a failure exit status. Check that status before treating the prefix as
 complete. Output failure cannot spend another native query.
+
+### Follow a finite sequence of live captures
+
+Select an explicit capture count to keep observing the same live owner:
+
+```sh
+supervise_publication tower-tail OPERATOR_PROFILE fa://1/run/3@41 --after-revision 0 --max-pages 128 --follow-captures 8
+```
+
+`--follow-captures` admits canonical decimal integers from 1 to 1,024 and counts
+the initial capture. Omission remains exactly one capture. Each capture must
+finish validation and flush its last JSON response before the client may start
+the next one. Its next `after_revision` is the preceding capture's acknowledged
+end, never the live owner's potentially newer revision. Events appended during
+pagination therefore belong to the next capture without duplicating or skipping
+rows. Empty captures count too; an empty historical suffix does not prove that
+the live owner will remain idle.
+
+Between completed captures, the client waits using the original profile's
+`poll_ms` and checks the same elapsed deadline before and after that wait. It
+uses one authenticated connection and the same original native grant. The
+`--max-pages` limit covers **all** captures together, including empty pages;
+profile queries, transport exchanges, bytes, I/O calls and elapsed time are also
+cumulative. No completion renews an allowance, reconnects or retries a request.
+
+Every new capture retains the complete original scope and registration. Its
+revision, control sequence and recorded time cannot go backward; an unchanged
+journal revision must retain the identical basis. Cursor identities remain
+nonreusable across the whole session. These checks supplement the native
+original-owner grant and the existing exact per-page validation.
+
+Success means all explicitly requested captures completed. Exhaustion before
+that count, an incomplete page, native Unknown/refusal, changed owner custody,
+invalid reply, failed output or an expired deadline stops the command with a
+nonzero result. Previously flushed valid JSON lines remain available. A valid
+Unknown/refusal response is emitted before stopping; a malformed response is
+not emitted. No failure starts a replacement capture. Even success describes
+only the final observed cut, not future quiescence or an external effect's
+outcome.
 
 `tower-operator-exchange OPERATOR_PROFILE REQUEST_JSON` also validates native
 Tail responses for explicit request documents. It remains an explicit document
@@ -246,3 +286,11 @@ handoff and reconnect. The Fence fixture preserves the deployed clock domain
 when selecting its native review profile so the positive test reaches the
 original authenticated service. These tests remain authored source pending RCH
 execution; see the [composition tests](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/tail_composition.rs).
+
+Nine additional finite-follow regression functions use the original native
+owner and socket transport. They cover events arriving during pagination,
+empty observations followed by new work, cumulative caller/profile/native
+limits, altered later bases, owner/grant loss, write/flush failure, deadline
+expiry and strict option admission. The changed client and test sources pass
+scoped rustfmt and whitespace checks. They remain authored regressions pending
+compilation and execution through the unavailable required RCH runner.

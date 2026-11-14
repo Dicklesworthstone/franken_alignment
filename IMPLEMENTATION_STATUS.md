@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: follow bounded live journal captures through Tower
+
+The existing `tower-tail` command now accepts explicit `--follow-captures N`
+for 1–1,024 captures including the initial one. Default behavior remains one
+capture. A successor starts only after its predecessor has been fully validated
+and flushed, at that exact acknowledged ending revision. Events appended while
+a capture is paginated remain for its successor. Empty captures count without
+claiming continuing inactivity.
+
+All captures retain the same authenticated connection and original finite
+native grant. Page, query, exchange, byte, I/O-call and elapsed bounds are
+cumulative; the original polling interval controls waits between captures.
+Cross-capture validation preserves scope, registration and cursor uniqueness,
+rejects regressing bases and requires identical bases at an unchanged revision.
+Incomplete observations, owner/grant loss, malformed replies, failed output or
+expired time stop without another capture, retry or renewed allowance.
+
+Nine authored regressions use the original native owner and socket transport,
+including arrivals during pagination, empty captures before new work, independent
+budget limits, changed bases and all principal interruption boundaries. The
+client and new tests pass scoped rustfmt and whitespace checks; independent
+source/API review found no blocker. The required RCH runner remains unavailable,
+so Rust compilation, runtime tests, Clippy and full qualification are pending.
+This advances plan section 17.8 under the existing Tail/FA-135 work without
+new authority, wire formats, packet closure or broader journal claims.
+
+Contracts and usage: docs/TOWER_JOURNAL_TAIL.md, docs/LIVE_TOWER_OPERATOR.md
+and docs/AGENT_GUIDE.md.
+
 ## 2026-11-14: govern ordinary topology-supervised Tower publication
 
 Scheduled plain and simple-witness checked Tower services now compose the live

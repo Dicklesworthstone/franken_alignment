@@ -1,6 +1,7 @@
-//! Follow one finite original journal capture. Revisions belong to the native
-//! journal, not the Tower control ledger. Returned rows are historical metadata;
-//! neither their names nor an empty suffix prove an effect outcome or authority.
+//! Enumerate original journal captures with an explicitly bounded live-follow
+//! option. Revisions belong to the native journal, not the Tower control ledger.
+//! Returned rows are historical metadata; neither their names nor an empty
+//! suffix prove an effect outcome, continuing quiescence or authority.
 
 use super::{
     Budget, Endpoint, Instant, Json, OperatorSettings, Path, ReadArguments, TowerRequest, Verb,
@@ -15,11 +16,11 @@ use fa_reference::address_resolver::{Address, Noun};
 use fa_reference::tower::MAX_REQUEST_STRING_BYTES;
 use std::collections::{BTreeMap, BTreeSet};
 
-const USAGE: &str = "tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision N --max-pages N (canonical original journal revision; pages 1..1024; one capture, no reconnect or retry)";
+const USAGE: &str = "tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision N --max-pages N [--follow-captures N] (canonical original journal revision; total pages and captures 1..1024; one connection, no reconnect or retry)";
 const INVALID: &str = "invalid or inconsistent native journal tail page; no continuation or new capture was requested";
 
 pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
-    let (address, after_revision, max_pages) = selection(args)?;
+    let (address, after_revision, max_pages, max_captures) = selection(args)?;
     let started = Instant::now();
     let settings = OperatorSettings::read(Path::new(&args[1]))?;
     if address.tenant != settings.scope.tenant.to_string()
@@ -38,16 +39,19 @@ pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
     let mut budget = Budget::new(&endpoint, started);
     let mut socket = connect_endpoint(endpoint, &budget, || settings.check_directory())?;
     let mut cursor = None;
+    let mut completed_captures = 0;
     for page in 1..=page_limit {
         let mut request = TowerRequest::new(
             format!("tower-tail-page-{page}"),
             address.clone(),
             Verb::Tail,
         );
-        request.arguments = cursor
-            .map_or(ReadArguments::JournalTail { after_revision }, |cursor| {
-                ReadArguments::JournalTailPage { cursor }
-            });
+        request.arguments = cursor.map_or(
+            ReadArguments::JournalTail {
+                after_revision: capture.after_revision,
+            },
+            |cursor| ReadArguments::JournalTailPage { cursor },
+        );
         budget.write_frame(&mut socket, &request_frame(&request)?)?;
         let response = budget.read_frame(&mut socket)?;
         let parsed = parse_response(&response, &request)?;
@@ -56,16 +60,32 @@ pub(super) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
         // can spend another query. Output loss never triggers another request.
         emit_response(&response, output, &budget)?;
         match progress {
-            Progress::Complete => return Ok(()),
+            Progress::Complete => {
+                completed_captures += 1;
+                if completed_captures == max_captures {
+                    return Ok(());
+                }
+                // A new capture spends the SAME finite grants. Its start is
+                // derived only from a fully validated, successfully flushed
+                // predecessor; incomplete or lost output never skips history.
+                if page == page_limit {
+                    break;
+                }
+                budget.blocked()?;
+                capture = capture.successor()?;
+                cursor = None;
+            }
             Progress::Continue(next) => cursor = Some(next),
             Progress::Stopped(reason) => return Err(reason.into()),
         }
     }
-    Err("Tower journal tail is incomplete: page or original exchange allowance exhausted; partial pages retained; no reconnect, retry or new capture".into())
+    Err(format!(
+        "Tower journal tail is incomplete: page or original exchange allowance exhausted after {completed_captures} of {max_captures} requested captures; partial pages retained; no reconnect, retry or new capture"
+    ))
 }
 
-fn selection(args: &[String]) -> Result<(Address, u64, usize), String> {
-    if args.len() != 7
+fn selection(args: &[String]) -> Result<(Address, u64, usize, usize), String> {
+    if !matches!(args.len(), 7 | 9)
         || args[0] != "tower-tail"
         || args[1].is_empty()
         || args[1].starts_with("--")
@@ -78,16 +98,30 @@ fn selection(args: &[String]) -> Result<(Address, u64, usize), String> {
     let address = Address::parse(&args[2]).map_err(|_| USAGE.to_owned())?;
     let after_revision = decimal(&args[4]).ok_or_else(|| USAGE.to_owned())?;
     let max_pages = decimal(&args[6]).ok_or_else(|| USAGE.to_owned())?;
+    let max_captures = if args.len() == 9 {
+        if args[7] != "--follow-captures" {
+            return Err(USAGE.into());
+        }
+        decimal(&args[8]).ok_or_else(|| USAGE.to_owned())?
+    } else {
+        1
+    };
     if address.kind != Noun::Run
         || address.generation.is_none_or(|generation| generation == 0)
         || address.canonical_string() != args[2]
         || decimal(&address.tenant).is_none_or(|tenant| tenant == 0)
         || decimal(&address.id).is_none_or(|run| run == 0)
         || !(1..=MAX_JOURNAL_TAIL_QUERIES as u64).contains(&max_pages)
+        || !(1..=MAX_JOURNAL_TAIL_QUERIES as u64).contains(&max_captures)
     {
         return Err(USAGE.into());
     }
-    Ok((address, after_revision, max_pages as usize))
+    Ok((
+        address,
+        after_revision,
+        max_pages as usize,
+        max_captures as usize,
+    ))
 }
 
 pub(super) fn matches(response: &Json, request: &TowerRequest) -> bool {
@@ -105,6 +139,7 @@ struct Capture {
     after_revision: u64,
     events_per_page: usize,
     basis: Option<Json>,
+    previous_basis: Option<Json>,
     next_offset: u64,
     cursors: BTreeSet<u64>,
 }
@@ -116,6 +151,7 @@ impl Capture {
             after_revision,
             events_per_page,
             basis: None,
+            previous_basis: None,
             next_offset: 0,
             cursors: BTreeSet::new(),
         }
@@ -132,6 +168,10 @@ impl Capture {
             || page.events > self.events_per_page
             || (!page.complete && page.events != self.events_per_page)
             || self.basis.as_ref().is_some_and(|basis| basis != page.basis)
+            || self
+                .previous_basis
+                .as_ref()
+                .is_some_and(|previous| !follows_basis(previous, page.basis))
             || page
                 .cursor
                 .is_some_and(|cursor| self.cursors.contains(&cursor))
@@ -154,6 +194,42 @@ impl Capture {
             ))
         }
     }
+
+    /// Called only after Complete was emitted and flushed. Retain the last cut
+    /// to reject rollback and contradictory claims about an unchanged journal.
+    /// No cursor or allowance is renewed by following a later suffix.
+    fn successor(self) -> Result<Self, String> {
+        let previous = self.basis.ok_or(INVALID)?;
+        let revision = number(previous.get("journal_revision").ok_or(INVALID)?)?;
+        if self.after_revision.checked_add(self.next_offset) != Some(revision) {
+            return Err(INVALID.into());
+        }
+        Ok(Self {
+            scope: self.scope,
+            after_revision: revision,
+            events_per_page: self.events_per_page,
+            basis: None,
+            previous_basis: Some(previous),
+            next_offset: 0,
+            cursors: self.cursors,
+        })
+    }
+}
+
+fn follows_basis(previous: &Json, current: &Json) -> bool {
+    let compare = || -> Result<bool, String> {
+        let prior_revision = number(previous.get("journal_revision").ok_or(INVALID)?)?;
+        let revision = number(current.get("journal_revision").ok_or(INVALID)?)?;
+        if revision == prior_revision {
+            return Ok(previous == current);
+        }
+        let prior_sequence = number(previous.get("control_sequence").ok_or(INVALID)?)?;
+        let sequence = number(current.get("control_sequence").ok_or(INVALID)?)?;
+        let prior_tick = optional_number(previous.get("recorded_at").ok_or(INVALID)?)?;
+        let tick = optional_number(current.get("recorded_at").ok_or(INVALID)?)?;
+        Ok(revision > prior_revision && sequence >= prior_sequence && tick >= prior_tick)
+    };
+    compare().unwrap_or(false)
 }
 
 struct Page<'a> {

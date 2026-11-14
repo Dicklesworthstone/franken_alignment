@@ -91,8 +91,10 @@ acknowledged revision, including learned history, without replaying numerical
 work or changing authority. The authenticated ordinary, learned and resident
 operator services accept an explicit `journal_tail` profile selection;
 `supervise_publication tower-tail OPERATOR_PROFILE RUN_ADDRESS --after-revision 0 --max-pages 128`
-follows one finite capture with strict page validation. Runtime qualification
-remains pending.
+follows one finite capture with strict page validation. Optional
+`--follow-captures N` observes a finite sequence of live cuts over the same
+connection and cumulative work budget, advancing only after validated output.
+Runtime qualification remains pending.
 
 The [reference Tower dispatcher](docs/TOWER_REFERENCE.md) connects `get`,
 `related`, `tail`, `situation`, `explain`, `why-held`, `next` and `replay-plan` through one Rust

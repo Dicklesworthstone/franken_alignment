@@ -129,7 +129,7 @@ pub(crate) fn situation_command(args: &[String], output: &mut impl Write) -> Res
     situation::command(args, output)
 }
 
-/// Read one explicitly bounded suffix from the original native journal.
+/// Read original journal captures, optionally following an explicit finite count.
 pub(crate) fn journal_tail_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
     journal_tail::command(args, output)
 }

@@ -136,7 +136,13 @@ distinct from the prospective global `--since` sequence in playbook P0. The
 client pins one cut, validates every page before output and follows only its
 single-use continuations. Partial output and exhausted work remain incomplete;
 check the exit status. No page changes authority, proves an effect outcome or
-replays learned work. See [the exact contract](TOWER_JOURNAL_TAIL.md).
+replays learned work. Add `--follow-captures N` for 1–1,024 successive captures
+on the same connection, counting the first. The client advances only after a
+complete capture is validated and flushed, waits under the original `poll_ms`
+and deadline, and shares one total page/query/exchange budget. Empty captures
+count but do not prove future inactivity. Success requires the selected capture
+count; any incomplete or failed observation stops follow without retry.
+See [the exact contract](TOWER_JOURNAL_TAIL.md).
 
 For a new topology-enforced publication, the two Tower create modes accept
 `--topology-profile TOPOLOGY_PROFILE`, optionally with the separate operator
