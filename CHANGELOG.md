@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-14: correct recovery regression operator selections
+
+- Align both disabled-explanation fixtures with the existing zero-replay,
+  disclosure-none contract so recovery regressions reach their intended paths.
+- Preserve separate paid promotion allowances and production validation.
+  Rust/RCH execution qualification remains pending.
+
 ## 2026-11-14: preserve single-request learned startup recovery custody
 
 - Retain the requested independently checked successor on single-request

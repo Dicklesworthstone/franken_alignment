@@ -1,5 +1,18 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: admit the intended recovery regression fixtures
+
+Final source review found two operator fixtures selecting zero explanation
+queries together with nonzero explanation replay and disclosure. The existing
+production validator correctly rejects that combination before recovery.
+Both fixtures now select zero explanation replay and disclosure none, so their
+governed and ordinary recovery scenarios can reach the intended startup,
+publication and refusal boundaries. The separate paid policy-promotion settings
+and production validation are unchanged. All existing test modules are retained.
+
+This is a source-reviewed fixture correction, not an executed test result.
+Compilation and runtime qualification remain blocked by the absent Rust/RCH tools.
+
 ## 2026-11-14: retain single-request learned recovery through startup refusal
 
 The single-request create-learned-generated workflow now preserves its requested

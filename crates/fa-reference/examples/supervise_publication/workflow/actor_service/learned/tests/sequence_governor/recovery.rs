@@ -208,7 +208,7 @@ fn ordinary_operator(root: &Root, actor: &Profile) -> learned_operator::Selectio
     let principal = format!(r#"{{"uid":{},"gid":{},"pid":{}}}"#,
         identity.uid(), identity.gid(), identity.pid().unwrap());
     let path = root.0.join("ordinary-operator.json");
-    fs::write(&path, format!(r#"{{"schema":"fa.tower-operator-service/1","scope":{},"socket":{},"supervisor":{principal},"operator":{principal},"candidate_limit":1,"connection_limit":1,"exchange_limit":2,"runtime_ms":60000,"poll_ms":1,"inspection_queries":1,"explanation_queries":0,"explanation_replay_events":4096,"explanation_disclosure":"policy_and_selected_witnesses"}}"#,
+    fs::write(&path, format!(r#"{{"schema":"fa.tower-operator-service/1","scope":{},"socket":{},"supervisor":{principal},"operator":{principal},"candidate_limit":1,"connection_limit":1,"exchange_limit":2,"runtime_ms":60000,"poll_ms":1,"inspection_queries":1,"explanation_queries":0,"explanation_replay_events":0,"explanation_disclosure":"none"}}"#,
         scope_json(actor), quote(root.0.join("peers/ordinary-operator.sock").to_str().unwrap()))).unwrap();
     learned_operator::Selection::read(&path, GENERATION).unwrap()
 }
