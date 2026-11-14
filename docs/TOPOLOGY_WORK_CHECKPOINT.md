@@ -73,6 +73,23 @@ A failed source read preserves native withdrawal and expenditure; an old cut or
 effect key is never restored. Capture a successor only from the healthy original
 owner. This adds library integration, not automatic CLI checkpoint export/import.
 
+## Exact recovery Fence successors
+
+Before a recovered observer is consumed by a source,
+`FileMediationObserver::recovered_topology_checkpoint(host, saved)` preserves the
+independently retained work across exactly one acknowledged recovery Fence.
+Original observer identity, complete prefix, graph, availability and native
+floors must agree. No intervening source, time, policy, numerical or effect work
+is accepted. The original documents, spending and last operation remain fixed;
+only acknowledged history, withdrawn availability and native floors advance.
+
+The observer proof also excludes source operations held only in RAM, which a
+journal-only comparison cannot detect. Capture performs no source reads, replay,
+clock calls or journal changes and grants no authority. Learned startup uses this
+cut before binding and actual source capture after binding to preserve selected
+outputs on failure. See [source continuity](TOPOLOGY_SOURCE_CONTINUITY.md) for
+failure semantics, independent export requirements and verification limits.
+
 ## Ordinary reconciled checkpoint successors
 
 `FileMediatedRecovery::finish_reconciled_with_checkpoint(&saved, clock)` carries

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: bind recovery checkpoint export to the original observer
+
+- Require the healthy original owner's separately issued unbound observer for
+  exact one-Fence source capture; keep the shared host-only reduction private.
+- Prevent a bound source's RAM-only operation-floor progress from disappearing
+  behind an unchanged journal, without changing source or effect allowances.
+- Capture before learned source binding and recheck the same exact healthy cut
+  before failure export; preserve concurrent single/resident startup integration.
+- Add four native and two operator regression functions plus a compile-fail
+  boundary, and adapt the existing public three-lane recovery regression.
+- Record source/API review separately from unexecuted compilation, runtime tests,
+  rustfmt, Clippy and RCH qualification after the workspace disconnection.
+
 ## 2026-11-14: preserve paired learned recovery custody through live startup
 
 - Pre-admit selected source checkpoint output before consuming the recovery

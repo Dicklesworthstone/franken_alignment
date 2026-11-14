@@ -9,6 +9,9 @@ the rest of startup refuses. Select `--retain-history-anchor` and the existing
 The input history and source checkpoint must still name the same exact cut.
 
 The source destination is admitted before recovery can acknowledge a Fence.
+After recovery, the original unbound observer captures its exact successor before
+next-source loading or binding. A later error can export that source capture
+only if the same healthy owner still names precisely the captured history cut.
 An existing destination, a path inside the authority store, or a normalized
 alias of the history output refuses without advancing the journal or cleaning
 staging. A later path race is checked again by the original create-new writers.
@@ -55,10 +58,10 @@ been compiled, formatted or executed after the workspace disconnection.
 
 ## Retain a recovery Fence before source binding
 
-`TopologyCheckpoint::after_recovery_fence` carries an independently retained
-source checkpoint across exactly one acknowledged recovery Fence on the same
-healthy original owner. Its consumer is live learned startup: a missing next
-source document or refused source rebind must not strand an otherwise valid
+`FileMediationObserver::recovered_topology_checkpoint(host, saved)` carries an
+independently retained source checkpoint across exactly one acknowledged recovery
+Fence on the same healthy original owner. Its consumer is live learned startup:
+a missing next source document or refused source rebind must not strand valid
 history at a newer cut than its independently retained source accounting.
 
 The original profile, canonical store identity, complete history prefix, graph
@@ -66,8 +69,14 @@ and historical availability must agree. The successor must contain only that
 one Fence, retain the same graph and have withdrawn native availability. Source
 documents, spent checks and read bytes, and the last operation remain unchanged;
 the actual acknowledged history and native control/authority floors advance.
-No credential guard is required. Empty suffixes, multiple Fences, intervening
-source work, changed graphs, other events and poisoned owners refuse.
+The separately issued observer must belong to that same owner and must not yet
+have been consumed by a source. A bound withdrawn source can advance its last
+operation without adding a journal event; an unchanged journal alone cannot
+prove that older source accounting remains complete. The observer cannot be
+cloned or recovered from a bound source. The host-only Fence reduction is private
+so it cannot bypass this custody check. No credential guard is required. Empty
+suffixes, multiple Fences, intervening source work, changed graphs, accepted cuts,
+other events and poisoned owners refuse.
 
 Capture performs no filesystem read, source refresh, numerical replay, clock
 call or journal write. It grants no source freshness or effect authority. The
@@ -83,6 +92,14 @@ foreign history, graph/floor mismatches and all five storage barriers. A scoped
 Rust formatter parsed the new local files before the execution workspace
 disconnected. The source was preserved through GitHub after that disconnection;
 compilation and runtime execution remain pending the required RCH qualification.
+
+Four additional native regression functions cover exact/repeated capture,
+observer identity, stale or mismatched source custody and ambiguous persistence.
+The host-only bypass has a compile-fail example. Two additional operator
+regressions exercise deadline expiry immediately after the Fence and a failed
+native rebind that must not export an obsolete pair from poisoned custody.
+These additions are independently source-reviewed but remain uncompiled and
+unexecuted; rustfmt, Clippy and the required RCH gate also remain pending.
 
 ## Reconnect the original source
 

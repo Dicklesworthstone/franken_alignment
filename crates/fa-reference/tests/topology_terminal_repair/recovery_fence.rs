@@ -74,7 +74,8 @@ fn learned_recovery_fence_checkpoint_supports_corrected_restart_in_all_native_la
         let (host, roles) = finish(anchored(&root, lane, &saved));
         assert!(host.credential_status().unwrap().is_none());
         let before = root.bytes();
-        let fenced = saved.after_recovery_fence(&host).unwrap();
+        let fenced = roles.topology_observer
+            .recovered_topology_checkpoint(&host, &saved).unwrap();
         same_source(&saved, &fenced);
         assert!(!fenced.available());
         assert_eq!(fenced.history_anchor(), &host.history_anchor().unwrap());
@@ -118,10 +119,11 @@ fn learned_recovery_fence_checkpoint_supports_corrected_restart_in_all_native_la
         let fenced = imported(&archive(&fenced));
         let (mut host, roles) = finish(anchored(&root, lane, &fenced));
         assert_eq!(
-            saved.after_recovery_fence(&host),
+            roles.topology_observer.recovered_topology_checkpoint(&host, &saved),
             Err(JournalError::Contract(Error::Stale))
         );
-        let resumed = fenced.after_recovery_fence(&host).unwrap();
+        let resumed = roles.topology_observer
+            .recovered_topology_checkpoint(&host, &fenced).unwrap();
         same_source(&saved, &resumed);
         assert_eq!(
             host.learned_generation_inspection().unwrap().numerical,

@@ -6,6 +6,7 @@ use crate::workflow::continuation::guarded::mediated::profile::{History, Selecti
 use fa_reference::action::consequence::delivery::persistent::observed::{
     driver::topology::{FileDriverTopology, checkpoint::TopologyCheckpoint},
     guarded::anchored::FileHistoryAnchor,
+    mediation::FileMediationObserver,
 };
 use std::path::Path;
 
@@ -15,6 +16,7 @@ pub(super) struct FenceRetention<'a> {
     loaded: &'a Loaded,
     history: &'a History,
     source: Option<AcknowledgedOutput>,
+    checkpoint: Option<TopologyCheckpoint>,
 }
 
 impl<'a> FenceRetention<'a> {
@@ -37,12 +39,28 @@ impl<'a> FenceRetention<'a> {
                 Ok::<_, String>(output)
             })
             .transpose()?;
-        Ok(Self { loaded, history, source })
+        Ok(Self { loaded, history, source, checkpoint: None })
     }
 
-    /// Re-derive the exact Fence cut from the SAME healthy owner after a failed
-    /// source bind. A poisoned owner or any later acknowledged event refuses;
-    /// stale pre-bind evidence is never relabeled as the current source cut.
+    /// Capture before binding consumes the original observer. The journal alone
+    /// cannot exclude a bound source's unpersisted operation-floor advancement.
+    pub(super) fn capture(
+        &mut self,
+        host: &FileOversight,
+        observer: Option<&FileMediationObserver>,
+    ) -> Result<(), String> {
+        if self.source.is_some() {
+            let saved = self.history.checkpoint()
+                .ok_or("recovery custody requires an exact v2 source checkpoint")?;
+            let observer = observer.ok_or("recovered topology observer custody is missing")?;
+            self.checkpoint = Some(observer.recovered_topology_checkpoint(host, saved).map_err(debug)?);
+        }
+        Ok(())
+    }
+
+    /// Export only while the SAME healthy owner still matches the captured cut.
+    /// A poisoned owner or any later acknowledged event refuses; stale prebind
+    /// evidence is never relabeled as the current source cut.
     pub(super) fn retain_error(&self, host: &FileOversight, error: String) -> String {
         let history = self.loaded.anchor_output.as_deref().map(|path| {
             let previous = self.loaded.recovery_anchor.as_ref()
@@ -51,9 +69,12 @@ impl<'a> FenceRetention<'a> {
             Ok::<_, String>((path, anchor))
         }).transpose();
         let source = self.source.as_ref().map(|output| {
-            let saved = self.history.checkpoint()
-                .ok_or("recovery custody requires an exact v2 source checkpoint")?;
-            let checkpoint = saved.after_recovery_fence(host).map_err(debug)?;
+            let checkpoint = self.checkpoint.as_ref()
+                .ok_or("missing acknowledged recovery topology checkpoint")?;
+            let current = host.history_anchor_after(checkpoint.history_anchor()).map_err(debug)?;
+            if &current != checkpoint.history_anchor() {
+                return Err("owner advanced beyond the captured recovery topology cut".into());
+            }
             Ok::<_, String>((output, checkpoint))
         }).transpose();
         // Capture both before either independent file write. A failed export
@@ -63,7 +84,7 @@ impl<'a> FenceRetention<'a> {
             None => Ok(()),
         });
         let source = source.and_then(|saved| match saved {
-            Some((output, checkpoint)) => output.retain(&checkpoint),
+            Some((output, checkpoint)) => output.retain(checkpoint),
             None => Ok(()),
         });
         combine(error, history, source)

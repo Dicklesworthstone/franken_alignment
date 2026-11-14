@@ -18,6 +18,8 @@ use std::{collections::BTreeMap, fs, io::Cursor, path::PathBuf, sync::atomic::{A
 mod credential;
 #[path = "tests/reconciled.rs"]
 mod reconciled;
+#[path = "tests/recovered.rs"]
+mod recovered;
 #[path = "tests/terminal.rs"]
 mod terminal;
 #[path = "tests/recovery_fence.rs"]

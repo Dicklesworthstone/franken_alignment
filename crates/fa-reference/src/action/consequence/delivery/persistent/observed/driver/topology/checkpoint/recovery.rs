@@ -5,7 +5,7 @@ use crate::action::consequence::delivery::persistent::observed::{Event,
     driver::FileSupervisedDriver,
     mediation::{FileMediationObserver, source::{TopologyRefresh, TopologySourceRecovery}}};
 use crate::Error;
-use std::path::PathBuf;
+use std::{path::PathBuf, rc::Rc};
 
 /// Independently selected next files and complete next contract. The original
 /// context and counters come from the checkpoint, never manual reconstruction.
@@ -51,6 +51,49 @@ impl FileSupervisedDriver {
             previous: checkpoint.expected().clone(), next: selection.next,
             work: checkpoint.work(), last_operation: checkpoint.last_operation(),
         })
+    }
+}
+
+impl FileMediationObserver {
+    /// Carry independently retained source custody across exactly one original
+    /// recovery Fence, before this observer is consumed by a live source.
+    ///
+    /// The SAME healthy owner and separately issued observer are required.
+    /// Observer custody cannot coexist with a bound source, so RAM-only source
+    /// operations cannot disappear behind an unchanged journal. The original
+    /// complete prefix, graph, availability and floors are checked; no Time,
+    /// source, numerical, policy, effect or second Fence may follow the saved cut.
+    ///
+    /// Original documents, work and last operation remain unchanged. Only the
+    /// acknowledged history and native floors advance, with coverage withdrawn.
+    /// This performs no I/O, replay, source check or mutation and issues no role.
+    /// Keep the old pair until both independent successor exports succeed.
+    ///
+    /// The host alone cannot bypass the separately held observer:
+    ///
+    /// ```compile_fail,E0624
+    /// use fa_reference::action::consequence::delivery::persistent::observed::{
+    ///     FileOversight, driver::topology::checkpoint::TopologyCheckpoint,
+    /// };
+    /// fn bypass(saved: &TopologyCheckpoint, host: &FileOversight) {
+    ///     let _ = saved.after_recovery_fence(host);
+    /// }
+    /// ```
+    pub fn recovered_topology_checkpoint(
+        &self,
+        host: &FileOversight,
+        checkpoint: &TopologyCheckpoint,
+    ) -> Result<TopologyCheckpoint, JournalError> {
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if host.mediation_snapshot()?.accepted.is_some() {
+            return Err(Error::Binding.into());
+        }
+        checkpoint.after_recovery_fence(host)
     }
 }
 

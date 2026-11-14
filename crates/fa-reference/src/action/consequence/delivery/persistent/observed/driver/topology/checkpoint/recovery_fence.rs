@@ -1,5 +1,5 @@
-//! Retain the original source-work cut immediately after native guarded recovery.
-//! Acknowledged Fence custody needs neither a live source nor a credential guard.
+//! Internal exact-Fence reduction after the original unbound observer is checked.
+//! The public observer entry point prevents losing RAM-only source operations.
 use super::{FileOversight, JournalError, TopologyCheckpoint, check_work, copy};
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{BaseEvent, Event};
@@ -25,7 +25,11 @@ impl TopologyCheckpoint {
     /// write, topology certification or authority is created. Independently
     /// retaining the successor remains the caller's obligation; keep the old
     /// checkpoint until that export has been durably acknowledged.
-    pub fn after_recovery_fence(&self, host: &FileOversight) -> Result<Self, JournalError> {
+    // An unchanged journal alone cannot prove that an already-bound withdrawn
+    // source has not consumed a later operation ID. Only the public observer
+    // boundary may call this reduction for external consumers; binding consumes
+    // that noncloneable observer before any source operation can occur.
+    pub(super) fn after_recovery_fence(&self, host: &FileOversight) -> Result<Self, JournalError> {
         if host.storage_failure().is_some() {
             return Err(JournalError::Unavailable);
         }

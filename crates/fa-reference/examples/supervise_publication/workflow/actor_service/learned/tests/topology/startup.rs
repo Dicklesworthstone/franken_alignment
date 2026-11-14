@@ -7,6 +7,8 @@ use crate::workflow::actor_service::Profile;
 
 #[path = "startup/resident.rs"]
 mod resident;
+#[path = "startup/interruptions.rs"]
+mod interruptions;
 
 #[derive(Clone)]
 struct Archives {

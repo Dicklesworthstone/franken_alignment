@@ -13,7 +13,7 @@ Append these options to an existing `create-learned-generated` command:
 | Option | Meaning |
 | --- | --- |
 | `--history-anchor INPUT` | Require the independently retained original prefix before recovery. Valid with `--continue-generation`, `--after-message`, `--finish-after-message`, message or finish receipt `--resume`, and offline `--recover-stop`; refused on initial creation. |
-| `--retain-history-anchor NEW_OUTPUT` | At final workflow or receipt settlement, export the acknowledged original owner to a new private operator file. When an input is supplied, the owner must also be a genuine successor of that prefix. |
+| `--retain-history-anchor NEW_OUTPUT` | At final workflow, receipt settlement or an acknowledged recovery startup refusal, export the original owner to a new private operator file. When an input is supplied, the owner must also be a genuine successor of that prefix. |
 
 Offline [learned stop recovery](LEARNED_STOP_RECOVERY.md) accepts only an input
 anchor. Its sealed terminal result exposes no live owner for successor export,
@@ -97,16 +97,27 @@ response and the original effect state, and still performs normal cleanup. It
 does not start another forecast, review, publication or effect retry.
 
 Retention happens at the final workflow or receipt path before driver cleanup.
-Independently anchored, nonmediated `create-learned-generated` and resident
+Independently anchored `create-learned-generated` and resident
 `serve-learned-generated` recovery also retain their acknowledged successor when
 post-Fence startup fails. This includes an invalid Message or Finish predecessor
 or a failed optional operator listener, with or without a resident governor.
 The original checked successor is captured before these read-only startup steps
 and exported on their returned error; the original failure and any retention
 failure are both reported. This also covers consuming actor-gateway conversion
-and intake setup. It never reopens the store, acquires new source evidence,
-replays numerical work or retries an effect. Successful startup retains its
-original final-workflow archive after any live effects.
+and intake setup.
+
+For topology-mediated recovery, selected v2 source checkpoint custody accompanies
+the same exact history cut. Before binding, the original unbound observer may
+carry the saved source accounting across only the acknowledged recovery Fence.
+After binding, capture uses the actual returned source, including its newer
+graph and operation floor. Missing next files, late deadline refusal and local
+startup failures retain the applicable pair; a poisoned or advanced owner cannot
+export an obsolete prebind source capture. Both selected outputs are attempted
+even when one fails. See [source continuity](TOPOLOGY_SOURCE_CONTINUITY.md).
+
+Retention never reopens the store, acquires new source evidence, replays numerical
+work or retries an effect. Successful startup retains its original final-workflow
+archive after any live effects.
 
 Retention is not a transaction spanning publication and independent custodian
 storage. A process crash, failed retention or an earlier failure in another

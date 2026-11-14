@@ -248,11 +248,13 @@ where
     if !continuing {
         return Err("topology recovery inputs cannot create a learned history".into());
     }
-    let retention = super::startup_custody::FenceRetention::admit(
+    let mut retention = super::startup_custody::FenceRetention::admit(
         config, loaded, history, selection,
     )?;
     let ((mut host, human, forecast, identity), observer) =
         recovery::open_selected_live_with_topology(config, loaded, control, deadline, time)?;
+    retention.capture(&host, observer.as_ref())
+        .map_err(|error| retention.retain_error(&host, error))?;
     let bound = (|| {
         match host.request_status(loaded.request) {
             Err(JournalError::Contract(Error::Missing)) => {}

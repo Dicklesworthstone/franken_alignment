@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: require original observer custody for recovery checkpoint export
+
+The public one-Fence checkpoint successor now requires the separately issued
+FileMediationObserver from the same healthy original owner. The shared
+TopologyCheckpoint::after_recovery_fence reduction is private. A withdrawn
+source can advance its last operation in RAM without a journal event; the
+previous host-only public method could therefore export a lower operation floor.
+Binding consumes the noncloneable observer, so the new public boundary excludes
+that hidden source progress. This is an operation-floor correction, not a claim
+that paid checks could be refunded.
+
+Learned startup captures that observer-bound successor immediately after recovery,
+before loading or binding the next source. Its existing failure exporter checks
+the current healthy owner still equals the capture before retaining source
+custody. A later native update or poisoned replacement refuses the old pair.
+The concurrent startup-custody implementation, single/resident integration and
+all its regression coverage remain intact.
+
+Four new native regression functions and two operator regression functions are
+authored, plus a compile-fail example blocking the host-only public bypass.
+They cover zero/spent work, repeated recovery, stale observers on a newly opened
+owner at the same path, exact history/graph/availability/work/floor mismatches,
+deadline expiry immediately after the Fence and poisoned native persistence.
+The existing public plain/raw/owned recovery regression is adapted to retain
+the original observer; its assertions and complete workflow are preserved.
+
+Independent source/API review and Git content checks completed. Compilation,
+runtime tests, rustfmt, Clippy and the required RCH gate have not run because
+the execution workspace remains disconnected. No broader packet, tracker
+acceptance or production qualification is claimed. The source-continuity,
+topology-checkpoint and learned-history-anchor contracts describe the integrated
+behavior and independent archive limitations.
+
 ## 2026-11-14: recover paired learned topology custody after failed startup
 
 The single-request and resident learned services now preserve independently
