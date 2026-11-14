@@ -1,8 +1,10 @@
-//! Explicit local continuation across acknowledged ordinary target restrictions.
+//! Explicit local continuation across acknowledged target restrictions.
 //! The original gate keeps its decision and reservation. Only a completed
 //! driver's readiness cut moves, after proving every intervening control change.
 use super::{FileSupervisedDriver, Job, JournalError, Phase, admitted};
 use super::super::FileOversight;
+use super::super::decoder::learned::sidecar::FileLearnedSidecarFinish;
+use super::super::helpers::learned::FileLearnedProbeStatus;
 use super::super::narrowing::MAX_AUTHORITY_NARROWINGS;
 use crate::Error;
 use crate::action::ActionState;
@@ -58,7 +60,7 @@ impl FileSupervisedDriver {
         Ok(Some(continuation(job, &host, sequence, epoch)?.operation))
     }
 
-    /// Continue the exact retained completed review after one or more ordinary
+    /// Continue the exact retained completed review after one or more target
     /// restrictions, selecting the LAST acknowledged narrowing operation.
     ///
     /// Only contiguous original NarrowAuthority receipts may bridge the old
@@ -74,6 +76,10 @@ impl FileSupervisedDriver {
     /// A mediated job must retain its original same-owner topology source; this
     /// observation-only continuation does not read it or spend another check.
     /// The original fresh source check still runs at final publication.
+    /// Numerical owners must retain their original unpaused source, with no
+    /// unresolved generation or reset. Learned sidecar custody and any retained
+    /// computed review must still match the original completed Continue. This
+    /// neither recomputes a review nor resumes or refunds numerical work.
     /// An exact retry on the same still-current job returns its original result.
     pub fn continue_after_narrowing(
         &mut self,
@@ -125,7 +131,7 @@ fn retained_basis(
     job.check_owner(host)?;
     if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
     if host.source_interrupted { return Err(Error::Incomplete.into()); }
-    if !host.authority_narrowing_supported() || driver.learned_review.is_some() {
+    if !host.authority_narrowing_supported() {
         return Err(Error::Incomplete.into());
     }
     match &driver.topology {
@@ -160,7 +166,73 @@ fn retained_basis(
     if state.control.ceiling.as_ref().is_some_and(|ceiling| !ceiling.contains(target)) {
         return Err(Error::Binding.into());
     }
+    retained_numerical_basis(driver, job, host, state.control.sequence,
+        state.control.ledger.epoch)?;
     Ok((state.control.sequence, state.control.ledger.epoch))
+}
+
+/// Validate the original live numerical source without capturing, evaluating or
+/// renewing a policy lease. The normal publication path still obtains fresh
+/// evidence. Historical equal-looking inputs cannot replace this source check.
+fn retained_numerical_basis(
+    driver: &FileSupervisedDriver,
+    job: &Job,
+    host: &FileOversight,
+    sequence: u64,
+    epoch: u64,
+) -> Result<(), JournalError> {
+    if host.decoder_required() {
+        if !host.clock_ready() || host.machine.decoder_paused()
+            || host.machine.pending_decoder_generation().is_some()
+            || host.machine.pending_learned_step().is_some()
+            || host.machine.pending_learned_reset().is_some()
+        {
+            return Err(Error::Incomplete.into());
+        }
+        host.machine.broker.check_decoder_source(job.attempt)?;
+    }
+    if !host.learned_sidecar_required() && driver.learned_review.is_none() {
+        return Ok(());
+    }
+    let input = job.inputs.as_ref().ok_or(Error::Incomplete)?;
+    let current = host.machine.checked_learned_sidecar_source(job.attempt)?;
+    if current.input_revision() != job.input_revision || current.round().input() != input {
+        return Err(Error::Stale.into());
+    }
+    let applied = host.machine.broker.latest_applied_review(job.attempt)
+        .ok_or(Error::Incomplete)?;
+    if applied.control.attempt != job.attempt || applied.control.action != job.action
+        || applied.control.decision.consequence != Consequence::Continue
+        || applied.control.sequence > job.control_sequence.ok_or(Error::Incomplete)?
+    {
+        return Err(Error::Stale.into());
+    }
+    if let Some(saved) = &driver.learned_review {
+        let review = saved.review();
+        if saved.request() != job.request || review.status() != FileLearnedProbeStatus::Finished
+            || review.failure().is_some() || review.input_revision() != job.input_revision
+            || review.input() != input
+        {
+            return Err(Error::Stale.into());
+        }
+        let Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. }) =
+            review.history().last()
+        else {
+            return Err(Error::Incomplete.into());
+        };
+        if &receipt.policy != applied || receipt.input_revision != job.input_revision
+            || receipt.inputs.as_ref() != input
+        {
+            return Err(Error::Stale.into());
+        }
+    }
+    // A second explicit continuation keeps the immutable original review cut.
+    // Prove its entire bounded chain too; an unrelated control change cannot be
+    // hidden behind a previously acknowledged local continuation.
+    if applied.control.sequence != sequence {
+        continuation_since(job, host, applied.control.sequence, sequence, epoch)?;
+    }
+    Ok(())
 }
 
 fn continuation(
@@ -170,6 +242,16 @@ fn continuation(
     epoch: u64,
 ) -> Result<FileDriverNarrowingContinuation, JournalError> {
     let previous = job.control_sequence.ok_or(Error::Incomplete)?;
+    continuation_since(job, host, previous, sequence, epoch)
+}
+
+fn continuation_since(
+    job: &Job,
+    host: &FileOversight,
+    previous: u64,
+    sequence: u64,
+    epoch: u64,
+) -> Result<FileDriverNarrowingContinuation, JournalError> {
     let distance = sequence.checked_sub(previous).ok_or(Error::Stale)?;
     if distance == 0 || distance > MAX_AUTHORITY_NARROWINGS as u64 {
         return Err(Error::Stale.into());

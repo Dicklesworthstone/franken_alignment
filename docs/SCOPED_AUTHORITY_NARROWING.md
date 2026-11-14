@@ -1,11 +1,11 @@
-# Scoped ordinary authority narrowing
+# Scoped authority narrowing
 
-An independently authorized supervisor can restrict the original ordinary
+An independently authorized supervisor can restrict the original
 publication run to an exact set of targets. The original consequence authority
 intersects that set with its current ceiling. A later larger selection cannot
 restore a target that an earlier restriction removed.
 
-This implements the ordinary `NarrowAuthority` law in plan sections 9.8 and
+This implements the `NarrowAuthority` law in plan sections 9.8 and
 25.2, under FA-014, FA-104 and the FA-138 Tower work. It serves FI-A02, FI-A09
 and FI-A13: external control, typed consequences and useful restrictions that
 preserve permitted work. The [existing consequence contract](CONSEQUENCE_REFERENCE.md)
@@ -26,12 +26,13 @@ admit a later version-3 proposal. A sequence that needs several versions must
 retain those versions when making its initial restriction; a later larger
 selection still intersects the current ceiling and cannot restore omissions.
 
-This operation supports ordinary artifact publication, including its existing
-mandatory evidence source, checked publication, credential, credibility and
-topology-mediation guards. Decoder, learned, predictor/consistency and all stream
-owners are unsupported by this ordinary operation and refuse before replay. The
-existing learned prompt-checkpoint narrowing operation remains a separate
-contract, with its checkpoint binding and deliberate epoch revocation.
+This operation supports ordinary artifact publication and original decoder,
+learned, predictor/consistency and typed-stream owners. Their mandatory evidence,
+checked publication, credential, credibility and topology guards remain active.
+Numerical actor controls require the separate replay allowance below; an ordinary
+grant cannot silently purchase model reconstruction. The existing learned
+prompt-checkpoint narrowing operation remains a separate contract, with its
+checkpoint binding and deliberate epoch revocation.
 
 ## Original control and accounting
 
@@ -46,6 +47,18 @@ Proposed or reviewing work without a reservation supplies no refund. Retained
 targets keep their original reservations. Dispatched, Unknown and
 IrrecoverablyUnknown attempts retain their original states and charges.
 Narrowing does not establish whether an earlier effect executed.
+
+Numerical state, prompt and sampling history, retained forecasts, likelihood
+evidence, source frontiers, pending intents and all lifetime expenditure stay
+with their original owners. Stream publication/confirmation prefixes and pending
+effect obligations also remain unchanged. Restriction can occur while numerical
+work or a reset intent is pending, but cannot rebase the intent's predecessor.
+A pending reset made stale by the new sequence still refuses completion.
+
+Narrowing after dispatch does not renew the consumed human approval. An unresolved
+first publication must still pass the original final sequence check; a stale
+approval cannot publish even when its target was retained. Previously executed
+or unknown outcomes keep their original receipt/reconciliation obligations.
 
 The acknowledgment records the previous ceiling, requested target set, actual
 effective intersection, cancelled native attempts and refunded reservation
@@ -98,6 +111,23 @@ Dropping or revoking the grant withdraws all port clones. Ports cannot keep the
 original owner alive or follow a reopened owner. A numerically equal scope
 does not establish shared owner identity.
 
+`narrow_port_with_numerical_budget(queries, operations, max_replay_events,
+numerical_replay_events)` independently admits cumulative numerical replay.
+The allowance must be positive and no larger than operations times the selected
+per-operation ceiling. Decoder, learned and action-consistency histories,
+including raw-frame predictors, require this explicit selection. Plain typed
+streams without numerical history can use the ordinary grant.
+
+Before an entered numerical restriction, reserve the complete acknowledged
+journal plus the proposed narrowing event (`journal_revision + 1`). This budget
+counts replay events, not scalar products or CPU time. The immutable numerical
+recipes still enforce their original computational limits. Warm reconstruction,
+failure and reconnect never refund this reservation. Plans and exact cached
+retries spend no numerical replay allowance; ordinary histories leave an
+unneeded numerical allowance untouched. Missing selection reports
+`numerical_replay_unsupported`; an insufficient remaining allowance reports
+`numerical_replay_limit`, before key retention, snapshot invalidation or replay.
+
 The query allowance is 1–1,024, mutation allowance 1–128, and per-operation
 replay ceiling 1–4,096 events. Clones share all allowances and the same exact
 result cache. These are finite native work reservations, not CPU measurements
@@ -116,7 +146,7 @@ against the same original healthy owner. A stale cut, unsupported history,
 foreign operation identity or insufficient selected replay allowance refuses
 before entering a new native mutation.
 
-On entry, the port retains the operation identity, spends one mutation and
+On entry, the port reserves any required numerical work, retains the operation identity, spends one mutation and
 invalidates the original admission snapshot before calling the durable owner.
 Storage failure or interruption does not replenish that work or turn an
 unacknowledged candidate into a receipt. A faulted or unavailable owner cannot
@@ -127,7 +157,7 @@ without another event, replay, refund or snapshot invalidation. Changed input
 under that key conflicts. The cache has live-grant lifetime; a new grant cannot
 reuse an operation already recorded in the durable native namespace.
 
-## Continue an already completed ordinary review
+## Continue an already completed review
 
 A completed `Continue` review may remain useful when an independent operator
 narrows the run to a set that still includes its exact target. The native driver
@@ -143,20 +173,28 @@ if let Some(operation) = operation {
 Both methods operate on the original process-local driver. The first reports
 only a provable pending continuation; the second checks it again before changing
 the driver's retained control predecessor. They require the same healthy locked
-owner, a completed ordinary review in its Ready phase, the original exact action
+owner, a completed review in its Ready phase, the original exact action
 and complete input revision and bytes, the original authority epoch, a retained
 target and the original native Continue decision. A Ready job may still be
 native Reviewing while it waits for its first human key. If it already owns an
 automatic permit, its native reservation must still be Authorized.
 
 Every intervening control sequence must be accounted for by an acknowledged
-ordinary target-narrowing receipt held by this owner. Each restriction must
+target-narrowing receipt held by this owner. Each restriction must
 retain the selected target, and the selected final operation must end at the
 current sequence. A source replacement, policy update, another review, fencing,
 cancellation, suspended owner, excluded target or other unaccounted control
-transition cannot be treated as narrowing. An in-progress helper review, a
-dispatched or uncertain effect, and a learned or stream history cannot
-use this continuation path.
+transition cannot be treated as narrowing. An in-progress helper review or a
+dispatched or uncertain effect cannot use this continuation path.
+
+Decoder owners also pass their original current numerical-source validation;
+paused or pending numerical work cannot be acknowledged as a completed current
+source. Learned owners retain their exact current native sidecar and complete
+input. Pending learned reset refuses continuation. A retained computed probe
+review must be Finished, belong to the same request/input and end with its
+original successful applied Continue receipt. Repeated continuations account
+for every restriction back to that original receipt. No completed review is
+substituted, detached, rerun or relabelled to make these checks pass.
 
 A mediated owner must retain its original driver-owned topology source. The
 continuation checks that source's original issuer and exact current graph
@@ -177,7 +215,7 @@ replaced or faulted owner.
 
 Continuation changes only the driver's local readiness predecessor. It does not
 append an event, sample time, acquire source evidence, run helpers, refund rights,
-recreate a permit or issue a human approval. Subsequent ordinary approval and
+recreate a permit or issue a human approval. Subsequent approval and
 dispatch still acquire fresh evidence through their original paths. Earlier
 human requests and approvals remain withdrawn; a new independent human review
 must bind the new control context. Missing or changed source evidence still
@@ -189,8 +227,8 @@ Install the original capability with `PublicationTower::set_narrow(Some(port))`
 on a restricted control-operator mount. Operator role and Permit purpose remain
 required. Equal numeric scope cannot install another owner's port. Actor,
 legacy reconciliation, learned observer, imported-snapshot and branch surfaces
-cannot use this route. A learned control mount can report an explicitly blocked
-plan but cannot enter the ordinary narrowing mutation.
+cannot use this route. An original learned or generated control mount can enter
+the mutation only with its independently issued numerical replay allowance.
 
 Select the registered `next` verb at the original Run address with an explicit
 `narrow_authority` action. For example, substitute the actual route and target:
@@ -332,7 +370,16 @@ review retains its original behavior and does not select this continuation.
 
 ## Validation boundary
 
-Fourteen native regression functions cover actual retained publication with a
+The numerical extension adds actual decoder, learned, predictive and typed-stream
+regression sources, finite replay reservation and exact-retry controls, and
+completed learned-driver continuation with fresh human approval. Source checks
+preserve pending work, stale-source refusal, consumed approval boundaries,
+original stream liability and unchanged lifetime accounting. New source is
+syntax-parsed and reviewed independently; the required RCH command exits 127
+because its runner is absent. Compilation, runtime tests, rustfmt, Clippy and
+full qualification of this extension remain pending.
+
+The original ordinary baseline's fourteen native regression functions cover actual retained publication with a
 fresh human key, excluded reservation refunds, charged Unknown conservation,
 monotone and empty restrictions, canonical journal refusal, durable and live
 retries, finite work, owner replacement and revocation, unsupported histories,

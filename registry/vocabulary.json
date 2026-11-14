@@ -148,7 +148,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "Vec<Affordance> ranked",
-      "note": "The native publication adapter has separately granted receipt-reconciliation, undispatched-request cancellation, explicit Unknown disposition and ordinary target-ceiling narrowing plans. Actions cancel_undispatched, abandon_unknown and narrow_authority explicitly select the latter contracts; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown."
+      "note": "The native publication adapter has separately granted receipt-reconciliation, undispatched-request cancellation, explicit Unknown disposition and target-ceiling narrowing plans. Numerical narrowing requires a separate cumulative replay allowance. Actions cancel_undispatched, abandon_unknown and narrow_authority explicitly select the latter contracts; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown."
     },
     {
       "verb": "tail",

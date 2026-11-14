@@ -1,4 +1,4 @@
-//! Ordinary narrowing cannot enter numerical reconstruction or a text stream.
+//! Numerical work is separately granted; plain stream restriction is native.
 use super::*;
 use crate::action::consequence::activation::monitor::decoder::MonitoredStep;
 use crate::action::consequence::activation::tensor::kv::decoder::{
@@ -12,35 +12,73 @@ mod data {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/support/decoder_inputs.rs"));
 }
 
-fn refuses(mut host: FileOversight, root: &Root) {
+fn numerical_requires_paid_replay(host: FileOversight, root: &Root) {
     let before = host.inspect();
     let files = root.files();
     let decoder = host.decoder_inspection().ok();
     let predictor = host.action_consistency_snapshot().ok();
     let stream = host.stream_snapshot().ok();
     let mediation = host.mediation_snapshot().ok();
-    let original = native(&host, 1, Vec::new());
-    assert!(matches!(host.narrow_authority(host.revision(), original), Err(JournalError::Contract(Error::Incomplete))));
     let (_, mut supervisor) = host.into_actor_gateway();
     supervisor.set_snapshot(before.revision, Some(snapshot())).unwrap();
     let (port, grant) = supervisor.narrow_port(1, 1, MAX_NARROW_REPLAY_EVENTS).unwrap();
     let offered = plan(port.next(1, Vec::new()));
-    assert_eq!(offered.block_reason(), Some(FileNarrowBlockReason::UnsupportedHistory));
+    assert_eq!(offered.block_reason(), Some(FileNarrowBlockReason::NumericalReplayUnsupported));
     assert_eq!(port.narrow(FileNarrowRequest::new(1, offered.basis(), Vec::new()).unwrap()), Err(FileNarrowError::Unsupported));
     assert_eq!(grant.remaining_queries(), 0);
     assert_eq!(grant.remaining_operations(), 1);
+    assert_eq!(grant.remaining_numerical_replay_events(), None);
     assert!(supervisor.owner.borrow().snapshot.is_some());
-    let host = supervisor.host().unwrap();
-    assert_eq!(host.inspect(), before);
-    assert_eq!(host.decoder_inspection().ok(), decoder);
-    assert_eq!(host.action_consistency_snapshot().ok(), predictor);
-    assert_eq!(host.stream_snapshot().ok(), stream);
-    assert_eq!(host.mediation_snapshot().ok(), mediation);
+    {
+        let host = supervisor.host().unwrap();
+        assert_eq!(host.inspect(), before);
+        assert_eq!(host.decoder_inspection().ok(), decoder);
+        assert_eq!(host.action_consistency_snapshot().ok(), predictor);
+        assert_eq!(host.stream_snapshot().ok(), stream);
+        assert_eq!(host.mediation_snapshot().ok(), mediation);
+    }
+    assert_eq!(root.files(), files);
+
+    let events = before.revision as usize + 1;
+    let (paid, paid_grant) = supervisor.narrow_port_with_numerical_budget(
+        2, 2, events + 1, events).unwrap();
+    let input = plan(paid.next(1, Vec::new())).request().unwrap();
+    let acknowledged = receipt(paid.narrow(input.clone()));
+    assert_eq!(acknowledged.refunded_units(), 0);
+    assert_eq!(paid_grant.remaining_numerical_replay_events(), Some(0));
+    assert_eq!(paid_grant.remaining_operations(), 1);
+    assert!(supervisor.owner.borrow().snapshot.is_none());
+    {
+        let host = supervisor.host().unwrap();
+        let after = host.inspect();
+        assert_eq!(after.control.ledger, before.control.ledger);
+        assert_eq!(after.payload, before.payload);
+        assert_eq!(after.executions, before.executions);
+        if let Some(mut expected) = decoder {
+            expected.journal_revision = after.revision;
+            assert_eq!(host.decoder_inspection().unwrap(), expected);
+        }
+        if let Some(mut expected) = predictor {
+            expected.journal_revision = after.revision;
+            assert_eq!(host.action_consistency_snapshot().unwrap(), expected);
+        }
+    }
+    let revision = supervisor.host().unwrap().revision();
+    supervisor.set_snapshot(revision, Some(snapshot())).unwrap();
+    let files = root.files();
+    assert_eq!(receipt(paid.clone().narrow(input)), acknowledged);
+    let blocked = plan(paid.next(2, Vec::new()));
+    assert_eq!(blocked.block_reason(), Some(FileNarrowBlockReason::NumericalReplayLimit));
+    assert_eq!(paid.narrow(FileNarrowRequest::new(2, blocked.basis(), Vec::new()).unwrap()),
+        Err(FileNarrowError::Capacity));
+    assert_eq!(paid_grant.remaining_operations(), 1);
+    assert_eq!(paid_grant.remaining_numerical_replay_events(), Some(0));
+    assert!(supervisor.owner.borrow().snapshot.is_some());
     assert_eq!(root.files(), files);
 }
 
 #[test]
-fn actual_decoder_and_raw_predictor_histories_refuse_before_reconstruction() {
+fn actual_decoder_and_raw_predictor_require_paid_replay_and_preserve_numerical_state() {
     let root = Root::new();
     let decoder = DecoderProfile::new(DecoderIdentity { tenant: 1, model: 9,
         model_generation: 1, tokenizer_generation: 1, profile_generation: 1 },
@@ -54,7 +92,10 @@ fn actual_decoder_and_raw_predictor_histories_refuse_before_reconstruction() {
     let cut = host.decoder_inspection().unwrap().numerical;
     assert!(matches!(host.advance_decoder_forced(host.revision(), cut.actor_revision, cut.position,
         0, DecoderBudget { scalar_products: MAX_DECODER_PRODUCTS }).unwrap().unwrap(), MonitoredStep::Released(_)));
-    refuses(host, &root);
+    // A recovery pause is not a reason to withhold a monotone restriction.
+    host.fence(host.revision()).unwrap();
+    assert!(host.decoder_inspection().unwrap().paused);
+    numerical_requires_paid_replay(host, &root);
 
     use crate::action::consequence::activation::consistency::{BinaryForecast, ErrorBudget, ForecastRegistration};
     use crate::action::consequence::activation::{CaptureProfile, FrameIdentity, SourceFrame};
@@ -84,18 +125,32 @@ fn actual_decoder_and_raw_predictor_histories_refuse_before_reconstruction() {
     observer.forecast_request(&mut host, revision, 701, actor_revision, &frame).unwrap().unwrap();
     assert!(!host.decoder_required());
     assert!(host.action_consistency_required());
-    refuses(host, &root);
+    numerical_requires_paid_replay(host, &root);
 }
 
 #[test]
-fn plain_stream_cannot_be_relabelled_as_ordinary_publication() {
+fn plain_stream_restriction_needs_no_numerical_allowance_and_keeps_its_boundary() {
     let root = Root::new();
     let mut selected = profile();
     selected.delivery.initial_payload.clear();
     let (mut host, _) = FileOversight::create_stream(root.store(), selected,
         StreamProfile::new(9, 1, 4, 16, 64).unwrap()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    refuses(host, &root);
+    let before = host.stream_snapshot().unwrap();
+    let (_, supervisor) = host.into_actor_gateway();
+    let (port, grant) = supervisor.narrow_port(1, 1, MAX_NARROW_REPLAY_EVENTS).unwrap();
+    let input = plan(port.next(1, Vec::new())).request().unwrap();
+    let restricted = receipt(port.narrow(input));
+    assert!(restricted.cancelled().is_empty());
+    assert_eq!(restricted.refunded_units(), 0);
+    assert_eq!(grant.remaining_numerical_replay_events(), None);
+    let after = supervisor.host().unwrap().stream_snapshot().unwrap();
+    assert_eq!(after.confirmed, before.confirmed);
+    assert_eq!(after.published, before.published);
+    assert_eq!(after.pending, before.pending);
+    assert_eq!(after.confirmed_target, before.confirmed_target);
+    assert_eq!(after.publication.control.ledger, before.publication.control.ledger);
+    assert_eq!(after.publication.executions, 0);
 }
 
 #[test]

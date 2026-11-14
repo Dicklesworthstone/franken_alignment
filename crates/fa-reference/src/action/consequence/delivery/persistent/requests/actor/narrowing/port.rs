@@ -5,19 +5,46 @@ use crate::action::consequence::delivery::persistent::observed::narrowing::FileA
 use crate::Error;
 
 impl FileActorSupervisor<FileOversight> {
-    /// Provision finite independent ordinary target restriction. This samples
-    /// no clock/source, captures no snapshot, replays nothing and grants no key.
+    /// Provision finite independent target restriction without numerical replay.
+    /// This samples no clock/source, captures no snapshot and grants no key.
     pub fn narrow_port(&self, queries: usize, operations: usize, max_replay_events: usize)
         -> Result<(FileSupervisorNarrowPort, FileSupervisorNarrowGrant), JournalError>
     {
-        if queries == 0 || operations == 0 || max_replay_events == 0 { return Err(Error::InvalidInput.into()); }
+        self.narrow_port_with_limits(queries, operations, max_replay_events, None)
+    }
+
+    /// Permit original numerical-history reconstruction under one independent
+    /// cumulative allowance. Every entered restriction reserves the complete
+    /// acknowledged history plus its proposed event before retaining its key or
+    /// consuming the admission snapshot. Warm replay and failures refund nothing.
+    /// The original immutable model and predictor recipes still bound their work.
+    /// Plans and exact cached retries require no numerical reservation.
+    pub fn narrow_port_with_numerical_budget(&self, queries: usize, operations: usize,
+        max_replay_events: usize, numerical_replay_events: usize)
+        -> Result<(FileSupervisorNarrowPort, FileSupervisorNarrowGrant), JournalError>
+    {
+        self.narrow_port_with_limits(queries, operations, max_replay_events,
+            Some(numerical_replay_events))
+    }
+
+    fn narrow_port_with_limits(&self, queries: usize, operations: usize,
+        max_replay_events: usize, numerical_replay_events: Option<usize>)
+        -> Result<(FileSupervisorNarrowPort, FileSupervisorNarrowGrant), JournalError>
+    {
+        if queries == 0 || operations == 0 || max_replay_events == 0
+            || numerical_replay_events == Some(0) { return Err(Error::InvalidInput.into()); }
         if queries > MAX_NARROW_QUERIES || operations > MAX_NARROW_OPERATIONS
             || max_replay_events > MAX_NARROW_REPLAY_EVENTS { return Err(Error::Limit.into()); }
+        let possible = operations.checked_mul(max_replay_events).ok_or(Error::Overflow)?;
+        if numerical_replay_events.is_some_and(|events| events > possible) {
+            return Err(Error::Limit.into());
+        }
         let owner = self.owner.try_borrow().map_err(|_| JournalError::Unavailable)?;
         if owner.host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
         let scope = owner.host.actor_explanation_scope();
         let grant = Rc::new(Grant { queries: Cell::new(queries), operations: Cell::new(operations),
-            max_replay_events, records: RefCell::new(BTreeMap::new()) });
+            max_replay_events, remaining_numerical_replay_events: numerical_replay_events.map(Cell::new),
+            records: RefCell::new(BTreeMap::new()) });
         Ok((FileSupervisorNarrowPort { owner: Rc::downgrade(&self.owner), grant: Rc::downgrade(&grant),
             scope, issuer: owner.host.journal_tail_identity() },
             FileSupervisorNarrowGrant { grant }))
@@ -65,6 +92,8 @@ impl FileSupervisorNarrowPort {
     /// Pending/error entries never rerun; dropped custody or unhealthy storage
     /// suppress even cached receipts. Unsupported histories and stale cuts fail
     /// before key retention, replay, mutation allowance or snapshot consumption.
+    /// Entered numerical work is reserved before all of those mutations and is
+    /// never returned, including after failure or an interrupted cached result.
     pub fn narrow(&self, input: FileNarrowRequest) -> FileNarrowResult {
         let Some(grant) = self.grant.upgrade() else { return Ok(withheld()); };
         let Some(owner) = self.owner.upgrade() else { return Ok(unknown()); };
@@ -86,12 +115,20 @@ impl FileSupervisorNarrowPort {
         if input.expected != before_basis { return Err(FileNarrowError::StalePredecessor); }
         if let Some(reason) = blocked(&owner.host, &grant, &before) {
             return Err(match reason {
-                FileNarrowBlockReason::ReplayLimit | FileNarrowBlockReason::OperationLimit => FileNarrowError::Capacity,
+                FileNarrowBlockReason::ReplayLimit | FileNarrowBlockReason::NumericalReplayLimit
+                    | FileNarrowBlockReason::OperationLimit => FileNarrowError::Capacity,
                 _ => FileNarrowError::Unsupported,
             });
         }
         let native = FileAuthorityNarrowRequest::new(input.operation, before_basis.control_sequence,
             before_basis.authority_epoch, input.retained_targets.clone()).map_err(|_| FileNarrowError::MalformedRequest)?;
+        if numerical(&owner.host) {
+            let events = replay_events(&before).ok_or(FileNarrowError::Capacity)?;
+            let allowance = grant.remaining_numerical_replay_events.as_ref()
+                .ok_or(FileNarrowError::Unsupported)?;
+            let remaining = allowance.get().checked_sub(events).ok_or(FileNarrowError::Capacity)?;
+            allowance.set(remaining);
+        }
         grant.operations.set(grant.operations.get() - 1);
         records.insert(input.operation, Record { request: input.clone(), result: None });
         owner.snapshot = None;
@@ -139,10 +176,22 @@ fn blocked(host: &FileOversight, grant: &Grant, state: &FileDeliverySnapshot) ->
     if state.stop.is_some() { return Some(Stopped); }
     if state.control.suspended { return Some(Suspended); }
     if !host.authority_narrowing_supported() { return Some(UnsupportedHistory); }
-    let events = usize::try_from(state.revision).ok().and_then(|n| n.checked_add(1));
-    if events.is_none_or(|events| events > grant.max_replay_events) { return Some(ReplayLimit); }
+    let numerical = numerical(host);
+    if numerical && grant.remaining_numerical_replay_events.is_none() {
+        return Some(NumericalReplayUnsupported);
+    }
+    let Some(events) = replay_events(state) else { return Some(ReplayLimit); };
+    if events > grant.max_replay_events { return Some(ReplayLimit); }
     if grant.operations.get() == 0 { return Some(OperationLimit); }
+    if numerical && grant.remaining_numerical_replay_events.as_ref()
+        .is_none_or(|allowance| allowance.get() < events) { return Some(NumericalReplayLimit); }
     None
+}
+fn numerical(host: &FileOversight) -> bool {
+    host.decoder_required() || host.action_consistency_required()
+}
+fn replay_events(state: &FileDeliverySnapshot) -> Option<usize> {
+    usize::try_from(state.revision).ok()?.checked_add(1)
 }
 fn native_error(error: JournalError) -> FileNarrowError {
     match error {

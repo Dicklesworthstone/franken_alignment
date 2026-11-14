@@ -410,7 +410,7 @@ impl OversightBroker {
 
     // Sidecar construction needs the live proposal source before its first
     // helper input exists. Permitting callers still use check_decoder above.
-    pub(super) fn check_decoder_source(&self, attempt: u64) -> Result<(), Error> {
+    pub(crate) fn check_decoder_source(&self, attempt: u64) -> Result<(), Error> {
         let Some(gate) = &self.decoder else {
             return Ok(());
         };

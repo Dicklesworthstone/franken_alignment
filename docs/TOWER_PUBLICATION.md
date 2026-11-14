@@ -7,7 +7,7 @@ historical admission or separately granted completed-review `explain`, candidate
 separately granted recorded-state `why-held`, and bounded original receipt
 planning/reconciliation, independently granted undispatched-request cancellation
 or explicit Unknown disposition through `next` and `resolve`, independently
-granted ordinary target-ceiling restriction through `next` and `narrow`, explicit
+granted target-ceiling restriction through `next` and `narrow`, explicit
 ordinary held-review admission through `next` and `convene`, separately granted
 original journal `tail`, request-to-review `related`, independently approved
 policy `promote`, and original-domain `fence` through its restricted
@@ -102,9 +102,9 @@ kinds `cancellation-next` and `cancellation` carry separate closed schemas;
 omitting the action discriminator retains the original reconciliation format.
 An action remains data until explicitly selected.
 
-## Restrict the original ordinary target ceiling
+## Restrict the original target ceiling
 
-The independent [ordinary narrowing contract](SCOPED_AUTHORITY_NARROWING.md)
+The independent [narrowing contract](SCOPED_AUTHORITY_NARROWING.md)
 connects `next` with explicit `action: "narrow_authority"` to the registered
 `narrow` verb. Install the original `FileSupervisorNarrowPort` through
 `set_narrow`; only a restricted control-operator mount with Permit purpose can
@@ -127,8 +127,12 @@ An empty target set retains nothing; a wider later selection cannot restore
 earlier exclusions. Ordinary mediated owners retain their original topology
 guards and source accounting. Completed-review continuation requires the same
 attached source, and publication still requires its fresh topology check. The
-ordinary operation refuses decoder, predictor and every stream owner, without
-borrowing their separate replay authority.
+default grant refuses numerical histories. Decoder, learned and predictor
+owners require `narrow_port_with_numerical_budget`; each entered mutation
+reserves the complete acknowledged history plus its proposed event from one
+finite cumulative allowance. Plain typed streams retain their original prefixes
+and pending-effect liabilities. Narrowing cannot reset numerical work, refresh
+predictors or rebase a pending reset intent.
 
 Sealed `narrowing-next` and `narrowing` results correlate the exact requested,
 prior and effective sets and the original run cut. They retain the original
@@ -223,15 +227,16 @@ connect that owner to the same separately granted operator operations:
 |---|---|
 | `new_generated_observer` | Original inspection, journal tail, request history, admission/completed-review explanation, hold diagnosis and policy comparison |
 | `new_generated_reconciliation_operator` | The same reads and explicitly granted original receipt reconciliation through `next` / `resolve` |
-| `new_generated_control_operator` | The same operations plus separately granted undispatched cancellation, Unknown abandonment and admission fencing |
+| `new_generated_control_operator` | The same operations plus separately granted undispatched cancellation, Unknown abandonment, target narrowing and admission fencing |
 
 Each takes the original generated-text port, an exact versioned Run address and
 `PublicationLimits`. The constructor itself grants no disclosure, replay work
 or mutation. The host must independently issue, install and retain the original
 native grants; all clones and facades share their finite work and exact retries.
 Numerical history still requires explicit numerical replay allowances for the
-operations that replay it. Ordinary target-ceiling narrowing remains unsupported
-for this stream contract.
+operations that replay it, including target-ceiling narrowing. An ordinary
+narrowing grant reports `numerical_replay_unsupported`; an explicitly selected
+short numerical allowance reports `numerical_replay_limit` before reconstruction.
 
 All three mounts require operator access. They cannot accept ordinary caller
 payloads or generated-source Submit documents, obtain actor tickets, run

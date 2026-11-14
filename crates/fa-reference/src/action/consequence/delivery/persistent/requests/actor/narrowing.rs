@@ -1,4 +1,4 @@
-//! Separately granted monotone restriction of the original ordinary run.
+//! Separately granted monotone restriction of the original run.
 //! Query plans are observation; only narrow enters the original durable gate.
 mod port;
 use super::{Knowledge, OwnerRef};
@@ -26,7 +26,8 @@ impl std::error::Error for FileNarrowError {}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileNarrowBlockReason {
-    Stopped, Suspended, UnsupportedHistory, ReplayLimit, OperationLimit, OperationAlreadyUsed,
+    Stopped, Suspended, UnsupportedHistory, ReplayLimit, NumericalReplayUnsupported,
+    NumericalReplayLimit, OperationLimit, OperationAlreadyUsed,
 }
 
 /// One exact acknowledged original-owner cut. The recorded clock is historical
@@ -114,6 +115,7 @@ pub type FileNarrowResult = Result<FileNarrowObservation, FileNarrowError>;
 struct Record { request: FileNarrowRequest, result: Option<FileNarrowResult> }
 struct Grant {
     queries: Cell<usize>, operations: Cell<usize>, max_replay_events: usize,
+    remaining_numerical_replay_events: Option<Cell<usize>>,
     records: RefCell<BTreeMap<u64, Record>>,
 }
 
@@ -129,13 +131,21 @@ impl FileSupervisorNarrowGrant {
     pub fn remaining_queries(&self) -> usize { self.grant.queries.get() }
     pub fn remaining_operations(&self) -> usize { self.grant.operations.get() }
     pub fn max_replay_events(&self) -> usize { self.grant.max_replay_events }
+    /// Cumulative journal-event reservations shared by all port clones. None
+    /// means numerical reconstruction was not granted; these are not CPU units.
+    pub fn remaining_numerical_replay_events(&self) -> Option<usize> {
+        self.grant.remaining_numerical_replay_events.as_ref().map(Cell::get)
+    }
     pub fn revoke(self) { drop(self); }
 }
 impl fmt::Debug for FileSupervisorNarrowGrant {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileSupervisorNarrowGrant")
             .field("remaining_queries", &self.remaining_queries())
-            .field("remaining_operations", &self.remaining_operations()).finish_non_exhaustive()
+            .field("remaining_operations", &self.remaining_operations())
+            .field("max_replay_events", &self.max_replay_events())
+            .field("remaining_numerical_replay_events", &self.remaining_numerical_replay_events())
+            .finish_non_exhaustive()
     }
 }
 

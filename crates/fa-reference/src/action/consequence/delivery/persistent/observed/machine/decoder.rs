@@ -123,7 +123,7 @@ impl Machine {
             | Event::Core(BaseEvent::Time(_) | BaseEvent::Cancel(_) | BaseEvent::Fence
                 | BaseEvent::Stop(_) | BaseEvent::StopProgress(_) | BaseEvent::Reconcile(_)
                 | BaseEvent::Seal(_) | BaseEvent::Sweep | BaseEvent::ReplacePolicy(_) | BaseEvent::ReserveRecovery(_) | BaseEvent::AbandonUnknown(_))
-            | Event::InputsUnavailable(..) | Event::RevokeHumans
+            | Event::InputsUnavailable(..) | Event::RevokeHumans | Event::NarrowAuthority(_)
             | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
             | Event::Source(_) | Event::Identity(_) | Event::Campaign(_)
             | Event::Credibility(CredibilityEvent::ActivateHeldOut(_) | CredibilityEvent::WithdrawHeldOut(_))

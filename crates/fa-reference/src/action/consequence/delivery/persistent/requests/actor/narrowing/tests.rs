@@ -333,3 +333,7 @@ fn source_refusal_and_stop_do_not_gain_authority_from_narrowing() {
 
 #[path = "unsupported.rs"]
 mod unsupported;
+#[path = "numerical.rs"]
+mod numerical;
+#[path = "stream.rs"]
+mod stream;

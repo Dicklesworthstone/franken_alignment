@@ -6,9 +6,11 @@ use crate::Error;
 
 impl Machine {
     pub(in super::super) fn authority_narrowing_supported(&self) -> bool {
-        self.decoder.is_none() && self.learned.is_none()
-            && self.consistency.is_none() && self.learned_consistency.is_none()
-            && self.broker.stream_state().is_none()
+        // Every original owner uses the same exact target lattice. Restriction
+        // changes no numerical predecessor, forecast or audience boundary. The
+        // caller's separate replay allowance governs numerical reconstruction;
+        // the immutable original recipes still bound that reconstruction.
+        true
     }
 
     pub(in super::super) fn authority_narrowing_requires_topology(&self) -> bool {

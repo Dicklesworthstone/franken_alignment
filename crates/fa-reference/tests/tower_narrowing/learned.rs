@@ -1,7 +1,7 @@
-//! Ordinary narrowing cannot bypass the original learned stream contract.
+//! Learned narrowing requires its own explicit numerical replay allowance.
 use super::{
-    Directory, OPERATION, Supervisor, access, image, mount, native, next, plan,
-    query, refused, support,
+    Directory, OPERATION, Supervisor, access, action, image, mount, native, next, plan,
+    query, receipt, refused, support,
 };
 use fa_reference::action::consequence::delivery::{
     persistent::{
@@ -57,7 +57,7 @@ fn generate(supervisor: &mut Supervisor) {
 }
 
 #[test]
-fn learned_observers_and_unsupported_control_history_cannot_import_ordinary_narrowing() {
+fn learned_observers_and_unpaid_control_cannot_narrow_but_paid_original_control_can() {
     let root = Directory::new();
     let (mut host, _) = FileOversight::create_with_learned_text_stream(root.store(), profile(), recipe()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
@@ -82,7 +82,8 @@ fn learned_observers_and_unsupported_control_history_cannot_import_ordinary_narr
     assert_eq!(message, b"OK");
     let saved = image(&root);
     let proposed = next(&mut control, OPERATION, vec![target]);
-    assert_eq!(plan(&proposed).block_reason(), Some(FileNarrowBlockReason::UnsupportedHistory));
+    assert_eq!(plan(&proposed).block_reason(), Some(FileNarrowBlockReason::NumericalReplayUnsupported));
+    assert!(proposed.to_json().unwrap().contains("numerical_replay_unsupported"));
     assert!(!plan(&proposed).can_narrow());
     assert!(plan(&proposed).request().is_none());
     let mut command = TowerRequest::new("unsupported-ordinary-narrow", mount(), Verb::Narrow);
@@ -103,4 +104,45 @@ fn learned_observers_and_unsupported_control_history_cannot_import_ordinary_narr
     let ticket = actor.submit(701, LearnedTextRelease::Message, ElapsedTick(100)).unwrap();
     assert!(matches!(actor.poll(&ticket), ActorKnowledge::Pending { .. }));
     assert_eq!(supervisor.host().unwrap().request_action(701).unwrap().spec().payload, b"OK");
+
+    let before = supervisor.host().unwrap().inspect();
+    let generation = supervisor.host().unwrap().learned_generation_inspection().unwrap();
+    let stream = supervisor.host().unwrap().stream_snapshot().unwrap();
+    let events = before.revision as usize + 1;
+    let (paid, paid_grant) = supervisor.narrow_port_with_numerical_budget(2, 1, events, events).unwrap();
+    control.set_narrow(Some(paid)).unwrap();
+    let offered = next(&mut control, OPERATION, vec![target]);
+    assert!(plan(&offered).can_narrow());
+    let command = action(&offered);
+    // The same exact command still cannot turn an observation mount into control.
+    refused(&observer.dispatch(&access(true, true), command.clone()), ReasonCode::CapabilityUnsupported);
+    assert_eq!(paid_grant.remaining_numerical_replay_events(), Some(events));
+    let narrowed = control.dispatch(&access(true, true), command.clone());
+    let acknowledged = receipt(&narrowed).clone();
+    assert_eq!(acknowledged.effective_targets(), &[target]);
+    assert!(acknowledged.cancelled().is_empty());
+    assert_eq!(acknowledged.refunded_units(), 0);
+    assert_eq!(paid_grant.remaining_operations(), 0);
+    assert_eq!(paid_grant.remaining_numerical_replay_events(), Some(0));
+    let after = supervisor.host().unwrap().inspect();
+    assert_eq!(after.revision, before.revision + 1);
+    assert_eq!(after.control.sequence, before.control.sequence + 1);
+    assert_eq!(after.control.ledger, before.control.ledger);
+    assert_eq!(after.executions, 0);
+    let numerical = supervisor.host().unwrap().learned_generation_inspection().unwrap();
+    assert_eq!(numerical.numerical, generation.numerical);
+    assert_eq!(numerical.pending, generation.pending);
+    assert_eq!(numerical.paused, generation.paused);
+    let current = supervisor.host().unwrap().stream_snapshot().unwrap();
+    assert_eq!(current.confirmed, stream.confirmed);
+    assert_eq!(current.published, stream.published);
+    assert_eq!(current.pending, stream.pending);
+    assert_eq!(current.confirmed_target, stream.confirmed_target);
+    assert_eq!(supervisor.host().unwrap().learned_text_message(LearnedEvidenceLimits::default()).unwrap().bytes(), message);
+    let saved = image(&root);
+    support::observe(&mut supervisor);
+    assert_eq!(receipt(&control.dispatch(&access(true, true), command)), &acknowledged);
+    assert_eq!(image(&root), saved);
+    assert_eq!(supervisor.host().unwrap().inspect(), after);
+    assert_eq!(paid_grant.remaining_numerical_replay_events(), Some(0));
 }

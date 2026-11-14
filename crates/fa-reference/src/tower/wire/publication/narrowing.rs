@@ -257,6 +257,8 @@ fn block_reason(reason: FileNarrowBlockReason) -> &'static str {
         FileNarrowBlockReason::Suspended => "suspended",
         FileNarrowBlockReason::UnsupportedHistory => "unsupported_history",
         FileNarrowBlockReason::ReplayLimit => "replay_limit",
+        FileNarrowBlockReason::NumericalReplayUnsupported => "numerical_replay_unsupported",
+        FileNarrowBlockReason::NumericalReplayLimit => "numerical_replay_limit",
         FileNarrowBlockReason::OperationLimit => "operation_limit",
         FileNarrowBlockReason::OperationAlreadyUsed => "operation_already_used",
     }

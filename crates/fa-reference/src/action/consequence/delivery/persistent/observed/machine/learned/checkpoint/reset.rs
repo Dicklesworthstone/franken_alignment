@@ -150,6 +150,7 @@ impl Machine {
                             | BaseEvent::ReplacePolicy(_)
                             | BaseEvent::ReserveRecovery(_)
                     ) | Event::InputsUnavailable(..)
+                        | Event::NarrowAuthority(_)
                         | Event::RevokeHumans
                         | Event::Human(_, HumanDecision::Reject | HumanDecision::Revoke)
                         | Event::Source(_)

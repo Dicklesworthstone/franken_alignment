@@ -1,4 +1,4 @@
-//! Explicit ordinary target-ceiling restriction in the original two-key journal.
+//! Explicit target-ceiling restriction in the original two-key journal.
 //! The original authority intersects sets; no policy, checkpoint or review is invented.
 use super::{Event, FileOversight, JournalError, Transition};
 use super::super::codec::shared::{Reader, Writer};
@@ -49,7 +49,7 @@ impl FileAuthorityNarrowReceipt {
 }
 
 impl FileOversight {
-    /// Commit one explicit restriction of this original ordinary artifact owner.
+    /// Commit one explicit restriction through this trusted original owner.
     /// Retained automatic reservations and every dispatched/Unknown charge stay
     /// with the original gate. Only outside undispatched reservations refund.
     /// The control sequence advances once; policy and authority epochs do not.
@@ -59,8 +59,14 @@ impl FileOversight {
     /// Ordinary mediated owners retain the same graph, accepted cut and epoch.
     /// This restriction neither refreshes topology nor replaces the selected
     /// source; a source-bound driver still qualifies it at final publication.
-    /// Decoder/predictor and ALL stream histories are unsupported by this
-    /// operation and refuse before replay. An exact healthy retry
+    /// Numerical histories replay under their original immutable recipes. This
+    /// restriction preserves decoder/KV/sampler work, pending generation/reset
+    /// intents, predictor observations and the exact stream audience boundary.
+    /// It cannot make an interrupted reset's former predecessor current again.
+    /// Untrusted operator access requires its own explicit numerical allowance.
+    /// A target's version is exact: publishing one retained version does not
+    /// automatically retain the successor message or Finish destination.
+    /// An exact healthy retry
     /// returns its original receipt, including after reopening, without widening
     /// a later ceiling or restoring a key. Existing event bytes remain unchanged.
     pub fn narrow_authority(&mut self, revision: u64, request: FileAuthorityNarrowRequest)

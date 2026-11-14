@@ -115,6 +115,35 @@ fn reset_preparation_catches_up_time_but_cannot_adopt_an_interrupted_intent() {
 }
 
 #[test]
+fn target_restriction_preserves_pending_reset_but_never_rebases_its_control_predecessor() {
+    use crate::action::consequence::delivery::persistent::observed::narrowing::FileAuthorityNarrowRequest;
+    let root = Directory::new();
+    let config = config(false, 1);
+    let (mut host, _) = owner(&root, &config);
+    pending(&mut host, MAX_MODEL_KV_VALUES);
+    let intent = host.pending_learned_reset().unwrap();
+    let usage = host.learned_recovery_usage().unwrap();
+    let numerical = host.learned_generation_inspection().unwrap();
+    let before = host.inspect();
+    let input = FileAuthorityNarrowRequest::new(901, before.control.sequence,
+        before.control.ledger.epoch, vec![before.target]).unwrap();
+    host.narrow_authority(host.revision(), input).unwrap();
+    let after = host.inspect();
+    assert_eq!(after.control.sequence, before.control.sequence + 1);
+    assert_eq!(after.control.ledger, before.control.ledger);
+    assert_eq!(host.pending_learned_reset().unwrap(), intent);
+    assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical.numerical);
+    assert_eq!(host.learned_recovery_usage().unwrap(), usage);
+    let bytes = disk(&host);
+    assert_eq!(host.prepare_learned_reset_completion(host.revision(), 900).err(), Some(Error::Stale.into()));
+    assert_eq!(host.complete_learned_reset(host.revision(), 900).err(), Some(Error::Stale.into()));
+    assert_eq!(host.inspect(), after);
+    assert_eq!(host.pending_learned_reset().unwrap(), intent);
+    assert_eq!(host.learned_recovery_usage().unwrap(), usage);
+    assert_eq!(disk(&host), bytes);
+}
+
+#[test]
 fn reset_preparation_rejects_foreign_stale_invalid_and_incomplete_work_without_writes() {
     let root = Directory::new(); let foreign_root = Directory::new(); let config = config(false, 1);
     let (mut host, _) = owner(&root, &config); let (mut foreign, _) = owner(&foreign_root, &config);

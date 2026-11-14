@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-14: narrow numerical and streaming publication authority
+
+- Extend original target-ceiling restriction to decoder, learned, predictive and
+  typed-stream owners without changing epochs, source state or lifetime work.
+- Add a separate cumulative numerical replay allowance to the native control
+  grant; reserve the complete history plus the mutation before entering replay.
+- Preserve stream prefixes, pending effects, Unknown charges and reset intent;
+  withdraw old human approvals and retain only permitted undispatched work.
+- Continue completed learned/decoder reviews only through original current
+  source and receipt bindings, with fresh independent human approval afterward.
+- Add actual publication, replay-budget, stale-source, pending-work and storage
+  failure regression sources. Source/syntax checks are separate from Rust/RCH
+  execution, which remains pending because the required runner is unavailable.
+
 ## 2026-11-14: follow bounded live journal captures through Tower
 
 - Add explicit `tower-tail --follow-captures N` while retaining one capture by

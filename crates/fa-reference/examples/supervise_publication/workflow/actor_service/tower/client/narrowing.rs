@@ -264,6 +264,7 @@ fn plan(
     } else if !value.get("action")?.is_null()
         || !matches!(value.get("block_reason")?.as_str()?,
             "stopped" | "suspended" | "unsupported_history" | "replay_limit"
+            | "numerical_replay_unsupported" | "numerical_replay_limit"
             | "operation_limit" | "operation_already_used")
     {
         return None;

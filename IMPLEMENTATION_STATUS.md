@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: narrow numerical and streaming publication authority
+
+The original durable target-ceiling operation now accepts decoder, learned,
+predictive and typed-stream histories. It intersects exact targets and advances
+the control sequence once while preserving policy generation, authority epoch,
+numerical source, lifetime expenditure, forecasts and stream prefixes. Excluded
+undispatched reservations refund through the original ledger; dispatched and
+unknown effects remain charged. A pending numerical or reset intent is retained,
+and a reset made stale by the restriction cannot silently rebase its predecessor.
+
+The separate `narrow_port_with_numerical_budget` grant reserves the complete
+acknowledged history plus its proposed event before key retention, admission
+snapshot invalidation and native entry. The allowance is finite, cumulative and
+shared by clones. Missing or insufficient selection refuses before replay.
+Plans, exact cached retries and nonnumerical history do not spend numerical
+allowance; entered failure does not refund it. Existing wire formats remain
+unchanged, with explicit numerical blocking reasons on plans.
+
+Completed Ready reviews can continue only under the original owner and exact
+action, input, target, epoch and complete narrowing-receipt chain. Decoder and
+learned source checks remain native. Learned continuation also binds the current
+sidecar and any retained completed probe evaluator to its original successful
+Continue receipt; pending work/reset, stale source, unrelated control transitions
+and incomplete reviews cannot borrow a later narrowing receipt. Old human keys
+remain withdrawn. Original final source, consistency, credibility, topology and
+two-key publication gates still decide whether an effect can proceed.
+
+Authored regressions cover real retained publication, exact-target successor
+refusal, charged/pending stream liability, cold numerical reconstruction, finite
+shared allowance and retry, pending reset, stale learned sources and storage
+failure boundaries. The live operator-profile and reviewer-loop composition is
+a separate increment; existing ordinary service behavior remains available.
+
+Independent source review, Rust syntax parsing and whitespace checks are distinct
+from execution evidence. `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked
+-p xtask -- check` exits 127 because `rch` is absent; no Rust compiler or Cargo is
+installed either. Compilation, runtime tests, rustfmt, Clippy and full qualification
+remain pending. No Bead or roadmap acceptance has been closed. This implements
+the existing plan sections 9.8/25.2 narrowing law under FA-014/FA-104/FA-138;
+contracts: `docs/SCOPED_AUTHORITY_NARROWING.md` and `docs/TOWER_PUBLICATION.md`.
+
 ## 2026-11-14: follow bounded live journal captures through Tower
 
 The existing `tower-tail` command now accepts explicit `--follow-captures N`

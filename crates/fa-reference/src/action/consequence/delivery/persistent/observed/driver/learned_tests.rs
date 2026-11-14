@@ -545,3 +545,5 @@ fn dispatched_cancellation_stays_query_only_without_repeating_helpers_or_refundi
 
 #[path = "learned_tests/evidence.rs"]
 mod evidence;
+#[path = "learned_tests/narrowing.rs"]
+mod narrowing;
