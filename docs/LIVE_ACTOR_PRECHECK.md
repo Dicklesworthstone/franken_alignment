@@ -23,7 +23,7 @@ supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE W
 
 The precheck option is final after ordinary positional arguments. Existing open
 modes can also use their independent credibility activation option. Sequence,
-multi-peer, receipt-only, topology, generated and native-text combinations
+multi-peer, receipt-only, native-transport topology, generated and native-text combinations
 are refused before another service can consume or ignore the option. An already
 recorded selected request remains observation/reconciliation-only: requesting a
 new disclosure for it is refused, without a source read or new grant. Its existing
@@ -41,6 +41,18 @@ described here. Run `actor-precheck` before an explicit `tower-exchange` proposa
 the Tower submission still reacquires source evidence and performs both reviews.
 The request-sequence option remains incompatible with precheck disclosure.
 See [the Tower composition](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
+
+Explicit single-request Tower `serve-create` and `serve-create-checked` can also
+select `--topology-profile TOPOLOGY_PROFILE`, using the existing simple witness
+profile for the checked form. The original topology cut must be certified
+before disclosure is exposed. Precheck requests and reconnects share one finite
+grant and do not refresh topology. Actual submission reacquires policy evidence,
+requires fresh helper/human review and both keys, and performs the original
+final topology check. Uncached, cached and full-policy disclosure remain
+available under their existing leakage contracts. Stop retains priority over
+both ingress sockets. A version-2 retained checkpoint cannot alias the precheck
+socket, even through another spelling of its parent directory. Topology/precheck
+reopening, schedules and live-governor combinations remain unsupported.
 
 The actor and precheck profiles are public connection context. The private
 supervisor Config, evidence, journal and independent reviewer roles must not be

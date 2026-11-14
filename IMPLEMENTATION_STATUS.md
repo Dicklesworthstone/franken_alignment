@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: combine exact precheck with topology-supervised Tower creation
+
+Ordinary single-request `serve-create` and `serve-create-checked` now accept
+explicit Tower generation, topology and precheck profiles together. The checked
+form retains the existing simple witness contract. The service reuses the same
+mediated owner, original policy disclosure, bounded source and final publication
+gate. It certifies initial topology before exposing disclosure, reacquires policy
+evidence on actual submission, requires helper and independent human approval,
+and refreshes topology again at publication. No precheck result supplies a key
+or a cut certificate. Queries and reconnects retain the original finite allowance.
+
+Version-2 topology checkpoint outputs are checked against the precheck socket's
+canonical parent/name before time, source or store admission, including aliases
+through parent symlinks. Independent Stop remains first in the common ingress
+loop, and source/history custody remains with the original driver on success or
+failure. Native-transport topology/precheck, scheduled/reopened/governed precheck,
+numerical owners and stronger witness combinations retain their existing scope.
+
+Seven new regression functions cover all option orderings; plain/checked real
+socket publication with uncached, cached and full-policy disclosure; cumulative
+query limits; fresh source rejection after a passing precheck; late graph bypass
+or missing inventory after charged dispatch; partial-frame Stop; checkpoint
+aliases; and initial topology refusal. Independent source/API review, Rust
+grammar parsing and whitespace checks completed. RCH is unavailable and no Rust
+toolchain is installed, so compilation, runtime tests, rustfmt, Clippy and full
+qualification remain pending. No new schema, dependency, authority or Bead
+closure. Contracts: `docs/TOWER_PEER.md`, `docs/LIVE_ACTOR_PRECHECK.md` and
+`docs/LIVE_TOPOLOGY_SERVICE.md`.
+
 ## 2026-11-14: bind live operator grants to their original native host
 
 Older inspection, explanation, hold-diagnosis, review-explanation, policy-replay,

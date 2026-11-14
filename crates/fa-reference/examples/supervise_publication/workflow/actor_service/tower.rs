@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -133,7 +133,7 @@ impl<'a> Arguments<'a> {
             }
         }
         if (requests.is_some() && precheck.is_some())
-            || (topology.is_some() && precheck.is_some())
+            || (open && topology.is_some() && precheck.is_some())
             || (guarded.is_some() && (!open || (topology.is_none() && governor.is_none())))
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()

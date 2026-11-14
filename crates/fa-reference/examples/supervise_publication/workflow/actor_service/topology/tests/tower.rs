@@ -5,6 +5,8 @@
 mod failure_custody;
 #[path = "tower/series.rs"]
 mod series;
+#[path = "tower/precheck_composition.rs"]
+mod precheck_composition;
 
 use super::*;
 use crate::workflow::actor_service::operator::Settings;

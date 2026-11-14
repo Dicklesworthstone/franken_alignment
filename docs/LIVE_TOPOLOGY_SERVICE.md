@@ -46,13 +46,25 @@ It accepts the option pairs in any order after all positional files. Operator
 read custody does not replace topology certification, and its socket cannot
 alias a retained checkpoint destination.
 
+Single-request Tower creation also accepts an explicit `--precheck-profile`
+alongside the topology profile. The [combined
+workflow](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal) exposes the
+original uncached, cached or full-policy disclosure only after initial topology
+certification. Precheck queries spend their shared disclosure allowance but do
+not acquire an effect key or refresh topology. Fresh actual submission, separate
+helper/human review, both publication keys and the mandatory final topology cut
+remain required. Checked creation uses the existing simple witness profile.
+The retained checkpoint and precheck socket must have distinct canonical paths.
+
 Topology-supervised reopening uses the explicit
 [guarded Tower recovery path](LIVE_TOWER_RECOVERY.md): select a Tower generation,
 `--guarded` history/floors and a `fa.mediated-submit/2` topology profile in either
 open mode. It consumes the independently retained source/history checkpoint and
 preserves cumulative work through the original recovery and source rebind.
-Ordinary unguarded open, request schedules and precheck disclosure remain outside
-this topology composition. Creation continues to refuse credibility activation;
+Ordinary unguarded open remains outside this topology composition. Explicit
+Tower schedules retain their existing cumulative source contract; precheck
+disclosure is limited to single-request Tower creation and is not admitted for
+scheduled, reopened or governed topology services. Creation continues to refuse credibility activation;
 guarded reopening applies the original option only to new work. No continuous
 watcher, OS-containment proof, new authority, journal format, effect adapter or
 executor is added.

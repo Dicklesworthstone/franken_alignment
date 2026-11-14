@@ -96,7 +96,54 @@ fn create_topology_and_optional_operator_are_selected_in_every_option_order() {
 }
 
 #[test]
-fn topology_cannot_enter_unselected_open_recovery_precheck_or_other_service_modes() {
+fn single_request_topology_precheck_creation_keeps_each_independent_selection() {
+    for mode in ["serve-create", "serve-create-checked"] {
+        let pairs = [
+            [FLAG, "11"],
+            ["--topology-profile", "topology.json"],
+            ["--precheck-profile", "precheck.json"],
+            ["--operator-profile", "operator.json"],
+        ];
+        for first in 0..4 {
+            for second in 0..4 {
+                for third in 0..4 {
+                    for fourth in 0..4 {
+                        let order = [first, second, third, fourth];
+                        if order.iter().enumerate().any(|(i, value)| order[..i].contains(value)) {
+                            continue;
+                        }
+                        let mut args = positional(mode);
+                        for index in order {
+                            args.extend(pairs[index].into_iter().map(str::to_owned));
+                        }
+                        let selected = Arguments::parse(&args).unwrap();
+                        assert!(!selected.open);
+                        assert_eq!(selected.generation, 11);
+                        assert_eq!(selected.topology, Some(Path::new("topology.json")));
+                        assert_eq!(selected.precheck, Some(Path::new("precheck.json")));
+                        assert_eq!(selected.operator, Some(Path::new("operator.json")));
+                        assert_eq!(selected.publication.is_some(), mode.ends_with("-checked"));
+                        assert!(selected.requests.is_none());
+                        assert!(selected.guarded.is_none());
+                    }
+                }
+            }
+        }
+    }
+    // This composition has no recovery or scheduled disclosure contract.
+    // Those selections must continue to refuse before profile reads or clocks.
+    for mode in ["serve-open", "serve-open-checked"] {
+        let mut args = positional(mode);
+        args.extend([
+            FLAG, "11", "--topology-profile", "topology.json",
+            "--precheck-profile", "precheck.json", "--guarded", "recovery.json",
+        ].into_iter().map(str::to_owned));
+        refused_before_reads(&args);
+    }
+}
+
+#[test]
+fn topology_cannot_enter_unselected_open_recovery_or_other_service_modes() {
     for mode in [
         "serve-open",
         "serve-open-checked",
@@ -117,7 +164,6 @@ fn topology_cannot_enter_unselected_open_recovery_precheck_or_other_service_mode
     }
     for mode in ["serve-create", "serve-create-checked"] {
         for forbidden in [
-            ["--precheck-profile", "precheck.json"],
             ["--peers", "peer.json"],
             ["--native-text", "native.json"],
             ["--guarded", "recovery.json"],

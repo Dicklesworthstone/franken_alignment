@@ -181,8 +181,9 @@ checks cover every future reviewer and Stop socket before setup, including any
 selected checkpoint archive.
 
 This creation composition uses `serve-create` and `serve-create-checked` with
-plain witness profiles. Topology cannot be combined with
-`--precheck-profile`, ordinary open/recovery, credibility activation, multiple
+plain witness profiles. Single-request Tower creation can also select
+`--precheck-profile` as described below. Topology cannot be combined with
+ordinary unguarded open/recovery, credibility activation, multiple
 peers, native text or generated/learned modes. Feed, wait, snapshot and joint
 witness profiles are refused before clock, source, socket or store setup.
 Recovery requires the existing independently retained mediated history and
@@ -230,6 +231,30 @@ Select one of the existing uncached, cached or full-policy precheck profiles;
 its original disclosure, socket, policy epoch, query and lifetime limits apply.
 `--requests` cannot be combined with this option: disclosure belongs to the
 single selected admission and is never renewed at a sequence handoff.
+
+The create forms can additionally retain their original topology supervision:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --topology-profile TOPOLOGY_PROFILE --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --precheck-profile PRECHECK_PROFILE --topology-profile TOPOLOGY_PROFILE --tower-generation 41
+```
+
+All option pairs follow the positional files and can appear in any order. This
+combination is limited to one ordinary request and the existing simple checked
+witness profile. It does not admit topology/precheck recovery, schedules, a live
+governor, native text, generated/learned owners or stronger witness profiles.
+Uncached, cached and full-policy precheck profiles retain their original
+disclosure and leakage contracts.
+
+Initial topology certification completes before the precheck endpoint is
+exposed. The same original source custodian pays the final check before
+publication; a precheck query performs no topology refresh and a precheck pass
+cannot stand in for a certified final cut. The actual submission still obtains
+fresh policy evidence and both independent publication keys. Version-2 topology
+profiles retain their actual acknowledged source/history checkpoint on normal
+or failed exit. The checkpoint destination and precheck socket must be distinct,
+including aliases through canonical parent directories; conflicts refuse before
+time, store or source admission.
 
 The actor calls `actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`
 through the separate native socket, then sends its actual proposal with

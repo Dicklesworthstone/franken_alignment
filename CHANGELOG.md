@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14: compose exact precheck with topology-supervised Tower creation
+
+- Enable explicit topology and precheck profiles together for ordinary
+  single-request Tower creation, including the existing simple checked mode.
+- Reuse initial topology certification, original finite disclosure custody,
+  fresh submission evidence, two independent approval keys and final cut checks.
+- Reject canonical precheck-socket/checkpoint aliases before live setup; retain
+  independent Stop priority and actual source/history custody on every exit.
+- Add seven parser/service regressions covering all three disclosure profiles,
+  real publication, finite reconnect budgets, changed evidence, final-cut failure,
+  partial requests, initial refusal and output-path collisions.
+- Update commands and scope contracts. Source review and grammar/whitespace
+  checks are complete; compilation, runtime, formatting and Clippy remain
+  pending the required RCH environment.
+
 ## 2026-11-14: preserve original-host control and disclosure custody
 
 - Bind legacy supervisor control and disclosure ports, plus ordinary/learned
