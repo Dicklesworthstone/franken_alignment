@@ -1,5 +1,21 @@
 # Preserve source-work continuity through topology recovery
 
+## Recover finite guarded submission after a returned error
+
+The finite `submit --guarded ... --topology-profile ...` workflow preserves
+selected paired custody through the same original reconciled recovery owner.
+An exact v2 source checkpoint can be retained after receipt-only recovery or
+failed preparation without loading the next live files. Once the next source
+binds, retention captures that source's actual newer history and spent work.
+No stale pre-bind checkpoint substitutes for later source progress.
+
+Both destinations are admitted before recovery mutation, and both exports are
+attempted independently on the original healthy cut. A corrected invocation
+selects the retained pair explicitly; source checks, numerical exclusions,
+effect accounting and independent publication review remain unchanged. See
+[finite submission and paired retention](TOPOLOGY_SUPERVISED_CONTINUATION.md#retries-loss-and-retention)
+for the profile, output rules and returned-error boundary.
+
 ## Recover learned live startup after a returned error
 
 Both `create-learned-generated` and `serve-learned-generated` retain selected

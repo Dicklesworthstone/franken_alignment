@@ -129,7 +129,6 @@ impl Selection {
     pub(crate) fn checkpoint_selected(&self) -> bool { matches!(&self.basis, Basis::Checkpoint(_)) }
     /// The independently selected destination can retain a terminal cut without
     /// loading or binding the next live topology/inventory documents.
-    #[cfg(target_os = "linux")]
     pub(crate) fn acknowledged_output(&self) -> Option<&Path> { self.output.as_deref() }
     pub(crate) fn history(&self, config: &Config, checkpoint: &mut impl FnMut() -> Result<(), String>)
         -> Result<History, String>

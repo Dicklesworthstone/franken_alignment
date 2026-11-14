@@ -33,6 +33,9 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
+#[path = "tests/custody.rs"]
+mod custody_tests;
+
 const TEMPLATE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/fixtures/supervised_publication.json"
@@ -241,6 +244,9 @@ fn seed(root: &Directory) -> Vec<u8> {
     seed_with_checks(root, 0)
 }
 fn seed_with_checks(root: &Directory, extra: u64) -> Vec<u8> {
+    seed_retaining(root, extra, false)
+}
+fn seed_retaining(root: &Directory, extra: u64, retain_source: bool) -> Vec<u8> {
     root.install(1, false);
     root.install(1, true);
     root.install(2, false);
@@ -312,7 +318,16 @@ fn seed_with_checks(root: &Directory, extra: u64) -> Vec<u8> {
         unreachable!()
     };
     let human = reviewer(&config, 1, ReviewDecision::Approve);
-    let result = from_recovered_with_topology(
+    let output = retain_source.then(|| {
+        source_checkpoint::Output::admit(
+            &config,
+            &root.path("first.source"),
+            graph_document(1).into_bytes(),
+            INVENTORY.as_bytes().to_vec(),
+        )
+        .unwrap()
+    });
+    let result = from_recovered_with_topology_retaining(
         config,
         host,
         roles.oversight.human,
@@ -328,7 +343,14 @@ fn seed_with_checks(root: &Directory, extra: u64) -> Vec<u8> {
         },
         Some(FileDriverTopology::new(source)),
         || ElapsedTick(1000),
-        |host| archive(host, &root.path("first.anchor")),
+        |host, source| {
+            source_checkpoint::combine(
+                archive(host, &root.path("first.anchor")),
+                output
+                    .as_ref()
+                    .map_or(Ok(()), |output| output.retain(host, source)),
+            )
+        },
     )
     .unwrap();
     human.join().unwrap();

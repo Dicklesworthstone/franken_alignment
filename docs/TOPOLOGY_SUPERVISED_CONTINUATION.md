@@ -92,6 +92,35 @@ predictive, evaluated, learned, stream or checked-witness deployments.
 
 ## Retries, loss and retention
 
+For exact paired custody, select the existing `fa.mediated-submit/2` profile
+instead of the manual v1 counters:
+
+```json
+{
+  "schema_version": "fa.mediated-submit/2",
+  "initial": {
+    "topology_path": "/operator/custody/initial-topology.json",
+    "inventory_path": "/operator/custody/initial-inventory.json"
+  },
+  "source_checkpoint": "/operator/custody/source-before.checkpoint",
+  "next": {
+    "topology_path": "/operator/live/next-topology.json",
+    "inventory_path": "/operator/live/next-inventory.json"
+  },
+  "operation": 100,
+  "retain_checkpoint": "/operator/custody/source-after.checkpoint"
+}
+```
+
+The checkpoint's complete history cut must match the independently selected
+history anchor in `fa.guarded-submit/1`. Select a separate new
+`retain_history_anchor` destination in that recovery profile. Both outputs are
+admitted before recovery acknowledges its Fence/Time/Sweep transaction. Their
+normalized destinations must differ, remain outside the authority store, and
+not alias the selected reviewer or Stop socket. Existing files are never
+overwritten. The native create-new writers check again when exporting, so a
+later competing file remains its creator's property.
+
 An existing request is query-only even when its original deadline has elapsed.
 Its independently retained historical topology is still verified, but `next`
 files, live policy evidence, credibility files, helper programs and human sockets
@@ -100,9 +129,35 @@ a changed request is an idempotency conflict, never a second publication. Curren
 requirements must describe the newly selected history on each later invocation;
 recovery does not silently change an old profile's current graph or availability.
 
-New-input failures after recovery may leave the acknowledged recovery fence. They
-are reported as such; a healthy original owner can retain its exact successor
-anchor. Live rebind failure retains native poisoning/visibility rules. Source loss
+An existing settled request can also retain its matched successor checkpoint
+without reading the next topology or inventory. The original native recovery
+finalizer supplies the checkpoint for the exact reconciled cut. The command
+does not create fresh source evidence to service that historical request.
+
+New-input failures after recovery may leave acknowledged recovery work. Before
+source binding, the command attempts both selected exports from the original
+native reconciled cut. A missing next file, bad next selection, expired deadline
+or returned preparation failure therefore need not strand the history beyond
+its retained source accounting. Export requires the same healthy owner's
+complete history anchor still to equal that saved cut. A later native event or
+poisoned owner refuses the old source checkpoint.
+
+After source binding succeeds, retention instead captures the actual original
+source, its newer graph, cumulative checks, reserved bytes and operation floor.
+It never falls back to the earlier recovery checkpoint after acknowledged source
+work. Both exports are attempted independently, and export errors accompany the
+original failure. A partial export is not a successful pair. No retention path
+reopens recovery, refreshes a source, refunds work or retries publication.
+
+For a corrected invocation, explicitly select the retained successor pair.
+Failure before binding leaves the selected newer graph eligible; failure after
+binding requires the next graph and inventory generations to advance again.
+The original finite source allowance and all fresh publication checks remain.
+This covers returned errors, not process termination before export or recovery
+of an unacknowledged replacement. Manual v1 selection retains its original
+independent-minimum contract and cannot mint an exact source checkpoint.
+
+Live rebind failure retains native poisoning/visibility rules. Source loss
 at final publication reaches the original withdrawal/sealing path; uncertainty
 never creates a refund or a resend. An output or archive failure cannot undo an
 acknowledged effect. The old archive is never overwritten. Stop profiles keep
@@ -134,3 +189,10 @@ capacity, the actual top-level command and closed mode selection. These are enfo
 Targeted and full-gate RCH attempts stop before compilation because `rch` is absent.
 Rust compilation, tests, rustfmt, Clippy and complete qualification remain unexecuted.
 No Beads or roadmap packet is closed by these source changes.
+
+The paired-retention increment adds source regressions for receipt-only export
+with absent live inputs, corrected subsequent publication after failed startup,
+pre-Fence output refusal, competing archive paths, deadlines and post-bind source
+accounting. Independent source review and scoped formatting are distinct from
+execution. The required RCH runner is unavailable in this session; compilation,
+runtime tests, Clippy and complete qualification remain pending.

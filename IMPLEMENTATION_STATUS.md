@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: retain paired topology custody through finite submission
+
+The finite guarded mediated submission command now preserves the native
+reconciled source checkpoint instead of discarding it after recovery. Exact v2
+selection can export both history and source custody on a returned preparation
+failure or a settled receipt-only retry, without opening next-source files or
+creating another source observation. A healthy full-history equality check
+prevents an older captured cut from describing later or poisoned native state.
+
+Both selected output destinations are admitted before the original recovery
+transaction, including normalized alias, authority-store and reviewer/Stop
+endpoint checks. After successful source binding, retention uses the actual
+original source and its cumulative work rather than the earlier recovery cut.
+Exports are independent, create-new and preserve the original diagnostic on
+failure. Corrected publication still uses explicit newer topology, original
+finite allowances, fresh helper review and independent human approval.
+
+The regression sources exercise corrected publication, absent-live-input
+receipt recovery, deadline and archive failures, early refusal and actual
+post-bind accounting. Independent source review and scoped formatting are
+separate from Rust compilation or runtime evidence. The required RCH launch
+exits 127 because the runner is unavailable. Clippy, tests and full qualification
+remain pending; no Bead or broader roadmap acceptance is closed.
+
+Contracts: docs/TOPOLOGY_SUPERVISED_CONTINUATION.md and
+docs/TOPOLOGY_SOURCE_CONTINUITY.md. Existing concurrent learned-governance
+implementation and contracts are preserved.
+
 ## 2026-11-14: govern live topology-supervised learned sequences
 
 The resident learned service now composes its explicit live governor with the

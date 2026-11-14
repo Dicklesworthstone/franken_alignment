@@ -1,9 +1,9 @@
 //! Continue the ORIGINAL mediated domain; never reopen through a weaker profile.
 //! Historical requests stay query-only and never consume the next live source.
+#[path = "mediated/custody.rs"]
+mod custody;
 #[path = "mediated/profile.rs"]
 pub(crate) mod profile;
-#[cfg(test)]
-use super::super::from_recovered_with_topology;
 use super::super::{checkpoint as source_checkpoint, from_recovered_with_topology_retaining};
 use super::{
     ActionState, Config, Continuation, Deadline, ElapsedTick, FileGuardedRecoveryStatus,
@@ -132,6 +132,9 @@ where
     checkpoint()?;
     let runtime_deadline = plus(time(), config.timing.runtime_ms)?;
     let custody = profile.admit(&config)?;
+    // Admit independent successor destinations before the native recovery can
+    // acknowledge any work. This needs no next-source document or observer.
+    let source_output = custody::admit(&config, &custody, topology, request, peers)?;
     checkpoint()?;
     let Recovered {
         native:
@@ -141,7 +144,7 @@ where
                 outcomes,
             },
         history,
-        ..
+        checkpoint: saved,
     } = recover(
         &config,
         profile,
@@ -165,12 +168,7 @@ where
             );
         }
         match owner.request_status(request) {
-            Ok(_) => {
-                if topology.retention_requested() {
-                    return Err("receipt-only recovery cannot capture a fresh source checkpoint; omit retain_checkpoint".into());
-                }
-                return Ok(None);
-            }
+            Ok(_) => return Ok(None),
             Err(JournalError::Contract(Error::Missing)) => {}
             Err(error) => return Err(debug(error)),
         }
@@ -195,8 +193,9 @@ where
     let selected = match prepared {
         Ok(selected) => selected,
         Err(error) => {
-            let error = combine_failure(Some(error), retain(&custody, &owner).err())
-                .expect("preparation refusal");
+            let retained =
+                custody::retain_recovered(&custody, source_output.as_ref(), saved.as_ref(), &owner);
+            let error = combine_failure(Some(error), retained.err()).expect("preparation refusal");
             return Err(acknowledged(revision, &error));
         }
     };
@@ -224,12 +223,18 @@ where
         selected,
         time,
         |host, topology| {
-            source_checkpoint::combine(
-                retain(&custody, host),
-                checkpoint_output
+            // A rebound source always supplies its actual current custody.
+            // Never fall back to the earlier recovery cut after source work.
+            let source =
+                source_output
                     .as_ref()
-                    .map_or(Ok(()), |output| output.retain(host, topology)),
-            )
+                    .map_or(Ok(()), |archive| match checkpoint_output.as_ref() {
+                        Some(output) => output
+                            .capture(host, topology)
+                            .and_then(|saved| archive.retain(&saved)),
+                        None => custody::retain_unchanged(archive, saved.as_ref(), host),
+                    });
+            source_checkpoint::combine(retain(&custody, host), source)
         },
     );
     match result {

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: retain paired topology custody through finite submission
+
+- Preserve the original reconciled source checkpoint through finite mediated
+  startup failures and settled receipt-only recovery with absent live inputs.
+- Admit separate new history/source destinations before recovery mutation and
+  reject authority-store, normalized-alias and reviewer/Stop endpoint collisions.
+- Export both selected archives independently; after rebind, capture only the
+  original live source's actual newer history and cumulative expenditure.
+- Add corrected-publication and causal failure regressions while retaining all
+  original effect, source, review and accounting requirements.
+- Record source review and formatting separately from unexecuted compilation,
+  runtime tests and Clippy: required RCH is unavailable, and acceptance stays open.
+
 ## 2026-11-14: govern live topology-supervised learned sequences
 
 - Retain the original governor and topology observer together through resident
