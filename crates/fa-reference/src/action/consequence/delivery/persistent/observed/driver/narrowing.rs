@@ -71,6 +71,9 @@ impl FileSupervisedDriver {
     /// source/clock read, authorization, refund, dispatch or human approval.
     /// All normal evidence and two-key checks still run. The service must discard
     /// its withdrawn human exchange/key and obtain fresh independent approval.
+    /// A mediated job must retain its original same-owner topology source; this
+    /// observation-only continuation does not read it or spend another check.
+    /// The original fresh source check still runs at final publication.
     /// An exact retry on the same still-current job returns its original result.
     pub fn continue_after_narrowing(
         &mut self,
@@ -122,11 +125,15 @@ fn retained_basis(
     job.check_owner(host)?;
     if host.storage_failure().is_some() { return Err(JournalError::Unavailable); }
     if host.source_interrupted { return Err(Error::Incomplete.into()); }
-    if !host.authority_narrowing_supported()
-        || driver.topology.is_some()
-        || driver.learned_review.is_some()
-    {
+    if !host.authority_narrowing_supported() || driver.learned_review.is_some() {
         return Err(Error::Incomplete.into());
+    }
+    match &driver.topology {
+        Some(topology) => topology.source().check_driver_binding(host, host.revision())?,
+        None if host.authority_narrowing_requires_topology() => {
+            return Err(Error::Incomplete.into());
+        }
+        None => {}
     }
     let (attempt, stage) = admitted(host.request_status(job.request)?)?;
     if attempt != job.attempt || host.request_action(job.request)? != &job.action {

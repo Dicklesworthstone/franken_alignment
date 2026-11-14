@@ -27,9 +27,9 @@ retain those versions when making its initial restriction; a later larger
 selection still intersects the current ceiling and cannot restore omissions.
 
 This operation supports ordinary artifact publication, including its existing
-mandatory evidence source, checked publication, credential and credibility
-guards. Decoder, learned, predictor/consistency, mediated and all stream owners
-are unsupported by this ordinary operation and refuse before replay. The
+mandatory evidence source, checked publication, credential, credibility and
+topology-mediation guards. Decoder, learned, predictor/consistency and all stream
+owners are unsupported by this ordinary operation and refuse before replay. The
 existing learned prompt-checkpoint narrowing operation remains a separate
 contract, with its checkpoint binding and deliberate epoch revocation.
 
@@ -155,8 +155,18 @@ retain the selected target, and the selected final operation must end at the
 current sequence. A source replacement, policy update, another review, fencing,
 cancellation, suspended owner, excluded target or other unaccounted control
 transition cannot be treated as narrowing. An in-progress helper review, a
-dispatched or uncertain effect, and a learned, stream or mediated history cannot
+dispatched or uncertain effect, and a learned or stream history cannot
 use this continuation path.
+
+A mediated owner must retain its original driver-owned topology source. The
+continuation checks that source's original issuer and exact current graph
+binding without reading files or spending a source check. A missing or foreign
+source cannot continue the completed review. Narrowing changes neither graph
+availability, the accepted graph certificate nor the authority epoch; it supplies
+no new certificate. The original fresh topology check still runs before publication,
+with cumulative source work and original withdrawal on failure. A late bypass,
+changed input or lost source therefore prevents external publication even after
+continuation, fresh human approval and dispatch charging.
 
 The returned `FileDriverNarrowingContinuation` records the request, attempt,
 selected operation, previous and current control sequences, authority epoch,
@@ -260,8 +270,10 @@ disposition, reconciliation or Fence merely by selecting narrowing.
 
 Learned actor and resident service setup refuses this selection. The ordinary
 profile has no numerical replay allowance; adding one does not enable learned
-or predictor history. An otherwise supported operator endpoint over a mediated
-owner still receives the native unsupported-history boundary.
+or predictor history. Ordinary topology-supervised services use the same
+selected narrowing grant and retain the same source across continuation and
+publication. Their source checkpoints capture the actual final work and history;
+the restriction does not renew source allowances or replace source custody.
 
 The service installs the same-owner port on its restricted control mount and
 retains one original grant across authenticated reconnects, review transitions

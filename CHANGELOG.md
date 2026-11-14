@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14: narrow ordinary topology-supervised publication
+
+- Extend the original exact target restriction to ordinary mediated owners while
+  preserving source custody, graph availability, epoch and unknown-effect charges.
+- Continue a retained completed review only with its same attached source,
+  invalidate old human keys and require fresh approval and final topology checks.
+- Add native/Tower and authenticated service regression sources with actual
+  publication, excluded reservations, unresolved liabilities and source failures.
+- Preserve numerical/stream exclusions, original replay bounds and all existing
+  acceptance gates. Syntax/source checks passed; required RCH exits 127 because
+  its runner is absent, so Rust compilation and runtime qualification are pending.
+
 ## 2026-11-14: bind recovery checkpoint export to the original observer
 
 - Require the healthy original owner's separately issued unbound observer for

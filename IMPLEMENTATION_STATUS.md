@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: narrow ordinary topology-supervised publication
+
+The original native target-ceiling restriction now accepts ordinary mediated
+owners, including their existing source and checked-publication guards. The
+same operation intersects exact targets, advances control sequence without an
+authority-epoch change, cancels only excluded undispatched attempts and refunds
+only their reservations. Retained automatic permits and dispatched/Unknown
+charges remain. Old human keys withdraw, including keys for retained targets.
+Decoder, learned, predictor and every stream owner retain their existing refusal.
+
+Completed-review continuation requires the original source attached to the same
+driver and verifies its issuer and current graph binding without a read, clock
+or source charge. It preserves the original action and review. Narrowing neither
+creates a certificate nor changes graph availability; final publication still
+spends the same source's compulsory fresh check. Changed or missing topology and
+exhausted source work cannot become an effect through the new continuation.
+
+Public native/Tower and authenticated live-service regression sources cover real
+publication after fresh human approval, old-key refusal, excluded-reservation
+refund with retained Unknown liability, missing source custody, late source loss,
+exact retries and stale full predecessors. The existing unsupported-history
+regression now separates ordinary mediation from the unchanged numerical and
+stream refusals. No test is removed or weakened to bypass those exclusions.
+
+Independent source/API review, Rust syntax parsing and Git whitespace checks
+completed. The required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p
+xtask -- check` attempt exits 127 because `rch` is absent; this refreshed workspace
+also has no Rust compiler or Cargo. Compilation, runtime tests, rustfmt, Clippy
+and full qualification remain pending. No roadmap packet or Bead is closed.
+Contracts: `docs/SCOPED_AUTHORITY_NARROWING.md`, `docs/LIVE_TOWER_OPERATOR.md`.
+
 ## 2026-11-14: require original observer custody for recovery checkpoint export
 
 The public one-Fence checkpoint successor now requires the separately issued

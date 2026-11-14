@@ -93,8 +93,8 @@ refund or relaunch it. Successful successor qualification does not reserve work
 for, or replace, the separately required topology check at final publication.
 A later unresolved effect retains its charge until the original endpoint supplies
 a receipt supporting settlement. The numerical and stream exclusions are
-independent of this ordinary mediated capability; target narrowing keeps its
-existing narrower supported history.
+independent of this ordinary mediated capability. Target narrowing remains a
+separate explicit restriction and cannot replace a newly convened review.
 
 Fresh evidence may have the same bytes, for example when independently operated
 helpers recover from an outage. Availability changes, edits, actor polling and

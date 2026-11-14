@@ -1,4 +1,4 @@
-//! Ordinary narrowing cannot enter numerical reconstruction or a stream/cut.
+//! Ordinary narrowing cannot enter numerical reconstruction or a text stream.
 use super::*;
 use crate::action::consequence::activation::monitor::decoder::MonitoredStep;
 use crate::action::consequence::activation::tensor::kv::decoder::{
@@ -88,7 +88,7 @@ fn actual_decoder_and_raw_predictor_histories_refuse_before_reconstruction() {
 }
 
 #[test]
-fn plain_stream_and_mediated_owner_cannot_be_relabelled_as_ordinary_publication() {
+fn plain_stream_cannot_be_relabelled_as_ordinary_publication() {
     let root = Root::new();
     let mut selected = profile();
     selected.delivery.initial_payload.clear();
@@ -96,14 +96,34 @@ fn plain_stream_and_mediated_owner_cannot_be_relabelled_as_ordinary_publication(
         StreamProfile::new(9, 1, 4, 16, 64).unwrap()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
     refuses(host, &root);
+}
 
+#[test]
+fn mediated_restriction_does_not_invent_a_missing_cut_or_change_graph_availability() {
     let root = Root::new();
     let selected = profile();
     let graph = graph(selected.delivery.scope, selected.delivery.target);
     let (mut host, _) = FileOversight::create(root.store(), selected).unwrap();
     host.enable_mediation(host.revision(), graph).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    refuses(host, &root);
+    let before = host.inspect();
+    let mediation = host.mediation_snapshot().unwrap();
+    assert!(mediation.available);
+    assert!(mediation.accepted.is_none());
+    let selected = native(&host, 1, Vec::new());
+    let receipt = host.narrow_authority(host.revision(), selected).unwrap();
+    assert_eq!(receipt.change().refunded_units, 0);
+    assert!(receipt.change().cancelled.is_empty());
+    let after = host.inspect();
+    assert_eq!(after.revision, before.revision + 1);
+    assert_eq!(after.control.sequence, before.control.sequence + 1);
+    assert_eq!(after.control.ledger, before.control.ledger);
+    assert!(after.control.ceiling.as_ref().unwrap().targets().is_empty());
+    let current = host.mediation_snapshot().unwrap();
+    assert_eq!(current.graph, mediation.graph);
+    assert_eq!(current.available, mediation.available);
+    assert!(current.accepted.is_none());
+    assert_eq!(host.inspect().executions, 0);
 }
 
 fn graph(scope: Scope, target: ResolvedTarget) -> crate::action::consequence::mediation::AuthorityGraph {

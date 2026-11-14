@@ -124,8 +124,11 @@ undispatched attempts and refunds only their actual reservations. It preserves
 retained automatic authorizations, authority epoch and dispatched/Unknown
 charges. Human keys retain their predecessor checks and require fresh approval.
 An empty target set retains nothing; a wider later selection cannot restore
-earlier exclusions. The ordinary operation refuses decoder, predictor, mediated
-and every stream owner, without borrowing their separate replay authority.
+earlier exclusions. Ordinary mediated owners retain their original topology
+guards and source accounting. Completed-review continuation requires the same
+attached source, and publication still requires its fresh topology check. The
+ordinary operation refuses decoder, predictor and every stream owner, without
+borrowing their separate replay authority.
 
 Sealed `narrowing-next` and `narrowing` results correlate the exact requested,
 prior and effective sets and the original run cut. They retain the original

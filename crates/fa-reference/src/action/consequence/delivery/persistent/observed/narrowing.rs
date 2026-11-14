@@ -56,8 +56,11 @@ impl FileOversight {
     /// Original human keys withdraw because their predecessor is now historical.
     /// No source/clock observation, helper execution, resend or actor reset runs.
     ///
-    /// Decoder/predictor, mediated and ALL stream histories are unsupported by
-    /// this ordinary operation and refuse before replay. An exact healthy retry
+    /// Ordinary mediated owners retain the same graph, accepted cut and epoch.
+    /// This restriction neither refreshes topology nor replaces the selected
+    /// source; a source-bound driver still qualifies it at final publication.
+    /// Decoder/predictor and ALL stream histories are unsupported by this
+    /// operation and refuse before replay. An exact healthy retry
     /// returns its original receipt, including after reopening, without widening
     /// a later ceiling or restoring a key. Existing event bytes remain unchanged.
     pub fn narrow_authority(&mut self, revision: u64, request: FileAuthorityNarrowRequest)
@@ -83,6 +86,10 @@ impl FileOversight {
 
     pub(crate) fn authority_narrowing_supported(&self) -> bool {
         self.machine.authority_narrowing_supported()
+    }
+
+    pub(crate) fn authority_narrowing_requires_topology(&self) -> bool {
+        self.machine.authority_narrowing_requires_topology()
     }
 }
 

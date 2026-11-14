@@ -8,7 +8,11 @@ impl Machine {
     pub(in super::super) fn authority_narrowing_supported(&self) -> bool {
         self.decoder.is_none() && self.learned.is_none()
             && self.consistency.is_none() && self.learned_consistency.is_none()
-            && self.mediation.is_none() && self.broker.stream_state().is_none()
+            && self.broker.stream_state().is_none()
+    }
+
+    pub(in super::super) fn authority_narrowing_requires_topology(&self) -> bool {
+        self.mediation.is_some()
     }
 
     pub(in super::super) fn narrowing_retry(&self, request: &FileAuthorityNarrowRequest)
@@ -39,6 +43,9 @@ impl Machine {
         -> Result<Transition, Error>
     {
         self.check_authority_narrow(request)?;
+        // Intersecting the exact target ceiling changes neither this original
+        // graph nor its authority epoch. Existing graph/cut custody stays with
+        // the broker; source loss and replacement retain their revocation law.
         let change = self.broker.narrow_targets(request.expected_control_sequence(),
             request.expected_authority_epoch(), request.ceiling()?)?;
         for id in &change.cancelled { self.automatic.remove(id); }

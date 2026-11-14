@@ -512,8 +512,10 @@ Select a separate optional `narrowing` profile member:
 The closed object permits 1–1,024 queries, 1–128 operations and 1–4,096 events
 including the appended restriction. Omission or null disables it. The ordinary
 grant has no numerical replay field, and learned actor/resident setup refuses
-this selection. Decoder, predictor, stream and mediated histories remain
-unsupported by the native operation.
+this selection. Decoder, predictor and stream histories remain unsupported by
+the native operation. Ordinary mediated histories retain their original
+topology source; continuing a completed review requires that same attached
+custodian, and final publication still spends a fresh source check.
 
 At the original Run address, send `next` with `action: "narrow_authority"`,
 an operation number and at most 64 canonical complete `retained_targets`.

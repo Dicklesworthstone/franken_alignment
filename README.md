@@ -29,6 +29,14 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The [original target-narrowing operation](docs/SCOPED_AUTHORITY_NARROWING.md)
+now supports ordinary topology-supervised publication. An independent operator
+can restrict exact targets while preserving retained reservations and unresolved
+effect charges. A completed review can continue only with its original attached
+source and fresh human approval; final publication still requires the original
+source's paid topology check. The new native, Tower and service regressions are
+authored; Rust/RCH compilation and execution qualification remain pending.
+
 The [ordinary live Tower recovery service](docs/LIVE_TOWER_RECOVERY.md) now
 accepts independent authenticated Stop during cooperative replay, before live
 work resumes. Plain, checked and explicitly scheduled recovery preserve the

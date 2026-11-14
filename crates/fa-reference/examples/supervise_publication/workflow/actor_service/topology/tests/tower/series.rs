@@ -4,6 +4,8 @@
 mod cancellation;
 #[path = "series/convening.rs"]
 mod convening;
+#[path = "series/narrowing.rs"]
+mod narrowing;
 
 use super::*;
 use crate::workflow::actor_service::series::{self as service, Options};
