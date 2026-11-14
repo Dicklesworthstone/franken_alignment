@@ -312,13 +312,20 @@ credentials refuse before numerical assets are loaded. The admitted recipe
 documents are retained for the actual loaders; they are not reread after this
 check. `--campaign-profile` is creation-only and refuses during recovery.
 
-The remaining sequence retains the existing 2–16 entry bound. A recovered
-suffix may contain one Message and a final Finish, so a stream that already
-confirmed its first Message can complete its original finite allowance.
-Creation still requires at least two Messages. No selection increases the
-original message, byte, sampling, numerical or campaign budget. Only entry one
-may select recovery floors and history custody; every entry still selects its
-own actor, request, sidecar and review rounds.
+An explicitly governed recovery accepts 1–16 remaining entries. It may contain
+a single Message, a single Finish, or Messages followed by an optional final
+Finish. A single Finish requires `--after-message` naming its nonzero original
+receipt-confirmed Message; it refuses `--continue-generation` and
+`--checkpoint-before-generation` before recipe or model assets are read.
+The original Finish checks still refuse an unresolved or Unknown predecessor.
+Finish does not start a continuation or consume another sampled draw, and still
+requires fresh source, native or process helper review, and human approval.
+
+Creation and sequences without an explicit recovery governor retain their
+2–16 entry bound; governed creation still requires at least two Messages.
+No selection increases the original message, byte, sampling, numerical or
+campaign budget. Only entry one may select recovery floors and history custody;
+every entry still selects its own actor, request, sidecar and review rounds.
 
 The original exclusive recovery cursor verifies the independent anchor, exact
 policy and complete guard inventory before its sole recovery fence. Its deadline

@@ -16,7 +16,7 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe and may finish a remaining Message/Finish suffix";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe and may select a single remaining Message or an explicit --after-message Finish";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -85,6 +85,8 @@ where
         .map(|path| campaigns::read(&config, path))
         .transpose()?;
     governor::check_selection(governor.as_ref(), operator.as_ref(), campaign, continuing)?;
+    let governed_recovery = governor.as_ref()
+        .and_then(|_| governor::Recovery::selected(continuing, after));
     let mut entries = if let Some(governor) = governor.as_ref() {
         profile::load_governed(
             Path::new(&args[2]),
@@ -94,12 +96,17 @@ where
                 .as_ref()
                 .expect("complete governor operator selection checked above"),
             &peers,
-            continuing,
+            governed_recovery,
+            checkpoint_path.is_some(),
         )?
     } else {
         profile::load(Path::new(&args[2]), &config)?
     };
-    validate(&config, &entries, &peers)?;
+    if governed_recovery.is_some() {
+        validate_entries(&config, &entries, &peers, governed_recovery)?;
+    } else {
+        validate(&config, &entries, &peers)?;
+    }
     // First compare every independently supplied recovery inventory. A creation
     // selection cannot erase a different later requirement. Then install ONE
     // original first-image guard and carry its expected inventory through the
@@ -163,8 +170,28 @@ fn options(args: &[String]) -> Result<(bool, Option<u64>), String> {
 /// No role, time observation or store access occurs during plan admission.
 /// Future entries cannot introduce another source custodian or recovery floor.
 fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(), String> {
-    if !(2..=MAX_ENTRIES).contains(&entries.len()) {
-        return Err("a learned sequence requires 2..=16 independently selected entries".into());
+    validate_entries(config, entries, peers, None)
+}
+
+/// Only explicit governed recovery can admit a singleton remaining release.
+/// Keep the same validation for direct callers as for the closed manifest;
+/// neither a small manifest nor a recorded predecessor grants live authority.
+fn validate_entries(
+    config: &Config,
+    entries: &[Entry],
+    peers: &PeerProfile,
+    recovery: Option<governor::Recovery>,
+) -> Result<(), String> {
+    if matches!(recovery, Some(governor::Recovery::AfterMessage(0))) {
+        return Err("governed learned recovery requires a nonzero original message predecessor".into());
+    }
+    let minimum = if recovery.is_some() { 1 } else { 2 };
+    if !(minimum..=MAX_ENTRIES).contains(&entries.len()) {
+        return Err(if recovery.is_some() {
+            "governed learned recovery requires 1..=16 independently selected remaining entries".into()
+        } else {
+            "a learned sequence requires 2..=16 independently selected entries".into()
+        });
     }
     peers.check_host(config)?;
     let original = &entries[0].loaded;
@@ -220,9 +247,16 @@ fn validate(config: &Config, entries: &[Entry], peers: &PeerProfile) -> Result<(
         if !sockets.insert(entry.actor.socket.clone()) {
             return Err("sequence actor socket paths must be distinct".into());
         }
-        if matches!(entry.release, LearnedTextRelease::Finish)
-            && (index == 0 || index + 1 != entries.len()) {
-            return Err("sequence Finish is permitted only as the last entry after a Message".into());
+        if matches!(entry.release, LearnedTextRelease::Finish) {
+            if index + 1 != entries.len()
+                || (index == 0 && !matches!(recovery,
+                    Some(governor::Recovery::AfterMessage(_))))
+            {
+                return Err("sequence Finish is permitted only as the last entry after a Message".into());
+            }
+            if index == 0 && loaded.checkpoint_on_generation.is_some() {
+                return Err("a remaining Finish cannot select a checkpoint before generation".into());
+            }
         }
         if index != 0 && (loaded.recovery_anchor.is_some() || loaded.anchor_output.is_some()
             || loaded.topology.is_some() || loaded.floor.journal_revision != 0
@@ -410,7 +444,13 @@ pub(super) fn run_with_services<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    validate(&config, &entries, peers)?;
+    let governed_recovery = selected_governor
+        .and_then(|_| governor::Recovery::selected(continuing, after_message));
+    if governed_recovery.is_some() {
+        validate_entries(&config, &entries, peers, governed_recovery)?;
+    } else {
+        validate(&config, &entries, peers)?;
+    }
     governor::check_selection(
         selected_governor,
         selected_operator,
@@ -552,12 +592,20 @@ where
             observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
         let identity = identity_observer.map(identity::Session::new);
         prediction::check(&host, prediction.as_ref())?;
+        // A sole remaining Finish names the original confirmed Message. It
+        // checks that receipt directly and never prepares another numerical
+        // continuation, which may already have exhausted the finite source.
+        let finishing = if first.release == LearnedTextRelease::Finish {
+            after_message
+        } else {
+            None
+        };
         let continuation = request_preflight(
             &host,
             &first.loaded,
             continuing,
-            None,
-            after_message,
+            finishing,
+            if finishing.is_some() { None } else { after_message },
             credibility,
         )?;
         let (port, supervisor) = host

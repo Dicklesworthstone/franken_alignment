@@ -3,7 +3,7 @@
 //! recipe asset intake is at most 1 GiB, plus the separately bounded profile
 //! documents. These admission reads never replenish live numerical, source,
 //! predictor, topology or publication allowances.
-use super::{Config, Entry, LearnedTextRelease, MAX_ENTRIES};
+use super::{Config, Entry, LearnedTextRelease, MAX_ENTRIES, governor::Recovery};
 use super::super::{fields::Fields, recipe};
 use super::super::super::Profile;
 use crate::config::read_regular;
@@ -15,6 +15,20 @@ struct Input { recipe: PathBuf, actor: PathBuf, release: LearnedTextRelease,
     precheck: Option<PathBuf> }
 
 fn decode(bytes: &[u8]) -> Result<Vec<Input>, String> {
+    decode_selected(bytes, None, false)
+}
+
+/// The original closed schemas permit a smaller remaining suffix only after
+/// explicit governed recovery selection. No ordinary or creation loader uses
+/// this relaxation, and Finish still needs its independently named predecessor.
+fn decode_selected(
+    bytes: &[u8],
+    recovery: Option<Recovery>,
+    checkpoint_before_generation: bool,
+) -> Result<Vec<Input>, String> {
+    if matches!(recovery, Some(Recovery::AfterMessage(0))) {
+        return Err("governed learned recovery requires a nonzero original message predecessor".into());
+    }
     let mut fields = Fields::parse(bytes, MAX_PROFILE_BYTES)?;
     let with_prechecks = match fields.text("schema")?.as_str() {
         "fa.learned-publication-sequence/1" => false,
@@ -23,7 +37,13 @@ fn decode(bytes: &[u8]) -> Result<Vec<Input>, String> {
     };
     let values = fields.array("entries", MAX_ENTRIES)?;
     fields.end()?;
-    if values.len() < 2 { return Err("a learned sequence requires 2..=16 entries".into()); }
+    if values.is_empty() || (recovery.is_none() && values.len() < 2) {
+        return Err(if recovery.is_some() {
+            "governed learned recovery requires 1..=16 remaining entries".into()
+        } else {
+            "a learned sequence requires 2..=16 entries".into()
+        });
+    }
     let count = values.len();
     let mut entries = Vec::with_capacity(count);
     for (index, value) in values.into_iter().enumerate() {
@@ -32,9 +52,16 @@ fn decode(bytes: &[u8]) -> Result<Vec<Input>, String> {
         let actor = fields.path("actor_profile")?;
         let release = match fields.text("release")?.as_str() {
             "message" => LearnedTextRelease::Message,
-            "finish" if index != 0 && index + 1 == count => LearnedTextRelease::Finish,
+            "finish" if index + 1 == count
+                && (index != 0 || matches!(recovery, Some(Recovery::AfterMessage(_)))) =>
+            {
+                LearnedTextRelease::Finish
+            }
             _ => return Err("sequence entries must be Messages followed by an optional final Finish".into()),
         };
+        if index == 0 && release == LearnedTextRelease::Finish && checkpoint_before_generation {
+            return Err("a remaining Finish cannot select a checkpoint before generation".into());
+        }
         // Version one stays closed and byte-compatible. Version two requires
         // an explicit per-entry choice; absence cannot silently erase intent.
         let precheck = if with_prechecks {
@@ -81,10 +108,15 @@ pub(super) fn load_governed(
     governor: &super::governor::Settings,
     operator: &super::super::operator::Selection,
     peers: &super::PeerProfile,
-    continuing: bool,
+    recovery: Option<Recovery>,
+    checkpoint_before_generation: bool,
 ) -> Result<Vec<Entry>, String> {
-    let plan = decode(&read_regular(path, MAX_PROFILE_BYTES)?)?;
-    if !continuing && plan
+    let plan = decode_selected(
+        &read_regular(path, MAX_PROFILE_BYTES)?,
+        recovery,
+        checkpoint_before_generation,
+    )?;
+    if recovery.is_none() && plan
         .iter()
         .filter(|input| input.release == LearnedTextRelease::Message)
         .count()
@@ -95,7 +127,7 @@ pub(super) fn load_governed(
     let prepared = plan
         .into_iter()
         .map(|input| {
-            let recipe = if continuing {
+            let recipe = if recovery.is_some() {
                 recipe::GovernedRecipe::read_recovery(
                     &input.recipe,
                     governor.campaign_requirement(),
@@ -116,7 +148,7 @@ pub(super) fn load_governed(
             Ok((input.release, recipe, actor, precheck))
         })
         .collect::<Result<Vec<_>, String>>()?;
-    if continuing
+    if recovery.is_some()
         && prepared.windows(2).any(|pair| {
             pair[0].1.expected_policy() != pair[1].1.expected_policy()
         })
@@ -128,7 +160,11 @@ pub(super) fn load_governed(
         .map(|(_, _, actor, _)| actor.request)
         .collect::<Vec<_>>();
     for (_, _, actor, _) in &prepared {
-        governor.check_learned_host(config, actor, peers, &operator.settings, &requests)?;
+        if recovery.is_some() {
+            governor.check_learned_recovery_host(config, actor, peers, &operator.settings, &requests)?;
+        } else {
+            governor.check_learned_host(config, actor, peers, &operator.settings, &requests)?;
+        }
     }
     let mut entries: Vec<Entry> = Vec::with_capacity(prepared.len());
     for (release, recipe, actor, precheck) in prepared {

@@ -7,6 +7,24 @@ pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
 use std::{collections::BTreeSet, path::PathBuf};
 
+/// Explicit recovery selection for the original remaining sequence. Creation
+/// keeps the ordinary minimum; an exact receipt predecessor can also close a
+/// final singleton Finish without manufacturing another Message.
+#[derive(Clone, Copy)]
+pub(super) enum Recovery {
+    Generation,
+    AfterMessage(u64),
+}
+
+impl Recovery {
+    pub(super) fn selected(continuing: bool, after_message: Option<u64>) -> Option<Self> {
+        continuing.then_some(match after_message {
+            Some(after) => Self::AfterMessage(after),
+            None => Self::Generation,
+        })
+    }
+}
+
 const INVALID: &str = "learned governor requires a new nonpredictive, nonmediated resident sequence with --campaign-profile, or explicit nonpredictive, nonmediated recovery with --history-anchor; both require paired --operator-profile/--tower-generation";
 
 /// Own the whole selected grammar before another option stripper can erase a
@@ -163,13 +181,23 @@ pub(super) fn check(
                 "every learned entry must retain the exact original campaign limits".into(),
             );
         }
-        settings.check_learned_host(
-            config,
-            &entry.actor,
-            peers,
-            &selected_operator.settings,
-            &requests,
-        )?;
+        if continuing {
+            settings.check_learned_recovery_host(
+                config,
+                &entry.actor,
+                peers,
+                &selected_operator.settings,
+                &requests,
+            )?;
+        } else {
+            settings.check_learned_host(
+                config,
+                &entry.actor,
+                peers,
+                &selected_operator.settings,
+                &requests,
+            )?;
+        }
         if let Some(path) = loaded.anchor_output.as_deref() {
             if fields::resolve_root(path)? == socket {
                 return Err(

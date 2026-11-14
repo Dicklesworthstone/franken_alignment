@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: recover a single remaining governed learned release
+
+Explicitly governed, independently anchored resident recovery now accepts
+1–16 remaining entries. An original stream can resume one remaining Message
+or its final Finish without inventing another release or increasing the original
+finite generation and campaign budgets. Creation and ordinary resident sequences
+retain their 2–16 bound; governed creation still requires two Messages.
+
+A singleton Finish requires a nonzero original confirmed predecessor selected
+by --after-message. Generation-only recovery, a nonfinal first Finish and a
+generation checkpoint on the remaining Finish refuse during manifest admission,
+before recipe or model assets. Shared governor admission has a recovery-only
+one-request minimum through the same credential, path, operator, request and
+numerical allowance checks. Creation retains its original minimum.
+
+The first Finish follows the original finish preflight and release path. It
+does not record a continuation intent or consume another sampled draw. Native
+receipt/stream/generation checks, fresh source and helper review, and fresh human
+approval remain mandatory. Unknown publication cannot become a confirmed
+predecessor through this selection.
+
+Four additional authored regression functions exercise actual singleton Message
+and separately recovered Finish commands, both approving and rejecting fresh
+human decisions, unsupported first-Finish admission before assets, and an actually
+published but unreconciled Unknown predecessor. The singleton scenarios also
+attempt an exhausted third Message, assert no extra work or request intent,
+retain that failure's sole recovery Fence, and use its successor to finish.
+Their final numerical assertions retain position six and four sampled draws.
+
+Independent source review and Git blob integrity checks completed. Compilation,
+runtime execution, rustfmt, Clippy and the required RCH gate remain unverified:
+the execution workspace is available again, but rch, cargo, rustc and rustfmt
+are absent. This scoped recovery capability does not change packet acceptance,
+qualification manifests or Bead status.
+
 ## 2026-11-13: retain ordinary learned recovery through startup failure
 
 Independently anchored, nonmediated resident learned recovery now retains its

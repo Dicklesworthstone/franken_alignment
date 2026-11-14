@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-14: resume single remaining governed learned releases
+
+- Accept 1–16 remaining entries only for explicitly governed anchored recovery;
+  preserve creation and ordinary sequence bounds and all original finite budgets.
+- Route a sole Finish through its original receipt-confirmed predecessor and
+  fresh review without starting another continuation or sampling operation.
+- Reject unsupported first-Finish and generation-checkpoint selections before
+  recipe or model assets; keep the common role and paid-work checks intact.
+- Add four regression functions covering actual Message/Finish restarts, fresh
+  human refusal, exhausted continuation with usable retained custody, pre-asset
+  admission, and a published but unresolved Unknown predecessor.
+- Record independent source review and content integrity checks; the required
+  Rust/RCH execution qualification remains pending because its tools are absent.
+
 ## 2026-11-13: preserve requested ordinary learned startup custody
 
 - Retain the exact acknowledged recovery successor on post-Fence startup

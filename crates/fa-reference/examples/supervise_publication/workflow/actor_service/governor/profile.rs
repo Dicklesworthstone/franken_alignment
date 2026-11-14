@@ -232,7 +232,7 @@ impl Settings {
                 "numerical governor work requires an explicitly governed learned sequence".into(),
             );
         }
-        self.check_host_roles(config, actor, reviewer, operator, requests)
+        self.check_host_roles(config, actor, reviewer, operator, requests, 2)
     }
 
     pub(crate) fn check_learned_host(
@@ -243,13 +243,39 @@ impl Settings {
         operator: &operator::Settings,
         requests: &[u64],
     ) -> Result<(), String> {
+        self.check_learned_host_roles(config, actor, reviewer, operator, requests, 2)
+    }
+
+    /// An explicitly recovered learned owner may have only its final Message
+    /// or Finish left. Admit that original singleton schedule with every same
+    /// independent role, path and numerical-work requirement.
+    pub(crate) fn check_learned_recovery_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+    ) -> Result<(), String> {
+        self.check_learned_host_roles(config, actor, reviewer, operator, requests, 1)
+    }
+
+    fn check_learned_host_roles(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+        minimum_requests: usize,
+    ) -> Result<(), String> {
         if self.numerical_replay.is_none() {
             return Err(
                 "learned governor requires its own explicit numerical replay allowance".into(),
             );
         }
         operator.check_governed_learned_operator()?;
-        self.check_host_roles(config, actor, reviewer, operator, requests)
+        self.check_host_roles(config, actor, reviewer, operator, requests, minimum_requests)
     }
 
     fn check_host_roles(
@@ -259,6 +285,7 @@ impl Settings {
         reviewer: &PeerProfile,
         operator: &operator::Settings,
         requests: &[u64],
+        minimum_requests: usize,
     ) -> Result<(), String> {
         actor.check_host(config)?;
         reviewer.check_host(config)?;
@@ -274,7 +301,7 @@ impl Settings {
             return Err("governor requires the same server/audience and distinct actor, operator and reviewer credential sets".into());
         }
         let selected: BTreeSet<_> = requests.iter().copied().collect();
-        if requests.len() < 2
+        if requests.len() < minimum_requests
             || selected.len() != requests.len()
             || selected.contains(&0)
             || !selected.contains(&actor.request)

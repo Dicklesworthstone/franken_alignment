@@ -27,8 +27,11 @@ for complete profiles, mode exclusions and the stable post-generation cut.
 An already governed stream can select the same independent governor during
 explicit `--continue-generation` or `--after-message` recovery, with a mandatory
 independent `--history-anchor` and full current-policy/campaign expectations in
-every recipe. A recovered suffix may contain one Message followed by Finish;
-the original finite generation and campaign budgets remain unchanged. The same
+every recipe. A recovered suffix may contain a single remaining Message or
+Finish, or Messages followed by an optional Finish. A singleton Finish requires
+`--after-message` naming its original confirmed predecessor and fresh review;
+it cannot select a generation checkpoint or restart sampling. The original
+finite generation and campaign budgets remain unchanged. The same
 guarded cursor returns fresh custody after its recovery fence, while independent
 Stop remains available throughout replay. See
 [governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
@@ -79,12 +82,16 @@ must pass the original exact recovery requirements and predecessor checks.
 }
 ```
 
-The manifest contains 2 through 16 entries. Each selects its own existing
+The manifest contains 2 through 16 entries for creation and ordinary sequences.
+Explicitly governed recovery permits 1 through 16 remaining entries under the
+[recovery contract](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
+Each selects its own existing
 [learned publication recipe](LEARNED_OPERATOR_PUBLICATION.md) and mandatory
 [authenticated actor profile](LIVE_LEARNED_ACTOR.md). Recipes must admit finite
-continuation, as supported by versions 4, 5 and 6. The first entry is a Message.
-Finish is optional and can appear only once, last. Ending after a Message
-retains an open confirmed stream; it does not imply Finish.
+continuation, as supported by versions 4, 5 and 6. The first entry is a Message,
+except for a sole remaining Finish under explicit governed `--after-message`
+recovery. Finish is optional and can appear only once, last. Ending after a
+Message retains an open confirmed stream; it does not imply Finish.
 
 Every recipe must encode the exact same complete original generation and
 stream. The comparison uses the original encoded configuration bytes. Prompt,

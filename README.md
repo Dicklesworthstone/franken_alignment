@@ -42,7 +42,9 @@ connects independent policy governance to a resumed resident learned sequence.
 Explicit continuation requires a retained history anchor and the complete current
 policy/campaign expectations. One guarded replay preserves native numerical state
 and spending, gives authenticated Stop priority, and returns fresh governor and
-human custody after the original fence. New publication still requires fresh
+human custody after the original fence. A single remaining Message or Finish
+can resume within the original finite budget; Finish requires its exact confirmed
+predecessor and cannot restart sampling. New publication still requires fresh
 source, helper and human checks. The new source and regression tests remain
 pending Rust compilation and runtime qualification.
 
