@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: recover paired learned topology custody after failed startup
+
+The single-request and resident learned services now preserve independently
+selected history and source checkpoints through returned startup errors. Source
+output admission precedes the recovery Fence and rejects existing paths,
+authority-store destinations and normalized aliases of the history output.
+
+Errors before successful source binding retain the native exact Fence successor
+on the same healthy owner. Successful binding instead captures the original
+source's acknowledged newer graph and actual work before gateway conversion,
+predecessor checks and listener startup. Both exports are attempted independently;
+errors preserve the triggering diagnostic and never retry recovery or an effect.
+Poisoned owners cannot certify a new pair, and no stale Fence snapshot is used
+to describe a completed source update. Successful request cycles continue to
+retain their actual final owners.
+
+Six operator regression functions author 22 scenario arms across plain, raw
+predictive and owned predictive learned modes. They cover missing next files,
+wrong predecessors, late operator collisions, independent output races, early
+path refusal with untouched staging, and a corrected resident Message/Finish
+suffix. Positive controls perform original imported inference, native reviews,
+authenticated actor exchanges and fresh human approval. The assertions preserve
+the original AA audience stream, four sampled draws, source counters and effect
+charges. These are authored tests, not reported executions.
+
+Independent source review verified the original startup calls are read-only
+after the captured cut and corrected test expectations that confused journal
+events with authority epoch increments. An available topology's recovery Fence
+increments the epoch twice; its subsequent rebind increments it again. The
+expected event and epoch counts remain separately asserted.
+
+The execution workspace disconnected while root syntax validation was pending.
+Reviewed source and tests were preserved as GitHub blobs and integrated against
+the current main branch, retaining concurrent changes. The required RCH runner
+was already absent; no completed root formatting, compilation, Clippy, runtime
+test or canonical-gate result is claimed for this increment. The scoped bead
+`franken_alignment-fa-073-full-27tt.2.1` remains in progress pending verification.
+All original packet prerequisites and acceptance remain unchanged.
+
+Contract: `docs/TOPOLOGY_SOURCE_CONTINUITY.md`.
+
 ## 2026-11-14: resume single remaining ordinary learned releases
 
 Explicitly anchored resident recovery now accepts one remaining Message or its

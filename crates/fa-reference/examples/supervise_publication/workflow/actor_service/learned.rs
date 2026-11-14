@@ -28,6 +28,7 @@
 #[path = "learned/fleet.rs"] mod fleet;
 #[path = "learned/stopped.rs"] mod stopped;
 #[path = "learned/topology.rs"] mod topology;
+#[path = "learned/startup_custody.rs"] mod startup_custody;
 #[path = "learned/sequence.rs"] mod sequence;
 #[path = "learned/stream_reset.rs"] mod stream_reset;
 #[path = "learned/stream_checkpoint.rs"] mod stream_checkpoint;
@@ -375,30 +376,14 @@ where F: FnMut() -> ElapsedTick {
     let topology::Started { custody: (host, reviewer, observer, identity_observer), source: topology_source,
         output: topology_output } = topology::start(&config, &loaded, continuing,
             &mut control, &deadline, &mut time)?;
-    // The original recovery Fence is already acknowledged. Nonmediated startup
-    // only checks the owner and constructs local transport/grants; credibility
-    // activation, source reads and native work begin inside execute_request.
-    // Keep the exact independently anchored successor for any startup refusal,
-    // including a gateway conversion that consumes the original owner.
-    let startup_anchor = if continuing && loaded.topology.is_none()
-        && loaded.recovery_anchor.is_some() && loaded.anchor_output.is_some()
-    {
-        Some(host.history_anchor_after(loaded.recovery_anchor.as_ref()
-            .expect("anchored recovery retention requires independent history custody"))
-            .map_err(debug)?)
-    } else {
-        None
-    };
-    let retain_startup = |error: String| {
-        if let Some(anchor) = startup_anchor.as_ref() {
-            let path = loaded.anchor_output.as_deref()
-                .expect("startup anchor is captured only for selected retention");
-            if let Err(retention) = anchors::export_acknowledged(anchor, path) {
-                return format!("{error}; acknowledged recovery history retention failed: {retention}; preserve the previous anchor and original store");
-            }
-        }
-        error
-    };
+    // Capture the original acknowledged successor before consuming its owner.
+    // Mediated recovery has already rebound its source, so both archives must
+    // name that newer cut and preserve the same original source expenditure.
+    // The remaining startup operations do no source, numerical or journal work.
+    let startup_custody = startup_custody::Captured::capture(
+        &loaded, continuing, &host, topology_source.as_ref(), topology_output.as_ref(),
+    )?;
+    let retain_startup = |error: String| startup_custody.retain_error(error);
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
     let mut identity = identity_observer.map(identity::Session::new);
     prediction::check(&host, prediction.as_ref()).map_err(retain_startup)?;

@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-14: preserve paired learned recovery custody through live startup
+
+- Pre-admit selected source checkpoint output before consuming the recovery
+  Fence, including normalized history/source path-alias refusal.
+- Retain the exact original Fence pair on failed source binding, and capture
+  the actual rebound pair before fallible single-request or resident startup.
+- Attempt both independent create-new exports, preserve the original diagnostic,
+  and retain successful final-owner export without replay or effect retries.
+- Author six operator regression functions over 22 scenario arms, including
+  corrected Plain/Raw/Owned Message/Finish publication, resident handoff,
+  archive races and pre-Fence refusals.
+- Complete independent source/API review and preserve the changes through
+  GitHub. Compilation, formatting, Clippy, runtime tests and the canonical RCH
+  gate remain pending; the execution workspace is unavailable.
+
 ## 2026-11-14: resume single remaining ordinary learned releases
 
 - Permit 1–16 remaining entries for explicitly anchored ordinary resident

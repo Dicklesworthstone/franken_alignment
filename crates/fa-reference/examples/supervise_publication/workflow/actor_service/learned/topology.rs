@@ -248,27 +248,36 @@ where
     if !continuing {
         return Err("topology recovery inputs cannot create a learned history".into());
     }
+    let retention = super::startup_custody::FenceRetention::admit(
+        config, loaded, history, selection,
+    )?;
     let ((mut host, human, forecast, identity), observer) =
         recovery::open_selected_live_with_topology(config, loaded, control, deadline, time)?;
-    match host.request_status(loaded.request) {
-        Err(JournalError::Contract(Error::Missing)) => {}
-        Ok(_) => {
-            return Err(
-                "learned request already exists; use --resume for its original receipt".into(),
-            );
+    let bound = (|| {
+        match host.request_status(loaded.request) {
+            Err(JournalError::Contract(Error::Missing)) => {}
+            Ok(_) => {
+                return Err(
+                    "learned request already exists; use --resume for its original receipt".into(),
+                );
+            }
+            Err(error) => return Err(debug(error)),
         }
-        Err(error) => return Err(debug(error)),
-    }
-    let mut checkpoint = || {
-        deadline.check(time())?;
-        if control.pending_peer()? {
-            return Err("learned topology recovery interrupted before live source binding; no durable Stop applied or acknowledged".into());
-        }
-        Ok(())
+        let mut checkpoint = || {
+            deadline.check(time())?;
+            if control.pending_peer()? {
+                return Err("learned topology recovery interrupted before live source binding; no durable Stop applied or acknowledged".into());
+            }
+            Ok(())
+        };
+        let next = selection.next(config, history.clone(), &mut checkpoint)?;
+        let observer = observer.ok_or("recovered topology observer custody is missing")?;
+        next.bind(&mut host, observer)
+    })();
+    let (source, output) = match bound {
+        Ok(bound) => bound,
+        Err(error) => return Err(retention.retain_error(&host, error)),
     };
-    let next = selection.next(config, history.clone(), &mut checkpoint)?;
-    let observer = observer.ok_or("recovered topology observer custody is missing")?;
-    let (source, output) = next.bind(&mut host, observer)?;
     Ok(Started {
         custody: (host, human, forecast, identity),
         source: Some(source),

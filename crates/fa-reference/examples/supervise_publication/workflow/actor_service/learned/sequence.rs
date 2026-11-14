@@ -595,22 +595,12 @@ where
         source,
         output,
     } = started;
-    // Recovery has already acknowledged its original Fence. Every remaining
-    // startup check is read-only for a nonmediated profile, including ordinary
-    // anchored recovery without a governor. Credibility activation occurs only
-    // inside the later request cycle. Retain this exact successor if request
-    // admission or either listener fails; never reopen the store on error.
-    let startup_anchor = if continuing
-        && first.loaded.topology.is_none()
-        && first.loaded.recovery_anchor.is_some()
-        && first.loaded.anchor_output.is_some()
-    {
-        Some(host.history_anchor_after(first.loaded.recovery_anchor.as_ref()
-            .expect("anchored recovery retention requires independent history custody"))
-            .map_err(debug)?)
-    } else {
-        None
-    };
+    // Preserve the actual acknowledged startup cut before consuming the owner.
+    // A mediated source has already rebound, and its checkpoint must advance
+    // with history. These local startup checks cannot refresh or spend it.
+    let startup_custody = super::startup_custody::Captured::capture(
+        &first.loaded, continuing, &host, source.as_ref(), output.as_ref(),
+    )?;
     let startup = (|| {
         if let Some(selected) = first.loaded.checkpoint_on_generation {
             selected.check_owner(&host)?;
@@ -666,16 +656,7 @@ where
     let (reviewer, mut prediction, mut identity, mut initial_continuation, port,
         mut driver, mut operator) = match startup {
         Ok(started) => started,
-        Err(error) => {
-            if let Some(anchor) = startup_anchor {
-                let path = first.loaded.anchor_output.as_deref()
-                    .expect("startup anchor is captured only for selected retention");
-                if let Err(retention) = anchors::export_acknowledged(&anchor, path) {
-                    return Err(format!("{error}; acknowledged recovery history retention failed: {retention}; preserve the previous anchor and original store"));
-                }
-            }
-            return Err(error);
-        }
+        Err(error) => return Err(startup_custody.retain_error(error)),
     };
     let mut initial_deadline = Some(deadline);
     let mut wire = ActorWire::new(port.clone());

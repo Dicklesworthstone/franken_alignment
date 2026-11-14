@@ -37,6 +37,15 @@ Stop session continues through normal startup without renewed allowances.
 Ten new native/socket regression functions are authored; compilation and runtime
 qualification remain pending.
 
+The learned topology services now retain independently selected history and
+source checkpoints across returned startup failures, both before and after
+source rebind. Corrected single-request and resident restarts use those exact
+successor pairs without renewing source work, numerical budgets or effect
+rights. Fresh native and human review still guard publication. See
+[paired startup recovery](docs/TOPOLOGY_SOURCE_CONTINUITY.md#recover-learned-live-startup-after-a-returned-error).
+The new regression sources are independently reviewed; Rust/RCH execution
+qualification remains pending.
+
 The [governed learned recovery service](docs/LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
 connects independent policy governance to a resumed resident learned sequence.
 Explicit continuation requires a retained history anchor and the complete current

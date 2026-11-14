@@ -1,5 +1,58 @@
 # Preserve source-work continuity through topology recovery
 
+## Recover learned live startup after a returned error
+
+Both `create-learned-generated` and `serve-learned-generated` retain selected
+paired custody when an independently anchored topology recovery succeeds but
+the rest of startup refuses. Select `--retain-history-anchor` and the existing
+`retain_checkpoint` field in the `fa.mediated-submit/2` topology profile.
+The input history and source checkpoint must still name the same exact cut.
+
+The source destination is admitted before recovery can acknowledge a Fence.
+An existing destination, a path inside the authority store, or a normalized
+alias of the history output refuses without advancing the journal or cleaning
+staging. A later path race is checked again by the original create-new writers.
+
+There are two different acknowledged cuts:
+
+- Before the next source binds, request-status, missing next-file, selection,
+  observer and binding errors retain the original exact Fence successor. Its
+  old graph, input documents, source counters and last operation remain intact;
+  native availability is withdrawn.
+- After binding succeeds, startup captures the original live source and its
+  newly acknowledged graph before consuming the host into the actor gateway.
+  A failed predecessor/forecast/checkpoint check, gateway or intake setup,
+  source attachment, or operator/governor listener retains that newer source
+  checkpoint with its matching history. It never substitutes the earlier Fence
+  checkpoint for a completed topology update.
+
+Both exports are attempted independently. Their errors append to the original
+startup diagnostic, and neither overwrites an existing archive or triggers
+another recovery, source refresh, generation or effect. Poisoned owners cannot
+certify a new pair. A partial export is not a claim that both archives were
+retained. Successful startup still exports from the final live owner after the
+request cycle.
+
+For a corrected invocation, select the retained successor pair explicitly.
+If the failed startup had already rebound the source, both selected graph and
+inventory generations must advance again; if it failed before binding, the
+previously selected newer generation remains eligible. Original source checks,
+numerical budgets, confirmed audience history, spent effect rights, fresh native
+review and human approval remain authoritative. A resident Message/Finish suffix
+uses one recovered owner through its handoff.
+
+This covers returned startup failures, not process termination or durability
+recovery after an unacknowledged write. It does not create mandatory archive
+selection for legacy callers or relax the original guarded-recovery contract.
+
+Six authored operator regression functions contain 22 scenario arms: all three
+learned/predictor modes through missing-source, bad-predecessor and late-listener
+failures with successful corrected Message and Finish; competing archive paths;
+early custody admission; and corrected resident suffixes. They preserve the
+original four sampled draws and distinguish journal events from authority epochs.
+Independent source/API review is complete; these new operator sources have not
+been compiled, formatted or executed after the workspace disconnection.
+
 ## Retain a recovery Fence before source binding
 
 `TopologyCheckpoint::after_recovery_fence` carries an independently retained
