@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: govern live topology-supervised learned sequences
+
+- Retain the original governor and topology observer together through resident
+  learned creation and fully guarded anchored recovery.
+- Require exact v2 paired source/history custody on mediated governor recovery;
+  preserve the original Stop path, paired startup retention and finite budgets.
+- Reject governor socket aliases against source inputs/checkpoints/outputs while
+  keeping predictive and joint-credibility composition outside this live path.
+- Add actual authenticated creation/recovery promotion and Message/Finish
+  regression sources, including late source loss and independent custody controls.
+- Verify source/API, syntax and changed-line integrity. Rust compilation and
+  runtime qualification remain pending because the required RCH runner is absent.
+
 ## 2026-11-14: narrow ordinary topology-supervised publication
 
 - Extend the original exact target restriction to ordinary mediated owners while

@@ -1,7 +1,7 @@
 //! Live recovery chooses either original custody or a terminal admission Stop.
 //! A checked peer is retained while the SAME guarded cursor verifies every event.
 use super::{
-    Config, Control, Deadline, ElapsedTick, GovernedCustody, Loaded, Progress, TopologyCustody,
+    Config, Control, Deadline, ElapsedTick, GovernedTopologyCustody, Loaded, Progress, TopologyCustody,
     debug, ready_governed_with_checkpoints, ready_selected_with_checkpoints, selected,
 };
 use super::super::{anchors, topology};
@@ -40,7 +40,7 @@ pub(super) fn open_governed<F>(
     control: &mut Control,
     deadline: &Deadline,
     time: &mut F,
-) -> Result<GovernedCustody, String>
+) -> Result<GovernedTopologyCustody, String>
 where
     F: FnMut() -> ElapsedTick,
 {
@@ -56,7 +56,7 @@ where
     if pending {
         return stop(config, loaded, recovery.into_original(), control, deadline, time);
     }
-    recovery.finish().map_err(debug)
+    recovery.finish_with_topology().map_err(debug)
 }
 
 /// Complete only the independently expected pending stream intent. The SAME

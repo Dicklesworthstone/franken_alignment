@@ -29,11 +29,14 @@ keeps its original complete grammar and atomic three-event replacement.
 ## Fresh governor custody after learned recovery
 
 The live recovery adapter can retain the fresh governor returned by the original
-`FileGuardedLearnedRecovery` together with its recovered host and human reviewer.
-It accepts only an explicitly selected nonpredictive, nonmediated learned stream
-with an independently retained history anchor and exact existing campaign
-requirements. A creation campaign selection cannot substitute for that inventory.
-The complete original guard, effective-policy, credential, recovery-floor and
+`FileGuardedLearnedRecovery` or `FileMediatedLearnedRecovery` together with its
+recovered host and human reviewer. It accepts an explicitly selected
+nonpredictive learned stream with an independently retained history anchor and
+exact existing campaign requirements. Mediated recovery additionally requires
+the exact v2 source checkpoint for that same cut and retains the observer from
+the original role bundle for source binding. A creation campaign selection or
+manual source minimum cannot substitute for that inventory. The complete
+original graph, guard, effective-policy, credential, recovery-floor and
 terminal-reserve checks still belong to the same native cursor.
 
 Replay checks the command's original deadline and independent Stop transport at

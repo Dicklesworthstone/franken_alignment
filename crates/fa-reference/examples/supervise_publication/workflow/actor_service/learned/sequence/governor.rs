@@ -1,13 +1,13 @@
 //! Explicit live governor custody for one created or guarded recovered sequence.
 //! Selection never reconstructs a role, enables a late guard or approves a
 //! campaign. The original native constructor and independent peer own those.
-use super::super::{fields, operator};
+use super::super::{fields, operator, recovery, topology};
 use super::{Config, Entry, LearnedTextRelease, PeerProfile};
 pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
 use std::{collections::BTreeSet, path::PathBuf};
 
-const INVALID: &str = "learned governor requires a new nonpredictive, nonmediated resident sequence with --campaign-profile, or explicit nonpredictive, nonmediated recovery with --history-anchor; both require paired --operator-profile/--tower-generation";
+const INVALID: &str = "learned governor requires a new nonpredictive resident sequence with --campaign-profile, or explicit nonpredictive recovery with --history-anchor; both require paired --operator-profile/--tower-generation, and governed topology recovery requires an exact paired v2 source checkpoint";
 
 /// Own the whole selected grammar before another option stripper can erase a
 /// recovery or maintenance mode. Without this selection, preserve the old argv.
@@ -53,6 +53,7 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<PathBu
                 | "--history-anchor"
                 | "--retain-history-anchor"
                 | "--checkpoint-before-generation"
+                | "--topology-profile"
         )
         {
             return Err(INVALID.into());
@@ -137,6 +138,11 @@ pub(super) fn check(
     } else if entries[0].loaded.creation_campaigns != Some(expected) {
         return Err("learned governor requires its original first-image campaign guard".into());
     }
+    if continuing {
+        recovery::check_governed_recovery(&entries[0].loaded)?;
+    } else {
+        recovery::check_governed_creation(config, &entries[0].loaded)?;
+    }
     let requests = entries
         .iter()
         .map(|entry| entry.loaded.request)
@@ -147,8 +153,7 @@ pub(super) fn check(
     }
     for (index, entry) in entries.iter().enumerate() {
         let loaded = &entry.loaded;
-        if loaded.topology.is_some()
-            || (loaded.recovery_anchor.is_some() && (!continuing || index != 0))
+        if (loaded.recovery_anchor.is_some() && (!continuing || index != 0))
             || loaded.generation.required_pre_output_forecast().is_some()
             || loaded
                 .generation
@@ -185,6 +190,20 @@ pub(super) fn check(
                 return Err(
                     "learned governor socket conflicts with retained history custody".into(),
                 );
+            }
+        }
+        if let Some(selected) = loaded.topology.as_ref() {
+            let (mut reserved, output) = match selected {
+                topology::Selection::Create(selected) =>
+                    (selected.input_paths().to_vec(), selected.acknowledged_output()),
+                topology::Selection::Recover { selection, .. } =>
+                    (selection.input_paths(), selection.acknowledged_output()),
+            };
+            reserved.extend(output);
+            for path in reserved {
+                if fields::resolve_root(path)? == socket {
+                    return Err("learned governor socket conflicts with original topology source or retained checkpoint custody".into());
+                }
             }
         }
         if let Some(precheck) = entry.precheck.as_ref() {

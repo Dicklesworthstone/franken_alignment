@@ -8,6 +8,8 @@ mod governed_admission;
 
 #[path = "sequence_governor/recovery.rs"]
 mod recovered;
+#[path = "sequence_governor/mediated.rs"]
+mod mediated;
 
 use super::super::super::operator as learned_operator;
 use super::*;
@@ -541,8 +543,10 @@ fn governed_learned_command_rejects_unsupported_or_unfunded_modes_before_assets_
                 args.extend([
                     "--topology-profile".into(),
                     root.0.join("absent-topology.json").display().to_string(),
+                    "--topology-profile".into(),
+                    root.0.join("second-topology.json").display().to_string(),
                 ]);
-                "nonmediated"
+                "learned governor requires"
             }
             2 => {
                 // The later recipe must refuse before the FIRST recipe's assets.

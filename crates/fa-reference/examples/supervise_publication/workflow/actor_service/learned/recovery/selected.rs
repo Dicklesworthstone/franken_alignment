@@ -4,7 +4,7 @@ use super::cooperative::Progress;
 use fa_reference::action::consequence::experiment::InterventionScope;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
 use super::{
-    Config, Custody, FileOversight, GovernedCustody, Loaded, RecoveryReserve, TopologyCustody,
+    Config, Custody, FileOversight, GovernedTopologyCustody, Loaded, RecoveryReserve, TopologyCustody,
     debug, requirements,
 };
 use fa_reference::action::ElapsedTick;
@@ -51,12 +51,13 @@ pub(super) enum Cursor {
     PredictiveMediated(FilePredictiveMediatedLearnedRecovery),
 }
 
-/// A separately selected original plain cursor whose independently supplied
+/// Separately selected original nonpredictive cursors whose independent
 /// requirements include the campaign guard and anchor. Complete native Ready
-/// validation therefore proves the governor will be part of the fresh role
-/// bundle BEFORE the original finalizer can publish its recovery Fence.
-pub(super) struct GovernedCursor {
-    original: FileGuardedLearnedRecovery,
+/// validation proves both selected roles will be part of the original fresh
+/// bundle BEFORE the finalizer can publish its recovery Fence.
+pub(super) enum GovernedCursor {
+    Plain(FileGuardedLearnedRecovery),
+    Mediated(FileMediatedLearnedRecovery),
 }
 
 impl GovernedCursor {
@@ -64,32 +65,72 @@ impl GovernedCursor {
         super::check_governed_recovery(loaded)?;
         // Use the same full requirements, canonical anchor and original terminal
         // reserve as ordinary recovery; no weaker open or second replay exists.
-        match Cursor::begin_plain(config, loaded)? {
-            Cursor::Plain(original) => Ok(Self { original }),
-            _ => Err("governed learned recovery requires the original plain cursor".into()),
+        match Cursor::begin(config, loaded)? {
+            Cursor::Plain(original) => Ok(Self::Plain(original)),
+            Cursor::Mediated(original) => Ok(Self::Mediated(original)),
+            _ => Err("governed learned recovery requires an original nonpredictive cursor".into()),
         }
     }
 
     pub(super) fn progress(&self) -> Progress {
-        self.original.progress()
+        match self {
+            Self::Plain(original) => original.progress(),
+            Self::Mediated(original) => original.progress(),
+        }
     }
 
     pub(super) fn advance(&mut self, done: usize) -> Result<Progress, JournalError> {
-        self.original.advance(done, 1)
+        match self {
+            Self::Plain(original) => original.advance(done, 1),
+            Self::Mediated(original) => original.advance(done, 1),
+        }
     }
 
     /// The terminal consumer retains this SAME cursor; it never finishes into
     /// a live owner or provisions a governor before applying authenticated Stop.
     pub(super) fn into_original(self) -> Cursor {
-        Cursor::Plain(self.original)
+        match self {
+            Self::Plain(original) => Cursor::Plain(original),
+            Self::Mediated(original) => Cursor::Mediated(original),
+        }
     }
 
-    pub(super) fn finish(self) -> Result<GovernedCustody, JournalError> {
-        let (host, roles) = self.original.finish()?;
+    #[cfg(test)]
+    pub(super) fn finish(self) -> Result<super::GovernedCustody, JournalError> {
+        let Self::Plain(original) = self else {
+            return Err(fa_reference::Error::Incomplete.into());
+        };
+        Self::finish_plain(original).map(|((custody, _), governor)| (custody, governor))
+    }
+
+    pub(super) fn finish_with_topology(self) -> Result<GovernedTopologyCustody, JournalError> {
+        // Separate native finalizer frames keep mutually exclusive owner/role
+        // temporaries from accumulating on an unoptimized startup stack.
+        match self {
+            Self::Plain(original) => Self::finish_plain(original),
+            Self::Mediated(original) => Self::finish_mediated(original),
+        }
+    }
+
+    #[inline(never)]
+    fn finish_plain(original: FileGuardedLearnedRecovery)
+        -> Result<GovernedTopologyCustody, JournalError>
+    {
+        let (host, roles) = original.finish()?;
         // begin requires Some(campaigns), and native check_ready matches that
         // exact guard before finishing. Native role provisioning follows it.
         let governor = roles.policy_governor.ok_or(fa_reference::Error::Incomplete)?;
-        Ok(((host, roles.human, None, roles.identity_observer), governor))
+        Ok((((host, roles.human, None, roles.identity_observer), None), governor))
+    }
+
+    #[inline(never)]
+    fn finish_mediated(original: FileMediatedLearnedRecovery)
+        -> Result<GovernedTopologyCustody, JournalError>
+    {
+        let (host, roles) = original.finish()?;
+        let governor = roles.oversight.policy_governor.ok_or(fa_reference::Error::Incomplete)?;
+        Ok((((host, roles.oversight.human, roles.consistency_observer,
+            roles.oversight.identity_observer), Some(roles.topology_observer)), governor))
     }
 }
 

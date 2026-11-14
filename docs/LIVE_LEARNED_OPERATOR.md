@@ -89,7 +89,7 @@ kernel process identities, not executable identities or human authentication.
 Naming the same identity for multiple roles gives those processes the
 corresponding explicitly selected access.
 
-For new or independently recovered nonpredictive, nonmediated resident
+For new or independently recovered nonpredictive resident
 sequences, an explicit
 `--governor-profile` can pair this operator with a separate original campaign
 governor. The operator's `policy_promotion` selection must include its own
@@ -105,6 +105,10 @@ original guarded recovery fence; old approvals and ports remain revoked. The
 [recovery selection](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
 preserves native generation/campaign spending while independently provisioning
 the new invocation's finite operator and governor service allowances.
+Topology-selected sequences retain the original source alongside governor
+custody. Governed mediated recovery requires its exact matching v2 source/history
+pair. Promotion preserves source expenditure and cannot replace the initial
+certification or compulsory final topology refresh for any release.
 
 The socket directory must be supervisor-owned and not group/other writable.
 Admission compares the canonical path with the authority store subtree, selected

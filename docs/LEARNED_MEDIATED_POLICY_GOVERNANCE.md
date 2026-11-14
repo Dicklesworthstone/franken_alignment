@@ -12,6 +12,15 @@ effect reviewer do not receive governor authority. No signed governor identity,
 predictive policy-promotion profile or operating-system containment claim is
 introduced by this composition.
 
+The [live resident governor](LIVE_POLICY_GOVERNOR.md#preserve-topology-through-live-governance)
+also supports nonpredictive topology-mediated creation and explicitly anchored
+recovery. It retains the original separately issued governor and source observer,
+then uses independent authenticated Request/Approve and paid operator Promote
+operations. Its recovered source must match an exact v2 history/checkpoint pair,
+and every new release retains initial certification and final fresh source
+checks. The offline operation described below keeps its atomic three-event
+transaction and performs no live publication.
+
 ## Explicit paired selection
 
 The campaign guard must already exist in the original first image, with exact

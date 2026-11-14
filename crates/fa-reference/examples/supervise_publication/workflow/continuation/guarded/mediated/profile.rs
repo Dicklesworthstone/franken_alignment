@@ -67,6 +67,20 @@ impl History {
     }
 }
 impl Selection {
+    /// Every independently selected historical or live source input. Inspecting
+    /// these names does not open the next documents or spend source work.
+    pub(crate) fn input_paths(&self) -> Vec<&Path> {
+        let mut paths = vec![self.initial.topology.as_path(), self.initial.inventory.as_path(),
+            self.next.topology.as_path(), self.next.inventory.as_path()];
+        match &self.basis {
+            Basis::Manual { current, .. } => {
+                paths.extend([current.topology.as_path(), current.inventory.as_path()]);
+            }
+            Basis::Checkpoint(path) => paths.push(path.as_path()),
+        }
+        paths
+    }
+
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::read_with_reader(path, &mut crate::config::read_regular)
     }

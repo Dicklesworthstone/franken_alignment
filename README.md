@@ -61,8 +61,12 @@ policy/campaign expectations. One guarded replay preserves native numerical stat
 and spending, gives authenticated Stop priority, and returns fresh governor and
 human custody after the original fence. A single remaining Message or Finish
 can resume within the original finite budget; Finish requires its exact confirmed
-predecessor and cannot restart sampling. New publication still requires fresh
-source, helper and human checks. The new source and regression tests remain
+predecessor and cannot restart sampling. Both new and recovered nonpredictive
+sequences can select the original topology supervisor alongside the live
+governor. Recovery requires an exact v2 source checkpoint paired with the
+independent history anchor; governor custody and spent source work survive in
+the same original owner. New publication still requires initial certification,
+final fresh source checks, helper review and human approval. The new source and regression tests remain
 pending Rust compilation and runtime qualification.
 
 The [native request-history capability](docs/TOWER_REQUEST_HISTORY.md) connects

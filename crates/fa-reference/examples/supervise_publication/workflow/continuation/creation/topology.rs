@@ -22,6 +22,11 @@ pub(crate) struct Selection {
 }
 
 impl Selection {
+    /// Declared source custody for read-only transport alias admission.
+    pub(crate) fn input_paths(&self) -> [&Path; 2] {
+        [&self.topology, &self.inventory]
+    }
+
     /// Explicit separately retained source/history custody for maintenance.
     pub(crate) fn acknowledged_output(&self) -> Option<&Path> { self.output.as_deref() }
 

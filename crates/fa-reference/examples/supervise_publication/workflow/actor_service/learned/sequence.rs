@@ -35,7 +35,7 @@ impl Recovery {
     }
 }
 
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; explicitly anchored recovery may select a single remaining Message or an explicit --after-message Finish; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; explicitly anchored recovery may select a single remaining Message or an explicit --after-message Finish; nonpredictive sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe, and governed topology recovery requires its exact paired v2 source checkpoint";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -558,25 +558,10 @@ where
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
     let (started, governor_role) = if selected_governor.is_some() {
-        let (custody, role) = if continuing {
-            super::recovery::open_governed_live(
-                &config,
-                &first.loaded,
-                &mut control,
-                &deadline,
-                &mut time,
-            )?
-        } else {
-            super::recovery::create_governed(&config, &first.loaded)?
-        };
-        (
-            topology::Started {
-                custody,
-                source: None,
-                output: None,
-            },
-            Some(role),
-        )
+        let (started, role) = topology::start_governed(
+            &config, &first.loaded, continuing, &mut control, &deadline, &mut time,
+        )?;
+        (started, Some(role))
     } else {
         (
             topology::start(

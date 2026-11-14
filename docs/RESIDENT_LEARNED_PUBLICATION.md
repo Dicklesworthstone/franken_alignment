@@ -15,7 +15,7 @@ renewed. Every scheduled actor/reviewer/Stop path and retained output is checked
 for collision before startup. Operator traffic cannot approve or advance a
 release, and independent Stop retains priority.
 
-A new nonpredictive, nonmediated sequence with at least two Messages can also
+A new nonpredictive sequence with at least two Messages can also
 select `--governor-profile GOVERNOR_PROFILE` together with `--campaign-profile`
 and that same operator pair. The original first-image governor remains separate
 from actor, helper and human effect-review custody. Independent numerical
@@ -23,6 +23,14 @@ allowances pay for campaign Request/Approve and operator Promote; one original
 service retains those allowances across every message and helper handoff. See
 [live learned governance](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
 for complete profiles, mode exclusions and the stable post-generation cut.
+
+This selection composes with the original `--topology-profile` creation and
+recovery paths. The same constructor or guarded cursor returns both original
+governor and source-observer custody. A mediated recovery requires an exact v2
+source checkpoint matching the independently selected history anchor; manual
+source minima cannot replace it. Source work remains cumulative, and promotion
+does not replace initial certification, final fresh topology checks or human
+approval. Paired source/history retention still covers returned startup errors.
 
 An already governed stream can select the same independent governor during
 explicit `--continue-generation` or `--after-message` recovery, with a mandatory

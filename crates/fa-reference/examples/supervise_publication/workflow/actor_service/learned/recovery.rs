@@ -52,6 +52,7 @@ pub(super) type Custody = (
 pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
 pub(super) type GovernedCustody = (Custody, FilePolicyGovernor);
+pub(super) type GovernedTopologyCustody = (TopologyCustody, FilePolicyGovernor);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     super::recipe::check_creation(config, loaded)?;
@@ -90,22 +91,11 @@ pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custod
 /// Keep the original first-image governor only for an explicitly governed new
 /// resident run. No getter, late Enable, reopen or saved approval supplies it.
 pub(super) fn create_governed(config: &Config, loaded: &Loaded)
-    -> Result<(Custody, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor), String>
+    -> Result<GovernedCustody, String>
 {
-    super::recipe::check_creation(config, loaded)?;
-    super::credential::check_creation(loaded)?;
-    if loaded.creation_campaigns.is_none()
-        || loaded.topology.is_some()
-        || loaded.generation.required_pre_output_forecast().is_some()
-        || loaded
-            .generation
-            .required_owned_pre_output_forecast()
-            .is_some()
-        || loaded.generation.required_held_out_joint().is_some()
-    {
-        return Err(
-            "live learned governor requires a new nonpredictive, nonmediated campaign owner".into(),
-        );
+    check_governed_creation(config, loaded)?;
+    if loaded.topology.is_some() {
+        return Err("mediated learned governance requires original topology startup custody".into());
     }
     let guards = requirements(config, loaded).guards;
     let registration = super::credential::registration(loaded)?;
@@ -122,6 +112,24 @@ pub(super) fn create_governed(config: &Config, loaded: &Loaded)
         .policy_governor
         .ok_or("original learned bootstrap did not provision the selected governor")?;
     Ok(((host, roles.human, None, roles.identity_observer), governor))
+}
+
+/// Keep policy-bound predictors and joint credibility outside live governance.
+/// A mediated owner uses these same first-image campaign guards and its native
+/// topology constructor; no observer or authority is enabled after creation.
+pub(super) fn check_governed_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
+    super::recipe::check_creation(config, loaded)?;
+    super::credential::check_creation(loaded)?;
+    if loaded.creation_campaigns.is_none()
+        || loaded.recovery_anchor.is_some()
+        || matches!(loaded.topology.as_ref(), Some(super::topology::Selection::Recover { .. }))
+        || loaded.generation.required_pre_output_forecast().is_some()
+        || loaded.generation.required_owned_pre_output_forecast().is_some()
+        || loaded.generation.required_held_out_joint().is_some()
+    {
+        return Err("live learned governor requires a new nonpredictive campaign owner without joint credibility".into());
+    }
+    Ok(())
 }
 
 // Keep mutually exclusive native constructors out of the ordinary startup
@@ -304,17 +312,35 @@ pub(super) fn open_governed_live<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    if loaded.topology.is_some() {
+        return Err("mediated learned governance requires original topology recovery custody".into());
+    }
+    live::open_governed(config, loaded, control, deadline, time)
+        .map(|((custody, _), governor)| (custody, governor))
+}
+
+/// Preserve both independently issued roles from the SAME guarded original
+/// replay. The caller must bind the returned observer before any live work.
+pub(super) fn open_governed_live_with_topology<F>(
+    config: &Config,
+    loaded: &Loaded,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<GovernedTopologyCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     live::open_governed(config, loaded, control, deadline, time)
 }
 
 /// This selection narrows the already guarded recovery contract. It cannot
 /// discover a campaign inventory from the journal, install one during reopen,
 /// or requalify policy-bound predictors or joint credibility after promotion.
-fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
+pub(super) fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
     if loaded.recovery_anchor.is_none()
         || loaded.expected_campaigns.is_none()
         || loaded.creation_campaigns.is_some()
-        || loaded.topology.is_some()
         || loaded.generation.required_pre_output_forecast().is_some()
         || loaded
             .generation
@@ -322,7 +348,17 @@ fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
             .is_some()
         || loaded.generation.required_held_out_joint().is_some()
     {
-        return Err("governed learned recovery requires an independent history anchor and exact existing campaign limits, without creation, topology, prediction or joint credibility selections".into());
+        return Err("governed learned recovery requires an independent history anchor and exact existing campaign limits, without creation, prediction or joint credibility selections".into());
+    }
+    if let Some(selected) = loaded.topology.as_ref() {
+        let super::topology::Selection::Recover { history, .. } = selected else {
+            return Err("governed learned recovery cannot install a creation topology".into());
+        };
+        let saved = history.checkpoint()
+            .ok_or("governed learned topology recovery requires an exact v2 source checkpoint")?;
+        if Some(saved.history_anchor()) != loaded.recovery_anchor.as_ref() {
+            return Err("governed learned source checkpoint and history anchor describe different cuts".into());
+        }
     }
     Ok(())
 }

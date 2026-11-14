@@ -14,6 +14,7 @@ use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
     observed::{
         driver::topology::FileDriverTopology, guarded::mediated::predictive::FileMediatedPredictor,
+        governance::campaigns::FilePolicyGovernor,
     },
 };
 use fa_reference::action::consequence::mediation::CutCheck;
@@ -140,17 +141,58 @@ where
     match selected {
         Selection::Create(selection) => start_created(
             config, loaded, selection, continuing, control, deadline, time,
-        ),
+        ).map(|(started, _)| started),
         Selection::Recover { selection, history } => start_recovered(
             config,
             loaded,
             (selection, history),
             continuing,
+            false,
             control,
             deadline,
             time,
-        ),
+        ).map(|(started, _)| started),
     }
+}
+
+/// Governed startup retains the governor and selected source from the SAME
+/// original role bundle. The existing source intake, retention and native
+/// checker still own every mediated request after a policy promotion.
+pub(super) fn start_governed<F>(
+    config: &Config,
+    loaded: &Loaded,
+    continuing: bool,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<(Started, FilePolicyGovernor), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    if continuing {
+        recovery::check_governed_recovery(loaded)?;
+    } else {
+        recovery::check_governed_creation(config, loaded)?;
+    }
+    let Some(selected) = loaded.topology.as_ref() else {
+        let (custody, governor) = if continuing {
+            recovery::open_governed_live(config, loaded, control, deadline, time)?
+        } else {
+            recovery::create_governed(config, loaded)?
+        };
+        return Ok((Started { custody, source: None, output: None }, governor));
+    };
+    let (started, governor) = match selected {
+        Selection::Create(selection) => start_created(
+            config, loaded, selection, continuing, control, deadline, time,
+        ),
+        Selection::Recover { selection, history } => start_recovered(
+            config, loaded, (selection, history), continuing, true, control, deadline, time,
+        ),
+    }?;
+    let governor = governor
+        .ok_or("original learned topology startup did not provision the selected governor")?;
+    Ok((started, governor))
 }
 
 // Unselected startup must not reserve stack space for both topology owners.
@@ -163,7 +205,7 @@ fn start_created<F>(
     control: &mut Control,
     deadline: &Deadline,
     time: &mut F,
-) -> Result<Started, String>
+) -> Result<(Started, Option<FilePolicyGovernor>), String>
 where
     F: FnMut() -> ElapsedTick,
 {
@@ -221,7 +263,7 @@ where
     }
     .map_err(debug)?;
     let source = prepared.bind(&host, roles.topology_observer)?;
-    Ok(Started {
+    Ok((Started {
         custody: (
             host,
             roles.oversight.human,
@@ -230,7 +272,7 @@ where
         ),
         source: Some(source),
         output,
-    })
+    }, roles.oversight.policy_governor))
 }
 
 fn start_recovered<F>(
@@ -238,10 +280,11 @@ fn start_recovered<F>(
     loaded: &Loaded,
     (selection, history): (&Continuation, &History),
     continuing: bool,
+    governed: bool,
     control: &mut Control,
     deadline: &Deadline,
     time: &mut F,
-) -> Result<Started, String>
+) -> Result<(Started, Option<FilePolicyGovernor>), String>
 where
     F: FnMut() -> ElapsedTick,
 {
@@ -251,8 +294,15 @@ where
     let mut retention = super::startup_custody::FenceRetention::admit(
         config, loaded, history, selection,
     )?;
-    let ((mut host, human, forecast, identity), observer) =
-        recovery::open_selected_live_with_topology(config, loaded, control, deadline, time)?;
+    let (custody, governor) = if governed {
+        let (custody, governor) = recovery::open_governed_live_with_topology(
+            config, loaded, control, deadline, time,
+        )?;
+        (custody, Some(governor))
+    } else {
+        (recovery::open_selected_live_with_topology(config, loaded, control, deadline, time)?, None)
+    };
+    let ((mut host, human, forecast, identity), observer) = custody;
     retention.capture(&host, observer.as_ref())
         .map_err(|error| retention.retain_error(&host, error))?;
     let bound = (|| {
@@ -280,11 +330,11 @@ where
         Ok(bound) => bound,
         Err(error) => return Err(retention.retain_error(&host, error)),
     };
-    Ok(Started {
+    Ok((Started {
         custody: (host, human, forecast, identity),
         source: Some(source),
         output,
-    })
+    }, governor))
 }
 
 /// Install before any fallible preparation so selected custody cannot disappear.

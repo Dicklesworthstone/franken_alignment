@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: govern live topology-supervised learned sequences
+
+The resident learned service now composes its explicit live governor with the
+original topology-supervised creation and anchored-recovery paths. The original
+native constructor or guarded recovery cursor returns both governor and source
+observer in one role bundle. Startup retains both, instead of dropping governor
+custody on the mediated branch. The same source and numerical owner survive
+Request/Approve, independently paid operator Promote and Message/Finish handoffs.
+
+Mediated governor recovery requires the independently retained history anchor
+and exact matching v2 source checkpoint, current full policy, original campaign
+inventory, graph requirements, floors and reserve. Manual source minima cannot
+enter this path. The original cooperative cursor still checks authenticated
+Stop at every event and Ready; pending Stop uses that same terminal path before
+any live governor is issued. Existing paired retention captures the actual
+healthy Fence or rebound source cut through returned startup failures.
+
+Normalized governor socket paths cannot alias selected topology/inventory inputs,
+retained source checkpoints or requested outputs. Forecast and joint-credibility
+compositions remain refused. Governance preserves original campaign, generation
+and source expenditure. It creates no fresh topology certificate or effect key;
+each release keeps its initial source certification and mandatory final refresh,
+and requires fresh native/process review and independent human approval.
+
+New authenticated service regression sources exercise actual imported generation,
+separate governor Request/Approve, paid operator promotion, fresh Message/Finish
+publication and exact promotion retries under both creation and recovery. They
+assert the original four sampled draws and six cumulative source checks for
+three completed releases. Causal source-loss cases remove inventory only after
+the second dispatch charge, require no second effect or Finish and retain four
+checks with unavailable source custody. Preflight controls cover normalized
+output aliases, both forecast kinds, mismatched valid history/source cuts and
+manual v1 custody. These are authored expectations, not execution results.
+
+Independent source/API review, syntax parsing, registry JSON validation and Git
+whitespace checks completed. The required RCH gate remains unavailable (exit
+127: `rch` not found); no Rust compiler or Cargo is installed in this workspace.
+Compilation, runtime tests, rustfmt, Clippy and broader qualification remain
+pending. Existing acceptance gates and Bead status are unchanged.
+Contracts: `docs/LIVE_POLICY_GOVERNOR.md`, `docs/RESIDENT_LEARNED_PUBLICATION.md`.
+
 ## 2026-11-14: narrow ordinary topology-supervised publication
 
 The original native target-ceiling restriction now accepts ordinary mediated

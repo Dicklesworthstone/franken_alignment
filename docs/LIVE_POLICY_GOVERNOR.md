@@ -191,11 +191,12 @@ supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_P
 ```
 
 The sequence must contain at least two Messages, with an optional final Finish.
-This selection creates a new nonpredictive, nonmediated learned owner. Creation
-refuses continuation and recovery selections; the explicit anchored recovery
-selection below accepts them without a creation campaign profile. Both refuse
-topology, forecast and joint credibility selections before model/helper assets
-or live resources are acquired. The closed argv also
+This selection creates a new nonpredictive learned owner, optionally with the
+original `--topology-profile PATH` selection. Creation refuses continuation and
+recovery selections; the explicit anchored recovery selection below accepts
+them without a creation campaign profile. Forecast and joint credibility
+selections still refuse before model/helper assets or live resources are
+acquired. The closed argv also
 admits the existing optional checkpoint before generation and new output history
 anchor. A version-two sequence may select its original per-entry precheck
 listeners; those remain observations and cannot create governor authority.
@@ -210,9 +211,30 @@ learned and native-text services keep their existing default promotion refusal.
 
 The original guarded learned constructor installs the stream, source, campaign
 guard, learned configuration and terminal reserve in its first canonical image.
-Only that acknowledged creation returns the governor retained by the new live
-service. There is no late campaign enable, reopened role getter, replacement
-numerical owner or approval reconstructed from report bytes.
+With topology selected, the original mediated constructor also installs its
+graph and publication guard in that same image. Its role bundle supplies both
+the governor and the separately issued observer that binds the source. Only
+that acknowledged creation supplies custody to the live service. There is no
+late campaign enable, reopened role getter, replacement numerical owner or
+approval reconstructed from report bytes.
+
+### Preserve topology through live governance
+
+For a new owner, select the existing `fa.mediated-create/1` profile, or `/2` with
+an independent `retain_checkpoint` output. The topology, inventory and retained
+output paths are checked against the normalized governor socket before owner
+startup. They must also pass the original topology intake and custody checks.
+One attached source retains its exact graph, fixed input paths, operation floor
+and cumulative check/read allowance through every campaign and message handoff.
+
+Policy promotion preserves that source and its accepted same-graph cut. It does
+not refresh files or create a source certificate, human approval or effect
+permit. Each release still performs its original initial certification and
+compulsory final source refresh. A source lost or changed after promotion, or an
+exhausted source allowance, blocks external publication through the original
+withdrawal and receipt path. Governor and operator numerical replay allowances
+cannot pay for or renew topology work. Requested source checkpoints describe
+the actual final owner and work, alongside the independently retained history.
 
 ### Pay for Request/Approve separately from Promote
 
@@ -285,8 +307,8 @@ qualification after policy change and is outside this initial live selection.
 
 ## Recover a governed learned sequence
 
-The same live service can recover an already campaign-guarded, nonpredictive,
-nonmediated learned stream. Select the continuation explicitly and retain the
+The same live service can recover an already campaign-guarded, nonpredictive
+learned stream, including an originally topology-mediated stream. Select the continuation explicitly and retain the
 original full numerical recipe, source contract and stream limits:
 
 ```sh
@@ -312,6 +334,22 @@ credentials refuse before numerical assets are loaded. The admitted recipe
 documents are retained for the actual loaders; they are not reread after this
 check. `--campaign-profile` is creation-only and refuses during recovery.
 
+Mediated recovery additionally selects `--topology-profile PATH` with the existing
+`fa.mediated-submit/2` schema. Its independently retained source checkpoint must
+describe exactly the same history as `--history-anchor`; manual v1 source minima
+cannot establish this complete cut. The original mediated cursor checks the
+complete graph, guard inventory, source expenditure and operation floor. It
+returns the fresh governor and original observer together; the existing source
+rebind requires independently selected newer topology and inventory generations.
+No plain owner, second replay or replacement source allowance is introduced.
+
+The profile may request its normal `retain_checkpoint` output. This path and all
+initial, retained and next-source inputs must be distinct from the normalized
+governor socket. Existing paired startup retention applies before and after
+source binding: failures retain the actual acknowledged Fence or rebound source
+cut when a healthy original owner can certify it. A pending authenticated Stop
+uses the same cursor's terminal path before any live governor is issued.
+
 An explicitly governed recovery accepts 1–16 remaining entries. It may contain
 a single Message, a single Finish, or Messages followed by an optional final
 Finish. A single Finish requires `--after-message` naming its nonzero original
@@ -321,8 +359,9 @@ The original Finish checks still refuse an unresolved or Unknown predecessor.
 Finish does not start a continuation or consume another sampled draw, and still
 requires fresh source, native or process helper review, and human approval.
 
-Creation and sequences without an explicit recovery governor retain their
-2–16 entry bound; governed creation still requires at least two Messages.
+Creation and unanchored sequences retain their 2–16 entry bound; governed
+creation still requires at least two Messages. Explicitly anchored ordinary
+recovery also accepts a single remaining release without selecting a governor.
 No selection increases the original message, byte, sampling, numerical or
 campaign budget. Only entry one may select recovery floors and history custody;
 every entry still selects its own actor, request, sidecar and review rounds.
@@ -574,10 +613,17 @@ this execution environment, AF_UNIX socket creation itself is refused; real
 listener/client/end-to-end execution remains unverified. No assertion is removed
 or replaced to turn that environment refusal into protocol evidence.
 
+Mediated learned regression sources additionally exercise original creation and
+exact anchored recovery, independent Request/Approve/Promote peers, fresh
+Message/Finish publication, paired source/history retention and a lost source
+after promotion. They preserve exact source expenditure and numerical/effect
+charges. They also retain causal preflight refusals for mismatched custody,
+socket aliases and unsupported predictive composition.
+
 These are scoped Unix reference regressions; source coverage alone does not
 establish execution or full qualification. Kernel credentials
 identify the connecting local process under the trusted host assumptions; they
 do not prove evaluator competence or cryptographic independence. Live recovered
-service execution, mediated or predictive learned governor composition, live
-learned recovery, joint credibility requalification, policy efficacy and
-full production/runtime qualification remain separate unfinished capabilities.
+service execution, predictive learned governor composition, joint credibility
+requalification, policy efficacy and full production/runtime qualification
+remain separate unfinished capabilities.
