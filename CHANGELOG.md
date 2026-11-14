@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-13: preserve requested ordinary learned startup custody
+
+- Retain the exact acknowledged recovery successor on post-Fence startup
+  failures for independently anchored nonmediated resident sequences, including
+  ordinary services without a policy governor.
+- Preserve the original error and append retention failures without reopening
+  history or retrying generation/publication. Execution qualification is pending.
+
 ## 2026-11-14: cover governed learned restart through live peers
 
 - Add actual resident-command recovery scenarios for a confirmed Message prefix

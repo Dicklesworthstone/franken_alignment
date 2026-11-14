@@ -529,15 +529,17 @@ where
         output,
     } = started;
     // Recovery has already acknowledged its original Fence. Every remaining
-    // startup check is read-only for this supported nonmediated profile. Retain
-    // that exact successor if request admission or either listener now fails;
-    // never reopen the store or recapture an unrelated newer cut on error.
-    let startup_anchor = if selected_governor.is_some()
-        && continuing
+    // startup check is read-only for a nonmediated profile, including ordinary
+    // anchored recovery without a governor. Credibility activation occurs only
+    // inside the later request cycle. Retain this exact successor if request
+    // admission or either listener fails; never reopen the store on error.
+    let startup_anchor = if continuing
+        && first.loaded.topology.is_none()
+        && first.loaded.recovery_anchor.is_some()
         && first.loaded.anchor_output.is_some()
     {
         Some(host.history_anchor_after(first.loaded.recovery_anchor.as_ref()
-            .expect("governed recovery requires independent anchor custody"))
+            .expect("anchored recovery retention requires independent history custody"))
             .map_err(debug)?)
     } else {
         None

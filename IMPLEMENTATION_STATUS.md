@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: retain ordinary learned recovery through startup failure
+
+Independently anchored, nonmediated resident learned recovery now retains its
+requested acknowledged successor when startup fails after the original recovery
+Fence, including when no policy governor is selected. The same original
+history_anchor_after check binds the recovered cut before request preflight,
+actor-gateway conversion and optional operator startup. These startup operations
+are read-only for this scope; credibility activation remains in the later live
+request path with its existing final retention.
+
+A returned error no longer silently drops this selected recovery custody.
+Retention errors are reported together with the triggering startup failure.
+There is no second store open, source refresh, generation, publication, refund
+or effect retry. Successful startup keeps its original final retention, and
+unanchored or topology-coupled modes retain their existing contracts.
+
+Two authored regression functions cover eight pre-asset policy/campaign
+refusals and both post-Fence startup failures: a wrong continuation predecessor
+and a late operator-listener collision. The latter retains its exact successor
+with source/helper files absent, then uses that retained anchor to complete a
+corrected Message and Finish through fresh native and human review.
+
+This is a scoped FA-014 durability fix. Compilation, runtime execution, rustfmt,
+Clippy and the required RCH gate remain unverified: the execution workspace is
+unavailable, and RCH/Rust were absent before it disconnected. Independent
+source review and content checks are separate from executed qualification.
+Existing packet acceptance and qualification manifests remain unchanged.
+
 ## 2026-11-14: exercise recovered governance through live command peers
 
 Additional authored resident-command regressions cover both supported recovery

@@ -97,9 +97,17 @@ response and the original effect state, and still performs normal cleanup. It
 does not start another forecast, review, publication or effect retry.
 
 Retention happens at the final workflow or receipt path before driver cleanup.
-It is not a transaction spanning publication and independent custodian storage.
-A process crash or an earlier failure after the recovery fence can leave no new
-archive. A nonzero command result therefore does not imply that publication or
+Independently anchored, nonmediated resident `serve-learned-generated` recovery
+also retains its acknowledged successor when post-Fence startup fails. This
+includes an invalid request predecessor or a failed optional operator listener,
+with or without a selected governor. The original checked successor is captured
+before these read-only startup steps and exported on their returned error;
+the original failure and any retention failure are both reported. It never
+reopens the store, acquires new source evidence or retries an effect.
+
+Retention is not a transaction spanning publication and independent custodian
+storage. A process crash, failed retention or an earlier failure in another
+workflow can still leave no new archive. A nonzero command result therefore does not imply that publication or
 the recovery fence did not occur. The supplied old anchor still covers its
 original prefix; use the original receipt recovery path to inspect or settle the
 existing request.

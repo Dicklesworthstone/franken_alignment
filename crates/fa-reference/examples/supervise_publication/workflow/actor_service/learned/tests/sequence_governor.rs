@@ -6,6 +6,9 @@ mod governed_recovery;
 #[path = "sequence_governor_admission.rs"]
 mod governed_admission;
 
+#[path = "sequence_governor/recovery.rs"]
+mod recovered;
+
 use super::super::super::operator as learned_operator;
 use super::*;
 use crate::workflow::actor_service::governor as live_governor;
