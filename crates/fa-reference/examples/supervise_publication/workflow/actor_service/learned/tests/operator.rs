@@ -6,6 +6,8 @@ mod admission_explanation;
 mod fence;
 #[path = "operator/journal_tail.rs"]
 mod journal_tail;
+#[path = "operator/narrowing.rs"]
+mod narrowing;
 #[path = "operator/resolution.rs"]
 mod resolution;
 #[path = "operator/review_explanation.rs"]

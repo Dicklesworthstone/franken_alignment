@@ -475,7 +475,7 @@ where
     if control.checkpoint(driver, reviewer, deadline, time)? {
         return Ok(());
     }
-    let mut reviews = review_session::Session::new(config, request, peers, true)?;
+    let mut reviews = review_session::Session::new(config, request, peers)?;
     let mut approval = reviews.review(
         driver, reviewer, config, deadline, &mut control, time,
     )?;
@@ -530,27 +530,6 @@ where
             }
         }
     }
-}
-
-fn human_review<F>(
-    driver: &mut FileSupervisedDriver,
-    reviewer: &FileHumanReviewer,
-    config: &mut Config,
-    request: u64,
-    deadline: &Deadline,
-    channels: (Option<&PeerProfile>, &mut LiveControl<'_>),
-    time: &mut F,
-) -> Result<Option<FileHumanPermit>, String>
-where
-    F: FnMut() -> ElapsedTick,
-{
-    let (peers, control) = channels;
-    if control.checkpoint(driver, reviewer, deadline, time)? {
-        return Ok(None);
-    }
-    // Learned consumers retain their original one-shot request/key contract.
-    let mut session = review_session::Session::new(config, request, peers, false)?;
-    session.review(driver, reviewer, config, deadline, control, time)
 }
 
 fn cancel_unspent(driver: &mut FileSupervisedDriver, request: u64) -> Result<(), String> {

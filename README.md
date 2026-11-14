@@ -34,9 +34,12 @@ now supports numerical and typed-stream owners through a separately budgeted
 native control grant. Exact target restrictions preserve retained reservations,
 unresolved effect charges, numerical expenditure and stream prefixes. A completed
 learned review can continue only with its original current source and fresh human
-approval. Topology-supervised publication retains its original source and final
-paid check. The new native and Tower regressions are authored; Rust/RCH compilation
-and execution qualification remain pending.
+approval. The live learned and native generated operator profiles now expose
+this grant; the learned reviewer keeps the same finite listener and deadline
+while requiring a fresh independent approval after restriction. Topology-supervised
+publication retains its original source and final paid check. Native, Tower and
+live-service regressions are authored; Rust/RCH compilation and execution
+qualification remain pending.
 
 The [ordinary live Tower recovery service](docs/LIVE_TOWER_RECOVERY.md) now
 accepts independent authenticated Stop during cooperative replay, before live

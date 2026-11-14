@@ -13,6 +13,9 @@ use fa_reference::strict_json::{self, Json};
 use fa_reference::tower::{ReadArguments, TowerRequest, Verb, encode_request};
 use std::io::Read;
 
+#[path = "operator/narrowing.rs"]
+mod narrowing;
+
 const REGISTRATION: u64 = 41;
 const STOP_OPERATION: u64 = 1201;
 

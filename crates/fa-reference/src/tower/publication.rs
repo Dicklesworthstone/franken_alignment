@@ -362,7 +362,7 @@ impl PublicationTower {
     /// Restrict or settle the ORIGINAL native generated-text owner using only
     /// separately selected finite control grants. Ordinary actor intake stays
     /// closed. Decoder history keeps the native numerical replay budget gates;
-    /// ordinary target-ceiling Narrow remains unsupported for stream owners.
+    /// target-ceiling Narrow requires its own explicit numerical replay grant.
     pub fn new_generated_control_operator(
         mount: Address,
         port: FileGeneratedTextActorPort,

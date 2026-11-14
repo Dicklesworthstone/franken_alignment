@@ -9,8 +9,10 @@ running supervisor. A separately selected `resolution` grant connects native
 `cancellation` grant retires one original undispatched request through the same
 verbs with an explicit cancellation action. Independent `abandonment` selects
 terminal disposition of an original Unknown request while retaining its charge.
-An ordinary `narrowing` grant restricts the original exact target ceiling through
+A separate `narrowing` grant restricts the original exact target ceiling through
 explicit `next` and `narrow`, retaining allowed work and uncertain liabilities.
+Learned and native generated owners require an explicit cumulative numerical
+replay allowance in that grant.
 A separately selected ordinary `convening` grant admits explicit fresh helper
 rounds for a held original request through `next` and `convene`, with the same
 helper recipe, original deadline and later independent human approval.
@@ -507,7 +509,7 @@ the original source budget and actor connection. The integration syntax and
 format checks passed; runtime and compiler qualification remain pending because
 the required RCH runner was absent.
 
-## Restrict the ordinary run to selected targets
+## Restrict the original run to selected targets
 
 Select a separate optional `narrowing` profile member:
 
@@ -521,12 +523,22 @@ Select a separate optional `narrowing` profile member:
 ```
 
 The closed object permits 1–1,024 queries, 1–128 operations and 1–4,096 events
-including the appended restriction. Omission or null disables it. The ordinary
-grant has no numerical replay field, and learned actor/resident setup refuses
-this selection. Decoder, predictor and stream histories remain unsupported by
-the native operation. Ordinary mediated histories retain their original
-topology source; continuing a completed review requires that same attached
-custodian, and final publication still spends a fresh source check.
+including the appended restriction. Omission or null disables it. For learned,
+predictive or native generated-text service, independently add
+`"numerical_replay_events": 32768` to the example above. It must be positive and
+no greater than operations times `max_replay_events`. Each entered numerical
+restriction reserves the complete acknowledged history plus its proposed event
+from this same cumulative allowance, before replay or mutation. An omitted
+numerical allowance refuses numerical service setup; an insufficient live
+allowance offers no action and reports `numerical_replay_limit`.
+
+Narrowing-only numerical profiles select the original control mount and retain
+one grant across reconnects and resident handoff. Plans and exact retries spend
+no numerical work. The allowance is an event count; original model recipes still
+bound their own computation. Decoder state, learned work, forecasts, pending
+intents and stream prefixes remain unchanged. Mediated histories retain their
+original topology source; continuing a completed review requires that same
+attached custodian, and final publication still spends a fresh source check.
 
 At the original Run address, send `next` with `action: "narrow_authority"`,
 an operation number and at most 64 canonical complete `retained_targets`.
@@ -545,11 +557,24 @@ active request can retire through the existing scheduler without Stop; its
 successor still faces the narrowed ceiling. Selecting an empty set admits no
 later targets, and a wider later request cannot restore removed permission.
 
+A completed learned/native review can continue only through its original
+current numerical source, full input and complete native narrowing-receipt
+chain. The live reviewer session preserves its original listener, finite
+candidate allowance and deadline while withdrawing an old offer/key. A new
+authenticated connection must independently approve a fresh packet before
+dispatch. Reapproval is also required if narrowing arrives while checked
+publication waits for its selected producer. It does not rerun generation or
+helpers, resume pending work or renew a budget. Original source, predictive,
+credibility, credential, topology and final publication checks remain mandatory.
+
 The original grant and exact retry cache survive reconnects and request handoff
 without replenishment. See the [complete narrowing contract](SCOPED_AUTHORITY_NARROWING.md)
 for request examples, response schemas, finite work and the active-driver
-boundary. Authored plain/checked service regressions and authenticated client
-regressions received independent source review; execution and formatting remain
+boundary. Authored learned native/process/raw-predictive/owned-predictive command
+regressions cover withdrawn human offers and actual publication, while excluded
+requests and exact/short replay allowances provide causal controls. Original
+plain/checked service regressions remain in place. Source and syntax review are
+separate from execution and formatting, which remain
 pending because the required Rust/RCH tools are unavailable.
 
 ## Explicitly continue an ordinary held review

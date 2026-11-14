@@ -286,9 +286,9 @@ native response cannot authorize another operation or turn the requested set
 into a wider effective ceiling. Run-level journal Tail metadata identifies the
 new event without inventing an attempt, external request or review round.
 
-## Authenticated ordinary operator service
+## Authenticated operator service
 
-An ordinary Tower service can select this independent optional member of its
+An ordinary, learned or native generated Tower service can select this independent optional member of its
 existing `fa.tower-operator-service/1` profile:
 
 ```json
@@ -306,12 +306,20 @@ authority marker refuse before setup. A narrowing-only endpoint can disable
 inspection and admission explanation. It does not obtain cancellation, Unknown
 disposition, reconciliation or Fence merely by selecting narrowing.
 
-Learned actor and resident service setup refuses this selection. The ordinary
-profile has no numerical replay allowance; adding one does not enable learned
-or predictor history. Ordinary topology-supervised services use the same
-selected narrowing grant and retain the same source across continuation and
-publication. Their source checkpoints capture the actual final work and history;
-the restriction does not renew source allowances or replace source custody.
+For learned actor/resident or native generated service, add an independently
+selected positive `numerical_replay_events` within operations times
+`max_replay_events`; the example above allows at most 32,768 cumulative events.
+Omission refuses numerical service setup before owner startup. A short live
+allowance reports a blocked plan before replay. Selecting narrowing alone is
+enough to select the original numerical control mount; it does not need to
+borrow Fence, cancellation or promotion authority. The service retains the
+same grant across review phases and resident handoffs.
+
+Topology-supervised services use that same selected narrowing grant and retain
+the same source across continuation and publication. Their source checkpoints
+capture the actual final work and history; the restriction does not renew source
+allowances or replace source custody. Raw/owned predictive histories preserve
+their registered predictor and all original final consistency requirements.
 
 The service installs the same-owner port on its restricted control mount and
 retains one original grant across authenticated reconnects, review transitions
@@ -342,7 +350,7 @@ remaining ceiling. An empty ceiling therefore denies later admission. A request
 waiting for human approval can still be native Reviewing without a reservation;
 cancelling it refunds zero.
 
-After the original helper review has completed with Continue, an ordinary
+After the original helper review has completed with Continue, a
 service can preserve retained active work through the explicit native
 continuation above. The service checks the original acknowledged narrowing chain
 before offering human review, while an offer is pending and before dispatch.
@@ -361,12 +369,16 @@ automatic request for a more permissive decision.
 
 Human-request identities are selected from unused entries under the original
 finite native request capacity. They are separate from actor-request identities.
-Every later ordinary scheduled request uses the same bounded selection rule, so
+Every later scheduled request uses the same bounded selection rule, so
 a key consumed by a renewal cannot block a later actor request.
 Native request, input-retention and authenticated candidate limits are never
 replenished. Missing or changed source evidence prevents a replacement offer;
-expiry and all original publication checks still apply. Learned one-shot
-review retains its original behavior and does not select this continuation.
+expiry and all original publication checks still apply. The learned workflow
+keeps this same reviewer session through its human phase and checked-publication
+producer waits. Restriction of an excluded request retires its original
+Cancelled outcome even when no actor transport is attached, without creating
+a whole-run Stop. A retained request does not regenerate text, rerun helpers or
+renew its original action deadline.
 
 ## Validation boundary
 
@@ -378,6 +390,16 @@ original stream liability and unchanged lifetime accounting. New source is
 syntax-parsed and reviewed independently; the required RCH command exits 127
 because its runner is absent. Compilation, runtime tests, rustfmt, Clippy and
 full qualification of this extension remain pending.
+
+Live regression sources exercise the actual command in native learned,
+process-helper, raw-predictive and owned-predictive modes: a pending human offer
+is withdrawn, a fresh independently approved packet binds the same original
+review, and one actual publication follows. Excluded peer and transport-free
+requests retire without Stop. The original document client and generated
+operator exercise explicit numerical selection, short allowances, exact paid
+mutation and unchanged decoder/stream/source custody. Profile parsing rejects
+invalid cumulative allowances and preserves an unused allowance on ordinary
+history. These are authored causal controls, not executed test results.
 
 The original ordinary baseline's fourteen native regression functions cover actual retained publication with a
 fresh human key, excluded reservation refunds, charged Unknown conservation,

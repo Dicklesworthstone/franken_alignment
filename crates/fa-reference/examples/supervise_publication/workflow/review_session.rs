@@ -1,4 +1,4 @@
-//! One bounded reviewer endpoint across original ordinary authority restrictions.
+//! One bounded reviewer endpoint across original authority restrictions.
 //! A retained helper result may survive NarrowAuthority; its old human key never
 //! does. Reapproval needs a fresh authenticated connection, nonce and explicit
 //! decision, under the SAME listener, candidate allowance and workflow deadline.
@@ -16,7 +16,6 @@ pub(super) struct Session {
     socket: BoundSocket,
     admission: Admission,
     request: u64,
-    ordinary_continuation: bool,
 }
 
 impl Session {
@@ -24,7 +23,6 @@ impl Session {
         config: &Config,
         request: u64,
         peers: Option<&PeerProfile>,
-        ordinary_continuation: bool,
     ) -> Result<Self, String> {
         let path = peers.map_or_else(|| config.socket(request), |profile| profile.socket(request));
         let admission = Admission::new(peers)?;
@@ -37,7 +35,6 @@ impl Session {
             socket,
             admission,
             request,
-            ordinary_continuation,
         })
     }
 
@@ -48,9 +45,6 @@ impl Session {
         &self,
         driver: &mut FileSupervisedDriver,
     ) -> Result<bool, String> {
-        if !self.ordinary_continuation {
-            return Ok(false);
-        }
         let Some(operation) = driver
             .pending_narrowing_continuation(self.request)
             .map_err(debug)?
@@ -112,12 +106,9 @@ impl Session {
                 .host()
                 .map_err(debug)?
                 .policy_only_file_source_required();
-            let key = if self.ordinary_continuation {
+            let key = {
                 let host = driver.supervisor().host().map_err(debug)?;
                 unused_request_key(&host, self.request, config.profile.human.max_requests)?
-            } else {
-                // The original learned one-shot contract is unchanged.
-                self.request
             };
             let request = if policy_only {
                 driver.request_learned_human_approval_from_policy_file(

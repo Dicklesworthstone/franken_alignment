@@ -155,6 +155,7 @@ impl Service {
                 if settings.fence.is_some()
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
+                    || settings.narrowing.is_some()
                     || settings.policy_promotion.is_some()
                 {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
@@ -188,6 +189,7 @@ impl Service {
                 if settings.fence.is_some()
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
+                    || settings.narrowing.is_some()
                 {
                     PublicationTower::new_generated_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -356,14 +358,20 @@ impl Service {
             None
         };
         let narrowing = if let Some(selected) = &settings.narrowing {
-            let (port, custodian) = driver
-                .supervisor()
-                .narrow_port(
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().narrow_port_with_numerical_budget(
                     selected.queries,
                     selected.operations,
                     selected.max_replay_events,
-                )
-                .map_err(debug)?;
+                    events,
+                ),
+                None => driver.supervisor().narrow_port(
+                    selected.queries,
+                    selected.operations,
+                    selected.max_replay_events,
+                ),
+            }
+            .map_err(debug)?;
             tower.set_narrow(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {

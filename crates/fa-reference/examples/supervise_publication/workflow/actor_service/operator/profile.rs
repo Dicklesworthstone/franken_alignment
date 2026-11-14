@@ -191,13 +191,15 @@ impl JournalTailSettings {
     }
 }
 
-/// Explicit reduction of the original ordinary run's target ceiling. This
-/// grants neither publication nor learned-stream policy or checkpoint changes.
+/// Explicit reduction of the original run's target ceiling. Numerical owners
+/// require a separate cumulative reconstruction allowance. This grants neither
+/// publication nor learned-stream policy or checkpoint changes.
 #[derive(Clone, Debug)]
 pub(crate) struct NarrowingSettings {
     pub(crate) queries: usize,
     pub(crate) operations: usize,
     pub(crate) max_replay_events: usize,
+    pub(crate) numerical_replay_events: Option<usize>,
     pub(crate) authority: String,
 }
 
@@ -208,6 +210,11 @@ impl NarrowingSettings {
             queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
             operations: usize::try_from(fields.number("operations")?).map_err(debug)?,
             max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
                 .map_err(debug)?,
             authority: fields.text("authority")?,
         };
@@ -227,6 +234,16 @@ impl NarrowingSettings {
         {
             return Err(
                 "narrowing requires explicit original-target authority and bounded queries, operations and replay"
+                    .into(),
+            );
+        }
+        if self.numerical_replay_events.is_some_and(|events| {
+            events == 0
+                || self.operations.checked_mul(self.max_replay_events)
+                    .is_none_or(|maximum| events > maximum)
+        }) {
+            return Err(
+                "numerical narrowing requires a positive cumulative event budget within the selected operation and replay bounds"
                     .into(),
             );
         }
@@ -923,10 +940,12 @@ impl Settings {
                 "held-review convening supports only original ordinary publication runs".into(),
             );
         }
-        if self.narrowing.is_some() {
-            return Err(
-                "target-ceiling narrowing supports only original ordinary publication runs".into(),
-            );
+        if self.narrowing.as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(format!(
+                "{profile} target-ceiling narrowing requires an explicit numerical replay budget"
+            ));
         }
         if self
             .resolution

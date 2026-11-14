@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: expose paid narrowing in live learned and generated services
+
+- Admit explicit cumulative numerical narrowing allowances in operator profiles
+  and select the original learned/generated control mount for narrowing alone.
+- Preserve one reviewer listener, candidate budget and deadline across learned
+  restrictions while requiring fresh independent human approval at the new cut.
+- Recheck continuation during checked-publication waits and retire excluded
+  native requests without depending on actor transport or creating whole-run Stop.
+- Add real command/socket regressions for native/process/raw/owned learned modes,
+  transport-free retirement, native generated control and finite replay budgets.
+- Update operator usage and contracts; independent source/syntax checks remain
+  separate from pending compilation and runtime qualification through RCH.
+
 ## 2026-11-14: narrow numerical and streaming publication authority
 
 - Extend original target-ceiling restriction to decoder, learned, predictive and

@@ -41,7 +41,7 @@ use recipe::Loaded;
 use super::super::{Config, Deadline, Duration, ElapsedTick, FileOversight, FileHumanReviewer,
     FileDriverEvent, FileDriverPhase, FileSupervisedDriver, Instant, PeerProfile,
     RecoveryReserve, RunResult, LiveControl, cancel_unspent, cleanup, clock,
-    control::Control, debug, human_review, plus, stop};
+    control::Control, debug, plus, review_session, stop};
 use fa_reference::action::ActionState;
 use fa_reference::action::consequence::activation::tensor::kv::decoder::sampling::monitored::{
     GenerationStatus, GenerationStop,
@@ -603,26 +603,50 @@ where F: FnMut() -> ElapsedTick {
                         // LiveControl checks the independent Stop owner before
                         // it invokes either observational transport.
                         operator::checkpoint_driver(operator, driver);
-                        ingress::observe(intake, driver.supervisor_mut())
+                        let terminal = ingress::observe(intake, driver.supervisor_mut())?;
+                        // Direct/resident custody need not have a peer intake.
+                        // A separately narrowed-away request still retires from
+                        // its original native outcome without waiting for a
+                        // withdrawn human offer or inventing a whole-run Stop.
+                        let status = driver.supervisor().host().map_err(debug)?
+                            .request_status(loaded.request).map_err(debug)?;
+                        Ok(terminal || matches!(status.disposition,
+                            FileRequestDisposition::Admitted { stage: ActionState::Cancelled, .. }))
                     };
                     let mut live = LiveControl { stop: control.share(), ingress: &mut actor_ingress };
-                    let approval = human_review(&mut driver, reviewer, config,
-                        loaded.request, deadline, (Some(peers), &mut live), time)?;
-                    let Some(approval) = approval else {
+                    if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
+                    let mut reviews = review_session::Session::new(config, loaded.request, Some(peers))?;
+                    let mut approval = reviews.review(&mut driver, reviewer, config,
+                        deadline, &mut live, time)?;
+                    if approval.is_none() {
                         cancel_unspent(&mut driver, loaded.request)?;
                         return Ok(());
-                    };
+                    }
                     loop {
                         deadline.check(time())?;
                         if live.checkpoint(&mut driver, reviewer, deadline, time)? { return Ok(()); }
+                        if reviews.continue_after_narrowing(&mut driver)? {
+                            // Keep the original listener, reviewer candidate
+                            // allowance and deadline. The old human key was
+                            // withdrawn; only a fresh independent exchange can
+                            // approve this same retained learned review.
+                            drop(approval.take());
+                            approval = reviews.review(&mut driver, reviewer, config,
+                                deadline, &mut live, time)?;
+                            if approval.is_none() {
+                                cancel_unspent(&mut driver, loaded.request)?;
+                                return Ok(());
+                            }
+                            continue;
+                        }
                         let event = match publication.as_mut() {
                             Some(publication) => publication.step_learned_or_wait_with_credential(&mut driver,
-                                &mut config.source, time, Some(&approval), credential.permit())?,
+                                &mut config.source, time, approval.as_ref(), credential.permit())?,
                             None => Some(match credential.permit() {
                                 Some(permit) => driver.step_computed_from_policy_file_with_credential(
-                                    &mut config.source, &mut *time, Some(&approval), permit),
+                                    &mut config.source, &mut *time, approval.as_ref(), permit),
                                 None => driver.step_computed_from_policy_file(&mut config.source,
-                                    &mut *time, Some(&approval)),
+                                    &mut *time, approval.as_ref()),
                             }.result.map_err(debug)?),
                         };
                         let Some(event) = event else {

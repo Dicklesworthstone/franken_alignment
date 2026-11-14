@@ -126,7 +126,7 @@ fn publish(fixture: &mut Fixture, keys: &native::Keys) {
 }
 
 #[test]
-fn narrowing_profile_is_closed_bounded_independent_and_ordinary_only() {
+fn narrowing_profile_is_closed_bounded_and_requires_separate_numerical_work() {
     let identity = PeerPolicy::new(1, 2, Some(3)).unwrap();
     let old = profile_json(Path::new("/operator/narrow.sock"), identity, 1, 0);
     for document in [old.clone(), selected(&old, "null")] {
@@ -144,6 +144,7 @@ fn narrowing_profile_is_closed_bounded_independent_and_ordinary_only() {
     assert!(settings.fence.is_none());
     assert!(settings.check_learned_operator().is_err());
     let chosen = settings.narrowing.unwrap();
+    assert!(chosen.numerical_replay_events.is_none());
     assert_eq!((chosen.queries, chosen.operations, chosen.max_replay_events),
         (MAX_NARROW_QUERIES, MAX_NARROW_OPERATIONS, MAX_NARROW_REPLAY_EVENTS));
     for invalid in [
@@ -155,11 +156,40 @@ fn narrowing_profile_is_closed_bounded_independent_and_ordinary_only() {
         selection(1, 1, 1).replace("narrow_original_targets", "stop_original_admission"),
         selection(1, 1, 1).replace("\"operations\":1", "\"operations\":\"1\""),
         selection(1, 1, 1).replacen('{', "{\"operations\":1,", 1),
-        selection(1, 1, 1).replacen('{', "{\"numerical_replay_events\":1,", 1),
         selection(1, 1, 1).replacen('{', "{\"clock\":999999,", 1),
     ] {
         assert!(Settings::decode(selected(&old, &invalid).as_bytes()).is_err());
     }
+    let numerical = |events: &str| selection(2, 2, 64)
+        .replacen('{', &format!("{{\"numerical_replay_events\":{events},"), 1);
+    let admitted = Settings::decode(selected(&only, &numerical("128")).as_bytes()).unwrap();
+    admitted.check_learned_operator().unwrap();
+    admitted.check_generated_operator().unwrap();
+    assert_eq!(admitted.narrowing.unwrap().numerical_replay_events, Some(128));
+    for invalid in ["0", "129", "null", "false", "-1", "1.5", "\"1\""] {
+        assert!(Settings::decode(selected(&only, &numerical(invalid)).as_bytes()).is_err(),
+            "accepted invalid numerical narrowing allowance {invalid}");
+    }
+    let duplicate = numerical("1").replacen('{', "{\"numerical_replay_events\":1,", 1);
+    assert!(Settings::decode(selected(&only, &duplicate).as_bytes()).is_err());
+}
+
+#[test]
+fn ordinary_narrowing_keeps_unneeded_numerical_allowance_across_an_exact_retry() {
+    let mut fixture = fixture(1, 1);
+    fixture.settings.narrowing.as_mut().unwrap().numerical_replay_events = Some(1);
+    let target = fixture.driver.supervisor().host().unwrap().inspect().target;
+    let mut service = fixture.start();
+    let plan = fixture.query(&mut service, next(&fixture, 906, vec![target]));
+    let command = action(&fixture, &plan, 906, vec![target]);
+    let acknowledged = fixture.query(&mut service, command.clone());
+    known(&acknowledged, "narrowing");
+    let files = fixture.files();
+    assert_eq!(fixture.query(&mut service, command), acknowledged);
+    assert_eq!(fixture.files(), files);
+    let grant = service.active.as_ref().unwrap().narrowing.as_ref().unwrap();
+    assert_eq!(grant.remaining_operations(), 0);
+    assert_eq!(grant.remaining_numerical_replay_events(), Some(1));
 }
 
 #[test]

@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: expose paid narrowing in live learned and generated services
+
+The authenticated operator profile now accepts an optional positive cumulative
+`numerical_replay_events` within its existing narrowing operation/replay bounds.
+Learned and native generated service setup requires that explicit selection.
+A narrowing-only profile chooses the original control mount and installs its
+same-owner grant; it does not need unrelated Fence or cancellation authority.
+Missing/short allowances remain refusals before numerical mutation, and exact
+retry retains the original finite grant and acknowledgment.
+
+The learned workflow now retains one original reviewer session through human
+approval and checked-publication waits. It acknowledges only the native
+completed-review narrowing chain, discards withdrawn human keys and requires a
+fresh independently initiated authenticated connection, nonce, request identity
+and decision. The original listener, candidate allowance, action deadline,
+reviewed input, numerical work and source custody remain unchanged. A rejected
+decision stays terminal. Excluded native requests retire as Cancelled even when
+there is no actor intake transport, without manufacturing whole-run Stop.
+
+Authored command/socket regressions cover actual publication after withdrawal
+and reapproval in native learned, process-helper, raw-predictive and owned-
+predictive modes; excluded peer and transport-free requests; generated-only
+control mounting; exact/short numerical allowances; client validation and cached
+retry. Fixture models establish authority/control behavior only. The original
+source, predictive, credibility, credential, topology and final publication
+checks remain responsible for effect eligibility.
+
+Independent source/API review, Rust syntax parsing, JSON and whitespace checks
+are recorded separately from execution. The required RCH command still cannot
+run because `rch` is unavailable (exit 127), and the workspace has no Rust
+toolchain. Compilation, runtime tests, rustfmt, Clippy and complete qualification
+remain pending. No Bead or broader acceptance has been closed. Contracts:
+`docs/SCOPED_AUTHORITY_NARROWING.md`, `docs/LIVE_TOWER_OPERATOR.md` and
+`docs/AGENT_GUIDE.md`.
+
 ## 2026-11-14: narrow numerical and streaming publication authority
 
 The original durable target-ceiling operation now accepts decoder, learned,

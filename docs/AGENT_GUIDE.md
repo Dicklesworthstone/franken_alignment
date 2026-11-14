@@ -231,15 +231,21 @@ render their response with a nonzero exit; transport/output failures never cause
 an automatic resend or an ordinary submission. A later Submit uses its original
 separate contract and independently fresh source.
 
-#### Implemented ordinary target restriction
+#### Implemented target restriction
 
-The original ordinary publication owner now has a separately granted
+The original publication owner now has a separately granted
 [live target-ceiling Narrow](SCOPED_AUTHORITY_NARROWING.md). Select the operator
 profile's `narrowing` capability, then send Tower `next` at the original Run
 address with `action: "narrow_authority"`, a new operation identity and the
 canonical complete targets to retain. Inspect the reported effective
 intersection and explicitly submit the returned `narrow` document using
 `tower-operator-exchange`.
+
+For learned, predictive and native generated-text services, the narrowing
+profile must explicitly select positive `numerical_replay_events` within its
+operation and per-operation event bounds. Each entered restriction reserves the
+complete acknowledged history plus its proposed event. A short allowance gives
+a blocked plan before replay; reconnects and failed operations never refill it.
 
 The original gate cancels excluded undispatched attempts and refunds only their
 reservations. Retained automatic reservations and all dispatched/Unknown charges
@@ -249,7 +255,7 @@ ceiling. Narrowing leaves the authority epoch unchanged but advances the control
 sequence, making old human approvals historical. Obtain fresh independent human
 approval and preserve every other current gate before dispatch.
 
-An ordinary service can retain an active job after its helper review has
+A service can retain an active job after its helper review has
 completed with Continue. It advances local readiness only across the original
 acknowledged narrowing receipts, then requires a new authenticated human
 connection and independent approval of the new packet. An old pending offer is
@@ -259,9 +265,12 @@ workflow deadline remain in force. A rejection does not invite another vote.
 
 Narrowing during an unfinished helper review cannot reuse that old review.
 Excluded active work can retire through the existing scheduler, whose next
-request still faces the remaining ceiling. This ordinary operation does not
-handle learned, predictor, stream or mediated histories; the checkpoint contract
-below remains separate.
+request still faces the remaining ceiling. Learned/decoder continuation also
+requires its original current numerical source, exact sidecar/input and completed
+Continue receipt. It cannot conceal pending computation, reset or stale evidence.
+Stream prefixes, forecasts and unknown charges remain owned; mediated publication
+still checks its original source before an effect. The checkpoint contract below
+remains separate and deliberately revokes authority at its containment boundary.
 
 #### Implemented ordinary held-review continuation
 
