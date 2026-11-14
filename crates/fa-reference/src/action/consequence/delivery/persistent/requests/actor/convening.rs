@@ -248,6 +248,7 @@ impl fmt::Debug for FileSupervisorConveneGrant {
 pub struct FileSupervisorConvenePort {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
+    scope: Scope,
 }
 impl fmt::Debug for FileSupervisorConvenePort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

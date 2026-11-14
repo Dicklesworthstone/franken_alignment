@@ -41,6 +41,7 @@ impl FileActorSupervisor<FileOversight> {
             FileSupervisorConvenePort {
                 owner: Rc::downgrade(&self.owner),
                 grant: Rc::downgrade(&grant),
+                scope: grant.scope,
             },
             FileSupervisorConveneGrant { grant },
         ))
@@ -145,7 +146,7 @@ impl FileActorSupervisor<FileOversight> {
 
 impl FileSupervisorConvenePort {
     pub(crate) fn belongs_to(&self, actor: &FileActorPort<FileOversight>) -> bool {
-        Weak::ptr_eq(&self.owner, &actor.owner)
+        Weak::ptr_eq(&self.owner, &actor.owner) && self.scope == actor.scope
     }
 
     /// Spend one query on a bounded read of the exact held predecessor. A Known

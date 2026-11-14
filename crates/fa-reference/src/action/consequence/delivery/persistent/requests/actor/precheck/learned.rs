@@ -49,7 +49,8 @@ impl FileActorSupervisor<FileOversight> {
         let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries),
             projection, cache: None, learned: Some(Release { selected, action }) });
         let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner),
-            disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity() };
+            disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity(),
+            scope: grant.projection.scope };
         Ok((port, FilePrecheckDisclosure { disclosure: grant }))
     }
 }

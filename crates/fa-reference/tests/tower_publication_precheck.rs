@@ -813,3 +813,114 @@ fn precheck_wire_retains_exact_query_basis_and_review_required_without_private_p
     assert_eq!(files(&root), image);
     assert_eq!(supervisor.host().unwrap().retained_requests(), 0);
 }
+
+#[test]
+fn fresh_precheck_requires_full_original_scope_even_through_the_same_gateway() {
+    fn replacement(
+        root: &Directory,
+        selected: FileOversightProfile,
+    ) -> (FileOversight, FileEvidenceSource) {
+        let scope = selected.delivery.scope;
+        let (mut host, _reviewer) = FileOversight::create(root.store(), selected).unwrap();
+        host.enable_file_source(
+            host.revision(),
+            FileSourcePolicy {
+                source: StateSource { scope, source: 51, generation: 1 },
+                limits: StateLimits::default(),
+                freshness: StateFreshness::new(5).unwrap(),
+            },
+        )
+        .unwrap();
+        host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+        let evidence = EvidenceSnapshot::new(
+            EvidenceIdentity { source: 51, generation: 1, scope },
+            snapshot(b"ok"),
+            BTreeMap::from([
+                ("alpha".to_owned(), PRIVATE_INPUT.to_vec()),
+                ("beta".to_owned(), PRIVATE_INPUT.to_vec()),
+            ]),
+        )
+        .unwrap();
+        std::fs::write(source_path(root), evidence.encode()).unwrap();
+        let mut source = FileEvidenceSource::new(source_path(root), 51, scope, 1_048_576)
+            .unwrap();
+        host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1))
+            .unwrap();
+        (host, source)
+    }
+
+    let original_scope = profile().delivery.scope;
+    let mut scopes = [original_scope; 6];
+    scopes[1].tenant += 1;
+    scopes[2].principal += 1;
+    scopes[3].run += 1;
+    scopes[4].branch += 1;
+    scopes[5].authority += 1;
+    for replacement_scope in scopes {
+        // Principal, branch and authority differences leave the public tenant/run
+        // route unchanged. Only the first replacement retains the full scope.
+        let root = Directory::new();
+        let other = Directory::new();
+        let (actor, mut supervisor, original_source) = owner(&root);
+        let mut adapter = tower(actor);
+        let proposal = candidate(b"ok");
+        let (old_port, old_grant) = disclose(&supervisor, DISCLOSURE, 3);
+        adapter.set_precheck(Some(old_port)).unwrap();
+        known(
+            &check(&mut adapter, 1, &proposal),
+            FilePrecheckOutcome::PrecheckPassed,
+            1,
+            DISCLOSURE,
+        );
+        let mut selected = profile();
+        selected.delivery.scope = replacement_scope;
+        let (replacement, replacement_source) = replacement(&other, selected);
+        let original_host = {
+            let mut host = supervisor.host_mut().unwrap();
+            std::mem::replace(&mut *host, replacement)
+        };
+        let images = (files(&root), files(&other));
+        let original_state = original_host.inspect();
+        let replacement_state = supervisor.host().unwrap().inspect();
+        let reads = (
+            original_source.status().read_attempts,
+            replacement_source.status().read_attempts,
+        );
+        let (fresh, grant) = disclose(&supervisor, DISCLOSURE + 1, 2);
+        if replacement_scope == original_scope {
+            adapter.set_precheck(Some(fresh.clone())).unwrap();
+            known(
+                &check(&mut adapter, 2, &proposal),
+                FilePrecheckOutcome::PrecheckPassed,
+                2,
+                DISCLOSURE + 1,
+            );
+            assert_eq!(grant.remaining_queries(), 1);
+        } else {
+            assert!(adapter.set_precheck(Some(fresh.clone())).is_err());
+            // Rejection withdraws the old installed disclosure without entering
+            // either grant. The new grant is valid for its own native owner.
+            unsupported(&check(&mut adapter, 2, &proposal));
+            assert_eq!(grant.remaining_queries(), 2);
+            assert!(matches!(
+                fresh.check(3, &proposal).unwrap(),
+                ActorKnowledge::Known {
+                    value: FilePrecheckOutcome::PrecheckPassed,
+                    ..
+                }
+            ));
+            assert_eq!(grant.remaining_queries(), 1);
+        }
+        assert_eq!(old_grant.remaining_queries(), 2);
+        assert_eq!(original_host.inspect(), original_state);
+        assert_eq!(supervisor.host().unwrap().inspect(), replacement_state);
+        assert_eq!((files(&root), files(&other)), images);
+        assert_eq!(
+            (
+                original_source.status().read_attempts,
+                replacement_source.status().read_attempts,
+            ),
+            reads
+        );
+    }
+}

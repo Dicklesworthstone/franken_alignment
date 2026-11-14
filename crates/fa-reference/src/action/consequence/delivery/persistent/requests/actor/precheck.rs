@@ -111,6 +111,7 @@ pub struct FileActorPrecheckPort {
     owner: Weak<OwnerRef<FileOversight>>,
     disclosure: Weak<Disclosure>,
     issuer: Weak<()>,
+    scope: Scope,
 }
 impl fmt::Debug for FileActorPrecheckPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -152,17 +153,18 @@ impl FileActorSupervisor<FileOversight> {
         let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache,
             learned: None });
         let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner),
-            disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity() };
+            disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity(),
+            scope: grant.projection.scope };
         Ok((port, FilePrecheckDisclosure { disclosure: grant }))
     }
 }
 
 impl FileActorPrecheckPort {
-    /// Bind a host adapter to the same original gateway allocation. Identity
-    /// alone does not establish liveness, disclosure eligibility or freshness;
+    /// Bind a host adapter to the original gateway allocation and full scope.
+    /// Those checks do not establish liveness, disclosure eligibility or freshness;
     /// the original read boundary below continues to check those on every use.
     pub(crate) fn belongs_to(&self, port: &super::FileActorPort<FileOversight>) -> bool {
-        Weak::ptr_eq(&self.owner, &port.owner)
+        Weak::ptr_eq(&self.owner, &port.owner) && self.scope == port.scope
     }
 
     /// One bounded read, not a submission or an idempotent effect request.
@@ -237,6 +239,7 @@ impl FileActorPrecheckPort {
         let projection = &grant.projection;
         if state.host.storage_failure().is_some()
             || !Weak::ptr_eq(&self.issuer, &state.host.journal_tail_identity())
+            || state.host.actor_explanation_scope() != self.scope
             || state.host.revision() != projection.revision
             || state.host.capture_file_policy_state().is_err()
         {

@@ -3,7 +3,7 @@
 //! this grant. A retained page is historical evidence, not a fresh observation.
 
 use super::{
-    ActorError, FileActorPort, FileActorSupervisor, JournalError, Knowledge, OwnerRef,
+    ActorError, FileActorPort, FileActorSupervisor, JournalError, Knowledge, OwnerRef, Scope,
     UnknownReason,
 };
 use crate::Error;
@@ -188,6 +188,7 @@ impl fmt::Debug for FileSupervisorJournalTailGrant {
 pub struct FileSupervisorJournalTailPort {
     owner: Weak<OwnerRef<FileOversight>>,
     issuer: Weak<()>,
+    scope: Scope,
     grant: Weak<Grant>,
 }
 
@@ -234,6 +235,7 @@ impl FileActorSupervisor<FileOversight> {
             FileSupervisorJournalTailPort {
                 owner: Rc::downgrade(&self.owner),
                 issuer: owner.host.journal_tail_identity(),
+                scope: owner.host.actor_explanation_scope(),
                 grant: Rc::downgrade(&grant),
             },
             FileSupervisorJournalTailGrant { grant },
@@ -243,7 +245,7 @@ impl FileActorSupervisor<FileOversight> {
 
 impl FileSupervisorJournalTailPort {
     pub(crate) fn belongs_to(&self, actor: &FileActorPort<FileOversight>) -> bool {
-        Weak::ptr_eq(&self.owner, &actor.owner)
+        Weak::ptr_eq(&self.owner, &actor.owner) && self.scope == actor.scope
     }
 
     /// Capture every acknowledged metadata row after this original journal
@@ -286,6 +288,7 @@ impl FileSupervisorJournalTailPort {
         };
         if owner.host.storage_failure().is_some()
             || !Weak::ptr_eq(&self.issuer, &owner.host.journal_tail_identity())
+            || owner.host.actor_explanation_scope() != self.scope
         {
             *capture = None;
             return Ok(unknown());

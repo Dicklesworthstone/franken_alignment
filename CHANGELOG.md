@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14: reject foreign-scope capability installation
+
+- Bind fresh precheck, journal-tail, narrowing and convening grants to the full
+  original actor scope before installation, including principal, branch and
+  authority differences that do not change the tenant/run address.
+- Preserve same-scope independent custody, native issuer checks and original
+  budgets; rejected replacements withdraw old mounts without entering native work.
+- Add four paired original/replacement scope regressions covering valid native
+  reads, narrowing and held-review admission, plus all five numeric scope fields.
+  Source review, Rust grammar and whitespace checks passed; Rust/RCH compilation,
+  runtime, formatting and Clippy qualification remain pending.
+
 ## 2026-11-14: compose exact precheck with topology-supervised Tower creation
 
 - Enable explicit topology and precheck profiles together for ordinary

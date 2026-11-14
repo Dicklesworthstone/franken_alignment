@@ -417,3 +417,101 @@ fn failed_launch_is_a_finite_historical_result_and_unknown_requests_remain_unkno
     assert_eq!(image(&file), before);
     assert_eq!(file.source.status(), reads);
 }
+
+#[test]
+fn fresh_convening_grants_bind_the_complete_scope_after_owner_slot_replacement() {
+    use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+
+    // Selection happens after a real same-scope host replacement. The selected
+    // grant may still inspect the held predecessor and admit its successor.
+    {
+        let mut file = held();
+        let mut replacement = held();
+        std::mem::swap(
+            &mut *file.rig.driver.supervisor_mut().host_mut().unwrap(),
+            &mut *replacement.rig.driver.supervisor_mut().host_mut().unwrap(),
+        );
+        let (port, grant) = file.rig.driver.supervisor().convene_port(3, 1).unwrap();
+        let mut facade = tower(&file);
+        facade.set_convene(Some(port)).unwrap();
+        let before = file.rig.driver.supervisor().host().unwrap().inspect();
+        let bytes = (image(&file), image(&replacement));
+        let reads = (file.source.status(), replacement.source.status());
+        let request = query(&facade, REQUEST);
+        let proposed = exchange(&mut facade, &request);
+        let command = action(&proposed);
+        let queued = exchange(&mut facade, &command);
+        assert_eq!(observed(&queued).outcome(), FileConveneOutcome::Pending);
+        assert_eq!(grant.remaining_queries(), 2);
+        assert_eq!(grant.remaining_operations(), 0);
+        assert_eq!(exchange(&mut facade, &command).result, queued.result);
+        let ticket = file
+            .rig
+            .driver
+            .take_pending_convene(REQUEST)
+            .unwrap()
+            .expect("replacement owner's admitted successor");
+        assert_eq!(ticket.round(), NEXT_ROUND);
+        assert_eq!(ticket.expected(), observed(&queued).request().expected());
+        assert_eq!(file.rig.driver.supervisor().host().unwrap().inspect(), before);
+        assert_eq!((image(&file), image(&replacement)), bytes);
+        assert_eq!((file.source.status(), replacement.source.status()), reads);
+    }
+
+    for coordinate in 1..6 {
+        let mut file = held();
+        let mut facade = tower(&file);
+        let original_bytes = image(&file);
+        let reads = file.source.status();
+        let replacement_root = driver::Directory::new();
+        let mut selected = driver::profile();
+        match coordinate {
+            1 => selected.delivery.scope.tenant += 1,
+            2 => selected.delivery.scope.principal += 1,
+            3 => selected.delivery.scope.run += 1,
+            4 => selected.delivery.scope.branch += 1,
+            5 => selected.delivery.scope.authority += 1,
+            _ => unreachable!(),
+        }
+        let (mut replacement, _) =
+            FileOversight::create(replacement_root.store(), selected).unwrap();
+        replacement
+            .observe_time(replacement.revision(), ElapsedTick(1))
+            .unwrap();
+        let original = std::mem::replace(
+            &mut *file.rig.driver.supervisor_mut().host_mut().unwrap(),
+            replacement,
+        );
+        let original_state = original.inspect();
+        // A gateway selects convening only once. Issue its first grant after
+        // the swap so this probes scope binding, not duplicate selection.
+        let (port, grant) = file.rig.driver.supervisor().convene_port(3, 1).unwrap();
+        assert!(file.rig.driver.supervisor().has_live_convening().unwrap());
+        let before = file.rig.driver.supervisor().host().unwrap().inspect();
+        let bytes = std::fs::read(replacement_root.store().join("delivery.bin")).unwrap();
+        assert_eq!(
+            facade.set_convene(Some(port.clone())),
+            Err(TowerInstallError::SnapshotMismatch)
+        );
+        let request = query(&facade, REQUEST);
+        refused(&exchange(&mut facade, &request), ReasonCode::CapabilityUnsupported);
+        assert_eq!(grant.remaining_queries(), 3);
+        assert_eq!(grant.remaining_operations(), 1);
+        // The fresh grant itself is live on its own owner. That owner has no
+        // request, so its independent native query reports exactly that gap.
+        assert_eq!(
+            port.next(REQUEST, NEXT_ROUND),
+            Ok(Knowledge::Unknown { reason: UnknownReason::OutcomeUnknown })
+        );
+        assert_eq!(grant.remaining_queries(), 2);
+        assert_eq!(grant.remaining_operations(), 1);
+        assert_eq!(file.rig.driver.supervisor().host().unwrap().inspect(), before);
+        assert_eq!(original.inspect(), original_state);
+        assert_eq!(image(&file), original_bytes);
+        assert_eq!(
+            std::fs::read(replacement_root.store().join("delivery.bin")).unwrap(),
+            bytes
+        );
+        assert_eq!(file.source.status(), reads);
+    }
+}

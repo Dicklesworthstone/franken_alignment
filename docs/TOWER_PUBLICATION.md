@@ -77,6 +77,15 @@ revive old grants. A replacement needs independently selected custody and a
 compatible route. This changes no public request/response format, journal
 encoding, resource-refund rule or production qualification.
 
+Installation also checks the complete original native `Scope` for precheck,
+journal tail, narrowing and convening, including tenant, principal, run, branch,
+authority and purpose. A fresh grant selected after a host replacement cannot
+attach to a stale actor route merely because the gateway allocation, tenant or
+run still matches. Rejected replacements withdraw the old installed capability
+without spending either grant. Explicitly selected same-scope replacement
+custody remains usable; matching scope permits installation but never replaces
+the private issuer, current-state, finite-budget or predecessor checks at use.
+
 The [policy-replay contract](TOWER_POLICY_REPLAY.md) describes the native
 route: complete current-policy corpus comparison, distinct disclosure custody,
 exact campaign retries and a sealed response registration. It changes no policy

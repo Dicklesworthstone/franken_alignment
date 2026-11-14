@@ -53,7 +53,7 @@ impl FileActorSupervisor<FileOversight> {
 
 impl FileSupervisorNarrowPort {
     pub(crate) fn belongs_to(&self, actor: &FileActorPort<FileOversight>) -> bool {
-        Weak::ptr_eq(&self.owner, &actor.owner)
+        Weak::ptr_eq(&self.owner, &actor.owner) && self.scope == actor.scope
     }
 
     /// Inspect this exact selected intersection. Entry spends one query even if

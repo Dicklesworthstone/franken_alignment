@@ -573,3 +573,74 @@ fn imported_snapshots_and_experiment_branches_never_narrow_the_live_owner() {
     let response = facade.dispatch(&access(true, true), command);
     assert_eq!(receipt(&response).effective_targets(), &[proposal.target]);
 }
+
+#[test]
+fn replacement_narrowing_grants_require_the_full_original_mount_scope() {
+    use fa_reference::action::consequence::delivery::persistent::observed::FileOversight;
+
+    for coordinate in 0..6 {
+        let root = Directory::new();
+        let (actor, mut supervisor, _, proposal) = create(&root);
+        let mut facade = tower(actor);
+        let (old, old_grant) = supervisor.narrow_port(2, 1, MAX_NARROW_REPLAY_EVENTS).unwrap();
+        facade.set_narrow(Some(old)).unwrap();
+        let original_plan = next(&mut facade, OPERATION, vec![proposal.target]);
+        let original_command = action(&original_plan);
+        let original_state = supervisor.host().unwrap().inspect();
+        let original_image = image(&root);
+
+        let other = Directory::new();
+        let mut selected = support::profile();
+        match coordinate {
+            0 => {}
+            1 => selected.delivery.scope.tenant += 1,
+            2 => selected.delivery.scope.principal += 1,
+            3 => selected.delivery.scope.run += 1,
+            4 => selected.delivery.scope.branch += 1,
+            5 => selected.delivery.scope.authority += 1,
+            _ => unreachable!(),
+        }
+        let (mut replacement, _) = FileOversight::create(other.store(), selected).unwrap();
+        replacement.observe_time(replacement.revision(), ElapsedTick(1)).unwrap();
+        let original = std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+        let before = supervisor.host().unwrap().inspect();
+        let replacement_image = image(&other);
+        let unavailable = next(&mut facade, OPERATION, vec![proposal.target]);
+        assert!(matches!(native_next(&unavailable), Ok(ActorKnowledge::Unknown {
+            reason: ActorUnknown::ControllerUnavailable,
+        })));
+        let (fresh, grant) = supervisor.narrow_port(2, 1, MAX_NARROW_REPLAY_EVENTS).unwrap();
+
+        if coordinate == 0 {
+            facade.set_narrow(Some(fresh)).unwrap();
+            let proposed = next(&mut facade, OPERATION, vec![proposal.target]);
+            assert!(plan(&proposed).can_narrow());
+            let command = action(&proposed);
+            let completed = facade.dispatch(&access(true, true), command.clone());
+            assert_eq!(receipt(&completed).effective_targets(), &[proposal.target]);
+            let after = supervisor.host().unwrap().inspect();
+            assert_eq!(after.revision, before.revision + 1);
+            assert_eq!(after.control.sequence, before.control.sequence + 1);
+            assert_eq!(after.control.ledger, before.control.ledger);
+            assert_eq!(after.executions, before.executions);
+            assert_eq!(after.payload, before.payload);
+            let acknowledged = image(&other);
+            let repeated = facade.dispatch(&access(true, true), command);
+            assert_eq!(native(&repeated), native(&completed));
+            assert_eq!(image(&other), acknowledged);
+            assert_eq!((grant.remaining_queries(), grant.remaining_operations()), (1, 0));
+        } else {
+            // Principal, branch and authority changes retain the same public
+            // tenant/run address, but cannot become authority at that mount.
+            assert_eq!(facade.set_narrow(Some(fresh)), Err(TowerInstallError::SnapshotMismatch));
+            refused(&next(&mut facade, OPERATION, vec![proposal.target]), ReasonCode::CapabilityUnsupported);
+            refused(&facade.dispatch(&access(true, true), original_command), ReasonCode::CapabilityUnsupported);
+            assert_eq!((grant.remaining_queries(), grant.remaining_operations()), (2, 1));
+            assert_eq!(supervisor.host().unwrap().inspect(), before);
+            assert_eq!(image(&other), replacement_image);
+        }
+        assert_eq!((old_grant.remaining_queries(), old_grant.remaining_operations()), (1, 1));
+        assert_eq!(original.inspect(), original_state);
+        assert_eq!(image(&root), original_image);
+    }
+}

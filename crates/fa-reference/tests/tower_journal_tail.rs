@@ -954,3 +954,87 @@ fn labeled_tail_preserves_original_correlation_and_single_use_progress() {
     assert_eq!(f.supervisor.host().unwrap().inspect(), state);
     assert_eq!(files(&f.root), image);
 }
+
+#[test]
+fn fresh_tail_grants_bind_the_complete_scope_after_owner_slot_replacement() {
+    for coordinate in 0..6 {
+        let root = Directory::new();
+        let (actor, mut supervisor, _, _) = create(&root);
+        {
+            let mut host = supervisor.host_mut().unwrap();
+            let revision = host.revision();
+            host.observe_time(revision, ElapsedTick(2)).unwrap();
+        }
+        let (mut facade, _original_port, original_grant) =
+            install(actor, &supervisor, 4, 1);
+        let original_capture = capture(&mut facade, 0);
+        let original_cursor = cursor(&original_capture);
+        let original_image = files(&root);
+
+        let replacement_root = Directory::new();
+        let mut selected = profile();
+        match coordinate {
+            0 => {}
+            1 => selected.delivery.scope.tenant += 1,
+            2 => selected.delivery.scope.principal += 1,
+            3 => selected.delivery.scope.run += 1,
+            4 => selected.delivery.scope.branch += 1,
+            5 => selected.delivery.scope.authority += 1,
+            _ => unreachable!(),
+        }
+        let replacement_scope = selected.delivery.scope;
+        let (mut replacement, _) =
+            FileOversight::create(replacement_root.store(), selected).unwrap();
+        replacement
+            .observe_time(replacement.revision(), ElapsedTick(1))
+            .unwrap();
+        replacement
+            .observe_time(replacement.revision(), ElapsedTick(2))
+            .unwrap();
+        let original =
+            std::mem::replace(&mut *supervisor.host_mut().unwrap(), replacement);
+        let original_state = original.inspect();
+        let (fresh, grant) = supervisor.journal_tail_port(4, 1).unwrap();
+        let before = supervisor.host().unwrap().inspect();
+        let bytes = files(&replacement_root);
+
+        if coordinate == 0 {
+            facade.set_journal_tail(Some(fresh)).unwrap();
+            // A new same-scope grant is usable, while its old capture is retired.
+            conflict(&continuation(&mut facade, original_cursor));
+            assert_eq!(grant.remaining_queries(), 4);
+            let first = capture(&mut facade, 0);
+            assert_eq!(page(&first).events()[0].revision(), 1);
+            assert_ne!(cursor(&first), original_cursor);
+            let last = continuation(&mut facade, cursor(&first));
+            assert_eq!(page(&last).events()[0].revision(), 2);
+            assert_eq!(page(&last).basis(), page(&first).basis());
+            assert!(page(&last).enumeration_complete());
+            assert_eq!(grant.remaining_queries(), 2);
+        } else {
+            assert_eq!(
+                facade.set_journal_tail(Some(fresh.clone())),
+                Err(TowerInstallError::SnapshotMismatch)
+            );
+            refused(
+                &continuation(&mut facade, original_cursor),
+                ReasonCode::CapabilityUnsupported,
+            );
+            refused(&capture(&mut facade, 0), ReasonCode::CapabilityUnsupported);
+            assert_eq!(grant.remaining_queries(), 4);
+            // This is a valid grant for the replacement, not a stale or revoked
+            // grant. Its metadata must not be routed through the old actor.
+            let ActorKnowledge::Known { value, basis } = fresh.tail(0).unwrap() else {
+                panic!("replacement tail grant must remain independently usable");
+            };
+            assert_eq!(basis.scope, replacement_scope);
+            assert_eq!(value.events()[0].revision(), 1);
+            assert_eq!(grant.remaining_queries(), 3);
+        }
+        assert_eq!(original_grant.remaining_queries(), 3);
+        assert_eq!(supervisor.host().unwrap().inspect(), before);
+        assert_eq!(original.inspect(), original_state);
+        assert_eq!(files(&root), original_image);
+        assert_eq!(files(&replacement_root), bytes);
+    }
+}

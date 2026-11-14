@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: require complete scope when mounting native capabilities
+
+Fresh precheck, journal-tail, narrowing and held-review convening grants now
+require full native-scope equality with the original actor route at installation.
+A gateway can survive privileged host replacement; a newly issued grant for
+that replacement must not disclose another principal, branch or authority just
+because its tenant/run address or gateway allocation matches the old route.
+Precheck, tail and convening retain their selected scope explicitly; narrowing
+reuses its original scope. Precheck and tail also preserve the scope boundary at
+their native read entry. Existing inspection and request-history scope checks
+remain unchanged.
+
+Rejected installation withdraws the prior mounted capability before any native
+lookup, query expenditure or mutation. Independently selected same-scope grants
+retain their positive route; private native issuer checks and all original work,
+source, predecessor and authority conditions remain necessary at use. No public
+API, journal or wire format changes.
+
+Four public regression sources pair actual replacement owners with allowed
+same-scope precheck, journal pagination, native narrowing with an acknowledgment
+retry, and held-review Pending admission with one-use driver handoff. Each tests
+all five numeric scope coordinates, including principal, branch and authority
+changes that retain the same tenant/run address. Rejected mounts preserve query
+and operation allowances; the original owner's retained state is unchanged.
+
+Independent source/API review, Rust grammar parsing of all ten changed Rust
+files and whitespace checks passed. These do not establish Rust type checking
+or runtime correctness. RCH and the Rust toolchain remain unavailable; runtime
+tests, rustfmt, Clippy and full qualification remain pending. No Bead or roadmap
+acceptance is closed. Contract: `docs/TOWER_PUBLICATION.md`.
+
 ## 2026-11-14: combine exact precheck with topology-supervised Tower creation
 
 Ordinary single-request `serve-create` and `serve-create-checked` now accept
