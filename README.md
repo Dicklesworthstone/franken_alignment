@@ -37,6 +37,15 @@ Stop session continues through normal startup without renewed allowances.
 Ten new native/socket regression functions are authored; compilation and runtime
 qualification remain pending.
 
+The [governed learned recovery service](docs/LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
+connects independent policy governance to a resumed resident learned sequence.
+Explicit continuation requires a retained history anchor and the complete current
+policy/campaign expectations. One guarded replay preserves native numerical state
+and spending, gives authenticated Stop priority, and returns fresh governor and
+human custody after the original fence. New publication still requires fresh
+source, helper and human checks. The new source and regression tests remain
+pending Rust compilation and runtime qualification.
+
 The [native request-history capability](docs/TOWER_REQUEST_HISTORY.md) connects
 `related` on a publication request to its recorded attempt and completed
 reviews. An operator can follow exact Explain requests without manually

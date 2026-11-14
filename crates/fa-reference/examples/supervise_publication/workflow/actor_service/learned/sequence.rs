@@ -16,7 +16,7 @@ use fa_reference::action::consequence::oversight::actor_wire::WireResponse;
 use std::{collections::BTreeSet, io::Write, path::Path};
 
 pub(super) const MAX_ENTRIES: usize = 16;
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; new nonpredictive, nonmediated sequences with at least two Messages also accept --governor-profile PATH paired with the original campaign profile and explicit numerical operator promotion allowance";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; nonpredictive, nonmediated sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe and may finish a remaining Message/Finish suffix";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -45,7 +45,7 @@ where
 {
     let (args, governor_path) = governor::take_option(args)?;
     if governor_path.is_some() && credibility.is_some() {
-        return Err("new learned governor cannot activate recovery credibility".into());
+        return Err("live learned governor cannot activate recovery credibility".into());
     }
     // The operator pair owns the complete live grammar before another option
     // parser can erase an incompatible historical or maintenance selection.
@@ -84,7 +84,7 @@ where
         .as_deref()
         .map(|path| campaigns::read(&config, path))
         .transpose()?;
-    governor::check_selection(governor.as_ref(), operator.as_ref(), campaign)?;
+    governor::check_selection(governor.as_ref(), operator.as_ref(), campaign, continuing)?;
     let mut entries = if let Some(governor) = governor.as_ref() {
         profile::load_governed(
             Path::new(&args[2]),
@@ -94,6 +94,7 @@ where
                 .as_ref()
                 .expect("complete governor operator selection checked above"),
             &peers,
+            continuing,
         )?
     } else {
         profile::load(Path::new(&args[2]), &config)?
@@ -414,8 +415,12 @@ where
         selected_governor,
         selected_operator,
         entries[0].loaded.creation_campaigns,
+        continuing,
     )?;
     if let Some(governor) = selected_governor {
+        if credibility.is_some() {
+            return Err("live learned governor cannot activate recovery credibility".into());
+        }
         governor::check(
             governor,
             selected_operator.expect("paired selection checked above"),
@@ -486,7 +491,17 @@ where
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
     let (started, governor_role) = if selected_governor.is_some() {
-        let (custody, role) = super::recovery::create_governed(&config, &first.loaded)?;
+        let (custody, role) = if continuing {
+            super::recovery::open_governed_live(
+                &config,
+                &first.loaded,
+                &mut control,
+                &deadline,
+                &mut time,
+            )?
+        } else {
+            super::recovery::create_governed(&config, &first.loaded)?
+        };
         (
             topology::Started {
                 custody,
@@ -513,48 +528,79 @@ where
         source,
         output,
     } = started;
-    if let Some(selected) = first.loaded.checkpoint_on_generation {
-        selected.check_owner(&host)?;
-    }
-    let mut initial_deadline = Some(deadline);
-    let mut prediction =
-        observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
-    let mut identity = identity_observer.map(identity::Session::new);
-    prediction::check(&host, prediction.as_ref())?;
-    let mut initial_continuation = request_preflight(
-        &host,
-        &first.loaded,
-        continuing,
-        None,
-        after_message,
-        credibility,
-    )?;
-    let (port, supervisor) = host
-        .into_learned_text_stream_actor_gateway()
-        .map_err(debug)?;
-    let mut driver = FileSupervisedDriver::new(supervisor);
-    topology::attach(&mut driver, source)?;
-    let mut operator = selected_operator
-        .map(|selected| {
-            if selected_governor.is_some() {
-                selected.start_governed(&first.actor, port.clone(), &driver, &global)
-            } else {
-                selected.start(&first.actor, port.clone(), &driver, &global)
-            }
-        })
-        .transpose()?;
-    if let Some((settings, role)) = selected_governor.zip(governor_role) {
-        let service = crate::workflow::actor_service::governor::Service::start(
-            settings,
-            &first.actor,
-            role,
-            &global,
+    // Recovery has already acknowledged its original Fence. Every remaining
+    // startup check is read-only for this supported nonmediated profile. Retain
+    // that exact successor if request admission or either listener now fails;
+    // never reopen the store or recapture an unrelated newer cut on error.
+    let startup_anchor = if selected_governor.is_some()
+        && continuing
+        && first.loaded.anchor_output.is_some()
+    {
+        Some(host.history_anchor_after(first.loaded.recovery_anchor.as_ref()
+            .expect("governed recovery requires independent anchor custody"))
+            .map_err(debug)?)
+    } else {
+        None
+    };
+    let startup = (|| {
+        if let Some(selected) = first.loaded.checkpoint_on_generation {
+            selected.check_owner(&host)?;
+        }
+        let prediction =
+            observer.map(|observer| prediction::Session::new(first.loaded.request, observer));
+        let identity = identity_observer.map(identity::Session::new);
+        prediction::check(&host, prediction.as_ref())?;
+        let continuation = request_preflight(
+            &host,
+            &first.loaded,
+            continuing,
+            None,
+            after_message,
+            credibility,
         )?;
-        operator
-            .as_mut()
-            .ok_or("learned governor has no original promotion operator")?
-            .attach_governor(service)?;
-    }
+        let (port, supervisor) = host
+            .into_learned_text_stream_actor_gateway()
+            .map_err(debug)?;
+        let mut driver = FileSupervisedDriver::new(supervisor);
+        topology::attach(&mut driver, source)?;
+        let mut operator = selected_operator
+            .map(|selected| {
+                if selected_governor.is_some() {
+                    selected.start_governed(&first.actor, port.clone(), &driver, &global)
+                } else {
+                    selected.start(&first.actor, port.clone(), &driver, &global)
+                }
+            })
+            .transpose()?;
+        if let Some((settings, role)) = selected_governor.zip(governor_role) {
+            let service = crate::workflow::actor_service::governor::Service::start(
+                settings,
+                &first.actor,
+                role,
+                &global,
+            )?;
+            operator
+                .as_mut()
+                .ok_or("learned governor has no original promotion operator")?
+                .attach_governor(service)?;
+        }
+        Ok::<_, String>((reviewer, prediction, identity, continuation, port, driver, operator))
+    })();
+    let (reviewer, mut prediction, mut identity, mut initial_continuation, port,
+        mut driver, mut operator) = match startup {
+        Ok(started) => started,
+        Err(error) => {
+            if let Some(anchor) = startup_anchor {
+                let path = first.loaded.anchor_output.as_deref()
+                    .expect("startup anchor is captured only for selected retention");
+                if let Err(retention) = anchors::export_acknowledged(&anchor, path) {
+                    return Err(format!("{error}; acknowledged recovery history retention failed: {retention}; preserve the previous anchor and original store"));
+                }
+            }
+            return Err(error);
+        }
+    };
+    let mut initial_deadline = Some(deadline);
     let mut wire = ActorWire::new(port.clone());
     let mut responses = Vec::with_capacity(entries.len());
     let mut histories = Vec::with_capacity(entries.len());

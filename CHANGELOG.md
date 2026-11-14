@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-11-13: recover governed learned sequences with fresh custody
+
+- Retain the governor returned by the original independently anchored learned
+  recovery cursor, with complete policy, campaign, source, numerical, floor and
+  terminal-reserve checks.
+- Preserve event/Ready Stop checks and the original recovery fence, without
+  reviving historical approval keys or replenishing native generation budgets.
+- Connect that custody to explicit resident continuation with a mandatory
+  independent anchor and full policy/campaign expectations admitted before assets.
+  Permit an original remaining Message/Finish suffix without enlarging budgets.
+- Retain the acknowledged recovery anchor when later request preflight or
+  governor/operator listener startup fails, using the same owner and cut.
+- Add eight original-owner and authenticated Stop regression functions with
+  positive and causal-negative controls. Source review, seven-file syntax
+  inspection and whitespace checks passed before the execution workspace
+  disconnected; Rust compilation and runtime qualification remain pending.
+- Attempt the required RCH gate: exit 127 before compilation because `rch`
+  is absent. Preserve all test gates and leave the broader packets open.
+
 ## 2026-11-13: connect independent live governance to learned sequences
 
 - Add explicit new-sequence `--governor-profile` selection with matching original

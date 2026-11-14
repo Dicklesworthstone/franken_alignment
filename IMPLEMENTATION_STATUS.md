@@ -1,5 +1,54 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-13: recover governed learned sequences through original custody
+
+The learned live-recovery adapter has a sealed governed selection that keeps
+the governor returned by the original `FileGuardedLearnedRecovery` with its
+recovered host and human reviewer. Admission requires an independent history
+anchor and the exact existing campaign inventory, and excludes predictive,
+mediated and joint-credibility modes. It cannot install a creation guard.
+
+The same original cursor verifies the complete learned history and independent
+policy, guard, credential, floor and terminal-reserve expectations. Deadline and
+authenticated Stop checkpoints remain before every event and at Ready. Pending
+Stop takes the existing terminal path and retains its acknowledged anchor;
+ordinary completion issues fresh custody through the original recovery fence.
+Confirmed effects, unresolved liabilities, generation state and native campaign
+spending remain owned by the original history. Old governor custody and old
+promotion approval cannot become fresh authority.
+
+The resident command composes this custody through explicit
+`--continue-generation` or `--after-message` plus `--governor-profile` and its
+separate numerical operator. Recovery requires `--history-anchor` and every
+recipe's complete `fa.learned-recovery-policy/2` expectation before model assets;
+creation-only campaign profiles refuse. A remaining Message/Finish suffix keeps
+the original finite numerical limits. Post-fence startup failures retain the
+exact acknowledged successor anchor, and normal live work keeps the original
+Stop, review and publication paths. New service allowances are explicitly
+provisioned for the invocation; native generation and campaign spending persist.
+
+Eight authored regression functions exercise original native owners and guarded
+recovery. They cover a fresh paid promotion followed by actual learned/native/
+human publication, stale roles and approvals, exact policy/campaign/source/floor
+expectations, cancellation before open and at every event/Ready cut, and real
+authenticated Stop at early/middle/Ready cuts including reply loss and a bad
+nonce. Synthetic weights supply controlled inputs, not scientific efficacy
+evidence. These tests are not reported as executed.
+
+Independent source review of the adapter and live composition found no concrete
+blocker. Tree-sitter syntax inspection of the seven adapter/test Rust paths
+reported zero error or missing nodes, and `git diff --check` passed. Those are
+not Rust type checking or execution. The required
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` was
+attempted and exited 127 before compilation because `rch` is absent. This
+workspace also had no Rust toolchain. It disconnected during preparation of the
+first commit; the reviewed source was recovered from pinned GitHub base files
+and retained exact patches. No local compilation fallback, runtime pass or full
+qualification is claimed. FA-014/FA-130 remain open; Beads were not edited because
+their required `br` CLI was unavailable.
+
+Contracts: docs/LEARNED_POLICY_GOVERNANCE.md and docs/LIVE_POLICY_GOVERNOR.md.
+
 ## 2026-11-13: govern a live learned resident sequence with original paid custody
 
 A newly created nonpredictive, nonmediated `serve-learned-generated` sequence

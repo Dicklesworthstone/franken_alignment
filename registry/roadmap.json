@@ -457,7 +457,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs",
-        "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log"
+        "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log",
+        "docs/LIVE_POLICY_GOVERNOR.md",
+        "crates/fa-reference/tests/governed_learned_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs"
       ]
     },
     {
@@ -3345,7 +3349,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/selected.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/diagnosis.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/policy_replay.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/diagnosis/policy_replay.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/diagnosis/policy_replay.rs",
+        "docs/LIVE_POLICY_GOVERNOR.md",
+        "crates/fa-reference/tests/governed_learned_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs"
       ],
       "founding_ideas": [
         "FI-A14",

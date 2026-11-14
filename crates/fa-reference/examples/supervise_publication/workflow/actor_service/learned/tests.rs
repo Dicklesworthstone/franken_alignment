@@ -22,6 +22,7 @@ use super::*;
 #[path = "tests/anchors.rs"] mod anchors;
 #[path = "tests/anchored_recovery.rs"] mod anchored_recovery;
 #[path = "tests/recovery_quanta.rs"] mod recovery_quanta;
+#[path = "recovery/governed_tests.rs"] mod governed_recovery;
 #[path = "tests/replay.rs"] mod replay;
 #[path = "tests/recovery_control.rs"] mod recovery_control;
 #[path = "tests/receipt_replay_deadline.rs"] mod receipt_replay_deadline;

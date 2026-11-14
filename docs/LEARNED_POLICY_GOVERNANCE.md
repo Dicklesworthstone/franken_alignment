@@ -20,10 +20,39 @@ helpers and human **effect** reviewer. This is not a new signed-identity or
 remote governance authentication protocol.
 
 New nonpredictive resident sequences can instead retain the original first-image
-governor and expose its [separately authenticated live endpoint](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence).
+governor; independently anchored recovery can retain its freshly provisioned
+successor. Both expose the [separately authenticated live endpoint](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence).
 That selection requires both a governor Request/Approve numerical allowance and
 an independent operator Promote allowance. The offline anchored operation below
 keeps its original complete grammar and atomic three-event replacement.
+
+## Fresh governor custody after learned recovery
+
+The live recovery adapter can retain the fresh governor returned by the original
+`FileGuardedLearnedRecovery` together with its recovered host and human reviewer.
+It accepts only an explicitly selected nonpredictive, nonmediated learned stream
+with an independently retained history anchor and exact existing campaign
+requirements. A creation campaign selection cannot substitute for that inventory.
+The complete original guard, effective-policy, credential, recovery-floor and
+terminal-reserve checks still belong to the same native cursor.
+
+Replay checks the command's original deadline and independent Stop transport at
+every event and again at Ready. A pending authenticated Stop consumes that same
+verified cursor through its original terminal path, retaining the acknowledged
+anchor without issuing a live governor. Otherwise the original recovery fence
+returns fresh custody once. No role getter, late guard installation, second
+replay or reconstruction from a historical approval is used.
+
+The native numerical history, confirmed effects, unresolved charges and campaign
+spending survive recovery. Old governor handles and old approval keys cannot act
+on the recovered owner. A new policy promotion still requires a new complete
+campaign, independent approval and separately paid promotion; later publication
+still needs fresh source evidence, native helper work and human approval.
+
+This adapter and its regression sources advance FA-014 and FA-130. Source and
+syntax review are separate from Rust compilation, execution and deployment
+qualification. The live command composition is described in
+[the governor service contract](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
 
 ## Provision the original guard
 

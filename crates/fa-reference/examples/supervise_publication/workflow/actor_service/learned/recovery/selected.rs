@@ -4,7 +4,8 @@ use super::cooperative::Progress;
 use fa_reference::action::consequence::experiment::InterventionScope;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::investigation::FileProposalInvestigation;
 use super::{
-    Config, Custody, FileOversight, Loaded, RecoveryReserve, TopologyCustody, debug, requirements,
+    Config, Custody, FileOversight, GovernedCustody, Loaded, RecoveryReserve, TopologyCustody,
+    debug, requirements,
 };
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileReconciledLearnedReceipt;
@@ -48,6 +49,48 @@ pub(super) enum Cursor {
     Owned(FileOwnedPredictiveRecovery),
     Mediated(FileMediatedLearnedRecovery),
     PredictiveMediated(FilePredictiveMediatedLearnedRecovery),
+}
+
+/// A separately selected original plain cursor whose independently supplied
+/// requirements include the campaign guard and anchor. Complete native Ready
+/// validation therefore proves the governor will be part of the fresh role
+/// bundle BEFORE the original finalizer can publish its recovery Fence.
+pub(super) struct GovernedCursor {
+    original: FileGuardedLearnedRecovery,
+}
+
+impl GovernedCursor {
+    pub(super) fn begin(config: &Config, loaded: &Loaded) -> Result<Self, String> {
+        super::check_governed_recovery(loaded)?;
+        // Use the same full requirements, canonical anchor and original terminal
+        // reserve as ordinary recovery; no weaker open or second replay exists.
+        match Cursor::begin_plain(config, loaded)? {
+            Cursor::Plain(original) => Ok(Self { original }),
+            _ => Err("governed learned recovery requires the original plain cursor".into()),
+        }
+    }
+
+    pub(super) fn progress(&self) -> Progress {
+        self.original.progress()
+    }
+
+    pub(super) fn advance(&mut self, done: usize) -> Result<Progress, JournalError> {
+        self.original.advance(done, 1)
+    }
+
+    /// The terminal consumer retains this SAME cursor; it never finishes into
+    /// a live owner or provisions a governor before applying authenticated Stop.
+    pub(super) fn into_original(self) -> Cursor {
+        Cursor::Plain(self.original)
+    }
+
+    pub(super) fn finish(self) -> Result<GovernedCustody, JournalError> {
+        let (host, roles) = self.original.finish()?;
+        // begin requires Some(campaigns), and native check_ready matches that
+        // exact guard before finishing. Native role provisioning follows it.
+        let governor = roles.policy_governor.ok_or(fa_reference::Error::Incomplete)?;
+        Ok(((host, roles.human, None, roles.identity_observer), governor))
+    }
 }
 
 #[derive(Clone, Copy)]

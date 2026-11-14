@@ -1,4 +1,4 @@
-//! Explicit live governor custody for one newly created learned sequence.
+//! Explicit live governor custody for one created or guarded recovered sequence.
 //! Selection never reconstructs a role, enables a late guard or approves a
 //! campaign. The original native constructor and independent peer own those.
 use super::super::{fields, operator};
@@ -7,7 +7,7 @@ pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
 use std::{collections::BTreeSet, path::PathBuf};
 
-const INVALID: &str = "learned governor requires a new nonpredictive, nonmediated resident sequence, --campaign-profile and paired --operator-profile/--tower-generation";
+const INVALID: &str = "learned governor requires a new nonpredictive, nonmediated resident sequence with --campaign-profile, or explicit nonpredictive, nonmediated recovery with --history-anchor; both require paired --operator-profile/--tower-generation";
 
 /// Own the whole selected grammar before another option stripper can erase a
 /// recovery or maintenance mode. Without this selection, preserve the old argv.
@@ -26,18 +26,34 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<PathBu
     let mut remaining = args[..4].to_vec();
     let mut selected = None;
     let mut seen = BTreeSet::new();
+    let mut continuing = false;
     let mut at = 4;
     while at < args.len() {
         let flag = args[at].as_str();
+        if !seen.insert(flag) {
+            return Err(INVALID.into());
+        }
+        if matches!(flag, "--continue-generation" | "--after-message")
+            && std::mem::replace(&mut continuing, true)
+        {
+            return Err(INVALID.into());
+        }
+        if flag == "--continue-generation" {
+            remaining.push(args[at].clone());
+            at += 1;
+            continue;
+        }
         if !matches!(
             flag,
             "--governor-profile"
                 | "--operator-profile"
                 | "--tower-generation"
                 | "--campaign-profile"
+                | "--after-message"
+                | "--history-anchor"
                 | "--retain-history-anchor"
                 | "--checkpoint-before-generation"
-        ) || !seen.insert(flag)
+        )
         {
             return Err(INVALID.into());
         }
@@ -52,14 +68,17 @@ pub(super) fn take_option(args: &[String]) -> Result<(Vec<String>, Option<PathBu
         }
         at += 2;
     }
-    if ![
-        "--operator-profile",
-        "--tower-generation",
-        "--campaign-profile",
-    ]
+    if !["--operator-profile", "--tower-generation"]
     .iter()
     .all(|flag| seen.contains(flag))
     {
+        return Err(INVALID.into());
+    }
+    if continuing {
+        if seen.contains("--campaign-profile") || !seen.contains("--history-anchor") {
+            return Err(INVALID.into());
+        }
+    } else if !seen.contains("--campaign-profile") || seen.contains("--history-anchor") {
         return Err(INVALID.into());
     }
     Ok((remaining, selected))
@@ -70,6 +89,7 @@ pub(super) fn check_selection(
     governor: Option<&Settings>,
     selected_operator: Option<&operator::Selection>,
     campaigns: Option<FileCampaignRequirement>,
+    continuing: bool,
 ) -> Result<(), String> {
     if governor.is_some()
         != selected_operator.is_some_and(|selected| selected.settings.policy_promotion.is_some())
@@ -77,7 +97,10 @@ pub(super) fn check_selection(
         return Err("learned policy promotion requires both an independent governor and an explicit numerical operator allowance".into());
     }
     if let Some(governor) = governor {
-        if campaigns != Some(governor.campaign_requirement()) {
+        if continuing && campaigns.is_some() {
+            return Err("learned governor recovery cannot install a creation campaign guard".into());
+        }
+        if !continuing && campaigns != Some(governor.campaign_requirement()) {
             return Err(
                 "learned governor and original creation campaign limits must match exactly".into(),
             );
@@ -96,8 +119,7 @@ pub(super) fn check(
     peers: &PeerProfile,
     continuing: bool,
 ) -> Result<(), String> {
-    if continuing
-        || entries
+    if !continuing && entries
             .iter()
             .filter(|entry| entry.release == LearnedTextRelease::Message)
             .count()
@@ -106,7 +128,13 @@ pub(super) fn check(
         return Err(INVALID.into());
     }
     let expected = settings.campaign_requirement();
-    if entries[0].loaded.creation_campaigns != Some(expected) {
+    if continuing {
+        if entries[0].loaded.recovery_anchor.is_none()
+            || entries[0].loaded.creation_campaigns.is_some()
+        {
+            return Err("learned governor recovery requires an independent history anchor and no creation campaign guard".into());
+        }
+    } else if entries[0].loaded.creation_campaigns != Some(expected) {
         return Err("learned governor requires its original first-image campaign guard".into());
     }
     let requests = entries
@@ -117,10 +145,10 @@ pub(super) fn check(
     if socket == fields::resolve_root(config.source.path())? {
         return Err("learned governor socket conflicts with the original policy source".into());
     }
-    for entry in entries {
+    for (index, entry) in entries.iter().enumerate() {
         let loaded = &entry.loaded;
         if loaded.topology.is_some()
-            || loaded.recovery_anchor.is_some()
+            || (loaded.recovery_anchor.is_some() && (!continuing || index != 0))
             || loaded.generation.required_pre_output_forecast().is_some()
             || loaded
                 .generation

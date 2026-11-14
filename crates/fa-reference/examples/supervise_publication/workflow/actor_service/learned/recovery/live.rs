@@ -1,8 +1,8 @@
 //! Live recovery chooses either original custody or a terminal admission Stop.
 //! A checked peer is retained while the SAME guarded cursor verifies every event.
 use super::{
-    Config, Control, Deadline, ElapsedTick, Loaded, Progress, TopologyCustody, debug,
-    ready_selected_with_checkpoints, selected,
+    Config, Control, Deadline, ElapsedTick, GovernedCustody, Loaded, Progress, TopologyCustody,
+    debug, ready_governed_with_checkpoints, ready_selected_with_checkpoints, selected,
 };
 use super::super::{anchors, topology};
 use crate::workflow::continuation::checkpoint::AcknowledgedOutput;
@@ -30,6 +30,33 @@ where F: FnMut() -> ElapsedTick {
         return stop(config, loaded, recovery, control, deadline, time);
     }
     recovery.finish_with_topology().map_err(debug)
+}
+
+/// Original learned recovery with explicit campaign custody. Stop still wins
+/// at the Ready checkpoint, before the recovery Fence or fresh governor exists.
+pub(super) fn open_governed<F>(
+    config: &Config,
+    loaded: &Loaded,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<GovernedCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut pending = false;
+    let recovery = {
+        let mut checkpoint = |_: Option<Progress>| {
+            deadline.check(time())?;
+            pending |= control.recovery_pending_peer()?;
+            Ok(())
+        };
+        ready_governed_with_checkpoints(config, loaded, &mut checkpoint)?
+    };
+    if pending {
+        return stop(config, loaded, recovery.into_original(), control, deadline, time);
+    }
+    recovery.finish().map_err(debug)
 }
 
 /// Complete only the independently expected pending stream intent. The SAME
@@ -62,8 +89,8 @@ where
     recovery.finish_pending_stream_reset(intent, first_incident_sequence).map_err(debug)
 }
 
-fn stop<F>(config: &Config, loaded: &Loaded, recovery: selected::Cursor,
-    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<TopologyCustody, String>
+fn stop<F, T>(config: &Config, loaded: &Loaded, recovery: selected::Cursor,
+    control: &mut Control, deadline: &Deadline, time: &mut F) -> Result<T, String>
 where F: FnMut() -> ElapsedTick {
     // Admit only independently selected archive destinations and the original
     // store identity. No next-source documents, helper, reviewer or owner exist.

@@ -34,6 +34,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
     FileGuardSet, FileRecoveryRequirements,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::identity::FileIdentityObserver;
+use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor;
 #[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
@@ -50,6 +51,7 @@ pub(super) type Custody = (
 );
 pub(super) type TopologyCustody = (Custody,
     Option<fa_reference::action::consequence::delivery::persistent::observed::mediation::FileMediationObserver>);
+pub(super) type GovernedCustody = (Custody, FilePolicyGovernor);
 
 pub(super) fn create_selected(config: &Config, loaded: &Loaded) -> Result<Custody, String> {
     super::recipe::check_creation(config, loaded)?;
@@ -288,6 +290,43 @@ where
     live::open(config, loaded, control, deadline, time).map(|(custody, _)| custody)
 }
 
+/// Recover the explicitly selected original campaign owner and retain only its
+/// freshly issued governor. The SAME anchored replay, event/Ready checkpoints
+/// and authenticated Stop branch precede its sole recovery Fence. An old role,
+/// report or approval is never a source of recovered authority.
+pub(super) fn open_governed_live<F>(
+    config: &Config,
+    loaded: &Loaded,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<GovernedCustody, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    live::open_governed(config, loaded, control, deadline, time)
+}
+
+/// This selection narrows the already guarded recovery contract. It cannot
+/// discover a campaign inventory from the journal, install one during reopen,
+/// or requalify policy-bound predictors or joint credibility after promotion.
+fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
+    if loaded.recovery_anchor.is_none()
+        || loaded.expected_campaigns.is_none()
+        || loaded.creation_campaigns.is_some()
+        || loaded.topology.is_some()
+        || loaded.generation.required_pre_output_forecast().is_some()
+        || loaded
+            .generation
+            .required_owned_pre_output_forecast()
+            .is_some()
+        || loaded.generation.required_held_out_joint().is_some()
+    {
+        return Err("governed learned recovery requires an independent history anchor and exact existing campaign limits, without creation, topology, prediction or joint credibility selections".into());
+    }
+    Ok(())
+}
+
 /// Preserve the separately owned topology observer through the SAME one-event
 /// guarded replay. No source read or observer is issued before finalization.
 pub(super) fn open_selected_live_with_topology<F>(
@@ -319,6 +358,36 @@ fn ready_selected_with_checkpoints(
         |run, done| run.advance(done),
         Ok,
     )
+}
+
+/// Keep the campaign-selection proof alongside the original cursor until
+/// either its terminal Stop consumer or its fresh-role finalizer is selected.
+fn ready_governed_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<selected::GovernedCursor, String> {
+    check_governed_recovery(loaded)?;
+    checkpoint(None)?;
+    let recovery = selected::GovernedCursor::begin(config, loaded)?;
+    finish_replay(
+        recovery,
+        checkpoint,
+        |run| run.progress(),
+        |run, done| run.advance(done),
+        Ok,
+    )
+}
+
+#[cfg(test)]
+pub(super) fn open_governed_with_checkpoints(
+    config: &Config,
+    loaded: &Loaded,
+    checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
+) -> Result<GovernedCustody, String> {
+    ready_governed_with_checkpoints(config, loaded, checkpoint)?
+        .finish()
+        .map_err(debug)
 }
 
 /// The same original guarded Ready cursor completes its pending stream reset

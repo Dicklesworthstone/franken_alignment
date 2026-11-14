@@ -132,9 +132,7 @@ impl GovernedRecipe {
         campaigns: FileCampaignRequirement,
     ) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
-        if recipe.files.forecast.is_some() || recipe.joint.is_some() || !recipe.continuation {
-            return Err("live learned governor requires nonpredictive finite message continuation without joint credibility activation".into());
-        }
+        Self::check_supported(&recipe)?;
         if recipe
             .expected_policy
             .as_ref()
@@ -146,6 +144,34 @@ impl GovernedRecipe {
             return Err("new learned governor recipe disagrees with independent bootstrap policy or campaign limits".into());
         }
         Ok(Self(recipe))
+    }
+
+    /// Recovery must independently name the complete effective policy and
+    /// original campaign guard. The bootstrap policy is not a fallback for an
+    /// omitted recovery expectation, and no history read supplies these values.
+    pub(super) fn read_recovery(
+        file: &Path,
+        campaigns: FileCampaignRequirement,
+    ) -> Result<Self, String> {
+        let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
+        Self::check_supported(&recipe)?;
+        if recipe.expected_policy.is_none() || recipe.expected_campaigns != Some(campaigns) {
+            return Err("learned governor recovery requires an explicit full effective policy and exact original campaign limits in every recipe".into());
+        }
+        Ok(Self(recipe))
+    }
+
+    fn check_supported(recipe: &Recipe) -> Result<(), String> {
+        if recipe.files.forecast.is_some() || recipe.joint.is_some() || !recipe.continuation {
+            return Err("live learned governor requires nonpredictive finite message continuation without joint credibility activation".into());
+        }
+        Ok(())
+    }
+
+    /// Available before numerical assets so a later recipe cannot change the
+    /// independently selected recovery policy after earlier assets were loaded.
+    pub(super) fn expected_policy(&self) -> Option<&Policy> {
+        self.0.expected_policy.as_ref()
     }
 
     pub(super) fn load(self, config: &Config) -> Result<Loaded, String> {

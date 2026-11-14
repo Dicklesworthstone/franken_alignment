@@ -81,9 +81,10 @@ pub(super) fn load_governed(
     governor: &super::governor::Settings,
     operator: &super::super::operator::Selection,
     peers: &super::PeerProfile,
+    continuing: bool,
 ) -> Result<Vec<Entry>, String> {
     let plan = decode(&read_regular(path, MAX_PROFILE_BYTES)?)?;
-    if plan
+    if !continuing && plan
         .iter()
         .filter(|input| input.release == LearnedTextRelease::Message)
         .count()
@@ -94,11 +95,18 @@ pub(super) fn load_governed(
     let prepared = plan
         .into_iter()
         .map(|input| {
-            let recipe = recipe::GovernedRecipe::read(
-                &input.recipe,
-                config,
-                governor.campaign_requirement(),
-            )?;
+            let recipe = if continuing {
+                recipe::GovernedRecipe::read_recovery(
+                    &input.recipe,
+                    governor.campaign_requirement(),
+                )?
+            } else {
+                recipe::GovernedRecipe::read(
+                    &input.recipe,
+                    config,
+                    governor.campaign_requirement(),
+                )?
+            };
             let actor = Profile::read(&input.actor)?;
             let precheck = input
                 .precheck
@@ -108,6 +116,13 @@ pub(super) fn load_governed(
             Ok((input.release, recipe, actor, precheck))
         })
         .collect::<Result<Vec<_>, String>>()?;
+    if continuing
+        && prepared.windows(2).any(|pair| {
+            pair[0].1.expected_policy() != pair[1].1.expected_policy()
+        })
+    {
+        return Err("every governed recovery recipe must select the same complete effective policy".into());
+    }
     let requests = prepared
         .iter()
         .map(|(_, _, actor, _)| actor.request)

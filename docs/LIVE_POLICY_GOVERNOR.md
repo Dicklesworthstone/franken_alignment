@@ -1,8 +1,9 @@
 # Independently approve policy changes in a running publication service
 
 The Linux reference executable can provision a separate governor endpoint for a
-new or independently recovered ordinary Tower publication run, or a newly
-created nonpredictive learned sequence with explicit numerical allowances. The governor
+new or independently recovered ordinary Tower publication run, or a new or
+independently recovered nonpredictive learned sequence with explicit numerical
+allowances. The governor
 requests a replay of the
 complete original policy corpus and explicitly approves the exact returned
 report. That approval delegates one original opaque permit to the independently
@@ -190,9 +191,11 @@ supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_P
 ```
 
 The sequence must contain at least two Messages, with an optional final Finish.
-This selection creates a new nonpredictive, nonmediated learned owner. It refuses
-continuation, recovery, topology, forecast and joint credibility selections
-before model/helper assets or live resources are acquired. The closed argv also
+This selection creates a new nonpredictive, nonmediated learned owner. Creation
+refuses continuation and recovery selections; the explicit anchored recovery
+selection below accepts them without a creation campaign profile. Both refuse
+topology, forecast and joint credibility selections before model/helper assets
+or live resources are acquired. The closed argv also
 admits the existing optional checkpoint before generation and new output history
 anchor. A version-two sequence may select its original per-entry precheck
 listeners; those remain observations and cannot create governor authority.
@@ -279,6 +282,72 @@ expose their existing supervisor for this bounded turn; no wrapper or driver is
 reconstructed. Predictive promotion still needs a separately reviewed successor
 predictor binding. Installed joint credibility likewise needs a fresh
 qualification after policy change and is outside this initial live selection.
+
+## Recover a governed learned sequence
+
+The same live service can recover an already campaign-guarded, nonpredictive,
+nonmediated learned stream. Select the continuation explicitly and retain the
+original full numerical recipe, source contract and stream limits:
+
+```sh
+supervise_publication serve-learned-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST \
+  --history-anchor INPUT_ANCHOR --retain-history-anchor NEW_OUTPUT_ANCHOR \
+  --operator-profile OPERATOR_PROFILE --tower-generation 42 \
+  --governor-profile GOVERNOR_PROFILE
+```
+
+Use `--continue-generation` instead of `--after-message PREVIOUS_REQUEST` for
+the original unsubmitted generation. These selections are mutually exclusive.
+An already admitted request must use its original receipt/reconciliation path;
+recovery never turns a missing response into permission to resubmit an effect.
+
+Every selected recipe must carry the existing
+[`fa.learned-recovery-policy/2` envelope](LEARNED_RECOVERY_POLICY.md) with the
+**complete current effective policy** and exact original campaign inventory.
+All recipes must agree on the full policy, including its predicates, and the
+governor profile must select those same campaign limits. Missing expectations,
+same-generation policy disagreement, unsupported modes and conflicting role
+credentials refuse before numerical assets are loaded. The admitted recipe
+documents are retained for the actual loaders; they are not reread after this
+check. `--campaign-profile` is creation-only and refuses during recovery.
+
+The remaining sequence retains the existing 2–16 entry bound. A recovered
+suffix may contain one Message and a final Finish, so a stream that already
+confirmed its first Message can complete its original finite allowance.
+Creation still requires at least two Messages. No selection increases the
+original message, byte, sampling, numerical or campaign budget. Only entry one
+may select recovery floors and history custody; every entry still selects its
+own actor, request, sidecar and review rounds.
+
+The original exclusive recovery cursor verifies the independent anchor, exact
+policy and complete guard inventory before its sole recovery fence. Its deadline
+and authenticated Stop checkpoints run before each original event and at Ready.
+Pending Stop uses the same terminal exchange and retains the acknowledged
+history even after a lost reply; no live governor is issued on that branch.
+Otherwise the same native finalizer returns the fresh human and governor roles.
+Old actor ports, governor handles, effect keys and campaign approvals remain
+revoked. Original learned state, confirmed output, unresolved charges and spent
+campaign capacity remain part of the recovered owner.
+
+The new invocation independently provisions its governor/operator credentials
+and finite transport and numerical replay allowances. These new service grants
+do not reset persistent native generation or campaign expenditure. Reconnects
+and message handoffs within the invocation retain the same grants, deadlines
+and remaining work. A later promotion needs a fresh complete campaign, explicit
+independent approval and the separate paid Promote operation. Fresh source,
+helper and human checks remain mandatory for every new publication.
+
+When successor-anchor retention is selected, a failure during post-fence
+request preflight or listener startup retains that exact acknowledged recovery
+cut. Normal completion and later failures retain the original live owner's final
+acknowledged cut. Neither path reopens the store or retries an effect. Keep the
+old independent anchor until its successor is acknowledged.
+
+The recovery adapter and public-owner regression sources have independent
+source review and syntax checks. Rust compilation, authenticated service
+execution and full qualification remain pending; the required RCH runner is
+unavailable in the implementation workspace.
 
 ## Discover the current cut through the independent governor endpoint
 

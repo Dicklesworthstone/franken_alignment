@@ -24,6 +24,15 @@ service retains those allowances across every message and helper handoff. See
 [live learned governance](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
 for complete profiles, mode exclusions and the stable post-generation cut.
 
+An already governed stream can select the same independent governor during
+explicit `--continue-generation` or `--after-message` recovery, with a mandatory
+independent `--history-anchor` and full current-policy/campaign expectations in
+every recipe. A recovered suffix may contain one Message followed by Finish;
+the original finite generation and campaign budgets remain unchanged. The same
+guarded cursor returns fresh custody after its recovery fence, while independent
+Stop remains available throughout replay. See
+[governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
+
 This is scoped implementation toward FA-027 and plan sections 8.5, 8.7, 9.3,
 9.11, 11.2 and 16.4. Compilation and execution qualification remain pending.
 The full roadmap packet, including long-horizon and isolated-branch acceptance,
