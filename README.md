@@ -45,6 +45,15 @@ Stop session continues through normal startup without renewed allowances.
 Ten new native/socket regression functions are authored; compilation and runtime
 qualification remain pending.
 
+Ordinary scheduled plain and checked publication can also retain an independent
+[live policy governor with topology supervision](docs/LIVE_POLICY_GOVERNOR.md#govern-ordinary-mediated-publication).
+Creation and exact anchored recovery carry both original governor and source
+custody into the same service. Policy promotion still requires independent
+approval, and every new effect still needs fresh human approval and the original
+source's final topology check. Governed mediated recovery requires new scheduled
+work; source-free historical receipt service remains separately available.
+The new authenticated regression sources await Rust/RCH execution qualification.
+
 The learned topology services now retain independently selected history and
 source checkpoints across returned startup failures, both before and after
 source rebind. Corrected single-request and resident restarts use those exact

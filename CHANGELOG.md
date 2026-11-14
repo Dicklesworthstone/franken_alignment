@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-14: govern ordinary topology-supervised Tower publication
+
+- Connect plain/checked scheduled creation and anchored recovery to the original
+  mediated governor and source-observer role bundle.
+- Preserve full campaign/source/witness requirements, original Ready Stop,
+  unresolved charges, finite source spending and paired checkpoint retention.
+- Require new scheduled work for governed mediated recovery while preserving
+  ordinary source-free historical receipts; reject normalized custody aliases.
+- Add real independent-governor publication and source-loss regression sources,
+  and repair the relevant synthetic helper's independently selected policy epoch.
+- Record source/API and syntax validation separately from pending Rust/RCH
+  execution; no acceptance assertion, dependency or native authority law changed.
+
 ## 2026-11-14: retain paired topology custody through finite submission
 
 - Preserve the original reconciled source checkpoint through finite mediated

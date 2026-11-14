@@ -17,16 +17,20 @@ multiple peers, generated/learned modes and stronger feed, wait, snapshot or joi
 witness profiles keep their separate lifecycles. Unsupported combinations refuse
 before service setup.
 
-For ordinary campaign-governed recovery without topology, use the separately
-selected [live governor recovery command](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody).
-It requires `fa.guarded-submit/2` with full effective-policy and campaign
-expectations. The mediated service described here does not provision a live
-governor.
+The separately selected [live governor recovery command](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody)
+also composes with this original mediated service. It requires
+`fa.guarded-submit/2` with full effective-policy and campaign expectations,
+an independent governor profile and a separately granted operator promotion
+allowance. The source profile remains exact `fa.mediated-submit/2` custody for
+the same history. A governed schedule must contain at least two request keys
+and at least one new request; an entirely historical schedule uses the ordinary
+source-free receipt service without a governor.
 
 ## Independent history and source custody
 
 The existing `fa.guarded-submit/1` profile supplies an independent history anchor
-and revision/control/authority floors. The topology document must select
+and revision/control/authority floors; governed recovery uses `/2` with its
+complete policy and campaign inventory. The topology document must select
 `fa.mediated-submit/2`; manual v1 source-work minima cannot substitute for an exact
 checkpoint. The [checkpoint operator contract](TOPOLOGY_CHECKPOINT_OPERATOR.md#subsequent-publication)
 defines its `initial`, `source_checkpoint`, `next`, `operation` and optional
@@ -37,7 +41,9 @@ only strengthen external minima.
 Select new `retain_history_anchor` and `retain_checkpoint` destinations to retain
 the next pair. Each output uses existing create-new custody rules outside the
 authority store. Both outputs and the actor, human-review, Stop and operator
-sockets must be canonically distinct, including parent-directory aliases. These
+sockets must be canonically distinct, including parent-directory aliases. An
+explicit governor is checked against every selected source/checkpoint input and
+output as well as the original scheduled endpoint classes. These
 checks precede the clock, listeners and recovery mutation. Creation also checks
 all selected endpoint classes before setup.
 For a schedule, these checks include every future reviewer and Stop socket;
@@ -153,8 +159,9 @@ until their successors are acknowledged.
 
 Retention precedes direct helper cleanup, which can still make the command fail;
 a checkpoint does not attest reaping. The finite
-`submit --guarded --topology-profile` command retains its own recorded-request
-source-export restriction while sharing the same recovery helper.
+`submit --guarded --topology-profile` command also retains exact paired custody
+for recorded requests and returned startup failures, using its independently
+admitted output destinations and the same original recovery helper.
 
 The existing regressions cover both open grammars and option orders, actual
 plain/checked second publication, cumulative source spending, stale

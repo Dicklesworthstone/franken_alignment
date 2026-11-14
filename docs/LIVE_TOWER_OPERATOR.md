@@ -28,6 +28,10 @@ documents for an [independently provisioned native policy-promotion endpoint](TO
 New or explicitly guarded recovered ordinary plain or checked scheduled services
 can provision the [separate live governor](LIVE_POLICY_GOVERNOR.md)
 with `--governor-profile` and an independently selected operator allowance.
+This composition can retain the original topology supervisor through creation
+and anchored recovery. Governed mediated recovery requires its exact v2
+source/history pair and at least one new scheduled request. Governor custody
+cannot replace the same source's final check or a fresh human effect approval.
 The operator client/profile alone cannot turn policy replay into approval;
 it checks the complete audience and original response bindings and sends only
 the caller's explicit documents, with no automatic promotion or retry.

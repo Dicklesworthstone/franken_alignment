@@ -210,6 +210,9 @@ limits; it does not provision a governor or install server-side promotion custod
 For the executable ordinary service, select `--governor-profile` and the
 independent operator `policy_promotion` object at new ordinary plain or checked
 scheduled creation, or at explicitly anchored governed recovery.
+Both ordinary selections may retain their original topology supervisor.
+Mediated governed recovery requires exact paired source/history custody and a
+schedule containing new work; a receipt-only schedule does not start a governor.
 The separate `policy-governor-exchange` client sends one explicit cut-discovery,
 review or approval document per invocation. The service requires approval to contain the
 exact complete report returned for that campaign. The original native key is installed into the surviving operator session

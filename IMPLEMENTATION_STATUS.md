@@ -1,5 +1,48 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: govern ordinary topology-supervised Tower publication
+
+Scheduled plain and simple-witness checked Tower services now compose the live
+policy governor with original topology-supervised creation and anchored
+recovery. New creation places campaign, source, topology, selected witness and
+terminal-reserve guards in the same first image. Its original role bundle
+supplies both governor and topology observer. Recovery retains both from the
+same original mediated cursor after complete independent readiness checks.
+
+Governed recovery requires exact `fa.guarded-submit/2` policy/campaign
+expectations, an exact matching `fa.mediated-submit/2` source checkpoint and at
+least two scheduled request keys. It preserves the original cooperative Ready
+Stop branch, unresolved-effect refusal, explicit newer graph/inventory rebind,
+source operation floor and cumulative spending. Governor path admission checks
+normalized source/checkpoint inputs and outputs before live resources or the
+recovery Fence, including declared next-source paths whose files are absent.
+
+At least one scheduled request must be new. An entirely historical governed
+schedule refuses before governor service activation or next-source binding and
+retains the healthy acknowledged recovery pair through the existing failure
+exporter. The ordinary ungoverned receipt-only path remains source free. New
+work uses one attached source across all schedule and governance handoffs;
+initial certification and every final publication refresh remain paid by that
+same finite source allowance. A policy approval never grants effect authority.
+
+Authenticated regression sources exercise separate governor Request/Approve,
+original operator Promote, native helper review and fresh human approval for
+plain/checked creation and mixed historical/new recovery. They pair actual
+publication with late inventory loss after dispatch, exact source spending and
+retained checkpoint/history checks. Admission controls cover source/output
+aliases and the entirely historical schedule boundary. Independent review also
+found and repaired the existing creation and recovery governor fixtures' fixed
+epoch-zero helper expectations. The fixtures independently provision epochs
+0 then 1 for creation and 2 then 3 for recovery; full native helper-input binding
+and all original publication assertions remain enforced.
+
+Source/API review, scoped Rust syntax parsing, registry JSON and Git whitespace
+checks completed. Required RCH execution remains unavailable (exit 127: runner
+absent); Cargo and the Rust compiler are also absent. No compilation, runtime,
+rustfmt, Clippy or deployment qualification is claimed. Existing gates and Bead
+status remain unchanged. Contracts: `docs/LIVE_POLICY_GOVERNOR.md`,
+`docs/LIVE_TOWER_RECOVERY.md`, `docs/LIVE_TOWER_OPERATOR.md`.
+
 ## 2026-11-14: retain paired topology custody through finite submission
 
 The finite guarded mediated submission command now preserves the native

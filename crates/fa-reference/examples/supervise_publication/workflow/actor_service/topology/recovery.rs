@@ -3,7 +3,7 @@
 use super::super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
     Instant, OwnerStart, PeerProfile, Profile, PublicationProfile, check_deployment,
-    debug, operator, plus, serve_ready_driver,
+    debug, governor, operator, plus, serve_ready_driver,
 };
 use crate::recover_stop::guarded::{Custody, SubmitProfile};
 use crate::workflow::{FileHumanReviewer, control::Control};
@@ -55,6 +55,7 @@ where
         generation,
         operator,
         None,
+        None,
         time,
     )
 }
@@ -89,7 +90,34 @@ where
         generation,
         operator,
         Some(requests),
+        None,
         time,
+    )
+}
+
+/// The same anchored mediated replay returns both independent roles. New
+/// scheduled work must retain the original cumulative source before any live
+/// governor can mutate this owner; receipt-only schedules stay ungoverned.
+pub(in super::super) fn serve_sequence_governed<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    recovery: &SubmitProfile,
+    topology: &Selection,
+    generation: u64,
+    operator: &operator::Settings,
+    governor: &governor::Settings,
+    requests: &[u64],
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config, actor, reviewer, publication, credibility, recovery, topology,
+        generation, Some(operator), Some(requests), Some(governor), time,
     )
 }
 
@@ -104,6 +132,7 @@ fn serve_selected<F>(
     generation: u64,
     operator: Option<&operator::Settings>,
     requests: Option<&[u64]>,
+    governor: Option<&governor::Settings>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -126,8 +155,18 @@ where
     reviewer.check_host(&config)?;
     let scheduled = requests.unwrap_or(std::slice::from_ref(&actor.request));
     super::super::series::validate(scheduled, actor, reviewer)?;
+    if let Some(governor) = governor {
+        if requests.is_none() || scheduled.len() < 2 {
+            return Err("governed mediated recovery requires at least two explicitly scheduled requests".into());
+        }
+        if recovery.campaign_requirement() != Some(governor.campaign_requirement()) {
+            return Err("governed mediated recovery requires fa.guarded-submit/2 with the exact independently selected governor campaign limits".into());
+        }
+        governor.check_host(&config, actor, reviewer,
+            operator.ok_or("governor requires an independently selected operator")?, scheduled)?;
+    }
     if let Some(settings) = operator {
-        let endpoints: Vec<_> = scheduled
+        let mut endpoints: Vec<_> = scheduled
             .iter()
             .flat_map(|&request| {
                 [
@@ -136,6 +175,7 @@ where
                 ]
             })
             .collect();
+        endpoints.extend(governor.map(|settings| settings.socket.clone()));
         let paths: Vec<_> = endpoints.iter().map(|path| path.as_path()).collect();
         settings.check_host(&config, actor, reviewer, &paths)?;
     }
@@ -157,6 +197,13 @@ where
         &custody,
         archive.as_ref(),
     )?;
+    if let Some(governor) = governor {
+        let mut paths = topology.input_paths();
+        paths.push(config.source.path());
+        paths.extend(custody.output_path());
+        paths.extend(archive.as_ref().map(AcknowledgedOutput::path));
+        governor.check_custody_paths(&paths)?;
+    }
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
         logical: plus(time(), runtime)?,
@@ -209,6 +256,9 @@ where
             let owner = driver.supervisor().host().map_err(debug)?;
             mediated::require_settled(&owner, &outcomes)?;
             check_deployment(&config, &owner, publication)?;
+            if governor.is_some() && roles.oversight.policy_governor.is_none() {
+                return Err("guarded mediated recovery did not return the required fresh governor".into());
+            }
         }
         checkpoint_live(&mut control, &mut driver, &roles.oversight.human,
             &deadline, &mut time)?;
@@ -222,6 +272,9 @@ where
             }
         }
         if !has_new_work {
+            if governor.is_some() {
+                return Err("governed mediated recovery requires a new scheduled request; use ordinary ungoverned recovery for source-free historical receipts".into());
+            }
             return Ok(None);
         }
         if owner.inspect().stop.is_some() {
@@ -257,6 +310,10 @@ where
         Some((source, capture)) => (Some(source), capture),
         None => (None, None),
     };
+    let governor_role = governor.map(|settings| {
+        (settings, roles.oversight.policy_governor
+            .expect("original governor validated before source rebind"))
+    });
     // The SAME service installs the original source, performs its initial check,
     // acquires current actor evidence and uses the driver's final cut before
     // publication. Neither target version nor expected actor epoch is rewritten.
@@ -274,7 +331,7 @@ where
         checkpoint::combine(history, source)
     };
     let result = if let Some(requests) = requests {
-        super::super::series::serve_ready_driver(
+        super::super::series::serve_ready_driver_with_governor(
             config,
             actor,
             reviewer,
@@ -293,6 +350,7 @@ where
             source,
             OwnerStart::Reconciled,
             Some(control),
+            governor_role,
             deadline,
             time,
             retain,

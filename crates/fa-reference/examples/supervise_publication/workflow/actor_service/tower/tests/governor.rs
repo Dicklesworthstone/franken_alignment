@@ -37,7 +37,7 @@ fn explicit_independent_governor_selects_only_a_new_plain_scheduled_tower_owner(
 }
 
 #[test]
-fn governor_selection_cannot_downgrade_recovery_topology_or_actor_only_grammars() {
+fn governor_selection_cannot_downgrade_recovery_or_actor_only_grammars() {
     let args = selected();
     let mut invalid = Vec::new();
     for mode in [
@@ -54,7 +54,6 @@ fn governor_selection_cannot_downgrade_recovery_topology_or_actor_only_grammars(
         invalid.push(changed);
     }
     for flag in [
-        "--topology-profile",
         "--precheck-profile",
         "--guarded",
         "--native-text",
@@ -73,6 +72,12 @@ fn governor_selection_cannot_downgrade_recovery_topology_or_actor_only_grammars(
     singleton[7] = "7".into();
     invalid.push(singleton);
     let mut duplicate = args;
+    let mut duplicate_topology = duplicate.clone();
+    duplicate_topology.extend([
+        "--topology-profile".into(), "topology".into(),
+        "--topology-profile".into(), "another-topology".into(),
+    ]);
+    invalid.push(duplicate_topology);
     duplicate.extend(["--governor-profile".into(), "another-governor".into()]);
     invalid.push(duplicate);
     for args in invalid {
@@ -109,7 +114,10 @@ fn checked_governor_requires_its_explicit_witness_profile_and_retains_closed_opt
                 changed.remove(4);
             }
             1 => changed[4] = "--operator-profile".into(),
-            2 => changed.extend(["--topology-profile".into(), "topology".into()]),
+            2 => changed.extend([
+                "--topology-profile".into(), "topology".into(),
+                "--topology-profile".into(), "another-topology".into(),
+            ]),
             _ => changed.extend(["--precheck-profile".into(), "precheck".into()]),
         }
         assert!(Arguments::parse(&changed).is_err(), "{changed:?}");
@@ -164,11 +172,17 @@ fn governed_recovery_requires_guarded_operator_and_schedule_in_both_open_modes()
             changed.drain(index..index + 2);
             invalid.push(changed);
         }
-        for extra in ["--topology-profile", "--precheck-profile", "--guarded"] {
+        for extra in ["--precheck-profile", "--guarded"] {
             let mut changed = args.clone();
             changed.extend([extra.into(), "other".into()]);
             invalid.push(changed);
         }
+        let mut duplicate_topology = args.clone();
+        duplicate_topology.extend([
+            "--topology-profile".into(), "topology".into(),
+            "--topology-profile".into(), "another-topology".into(),
+        ]);
+        invalid.push(duplicate_topology);
         let mut singleton = args.clone();
         let index = singleton
             .iter()
@@ -193,6 +207,41 @@ fn governed_recovery_requires_guarded_operator_and_schedule_in_both_open_modes()
                 .unwrap_err(),
                 expected
             );
+        }
+    }
+}
+
+#[test]
+fn governed_topology_selects_the_complete_creation_or_anchored_recovery_in_both_modes() {
+    for checked in [false, true] {
+        for open in [false, true] {
+            let mut args = selected();
+            args[0] = match (open, checked) {
+                (false, false) => "serve-create",
+                (false, true) => "serve-create-checked",
+                (true, false) => "serve-open",
+                (true, true) => "serve-open-checked",
+            }.into();
+            if checked { args.insert(4, "witness".into()); }
+            if open { args.extend(["--guarded".into(), "recovery".into()]); }
+            args.extend(["--topology-profile".into(), "topology".into()]);
+            let positional = if checked { 5 } else { 4 };
+            let mut reversed = args[..positional].to_vec();
+            for pair in args[positional..].chunks_exact(2).rev() {
+                reversed.extend_from_slice(pair);
+            }
+            for ordered in [&args, &reversed] {
+                let selected = Arguments::parse(ordered).unwrap();
+                assert_eq!(selected.open, open);
+                assert_eq!(selected.publication, checked.then(|| Path::new("witness")));
+                assert_eq!(selected.guarded, open.then(|| Path::new("recovery")));
+                assert_eq!(selected.topology, Some(Path::new("topology")));
+                assert_eq!(selected.operator, Some(Path::new("operator")));
+                assert_eq!(selected.governor, Some(Path::new("governor")));
+                assert_eq!(selected.requests.as_deref(), Some([7, 8].as_slice()));
+                assert_eq!(selected.generation, 41);
+                assert!(selected.precheck.is_none());
+            }
         }
     }
 }

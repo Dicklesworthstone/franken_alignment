@@ -34,8 +34,10 @@ an explicit schedule of at least two requests, the Tower generation, and both
 independent profiles. Checked creation requires the existing plain publication
 witness profile. Feed, wait, producer, snapshot fallback, whole-domain and joint
 profiles remain explicit refusals; a stronger selected verifier is never reduced
-to plain witness limits. The selection refuses topology, precheck and
-generated/learned modes before reading their configuration. Governed open uses
+to plain witness limits. An optional `--topology-profile PATH` retains the
+original mediated owner and source. Precheck and generated/learned modes remain
+outside these ordinary commands; learned governance uses its separate selection
+below. Governed open uses
 the separate explicit recovery selection below. Existing journals are never
 upgraded to campaign governance by an actor or connection.
 
@@ -50,6 +52,34 @@ same first image. Policy promotion preserves them: each later effect still binds
 its own original capture and passes final witness validation under its current
 policy epoch. An old human key or a changed required value, absence or range
 cannot be excused by the governor's policy approval.
+
+### Govern ordinary mediated publication
+
+For plain or simple-witness checked creation, add the existing topology
+selection to the same scheduled command:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --topology-profile MEDIATED_CREATE_PROFILE \
+  --operator-profile OPERATOR_PROFILE --governor-profile GOVERNOR_PROFILE
+```
+
+The existing `fa.mediated-create/1` profile supplies the independently selected
+graph and inventory. Version `/2` additionally names a new `retain_checkpoint`
+output. The native mediated constructor installs those graph requirements,
+campaign guard, source guard, optional witness limits and terminal reserve in
+its first image. The governor and topology observer come from that same original
+role bundle; the observer binds the source before the governor endpoint starts.
+
+One original source and its finite allowance survive the entire schedule.
+Startup certifies it once; each new publication still performs the compulsory
+final source refresh. Policy Request/Approve/Promote does not read or renew that
+source, approve an effect or replace a human decision. A changed/lost topology
+input or exhausted source allowance therefore blocks publication even after
+successful policy promotion. A requested checkpoint records the actual final
+owner and cumulative work. Source inputs and retained outputs cannot alias the
+normalized governor socket.
 
 The governor profile is a closed JSON document. Profile counters use ordinary
 unsigned JSON numbers. This example's identities and paths must be replaced by
@@ -169,6 +199,26 @@ service transfers only the newly returned governor into its independently
 selected endpoint. A later policy change needs a fresh full-corpus campaign,
 explicit governor approval and separate operator promotion; no old report or
 cached response restores approval.
+
+An originally mediated owner adds `--topology-profile MEDIATED_SUBMIT_V2_PROFILE`
+to the same governed recovery command. Its source checkpoint must exactly match
+the independent history anchor in `fa.guarded-submit/2`; the complete original
+graph, availability, source work and operation floor remain mandatory. The
+original mediated cursor returns fresh human, governor and topology-observer
+custody together. New work uses the same cumulative source after an explicitly
+selected newer graph and inventory rebind, followed by initial certification and
+final publication checks. Neither the governor nor recovery renews source work.
+
+A governed mediated schedule must have at least two request keys and contain at
+least one genuinely new request. An entirely historical schedule refuses before
+the governor endpoint starts or next-source files are opened. The existing
+paired exporter retains the healthy acknowledged recovery cut on that refusal;
+the ordinary source-free receipt service remains available without a governor.
+Mixed historical/new schedules keep the one original source for new work while
+retained requests still observe their recorded outcomes. Selected history and
+source outputs remain independent create-new archives, including on returned
+startup errors. All selected source/checkpoint inputs and outputs are checked
+against the governor socket before recovery begins.
 
 The original Stop control continues through preparation and first intake. New
 publication still requires current source evidence, helper review, fresh human
@@ -609,9 +659,10 @@ promotion targets execute separately from the example harness.
 Current revision-specific compilation and execution results are recorded in
 `IMPLEMENTATION_STATUS.md`. The complete production executable and test-harness
 metadata are separate checks from linking and executing that large harness. In
-this execution environment, AF_UNIX socket creation itself is refused; real
-listener/client/end-to-end execution remains unverified. No assertion is removed
-or replaced to turn that environment refusal into protocol evidence.
+the current implementation workspace, the required Rust/RCH toolchain is
+unavailable; real listener/client/end-to-end execution of these new compositions
+remains unverified. Source review and syntax checks supply no protocol execution
+evidence.
 
 Mediated learned regression sources additionally exercise original creation and
 exact anchored recovery, independent Request/Approve/Promote peers, fresh

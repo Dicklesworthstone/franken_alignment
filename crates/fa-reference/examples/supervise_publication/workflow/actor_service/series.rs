@@ -196,12 +196,58 @@ pub(super) fn serve_tower_governed_checked<F>(
     generation: u64,
     operator_settings: &operator::Settings,
     governor_settings: &governor::Settings,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_tower_governed_selected(
+        config, actor, reviewer_profile, publication, requests, generation,
+        operator_settings, governor_settings, None, time,
+    )
+}
+
+/// Keep the original governor and topology observer from one first-image
+/// guarded bootstrap. The same attached source pays every final effect check.
+pub(super) fn serve_tower_governed_with_topology<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: &operator::Settings,
+    governor_settings: &governor::Settings,
+    topology: TopologySelection,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_tower_governed_selected(
+        config, actor, reviewer_profile, publication, requests, generation,
+        operator_settings, governor_settings, Some(topology), time,
+    )
+}
+
+fn serve_tower_governed_selected<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: &operator::Settings,
+    governor_settings: &governor::Settings,
+    topology_selection: Option<TopologySelection>,
     mut time: F,
 ) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
-    use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileGuardSet;
+    use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
+        FileGuardSet, mediated::FileMediatedBootstrap,
+    };
     if generation == 0 || requests.len() < 2 {
         return Err("live governor creation requires a nonzero Tower generation and at least two scheduled requests".into());
     }
@@ -234,6 +280,16 @@ where
         operator_settings,
         requests,
     )?;
+    if let Some(selection) = topology_selection.as_ref() {
+        topology::check_destinations(
+            &config, requests, actor, reviewer_profile, Some(operator_settings),
+            selection.acknowledged_output(),
+        )?;
+        let mut paths = selection.input_paths().to_vec();
+        paths.push(config.source.path());
+        paths.extend(selection.acknowledged_output());
+        governor_settings.check_custody_paths(&paths)?;
+    }
     let start = time();
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
@@ -241,6 +297,9 @@ where
         started: Instant::now(),
         wall: Duration::from_millis(runtime),
     };
+    let prepared_topology = topology_selection
+        .map(|selection| selection.prepare(&config, &mut || deadline.check(time())))
+        .transpose()?;
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
     let guards = FileGuardSet {
@@ -252,24 +311,42 @@ where
         campaigns: Some(governor_settings.campaign_requirement()),
         credential: None,
     };
-    let (host, roles) = match publication_limits {
-        Some(limits) => FileOversight::create_guarded_publication_reserved(
-            &config.store,
-            config.profile.clone(),
-            &guards,
-            None,
-            RecoveryReserve::terminal(),
-            limits,
-        ),
-        None => FileOversight::create_guarded_reserved(
-            &config.store,
-            config.profile.clone(),
-            &guards,
-            None,
-            RecoveryReserve::terminal(),
-        ),
-    }
-    .map_err(debug)?;
+    let (host, roles, source, output) = match prepared_topology {
+        Some(mut prepared) => {
+            let output = prepared.take_output();
+            let (host, roles) = FileOversight::create_mediated_guarded_reserved(
+                &config.store, config.profile.clone(), &guards, None,
+                FileMediatedBootstrap {
+                    topology: prepared.loaded().graph().clone(),
+                    reserve: RecoveryReserve::terminal(),
+                    publication: publication_limits,
+                },
+                None, None,
+            ).map_err(debug)?;
+            let source = prepared.bind(&host, roles.topology_observer)?;
+            (host, roles.oversight, Some(source), output)
+        }
+        None => {
+            let (host, roles) = match publication_limits {
+                Some(limits) => FileOversight::create_guarded_publication_reserved(
+                    &config.store,
+                    config.profile.clone(),
+                    &guards,
+                    None,
+                    RecoveryReserve::terminal(),
+                    limits,
+                ),
+                None => FileOversight::create_guarded_reserved(
+                    &config.store,
+                    config.profile.clone(),
+                    &guards,
+                    None,
+                    RecoveryReserve::terminal(),
+                ),
+            }.map_err(debug)?;
+            (host, roles, None, None)
+        }
+    };
     check_deployment(&config, &host, publication)?;
     let governor = roles
         .policy_governor
@@ -291,13 +368,15 @@ where
         port,
         driver,
         roles.human,
-        None,
+        source,
         OwnerStart::Ordinary,
         None,
         Some((governor_settings, governor)),
         deadline,
         time,
-        |_, _, _| Ok(()),
+        |host, source, _succeeded| {
+            output.as_ref().map_or(Ok(()), |output| output.retain(host, source))
+        },
     )
 }
 

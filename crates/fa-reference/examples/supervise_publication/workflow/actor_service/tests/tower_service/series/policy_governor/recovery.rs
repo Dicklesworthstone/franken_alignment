@@ -449,7 +449,7 @@ fn independently_anchored_checked_history_retains_publication_guard_through_fres
 
 fn recovered_pair(checked_mode: bool) {
     let root = Directory::new();
-    let mut config = configured(&root);
+    let mut config = mediated::governed_config(&root);
     evidence(&root, &config);
     let (mut actor, reviewer) = profiles(&root, &config);
     actor.connections = 1;
@@ -464,6 +464,9 @@ fn recovered_pair(checked_mode: bool) {
     let publication = checked_mode
         .then(|| PublicationProfile::decode(checked::profile_document(&root).as_bytes()).unwrap());
     let (recovery, original_anchor) = seed(&root, &mut config, &governor, publication.as_ref());
+    // The seed installs generation two at epoch one. Original recovery fences
+    // it to epoch two before this independently provisioned fresh worker runs.
+    write_complete(&root.0.join("helper-epoch"), b"2");
     let source = root.0.join("evidence.json");
     let source_bytes = fs::read(&source).unwrap();
     fs::remove_file(&source).unwrap();
@@ -591,6 +594,9 @@ fn recovered_pair(checked_mode: bool) {
         assert!(!source.exists());
         assert!(executed(&raw_exchange(&mut actor, &first)));
         write_complete(&source, source_bytes);
+        // Only after observing the fresh native promotion does the fixture
+        // provision the next helper's exact epoch-three input binding.
+        write_complete(&directory.join("helper-epoch"), b"3");
         if let Some(capture) = second_capture {
             write_complete(&directory.join("original.bin"), &capture);
             write_complete(&directory.join("current.bin"), &capture);

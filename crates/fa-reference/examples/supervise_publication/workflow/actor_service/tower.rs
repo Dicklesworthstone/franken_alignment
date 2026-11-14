@@ -25,7 +25,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; single-request open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -137,8 +137,7 @@ impl<'a> Arguments<'a> {
             || (guarded.is_some() && (!open || (topology.is_none() && governor.is_none())))
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()
-                && (topology.is_some()
-                    || precheck.is_some()
+                && (precheck.is_some()
                     || open != guarded.is_some()
                     || operator.is_none()
                     || requests.as_ref().is_none_or(|requests| requests.len() < 2)))
@@ -211,6 +210,23 @@ where
                     .guarded
                     .expect("governed recovery selection checked before reads"),
             )?;
+            if let Some(path) = selected.topology {
+                let topology = RecoveryTopologySelection::read(path)?;
+                return super::topology::recovery::serve_sequence_governed(
+                    config,
+                    &actor,
+                    &reviewer,
+                    publication.as_ref(),
+                    credibility,
+                    &recovery,
+                    &topology,
+                    selected.generation,
+                    operator.as_ref().expect("independent operator checked before reads"),
+                    &governor,
+                    selected.requests.as_deref().expect("governor schedule checked before reads"),
+                    time,
+                );
+            }
             return super::policy_recovery::serve(
                 config,
                 &actor,
@@ -227,6 +243,21 @@ where
                     .as_ref()
                     .expect("independent operator checked before reads"),
                 &governor,
+                time,
+            );
+        }
+        if let Some(path) = selected.topology {
+            let topology = TopologySelection::read(path)?;
+            return super::series::serve_tower_governed_with_topology(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                selected.requests.as_deref().expect("governor schedule checked before reads"),
+                selected.generation,
+                operator.as_ref().expect("independent operator checked before reads"),
+                &governor,
+                topology,
                 time,
             );
         }

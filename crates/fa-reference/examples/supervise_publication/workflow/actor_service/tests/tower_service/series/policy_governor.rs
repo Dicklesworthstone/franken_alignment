@@ -16,6 +16,8 @@ use std::sync::mpsc;
 mod checked;
 #[path = "policy_governor/recovery.rs"]
 mod recovery;
+#[path = "policy_governor/mediated.rs"]
+mod mediated;
 
 const CHILD_ROOT: &str = "FA_POLICY_GOVERNOR_E2E_ROOT";
 const CHILD_TEST: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::independent_governor_process";
@@ -282,7 +284,7 @@ fn independent_live_governor_preserves_checked_publication_across_policy_promoti
 
 fn governed_pair(checked: bool) {
     let root = Directory::new();
-    let config = configured(&root);
+    let config = mediated::governed_config(&root);
     evidence(&root, &config);
     let publication = checked.then(|| checked::prepare(&root, &config));
     let second_capture = publication.as_ref().map(|(_, bytes)| bytes.clone());
@@ -425,6 +427,9 @@ fn governed_pair(checked: bool) {
         assert!(!source.exists());
         assert!(executed(&raw_exchange(&mut actor, &first)));
         write_complete(&source, source_bytes);
+        // Provision the next worker's exact expected binding independently,
+        // after this fixture observes the original policy promotion.
+        write_complete(&directory.join("helper-epoch"), b"1");
         if let Some(capture) = second_capture {
             write_complete(&directory.join("original.bin"), &capture);
             write_complete(&directory.join("current.bin"), &capture);

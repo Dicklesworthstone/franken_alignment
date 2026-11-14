@@ -235,6 +235,19 @@ impl Settings {
         self.check_host_roles(config, actor, reviewer, operator, requests, 2)
     }
 
+    /// Admit independently selected source and archive paths without opening
+    /// their contents. Missing future source files retain their declared names;
+    /// canonical ancestors still prevent a listener from taking their custody.
+    pub(crate) fn check_custody_paths(&self, paths: &[&Path]) -> Result<(), String> {
+        let socket = resolved(&self.socket)?;
+        for path in paths {
+            if socket == resolved(path)? {
+                return Err("governor socket conflicts with original source or retained checkpoint custody".into());
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn check_learned_host(
         &self,
         config: &Config,
