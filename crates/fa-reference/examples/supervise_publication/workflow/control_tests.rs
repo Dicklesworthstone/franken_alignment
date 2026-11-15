@@ -41,7 +41,6 @@ impl Directory {
             clock().0,
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
-        fs::DirBuilder::new().mode(0o700).create(&path).unwrap();
         fs::DirBuilder::new()
             .mode(0o750)
             .create(path.join("peers"))

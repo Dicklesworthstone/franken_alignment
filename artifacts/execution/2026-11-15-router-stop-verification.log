@@ -1,0 +1,108 @@
+franken_alignment scoped routing / Stop verification
+Date: 2026-11-15 UTC
+
+Scope and provenance
+--------------------
+Executed source base: 8a1abacb4f6cfb90483cde8119f2e248988369f7
+Additional source under test:
+  crates/fa-reference/src/tower/router.rs
+  crates/fa-reference/tests/tower_router.rs
+  crates/fa-reference/tests/tower_router/multiple.rs
+
+The Stop lifetime production change and four lifetime-test functions are in
+8a1abac. The test fixture's redundant second root-directory creation was found
+during independent review after the test-build attempt below and removed in
+the router commit. No executed Stop-test result is claimed.
+
+Concurrent main commits 4c69d1daf6eb079252fa34400de80b2fe7992629 and
+61fffcaa158a6481bf8ccb35fee387ec41bef402 were preserved when constructing the
+final GitHub tree. They do not edit the router or Stop files. The execution
+workspace disconnected before the final combined tree could be rerun.
+
+Installed compiler:
+  nightly-2026-08-31-x86_64-unknown-linux-gnu
+  rustc 1.100.0-nightly (908501772 2026-08-30)
+This is the installed dated toolchain, not the repository's qualified nightly.
+
+Build environment used for executable tests:
+  CARGO_BUILD_JOBS=1
+  CARGO_INCREMENTAL=0
+  CARGO_PROFILE_DEV_DEBUG=0
+  CARGO_PROFILE_TEST_DEBUG=0
+  RUSTFLAGS='-Zunstable-options -Zthreads=1 --jobs-backend=1 -Zcodegen-backend=cranelift -Zhint-mostly-unused=yes'
+  isolated CARGO_HOME and CARGO_TARGET_DIR; --offline --locked
+These are invocation-local compiler settings; repository profiles and gates
+were not changed. All test functions and assertions remained enabled.
+
+Completed checks
+----------------
+cargo check --offline --locked -p fa-reference --lib
+  exit 0; 18.48s; two pre-existing Atomic::fetch_update deprecation warnings.
+
+cargo check --offline --locked -p fa-reference --test tower_router --example supervise_publication
+  exit 0; 46.38s; source/test typechecking and actual example implementation.
+  This check does not execute tests or select the example's cfg(test) harness.
+  The check used RUSTFLAGS='-Zthreads=1'.
+
+Independent source review and scoped rustfmt with skip_children=true completed
+for the changed Rust files. git diff --check passed before the final
+documentation/log additions and the redundant fixture-line removal.
+
+Router execution
+----------------
+Command:
+  cargo test --offline --locked -p fa-reference --test tower_router -- --test-threads=1
+
+Captured terminal result (warning diagnostics omitted from this excerpt):
+warning: `fa-reference` (lib) generated 2 warnings (run `cargo fix --lib -p fa-reference` to apply 2 suggestions)
+    Finished `test` profile [unoptimized] target(s) in 33.69s
+     Running tests/tower_router.rs (/workspace/scratch/f72f13ca37ed/alignment-target-live/debug/build/fa-reference/2290b0488b58a33e/out/tower_router-2290b0488b58a33e)
+
+running 12 tests
+test branch_and_tenant_boundaries_refuse_live_mounts_without_disabling_snapshot_reads ... ok
+test denials_and_malformed_requests_hide_route_presence_and_preserve_native_admission ... ok
+test every_live_verb_and_generation_shadows_conflicting_snapshot_objects_without_fallback ... ok
+test evidence_precheck_and_real_two_key_publication_share_one_router_without_sharing_authority ... ok
+test multiple::explicit_registration_navigation_never_chooses_an_implicit_first_owner ... ok
+test multiple::independent_disclosure_budgets_and_cursor_namespaces_survive_cross_run_queries ... ok
+test multiple::registration_rejects_ambiguous_runs_foreign_tenants_and_excess_mounts_before_native_work ... ok
+test multiple::the_exact_mount_bound_retains_each_original_registration ... ok
+test multiple::two_original_runs_publish_the_same_request_key_without_sharing_tickets_or_ledgers ... ok
+test multiple::unavailable_owner_never_falls_through_to_a_sibling_or_imported_decoy ... ok
+test native_generation_key_and_purpose_refusals_do_not_consume_the_original_snapshot ... ok
+test withdrawn_disclosure_and_closed_owner_keep_native_routes_reserved ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+ROUTER_TEST_EXIT=0
+
+Stop example execution attempt
+------------------------------
+Command:
+  cargo test --offline --locked -p fa-reference --example supervise_publication workflow::control::tests -- --test-threads=1
+
+Captured terminal error heading:
+warning: `fa-reference` (example "supervise_publication" test) generated 6 warnings
+error: could not compile `fa-reference` (example "supervise_publication" test); 6 warnings emitted
+
+The rustc --test process was terminated during executable code generation:
+  (signal: 9, SIGKILL: kill)
+STOP_TEST_EXIT=101
+
+No Stop test executed. There was no passing Stop runtime result, and the
+subsequent fixture correction has not been compiled or executed.
+
+Earlier resource/tool attempts
+------------------------------
+The standard LLVM router executable build and an initial Cranelift build were
+also terminated with SIGKILL before tests ran. After enabling the unused-code
+hint and one backend job, the exact complete router target above passed.
+Intermediate compiler-option probes rejected the removed -Zno-parallel-backend
+option and required -Zunstable-options for --jobs-backend. Only the accepted
+configuration listed above produced the passing test result.
+
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+  could not launch: rch not found (exit 127).
+The qualified-nightly install attempt failed in transport. Clippy and the
+canonical full gate did not run. No qualified RCH, deployment, whole-workspace,
+full dispatcher or Bead acceptance is inferred from these scoped local results.

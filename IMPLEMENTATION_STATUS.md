@@ -1,5 +1,43 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: route multiple original publication owners without shared authority
+
+A host can now mount zero through 64 original same-tenant publication facades
+in one `TowerRouter`. Registration rejects duplicate tenant/run identities even
+when generation, principal, branch or authority differs, as well as foreign
+tenants, branch/live combinations and excess mounts before reading an owner.
+The original single-owner API remains available. Multiple-owner navigation
+requires the exact selected registration; it never implicitly selects a first
+owner or acquires a request ticket.
+
+Each mounted run and request namespace retains its original native route,
+including stale generations, unsupported verbs, lost owners and malformed
+request suffixes. None can fall through to an imported snapshot or sibling
+owner. Request keys, finite precheck grants, journal continuations, source
+frontiers, charges and native ledgers remain independent. Host provisioning must
+still select an authenticated caller's actual run audience; same-tenant membership
+does not create per-run authorization. No fleet-wide transaction or aggregate
+live evidence basis is introduced (plan sections 6.7 and 17.2/17.3; FA-134).
+
+Six new integration functions pair real source-backed, independently reviewed,
+two-key publication in two owners with cross-run ticket, cursor, budget and
+fallback negatives, exact generation selection, duplicate rejection and the
+exact 64-owner bound. All twelve old/new router tests passed locally; source
+and test-target typechecking, scoped rustfmt, whitespace checks and independent
+source review also passed. The actual publication example passed `cargo check`.
+The shared Stop socket fixture now relies on its existing private-directory
+helper once, removing a duplicate creation that would panic before its tests.
+
+Local execution used installed `nightly-2026-08-31` with Cranelift and reduced
+code-generation concurrency. It covered `8a1abac` plus the router increment.
+Concurrent main commits `4c69d1d` and `61fffcaa` are preserved; the final combined
+tree could not be rerun after the execution workspace disconnected. The Stop
+example test build was killed during code generation, so no Stop runtime pass
+is claimed. Qualified-nightly/RCH, Clippy, canonical full-gate, deployment and
+full dispatcher acceptance remain open; no Bead is closed by this scoped result.
+Contract: `docs/TOWER_ROUTER.md`. Evidence and exact commands:
+`artifacts/execution/2026-11-15-router-stop-verification.log`.
+
 ## 2026-11-15: compose native, Tower and recovered topology prechecks
 
 Explicit live precheck selection now connects the native capability to three
@@ -97,12 +135,15 @@ registered-clock and recovery contracts (plan sections 6.5, 8.11 and 16.9;
 FA-014/FA-120), without changing a wire or journal format.
 
 Independent source review, scoped rustfmt with the installed dated nightly and
-Git whitespace checks passed. Example compilation and runtime qualification
-remain pending after an execution-service interruption; no passing runtime
-result, Bead closure or broader qualification is claimed. RCH is unavailable
-in this workspace. The session-lifetime check remains cooperative; it does not
-establish hard real-time preemption of kernel or disk work. Contract:
-`docs/LIVE_STOP_CONTROL.md`.
+Git whitespace checks passed. A later local `cargo check` passed for the actual
+publication example. Its test-harness build was killed during code generation
+before any Stop test ran; runtime qualification, Bead closure and broader
+qualification remain pending. The shared test fixture's duplicate directory
+creation was also removed after source review. RCH is unavailable in this
+workspace. The session-lifetime check remains cooperative; it does not establish
+hard real-time preemption of kernel or disk work. Contract:
+`docs/LIVE_STOP_CONTROL.md`. Execution scope:
+`artifacts/execution/2026-11-15-router-stop-verification.log`.
 
 ## 2026-11-14: recover paired stream-reset custody after terminal drainage
 

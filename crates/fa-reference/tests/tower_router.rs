@@ -35,7 +35,8 @@ use fa_reference::observation_algebra::{
 use fa_reference::round::{Verdict, commitment};
 use fa_reference::strict_json::{self, Json};
 use fa_reference::tower::publication::{
-    CONNECTED_PUBLICATION_VERBS, PublicationLimits, PublicationResponse, PublicationResult, PublicationTower,
+    CONNECTED_PUBLICATION_VERBS, PublicationLimits, PublicationResponse, PublicationResult,
+    PublicationTower,
 };
 use fa_reference::tower::router::{RoutedResponse, TowerRouter};
 use fa_reference::tower::{
@@ -51,6 +52,9 @@ const SNAPSHOT_GENERATION: u64 = 7;
 const MOUNT_GENERATION: u64 = 41;
 const DISCLOSURE: u64 = 81;
 const SOURCE_BYTES: &[u8] = b"PRIVATE-SOURCE-BYTES";
+
+#[path = "tower_router/multiple.rs"]
+mod multiple;
 
 fn imported_basis() -> Basis {
     let declared = ScopedProof::Declared {
@@ -648,7 +652,11 @@ fn every_live_verb_and_generation_shadows_conflicting_snapshot_objects_without_f
                         || (verb == Verb::Resolve && generation.is_none());
                     assert_eq!(
                         native.envelope.reason_code,
-                        Some(if stale { ReasonCode::StaleGeneration } else { ReasonCode::DeniedByPolicy })
+                        Some(if stale {
+                            ReasonCode::StaleGeneration
+                        } else {
+                            ReasonCode::DeniedByPolicy
+                        })
                     );
                 }
             }

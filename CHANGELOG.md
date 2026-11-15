@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-15: mount multiple independent native owners in one Tower router
+
+- Route up to 64 same-tenant original publication owners through the existing
+  bounded request entry point; reject ambiguous run aliases before native work.
+- Add explicit exact-registration request navigation while preserving the
+  existing single-owner API and refusing implicit selection among multiple runs.
+- Preserve each owner's tickets, grants, budgets, cursors and request namespace;
+  lost or stale owners never fall through to siblings or imported snapshot data.
+- Add six real-owner integration functions, including two independent two-key
+  publications using the same request key, quota/cursor isolation and exact bounds.
+- Execute all twelve router tests successfully on the installed dated nightly;
+  record the compiler configuration, preserved concurrent commits and remaining
+  qualified full-gate limits in the execution log and router contract.
+- Correct the existing shared Stop fixture's duplicate private-directory
+  creation. The publication example typechecks, but its test-binary build was
+  killed before execution; no passing Stop runtime result is claimed.
+
 ## 2026-11-15: connect live native, Tower and recovered topology prechecks
 
 - Install explicitly selected exact prechecks on the existing actor Tower
