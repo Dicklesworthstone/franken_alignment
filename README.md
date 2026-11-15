@@ -29,6 +29,16 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The [resident native publication service](docs/RESIDENT_NATIVE_PUBLICATION.md)
+now connects multiple generated Messages and an optional explicit Finish through
+one original decoder, stream, source custodian and journal. Each release needs
+its own authenticated actor submission, fresh helper review and independent
+human approval. A successor starts only after the original executed receipt is
+confirmed and its helper cohort is reaped. One Stop listener and one invocation
+deadline remain in force across the whole sequence. Regression sources cover
+actual fixture inference, cumulative frames, later rejection, Stop, source loss
+and final witness changes; required RCH execution qualification remains pending.
+
 Explicit [live policy prechecks](docs/LIVE_ACTOR_PRECHECK.md) now connect three
 previously separate paths. A Tower actor can discover exact predicates, precheck
 and submit through its existing session, sharing one finite disclosure with the

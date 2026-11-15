@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-15: serve native Message and Finish sequences through one live owner
+
+- Add `serve-native-generated` with an explicit 2–16-entry sequence and optional
+  original checked-publication profile; preflight complete recipes and endpoints.
+- Keep the original decoder, tokenizer, source, numerical history, stream and
+  journal resident while retaining separate actor/helper/human review per release.
+- Require exact selected source intent, Confirmed/Executed receipt and reaped
+  helpers before admitting a successor; reuse only helper-program configuration.
+- Retain the original Stop listener, finite peer allowance and overall deadline
+  through generation, later review, reply grace and handoff.
+- Add real fixture inference/socket regressions and strict profile cases, with
+  paired later refusal, Stop, source loss, wrong-kind intent and witness changes.
+  Independent source review and targeted syntax/format checks are distinct from
+  the required RCH compilation/runtime gate, which remains unavailable.
+
 ## 2026-11-15: expose original operator capability discovery through Tower
 
 - Add a strict operator selector to the existing capabilities verb and a sealed

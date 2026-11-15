@@ -154,9 +154,10 @@ pub(crate) fn policy_governor_command(
 }
 
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    // Learned services own their complete grammar, including a selected
-    // observational Tower endpoint. Ordinary option parsers cannot consume it.
+    // Resident and learned services own their complete grammar, including any
+    // selected Tower endpoint. Ordinary option parsers cannot consume it.
     match args.first().map(String::as_str) {
+        Some("serve-native-generated") => return native::sequence_command(args, credibility),
         Some("serve-learned-generated") => return learned::sequence_command(args, credibility),
         Some("create-learned-generated") => return learned::command(args, credibility),
         _ => {}

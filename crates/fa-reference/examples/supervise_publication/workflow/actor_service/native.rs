@@ -18,6 +18,8 @@ mod qualification;
 mod recipe;
 #[path = "native/recovery.rs"]
 mod recovery;
+#[path = "native/sequence.rs"]
+mod sequence;
 #[cfg(test)]
 #[path = "native/tests.rs"]
 mod tests;
@@ -32,11 +34,16 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{F
 use fa_reference::action::consequence::delivery::persistent::requests::actor::source_wire::inbox::pool::{
     FileActorPool, PoolAttachError, PoolBudget, PoolDriveReport,
 };
+use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_command};
 use std::io::Write;
 use recipe::Inputs;
 
 const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO";
+
+pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
+    sequence::command(args, credibility)
+}
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     let (selected_args, precheck_path) = exact_precheck::take_option(args)?;
@@ -557,26 +564,7 @@ where
                 }
                 // Only a first, unsubmitted complete generation gets a NEW proposal.
                 // An existing request above keeps its target, epoch and deadline.
-                let host = driver.supervisor().host().map_err(debug)?;
-                let progress = host
-                    .decoder_generation_progress(inputs.generation)
-                    .map_err(debug)?;
-                let text = host
-                    .decoder_text_generation(inputs.generation)
-                    .map_err(debug)?;
-                let bytes = text.result().map_err(debug)?.bytes().map_err(debug)?;
-                if bytes.is_empty() || std::str::from_utf8(bytes).is_err() {
-                    return Err("native result is not a nonempty complete UTF-8 message".into());
-                }
-                let source = FileTextMessageRequest {
-                    request: actor.request,
-                    generation: inputs.generation,
-                    generation_revision: progress.generation_revision(),
-                    target: host.inspect().target,
-                    policy_epoch: host.inspect().control.ledger.epoch,
-                    deadline: deadline.logical,
-                };
-                FileGeneratedTextActorPort::encode_message(&source).map_err(debug)?
+                completed_message_proposal(&driver, actor.request, &inputs, &deadline)?
             }
         };
         if let Some(selected) = precheck_selection {
@@ -794,6 +782,36 @@ where
         ));
     }
     Ok(())
+}
+
+/// Project only the fixed source reference of a completed original generation.
+/// Single-release and resident services share these checks and expose no output.
+fn completed_message_proposal(
+    driver: &FileSupervisedDriver,
+    request: u64,
+    inputs: &Inputs,
+    deadline: &Deadline,
+) -> Result<ActorProposal, String> {
+    let host = driver.supervisor().host().map_err(debug)?;
+    let progress = host
+        .decoder_generation_progress(inputs.generation)
+        .map_err(debug)?;
+    let text = host
+        .decoder_text_generation(inputs.generation)
+        .map_err(debug)?;
+    let bytes = text.result().map_err(debug)?.bytes().map_err(debug)?;
+    if bytes.is_empty() || std::str::from_utf8(bytes).is_err() {
+        return Err("native result is not a nonempty complete UTF-8 message".into());
+    }
+    let source = FileTextMessageRequest {
+        request,
+        generation: inputs.generation,
+        generation_revision: progress.generation_revision(),
+        target: host.inspect().target,
+        policy_epoch: host.inspect().control.ledger.epoch,
+        deadline: deadline.logical,
+    };
+    FileGeneratedTextActorPort::encode_message(&source).map_err(debug)
 }
 
 /// The original intent and one-token reducer own all cursor, budget and RNG state.

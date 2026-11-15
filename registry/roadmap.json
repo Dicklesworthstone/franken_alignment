@@ -527,7 +527,7 @@
       "id": "FA-017",
       "gate": "G2",
       "title": "Implement behavioral capture and coverage frontiers",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-007",
         "FA-016"
@@ -543,7 +543,14 @@
       ],
       "owner_role": "systems",
       "estimated_scope": "One independently reviewable work packet; split before implementation if multiple semantics change.",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
+      ],
       "founding_ideas": [
         "FI-A04"
       ]
@@ -765,7 +772,13 @@
       "result_artifacts": [
         "docs/UNICODE_PRETOKENIZATION.md",
         "crates/fa-reference/tests/llama3_bos.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
       ]
     },
     {
@@ -793,7 +806,13 @@
       "result_artifacts": [
         "docs/UNICODE_PRETOKENIZATION.md",
         "crates/fa-reference/tests/llama3_bos.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2625,7 +2644,13 @@
         "docs/PROCESS_LEARNED_PUBLICATION.md",
         "crates/fa-reference/tests/file_process_learned_driver.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
       ],
       "founding_ideas": [
         "FI-A15",

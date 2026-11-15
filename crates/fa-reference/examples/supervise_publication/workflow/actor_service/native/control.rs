@@ -33,6 +33,13 @@ impl Control {
         (self.stop, self.operator)
     }
 
+    /// Retain the SAME original Stop listener across resident request cycles.
+    /// Sharing preserves its credentials, candidate quota and one-use cleanup
+    /// outcome; a later review cannot provision another control allowance.
+    pub(super) fn share_stop(&self) -> StopControl {
+        self.stop.share()
+    }
+
     pub(super) fn checkpoint<F>(
         &mut self,
         driver: &mut FileSupervisedDriver,

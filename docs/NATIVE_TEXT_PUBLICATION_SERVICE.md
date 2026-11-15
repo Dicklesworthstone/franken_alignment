@@ -43,6 +43,17 @@ Each event, new-work transaction and final persistence remains synchronous;
 physical numerical replay may repeat across separate recovery attempts. This is
 not a hard-real-time stop bound or an exactly-once CPU claim.
 
+## Keep a native stream resident across releases
+
+The explicit [`serve-native-generated` sequence](RESIDENT_NATIVE_PUBLICATION.md)
+loads a bounded Message/Finish manifest and retains this same numerical owner,
+source, stream and journal between releases. Every entry still needs its own
+actor submission, original helper review, independent human key and any selected
+final witness check. Handoff requires confirmed execution and reaped helpers;
+Stop and the original invocation deadline remain live throughout. The initial
+sequence command creates a new stream; the single-release forms below retain
+their explicit continuation, recovery, operator and precheck selections.
+
 ## Invocation
 
 ```sh

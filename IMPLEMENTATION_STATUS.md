@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: keep native generated publication resident across Messages and Finish
+
+The explicit `serve-native-generated` command loads a closed, bounded sequence
+of 2–16 selected releases before live setup. Recipes must share the complete
+original decoder, tokenizer and stream configuration; actor request IDs and
+Message generations remain distinct. Finish explicitly retains the preceding
+Message's recipe. Canonical endpoint admission precedes numerical asset loading.
+
+One original native owner retains its decoder/KV/RNG state, source custody,
+journal, cumulative work and stream prefix. Each emitted source reference needs
+an independent authenticated actor submission; the admitted original intent must
+match the selected release before review starts. Every release receives fresh
+process helpers and independent human approval, plus any selected final witness
+check. A successor requires both the original Confirmed/Executed receipt and
+confirmed helper reaping. Only immutable helper-program configuration is reused.
+One original Stop listener and one invocation deadline survive all handoffs.
+
+Regression sources pair actual two-Message-plus-Finish fixture publication with
+later rejection, original Stop at a later human boundary, source loss after a
+confirmed prefix, a valid wrong-kind source substitution and changed publication
+witnesses. Closed-profile cases cover exact immutable identity, finite limits,
+release ordering and canonical endpoint aliases. These are authored acceptance
+sources, not deployment model-quality evidence. Independent source review and
+targeted syntax/format verification are recorded separately from execution.
+The required RCH runner is unavailable; compilation, runtime tests, Clippy and
+qualification remain pending, and no Bead or packet is closed.
+Contract: `docs/RESIDENT_NATIVE_PUBLICATION.md`.
+
 ## 2026-11-15: discover original Tower operator grants without spending them
 
 The existing `capabilities` verb now accepts the distinct closed operator
