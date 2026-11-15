@@ -3767,7 +3767,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/precheck/shared_tower.rs",
         "crates/fa-reference/src/tower/publication/peer.rs",
         "crates/fa-reference/tests/tower_publication_peer/precheck.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/precheck.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/precheck_admission.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/schedule.rs"
       ],
       "founding_ideas": [
         "FI-A13",

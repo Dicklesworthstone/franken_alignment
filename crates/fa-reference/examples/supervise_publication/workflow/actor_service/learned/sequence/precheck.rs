@@ -11,6 +11,7 @@ pub(super) fn check(config: &Config, entries: &[Entry], peers: &PeerProfile)
 {
     // Preserve the original version-one path without adding path observations.
     if entries.iter().all(|entry| entry.precheck.is_none()) { return Ok(()); }
+    precheck::Settings::check_schedule(entries.iter().filter_map(|entry| entry.precheck.as_ref()))?;
     let store = fields::resolve_root(&config.store)?;
     let mut reserved = BTreeSet::from([fields::resolve_root(config.source.path())?]);
     for entry in entries {
@@ -21,11 +22,17 @@ pub(super) fn check(config: &Config, entries: &[Entry], peers: &PeerProfile)
         if let Some(path) = entry.loaded.anchor_output.as_deref() {
             reserved.insert(fields::resolve_root(path)?);
         }
-        let output = match entry.loaded.topology.as_ref() {
-            None => None,
-            Some(topology::Selection::Create(selected)) => selected.acknowledged_output(),
-            Some(topology::Selection::Recover { selection, .. }) => selection.acknowledged_output(),
+        let (inputs, output) = match entry.loaded.topology.as_ref() {
+            None => (Vec::new(), None),
+            Some(topology::Selection::Create(selected)) =>
+                (selected.input_paths().to_vec(), selected.acknowledged_output()),
+            Some(topology::Selection::Recover { selection, .. }) =>
+                (selection.input_paths(), selection.acknowledged_output()),
         };
+        // Include absent future inputs as names, without opening them. A later
+        // disclosure must never occupy the graph, inventory or independently
+        // retained source checkpoint needed by the original owner.
+        for path in inputs { reserved.insert(fields::resolve_root(path)?); }
         if let Some(path) = output { reserved.insert(fields::resolve_root(path)?); }
     }
     let mut disclosed = BTreeSet::new();

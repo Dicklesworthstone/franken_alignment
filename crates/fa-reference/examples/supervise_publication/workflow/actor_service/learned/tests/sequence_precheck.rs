@@ -12,6 +12,9 @@ use fa_reference::action::consequence::oversight::{
 };
 use std::collections::BTreeMap;
 
+#[path = "sequence/precheck_admission.rs"]
+mod admission;
+
 fn document(socket: &Path, index: usize, epoch: u64) -> String {
     format!(r#"{{"schema":"fa.actor-precheck-service/1","policy_disclosure":"exact_predicates","socket":{},"expected_policy_epoch":{epoch},"disclosure_id":{},"query_limit":1,"exchange_limit":8,"candidate_limit":8,"connection_limit":8,"runtime_ms":60000}}"#,
         quote(socket.to_str().unwrap()), 81 + index)

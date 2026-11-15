@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: conserve learned sequence disclosure and source custody
+
+Resident learned sequences now apply the same complete-invocation precheck
+admission as ordinary schedules. Selected grants require distinct disclosure
+identities, and checked aggregate query, exchange, peer-candidate and connection
+allowances cannot multiply the native service ceilings across request handoffs.
+Null rows contribute nothing and the original all-null path remains unchanged.
+One shared loaded-profile validator serves both sequence families.
+
+Before startup, selected disclosure sockets also reserve every independently
+named topology graph, inventory and recovery source checkpoint. The check
+resolves existing parent aliases even for absent future sources, so a later
+socket cannot occupy the input needed by the original authority owner. Recovery
+rejects that collision before its Fence or staging cleanup.
+
+Four added regression functions pair a real three-release topology-mediated
+sequence at every exact aggregate ceiling with oversized allowances, reused
+identities and direct/parent-symlink source collisions during creation and
+recovery. They preserve original human approvals, topology custody, cumulative
+charges and canonical/staged bytes. Independent source review completed; the
+required RCH compiler/test runner is unavailable, so compilation, execution,
+Clippy and full qualification remain pending. No Bead or packet is closed.
+Contract: `docs/RESIDENT_LEARNED_PUBLICATION.md`.
+
 ## 2026-11-15: select bounded prechecks across ordinary Tower request schedules
 
 Ordinary plain and simple-witness checked Tower creation now accepts an explicit

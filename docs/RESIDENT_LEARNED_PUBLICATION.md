@@ -176,9 +176,21 @@ before the first clock observation, original owner or listener. Canonical
 precheck paths must be distinct from one another, all selected actor, human-review
 and Stop paths, the policy source, the entire authority-store subtree, retained
 history output, topology checkpoint output and the optional operator endpoint.
+They must also remain distinct from every selected topology graph, inventory
+and recovery source checkpoint, including future files that do not exist yet.
+Canonical existing parent directories resolve symlink aliases before startup;
+these name checks do not open or refresh the topology sources.
 Existing files and socket paths are never replaced. The actual original policy
 epoch is checked again after owner qualification and before that entry performs
 new numerical generation.
+
+The selected profiles share the same invocation-wide admission ceilings as an
+ordinary precheck schedule: at most 128 queries, 128 exchanges, 1,024 candidate
+connections and 1,024 authenticated connections in total. Checked sums and
+distinct disclosure IDs are required before any clock, listener or recovery
+Fence. Each row still owns its separate finite grant; unused work cannot move
+between rows. Null rows contribute no allowance, and a sequence with no
+selected disclosure retains its original admission behavior.
 
 Each release creates its own explicitly bounded, request-bound precheck grant
 during its original admission phase. Reconnecting to that endpoint does not

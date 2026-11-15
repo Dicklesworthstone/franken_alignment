@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-15: preserve learned sequence precheck budgets and topology inputs
+
+- Apply one shared aggregate disclosure validator to ordinary and learned
+  sequences, retaining the existing native ceilings across every request.
+- Reject repeated disclosure IDs and canonical conflicts with topology graphs,
+  inventories and recovery checkpoints before clocks, listeners or fencing.
+- Add exact-limit real publication and source-custody regression cases,
+  including absent future inputs reached through parent-directory aliases.
+- Complete independent source review; RCH compilation and runtime verification
+  remain unavailable and no acceptance gate is closed.
+
 ## 2026-11-15: precheck each explicitly selected ordinary Tower request
 
 - Add an explicit finite per-request precheck manifest for plain and simple

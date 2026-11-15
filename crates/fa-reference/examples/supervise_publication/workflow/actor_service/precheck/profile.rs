@@ -6,7 +6,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::pr
 use fa_reference::action::consequence::delivery::persistent::requests::actor::MAX_PRECHECK_QUERIES;
 use fa_reference::action::consequence::oversight::actor_peer::MAX_PEER_CONNECTIONS;
 use fa_reference::strict_json::{self, Json, Limits};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
@@ -28,6 +28,39 @@ pub(crate) struct Settings {
 }
 
 impl Settings {
+    /// Admit one finite invocation's complete disclosure allowance. A new
+    /// request may receive its separately selected grant, but cannot multiply
+    /// the native service limits by replenishing them at every handoff.
+    /// This examines only already loaded public profiles, with no I/O.
+    pub(crate) fn check_schedule<'a>(
+        selected: impl IntoIterator<Item = &'a Self>,
+    ) -> Result<(), String> {
+        let mut queries = 0_usize;
+        let mut exchanges = 0_usize;
+        let mut candidates = 0_u64;
+        let mut connections = 0_u64;
+        let mut disclosures = BTreeSet::new();
+        for settings in selected {
+            queries = queries.checked_add(settings.query_limit)
+                .ok_or("precheck schedule query allowance overflow")?;
+            exchanges = exchanges.checked_add(settings.exchange_limit)
+                .ok_or("precheck schedule exchange allowance overflow")?;
+            candidates = candidates.checked_add(settings.candidate_limit)
+                .ok_or("precheck schedule candidate allowance overflow")?;
+            connections = connections.checked_add(settings.connection_limit)
+                .ok_or("precheck schedule connection allowance overflow")?;
+            if queries > MAX_PRECHECK_QUERIES || exchanges > MAX_PRECHECK_EXCHANGES
+                || candidates > MAX_PEER_CONNECTIONS || connections > MAX_PEER_CONNECTIONS
+            {
+                return Err("aggregate precheck schedule allowance exceeds native service limits".into());
+            }
+            if !disclosures.insert(settings.disclosure_id) {
+                return Err("precheck schedule requires distinct disclosure IDs".into());
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn socket_path(&self) -> &Path {
         &self.socket
     }
