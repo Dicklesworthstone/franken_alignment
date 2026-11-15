@@ -177,6 +177,25 @@ pub struct FileSupervisorHoldDiagnosisPort {
     issuer: Weak<()>,
 }
 
+impl FileSupervisorHoldDiagnosisPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_hold_diagnosis",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[(
+                    "remaining_queries",
+                    grant.remaining.get(),
+                )]);
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorHoldDiagnosisPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorHoldDiagnosisPort { .. }")

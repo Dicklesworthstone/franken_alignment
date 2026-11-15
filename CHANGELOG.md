@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-15: expose original operator capability discovery through Tower
+
+- Add a strict operator selector to the existing capabilities verb and a sealed
+  response covering fourteen original native operator grants and their counters.
+- Preserve authentication, exact registration/scope, route and purpose gates;
+  keep revoked grants Withheld, unavailable owners Unknown and exhausted grants
+  Known at zero without consuming native operational allowances.
+- Validate discovery and closed refusals in the operator CLI before output or
+  subsequent requests; reject actor-response substitution and foreign scopes.
+- Add ten native and five CLI regression functions, including real generated,
+  learned and promotion fixtures and four bad-response transport cases.
+- Update operator examples and source-artifact references. Independent source
+  review and Rust parsing completed; required RCH runtime qualification remains
+  pending and no acceptance gate is closed.
+
 ## 2026-11-15: make native text recovery cooperative and interruptible by Stop
 
 - Add an original-owner recovery cursor with exact-predecessor event quanta,

@@ -229,6 +229,31 @@ pub struct FileSupervisorPolicyReplayPort {
     issuer: Weak<()>,
 }
 
+impl FileSupervisorPolicyReplayPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_policy_replay",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[
+                    ("remaining_queries", grant.remaining.get()),
+                    ("case_limit", grant.limits.cases),
+                    ("input_byte_limit", grant.limits.input_bytes),
+                ]);
+                let pages = match &grant.pages {
+                    Some(pages) => Some(pages.try_borrow().ok()?.remaining()),
+                    None => None,
+                };
+                let budget = budget.with("remaining_page_queries", pages);
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorPolicyReplayPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorPolicyReplayPort { .. }")

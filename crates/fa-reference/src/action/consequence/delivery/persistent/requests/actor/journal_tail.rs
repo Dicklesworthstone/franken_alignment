@@ -192,6 +192,25 @@ pub struct FileSupervisorJournalTailPort {
     grant: Weak<Grant>,
 }
 
+impl FileSupervisorJournalTailPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_journal_tail",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[
+                    ("remaining_queries", grant.remaining.get()),
+                    ("events_per_page", grant.events_per_page),
+                ]);
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorJournalTailPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorJournalTailPort { .. }")

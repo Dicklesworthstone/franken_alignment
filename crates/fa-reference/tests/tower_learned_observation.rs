@@ -168,6 +168,68 @@ fn image(root: &Directory) -> Vec<u8> {
 }
 
 #[test]
+fn operator_discovery_on_the_learned_owner_preserves_its_generated_release_and_grants() {
+    use fa_reference::tower::publication::OperatorCapabilityKind;
+
+    let root = Directory::new();
+    let (actor, mut supervisor, _) = create(&root);
+    let mut facade = tower(actor.clone());
+    let (inspection, grant) = supervisor.inspection_port(2).unwrap();
+    facade.set_inspection(Some(inspection)).unwrap();
+    generate(&mut supervisor);
+    observe(&mut supervisor);
+    let generation = supervisor
+        .host()
+        .unwrap()
+        .learned_generation_inspection()
+        .unwrap();
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    let mut discovery = TowerRequest::new("discover-learned-grants", mount(), Verb::Capabilities);
+    discovery.arguments = ReadArguments::OperatorCapabilities;
+    for _ in 0..3 {
+        let response = facade.exchange(
+            &access(true),
+            encode_request(&discovery).unwrap().as_bytes(),
+        );
+        let PublicationResult::OperatorCapabilities(linked) = &response.result else {
+            panic!("expected learned original grant discovery: {response:?}");
+        };
+        let entry = linked
+            .entries()
+            .iter()
+            .find(|entry| entry.kind() == OperatorCapabilityKind::Situation)
+            .unwrap();
+        assert!(entry.route_connected() && entry.purpose_allowed() && entry.configured());
+        assert!(
+            matches!(entry.native(), Some(ActorKnowledge::Known { value, basis })
+            if value.limits()["remaining_queries"] == 2 && basis.journal_revision == state.revision)
+        );
+        assert_eq!(grant.remaining_queries(), 2);
+        assert_eq!(
+            supervisor
+                .host()
+                .unwrap()
+                .learned_generation_inspection()
+                .unwrap(),
+            generation
+        );
+        assert_eq!(supervisor.host().unwrap().inspect(), state);
+        assert_eq!(image(&root), original);
+        assert!(!response.to_json().unwrap().contains("token_ids"));
+    }
+    let ticket = actor
+        .submit(701, LearnedTextRelease::Message, ElapsedTick(100))
+        .unwrap();
+    assert_eq!(
+        actor.poll(&ticket),
+        ActorKnowledge::Pending { request: 701 }
+    );
+    assert_eq!(grant.remaining_queries(), 2);
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 0);
+}
+
+#[test]
 fn learned_observer_follows_original_numerical_intake_and_two_key_publication() {
     let root = Directory::new();
     let (actor, mut supervisor, reviewer) = create(&root);

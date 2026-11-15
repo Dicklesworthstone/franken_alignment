@@ -13,6 +13,7 @@ mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
 mod narrowing;
+mod operator_capabilities;
 mod policy_promotion;
 mod policy_replay;
 mod request_history;
@@ -99,6 +100,11 @@ impl PublicationResponse {
                     )?,
                 )
             }
+            PublicationResult::OperatorCapabilities(linked) => (
+                "operator-capabilities",
+                operator_capabilities::encode(linked, &self.envelope.address,
+                    &self.envelope.operation_id, self.envelope.idempotency_key.as_deref(), &encoder)?,
+            ),
             PublicationResult::Situation(native) => {
                 ("situation", inspection::encode(native, &encoder)?)
             }

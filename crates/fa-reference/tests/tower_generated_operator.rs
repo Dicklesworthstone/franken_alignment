@@ -99,6 +99,88 @@ fn private_data_withheld(response: &PublicationResponse) {
 }
 
 #[test]
+fn operator_discovery_on_original_generated_mounts_spends_no_numerical_or_source_work() {
+    use fa_reference::tower::publication::OperatorCapabilityKind;
+
+    let root = Directory::new();
+    let (actor, mut supervisor, _) = create(&root);
+    let mut observer = PublicationTower::new_generated_observer(
+        mount(),
+        actor.clone(),
+        PublicationLimits::default(),
+    )
+    .unwrap();
+    let (inspection, inspection_grant) = supervisor.inspection_port(2).unwrap();
+    let (narrow, narrow_grant) = supervisor
+        .narrow_port_with_numerical_budget(2, 1, 256, 256)
+        .unwrap();
+    observer.set_inspection(Some(inspection)).unwrap();
+    observer.set_narrow(Some(narrow)).unwrap();
+    let mut discovery = TowerRequest::new("discover-generated-grants", mount(), Verb::Capabilities);
+    discovery.arguments = ReadArguments::OperatorCapabilities;
+    let source = generate(&mut supervisor);
+    observe(&mut supervisor);
+    let numerical = supervisor.host().unwrap().decoder_inspection().unwrap();
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    for _ in 0..3 {
+        let response = observer.dispatch(&access(true, true), discovery.clone());
+        let PublicationResult::OperatorCapabilities(linked) = &response.result else {
+            panic!("expected native generated grant discovery: {response:?}");
+        };
+        let entry = linked
+            .entries()
+            .iter()
+            .find(|entry| entry.kind() == OperatorCapabilityKind::Narrowing)
+            .unwrap();
+        assert!(!entry.route_connected());
+        assert!(entry.purpose_allowed() && entry.configured());
+        assert!(
+            matches!(entry.native(), Some(ActorKnowledge::Known { value, .. })
+            if value.limits()["remaining_queries"] == 2
+                && value.limits()["remaining_numerical_replay_events"] == 256)
+        );
+        assert_eq!(inspection_grant.remaining_queries(), 2);
+        assert_eq!(narrow_grant.remaining_numerical_replay_events(), Some(256));
+        assert_eq!(
+            supervisor.host().unwrap().decoder_inspection().unwrap(),
+            numerical
+        );
+        assert_eq!(supervisor.host().unwrap().inspect(), state);
+        assert_eq!(image(&root), original);
+        let encoded = response.to_json().unwrap();
+        for forbidden in [
+            "\"payload\"",
+            "\"token_ids\"",
+            "\"logits\"",
+            "PRIVATE-SOURCE-BYTES",
+        ] {
+            assert!(!encoded.contains(forbidden));
+        }
+    }
+    let mut actor_discovery = discovery;
+    actor_discovery.arguments = ReadArguments::Capabilities {
+        query: 1,
+        expected_policy_epoch: 0,
+    };
+    assert_eq!(
+        observer
+            .dispatch(&access(true, true), actor_discovery)
+            .envelope
+            .reason_code,
+        Some(ReasonCode::CapabilityUnsupported)
+    );
+    let ticket = actor.submit(&source).unwrap();
+    assert_eq!(
+        actor.poll(&ticket),
+        ActorKnowledge::Pending { request: REQUEST }
+    );
+    assert_eq!(supervisor.host().unwrap().inspect().executions, 0);
+    assert_eq!(inspection_grant.remaining_queries(), 2);
+    assert_eq!(narrow_grant.remaining_operations(), 1);
+}
+
+#[test]
 fn native_observation_preserves_real_generation_and_original_two_key_publication() {
     let root = Directory::new();
     let (actor, mut supervisor, reviewer) = create(&root);

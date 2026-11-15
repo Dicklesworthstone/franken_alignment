@@ -253,6 +253,33 @@ pub struct FileSupervisorPolicyPromotionPort {
     scope: Scope,
     issuer: Weak<()>,
 }
+impl FileSupervisorPolicyPromotionPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_policy_promotion",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[
+                    ("remaining_queries", grant.queries.get()),
+                    ("remaining_operations", grant.operations.get()),
+                    ("replay_event_limit", grant.max_replay_events),
+                ])
+                .with(
+                    "remaining_numerical_replay_events",
+                    grant
+                        .remaining_numerical_replay_events
+                        .as_ref()
+                        .map(Cell::get),
+                );
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorPolicyPromotionPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorPolicyPromotionPort { .. }")

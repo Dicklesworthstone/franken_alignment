@@ -36,6 +36,8 @@ mod journal_tail;
 mod journal_tail_validation;
 #[path = "client/narrowing.rs"]
 mod narrowing;
+#[path = "client/operator_capabilities.rs"]
+mod operator_capabilities;
 #[path = "client/policy_promotion.rs"]
 mod policy_promotion;
 #[path = "client/policy_replay.rs"]
@@ -240,6 +242,7 @@ fn exchange_endpoint(
         narrowing::check_profile(&parsed, &document.request, endpoint.scope)?;
         convening::check_profile(&parsed, &document.request, endpoint.scope)?;
         policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
+        operator_capabilities::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -506,13 +509,27 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,
+            ) || !operator_capabilities::refused_matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
             ) {
                 return Err(invalid());
             }
         }
         (Some("publication-request"), Verb::Propose | Verb::Get) => {}
         (Some("precheck"), Verb::Precheck) => {}
-        (Some("capabilities"), Verb::Capabilities) => {}
+        (Some("capabilities"), Verb::Capabilities)
+            if matches!(&request.arguments, ReadArguments::Capabilities { .. }) => {}
+        (Some("operator-capabilities"), Verb::Capabilities) => {
+            if !operator_capabilities::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
         (Some("situation"), Verb::Situation) => {}
         (Some("request-history"), Verb::Related) => {
             if !request_history::matches(result.get("value").ok_or_else(invalid)?, request) {

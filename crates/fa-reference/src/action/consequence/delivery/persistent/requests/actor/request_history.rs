@@ -96,6 +96,26 @@ pub struct FileSupervisorRequestHistoryPort {
     scope: Scope,
 }
 
+impl FileSupervisorRequestHistoryPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_request_history",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[
+                    ("remaining_queries", grant.remaining.get()),
+                    ("history_event_limit", grant.max_history_events),
+                    ("review_limit", grant.max_reviews),
+                ]);
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorRequestHistoryPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorRequestHistoryPort { .. }")

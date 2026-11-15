@@ -275,6 +275,33 @@ pub struct FileSupervisorAbandonmentPort {
     issuer: Weak<()>,
 }
 
+impl FileSupervisorAbandonmentPort {
+    /// Observe surviving original custody without spending operational work.
+    pub(crate) fn capability_snapshot(&self) -> super::FileOperatorCapabilityObservation {
+        super::capabilities::observe(
+            &self.owner,
+            &self.grant,
+            self.scope,
+            "supervisor_abandonment",
+            |grant| {
+                let budget = super::FileOperatorCapabilityBudget::new(&[
+                    ("remaining_queries", grant.queries.get()),
+                    ("remaining_operations", grant.operations.get()),
+                    ("replay_event_limit", grant.max_replay_events),
+                ])
+                .with(
+                    "remaining_numerical_replay_events",
+                    grant
+                        .remaining_numerical_replay_events
+                        .as_ref()
+                        .map(Cell::get),
+                );
+                Some((self.issuer.clone(), budget))
+            },
+        )
+    }
+}
+
 impl fmt::Debug for FileSupervisorAbandonmentPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("FileSupervisorAbandonmentPort { .. }")

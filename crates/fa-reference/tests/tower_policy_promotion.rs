@@ -231,6 +231,86 @@ fn document(response: &PublicationResponse) -> Json {
 }
 
 #[test]
+fn operator_discovery_preserves_original_campaign_queries_and_the_one_promotion_key() {
+    use fa_reference::tower::publication::OperatorCapabilityKind;
+
+    let root = Directory::new();
+    let (actor, mut supervisor, _, governor, _) = guarded(&root);
+    let (key, _) = approve(&mut supervisor, &governor, same_policy(2));
+    let (mut facade, grant) = granted(actor, &supervisor, key);
+    let mut discovery = TowerRequest::new("discover-campaign-grant", mount(), Verb::Capabilities);
+    discovery.arguments = ReadArguments::OperatorCapabilities;
+    let state = supervisor.host().unwrap().inspect();
+    let original = image(&root);
+    for _ in 0..3 {
+        let response = facade.dispatch(&access(true, true), discovery.clone());
+        let PublicationResult::OperatorCapabilities(linked) = &response.result else {
+            panic!("expected original campaign grant discovery: {response:?}");
+        };
+        let entry = linked
+            .entries()
+            .iter()
+            .find(|entry| entry.kind() == OperatorCapabilityKind::PolicyPromotion)
+            .unwrap();
+        assert!(entry.route_connected() && entry.purpose_allowed() && entry.configured());
+        let Some(ActorKnowledge::Known { value, basis }) = entry.native() else {
+            panic!("expected surviving original promotion custodian");
+        };
+        assert_eq!(basis.journal_revision, state.revision);
+        assert_eq!(value.limits()["remaining_queries"], 32);
+        assert_eq!(value.limits()["remaining_operations"], 1);
+        assert_eq!(grant.remaining_queries(), 32);
+        assert_eq!(grant.remaining_operations(), 1);
+        let encoded = response.to_json().unwrap();
+        for forbidden in [
+            "candidate_policy",
+            "PayloadAtMost",
+            "ExactValue",
+            "PRIVATE-SOURCE-BYTES",
+        ] {
+            assert!(!encoded.contains(forbidden));
+        }
+        assert_eq!(image(&root), original);
+        assert_eq!(supervisor.host().unwrap().inspect(), state);
+    }
+    let proposed = next(&mut facade, OPERATION);
+    assert!(plan(&proposed).can_promote());
+    let completed = facade.dispatch(&access(true, true), action(&proposed));
+    assert_eq!(receipt(&completed).candidate_policy_generation(), 2);
+    assert_eq!(grant.remaining_operations(), 0);
+    let response = facade.dispatch(&access(true, true), discovery.clone());
+    let PublicationResult::OperatorCapabilities(linked) = &response.result else {
+        panic!("expected exhausted original grant observation");
+    };
+    let entry = linked
+        .entries()
+        .iter()
+        .find(|entry| entry.kind() == OperatorCapabilityKind::PolicyPromotion)
+        .unwrap();
+    assert!(
+        matches!(entry.native(), Some(ActorKnowledge::Known { value, .. })
+        if value.limits()["remaining_operations"] == 0)
+    );
+    grant.revoke();
+    let response = facade.dispatch(&access(true, true), discovery);
+    let PublicationResult::OperatorCapabilities(linked) = &response.result else {
+        panic!("expected revoked selection discovery");
+    };
+    let entry = linked
+        .entries()
+        .iter()
+        .find(|entry| entry.kind() == OperatorCapabilityKind::PolicyPromotion)
+        .unwrap();
+    assert!(entry.configured());
+    assert!(matches!(
+        entry.native(),
+        Some(ActorKnowledge::Withheld {
+            authority_required: "supervisor_policy_promotion"
+        })
+    ));
+}
+
+#[test]
 fn approved_promotion_cancels_old_reservations_preserves_unknown_charge_and_new_work_publishes() {
     let root = Directory::new();
     let (actor, mut supervisor, human, governor, proposal) = guarded(&root);

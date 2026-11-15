@@ -2,7 +2,7 @@
 
 On Unix, `fa_reference::tower::publication::PublicationTower` connects sixteen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
-`get`, `precheck`, `capabilities`, and separately granted operator `situation`,
+`get`, `precheck`, actor or operator `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
 separately granted recorded-state `why-held`, and bounded original receipt
 planning/reconciliation, independently granted undispatched-request cancellation
@@ -98,6 +98,80 @@ control mount. The governor stays outside the Tower. Complete native corpus and
 predecessor checks, finite single-operation custody and historical retries remain
 mandatory. This embedding capability does not enable promotion in the ordinary
 server CLI or turn its policy-replay selection into approval.
+
+## Discover the selected original operator capabilities
+
+At the mounted Run address, an authenticated operator can select the existing
+`capabilities` verb with `ReadArguments::OperatorCapabilities`, encoded as
+`"arguments":{"operator":true}`. The selector has exactly that one boolean
+field. It is distinct from the actor's `query`/`expected_policy_epoch` discovery
+below and does not install or widen an exact-policy disclosure. Ordinary actor
+access cannot request this observation. Subject authorization and a supplied
+route generation are checked before any original grant is consulted.
+
+This mode is supported by ordinary, learned and generated observer,
+reconciliation and control mounts. It returns the sealed
+`PublicationResult::OperatorCapabilities` with wire kind
+`operator-capabilities` and schema `fa.operator-capabilities/1`. Its fixed
+fourteen entries describe the mount's original supervisor roles:
+
+| Capability | Native routes | Required caller purpose |
+|---|---|---|
+| `situation` | `situation` | Operator observation |
+| `journal_tail` | `tail` | Operator observation |
+| `request_history` | `related` | Operator observation |
+| `admission_explanation` | `explain` | Operator observation |
+| `review_explanation` | `explain` | Operator observation |
+| `hold_diagnosis` | `why-held` | Operator observation |
+| `resolution` | `next`, `resolve` | `Permit` |
+| `cancellation` | `next`, `resolve` | `Permit` |
+| `abandonment` | `next`, `resolve` | `Permit` |
+| `narrowing` | `next`, `narrow` | `Permit` |
+| `convening` | `next`, `convene` | `Permit` |
+| `fence` | `fence` | `Permit` |
+| `policy_replay` | `policy-replay` | `Experiment` |
+| `policy_promotion` | `next`, `promote` | `Permit` |
+
+`configuration` is a Known observation with `origin: "host_registration"` and
+the exact versioned registration. Each entry separately reports the registered
+verbs, `required_purpose`, `route_connected`, `purpose_allowed`, `installed`
+and the original grant's Knowledge. A selected grant can be installed while
+its route is closed by the mount or its purpose is unavailable to the caller.
+Discovery supplies neither missing condition and offers no executable action.
+
+An installed, surviving grant reports Known finite counters and limits at its
+original owner's scope and journal revision, with `origin:
+"original_live_grant"`. The named values cover its actual remaining query,
+operation, numerical replay or page allowances and applicable event, page,
+history, review or corpus limits. Counters are canonical decimal strings on the
+wire. An exhausted grant remains Known with zero remaining work. Omitted
+limits are `not_observed`, never unlimited. These process-local counters are
+observed beside the journal revision; they are not durable journal state or
+reservations for a later operation.
+
+An uninstalled port is `installed: false` with Withheld grant knowledge. Revoked
+original custody remains `installed: true` with Withheld knowledge and the
+role's exact authority requirement. A busy, lost, storage-faulted or replaced
+original owner is Unknown with `controller_unavailable`. The native observer
+checks the complete scope and private issuer identity; an equal-scope
+replacement or reopened journal cannot supply the old grant's observation.
+
+Discovery never invokes an operational query, spends its allowance, reserves a
+mutation, consumes an admission snapshot, reconstructs numerical history,
+reads a source, observes a clock or writes the journal. Repeated reads still
+consume the live transport's finite exchange, byte, I/O and deadline budgets.
+The response always labels `current_eligibility: "not_observed"`,
+`signed_profile: false` and `effect_authority: false`. Positive counters do not
+establish current predecessors, source freshness, approved review or permission
+to publish. No policy definitions, private inputs, cached operation results or
+keys are disclosed. The original operation must establish its own prerequisites.
+
+The response seals the exact query address, operation ID and idempotency label
+alongside the registration; relabeling those fields refuses encoding. The
+fourteen-entry result fits within the existing bounded response machinery and
+never substitutes a grant counter or registration generation for a global
+Tower budget or control sequence. The authenticated client example and full
+native-scope checks are in [the peer contract](TOWER_PEER.md#discover-the-live-operators-selected-grants).
 
 ## Plan and reconcile an original outcome
 
@@ -212,11 +286,12 @@ facade. A grant from another
 owner is rejected even when every numeric scope field matches.
 
 This constructor has a closed, read-only dispatch profile: an authenticated
-operator may request `situation`, recorded-state `why-held`, historical `explain`,
-or `policy-replay` under
-their independently selected native grants. Ordinary `propose`, request `get`,
-`precheck`, `capabilities` and every other verb are unavailable through this
-profile, including when a host supplies Permit or Experiment tags. Caller
+operator may request `situation`, `tail`, `related`, recorded-state `why-held`,
+historical `explain` or `policy-replay` under their independently selected native
+grants, and operator `capabilities` with the explicit `operator: true` selector.
+Ordinary `propose`, request `get`, `precheck`, actor exact-policy `capabilities`
+and every other verb are unavailable through this profile, including when a
+host supplies Permit or Experiment tags. Caller
 payloads cannot become learned release bytes. These checks precede the shared
 source-admission callback, ticket acquisition and native query work.
 
@@ -260,7 +335,7 @@ connect that owner to the same separately granted operator operations:
 
 | Constructor | Available profile |
 |---|---|
-| `new_generated_observer` | Original inspection, journal tail, request history, admission/completed-review explanation, hold diagnosis and policy comparison |
+| `new_generated_observer` | Operator capability discovery, original inspection, journal tail, request history, admission/completed-review explanation, hold diagnosis and policy comparison |
 | `new_generated_reconciliation_operator` | The same reads and explicitly granted original receipt reconciliation through `next` / `resolve` |
 | `new_generated_control_operator` | The same operations plus separately granted undispatched cancellation, Unknown abandonment, target narrowing and admission fencing |
 
@@ -814,11 +889,17 @@ ID, query label, policy epoch and observed elapsed tick remain in the original
 Revoked disclosure stays Withheld, unavailable/stale source eligibility stays
 Unknown, and a mismatched policy epoch stays a native Stale observation.
 
-The `capabilities` body similarly embeds the unchanged original
+The actor `capabilities` body similarly embeds the unchanged original
 `PrecheckCapabilitiesResponse`, including its own schema and informational
 marker. It retains `FilePrecheckBasis` and the original remaining-query count;
 neither becomes a global Tower budget or control sequence. An inconsistent
 publicly reconstructed response fails its original encoder's correlation checks.
+
+The separate `operator-capabilities` body seals the original host-registration
+configuration and each selected grant's native scope/revision. A Known
+configuration can contain Withheld or Unknown grant observations. Neither the
+configuration nor a surviving grant asserts current operation eligibility;
+the explicit disclosure and authority markers remain part of the closed schema.
 
 The `policy-replay` body preserves its sealed original policy comparison and
 native journal revision, control sequence, policy generation/epoch and recorded
@@ -883,7 +964,7 @@ precheck extension. Runtime execution and that extension's compiler check were
 blocked by the recorded shared-memory limit; those earlier checks do not qualify
 the later source.
 
-The capabilities increment adds eight real-source regression functions for
+The actor capabilities increment adds eight real-source regression functions for
 permitted discovery, shared allowances, unchanged source/journal state,
 generation/scope/refusal admission, owner identity/lifetime, revocation and exact
 native encoding. It updates the exhaustive router test to recognize the newly
@@ -907,3 +988,14 @@ counter preservation, foreign-owner installation and revocation. Centralized
 Rust 2024 parsing/formatting checks and source review completed. Compilation,
 Clippy, runtime execution and the canonical gate remain pending because RCH is
 unavailable; these checks do not establish deployment qualification.
+
+The operator capability-discovery increment adds ten authored regression
+functions: seven cover original finite budgets, actual two-key publication,
+custodian exhaustion/revocation, owner borrow/loss/replacement/storage failure,
+scope/role/generation admission, strict selectors and sealed bounded output;
+three use the actual promotion, generated-text and learned-release fixtures.
+Those positive fixtures retain the original promotion key and numerical/source
+state through discovery and then enter the original native operation. Independent
+source review and dated Rust 2024 syntax/format checks completed. Compilation,
+Clippy, runtime execution and the canonical RCH gate remain pending; this
+source increment is not deployment qualification or a signed assurance profile.

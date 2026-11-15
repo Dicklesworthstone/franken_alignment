@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: discover original Tower operator grants without spending them
+
+The existing `capabilities` verb now accepts the distinct closed operator
+selector `{"operator":true}`. Authenticated operator access, the exact original
+run registration and its generation are checked before disclosure. The response
+uses `operator-capabilities` and `fa.operator-capabilities/1`; actor policy
+capabilities retain their existing selector and meaning.
+
+One bounded response describes fourteen native operator routes: situation,
+journal tail, request history, admission/review explanation, hold diagnosis,
+resolution, cancellation, abandonment, narrowing, convening, Fence, policy
+replay and promotion. Connected route, allowed purpose and installed adapter
+are distinct from the original live grant observation. Each Known grant carries
+its full original scope, journal revision and remaining finite counters. A
+revoked grant is Withheld; an unavailable, borrowed, faulted or replaced owner
+is Unknown; an exhausted surviving grant remains Known with zero allowance.
+Discovery does not retain the original grant or consume native query,
+operation, page or numerical replay budgets. Normal peer-exchange limits still
+apply. Current effect eligibility and unlisted limits remain unobserved, and
+the response supplies neither a signed profile nor authority.
+
+The operator CLI validates the closed ordered descriptor vocabulary,
+registration, per-kind budgets and every Known grant's full independently
+configured scope before printing or sending a later document. A relabelled
+actor response or a discovery payload disguised as a generic refusal cannot
+bypass validation; genuine refusals retain their own exact non-success shape.
+
+Ten new native integration cases and five CLI regression functions cover
+ordinary, generated, learned observer, reconciliation and control mounts,
+original custody loss/revocation/exhaustion, strict decoding and authenticated
+multi-document rejection. Independent source reviews and rustfmt parsing
+completed. RCH is unavailable, so compilation, runtime execution, Clippy and
+qualification remain pending; FA-049 and FA-134 stay in progress. Contracts:
+`docs/TOWER_PUBLICATION.md` and `docs/TOWER_PEER.md`.
+
 ## 2026-11-15: checkpoint original native text recovery before live custody
 
 Native generated-text source recovery now exposes a consuming cooperative

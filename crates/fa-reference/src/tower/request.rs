@@ -354,6 +354,13 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
             })
         }
         Verb::Capabilities => {
+            if args.contains_key("operator") {
+                fields(args, &["operator"])?;
+                if field(args, "operator")? != &Json::Bool(true) {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::OperatorCapabilities);
+            }
             fields(args, &["query", "expected_policy_epoch"])?;
             Ok(ReadArguments::Capabilities {
                 query: decimal(args, "query")?,
@@ -605,6 +612,7 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
             validate_proposal(proposal)?;
         }
+        (Verb::Capabilities, ReadArguments::OperatorCapabilities) => {}
         (Verb::Capabilities, ReadArguments::Capabilities { query, .. }) => {
             if *query == 0 {
                 return Err(TowerDecodingError::MalformedRequest);
@@ -1044,6 +1052,7 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             ("query", quote(&query.to_string())),
             ("proposal", encode_proposal(proposal)),
         ]),
+        ReadArguments::OperatorCapabilities => object_json(&[("operator", "true".to_owned())]),
         ReadArguments::Capabilities {
             query,
             expected_policy_epoch,

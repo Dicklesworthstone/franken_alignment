@@ -10,6 +10,8 @@ mod abandonment;
 pub use abandonment::{LinkedAbandonment, LinkedAbandonmentNext};
 mod cancellation;
 mod capabilities;
+mod operator_capabilities;
+pub use operator_capabilities::{LinkedOperatorCapabilities, OperatorCapabilityEntry, OperatorCapabilityKind};
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
 mod convening;
 pub use convening::{LinkedConvene, LinkedConveneNext};
@@ -121,6 +123,7 @@ pub enum PublicationResult {
     Request(WireResponse),
     Precheck(PrecheckWireResponse),
     Capabilities(PrecheckCapabilitiesResponse),
+    OperatorCapabilities(LinkedOperatorCapabilities),
     Situation(FileInspectionResult),
     SituationLinks(LinkedSituation),
     JournalTail(LinkedJournalTail),
@@ -464,7 +467,8 @@ impl PublicationTower {
                     | Verb::Explain
                     | Verb::WhyHeld
                     | Verb::PolicyReplay
-            ) {
+            ) && !(request.verb == Verb::Capabilities
+                && request.arguments == ReadArguments::OperatorCapabilities) {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
         }
@@ -482,7 +486,9 @@ impl PublicationTower {
                     | Verb::Next
                     | Verb::Resolve
                     | Verb::PolicyReplay
-            ) && !(self.control_operator
+            ) && !(request.verb == Verb::Capabilities
+                && request.arguments == ReadArguments::OperatorCapabilities)
+                && !(self.control_operator
                 && matches!(
                     request.verb,
                     Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote
@@ -605,6 +611,9 @@ impl PublicationTower {
         }
 
         if request.verb == Verb::Capabilities {
+            if request.arguments == ReadArguments::OperatorCapabilities {
+                return self.dispatch_operator_capabilities(access, request);
+            }
             return self.dispatch_capabilities(request);
         }
 

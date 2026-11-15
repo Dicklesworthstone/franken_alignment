@@ -124,6 +124,71 @@ frame, byte, deadline and I/O limits remain independent. See
 for exact request grammar, cache custody, validation scope and partial-output
 semantics.
 
+## Discover the live operator's selected grants
+
+The separately authenticated operator endpoint accepts the existing
+`capabilities` verb with exactly `"arguments":{"operator":true}`. Save this
+complete request as `OPERATOR_CAPABILITIES_JSON`, using the actual printed Run
+address and registration:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-selected-operator-grants",
+  "address": "fa://1/run/3@41",
+  "verb": "capabilities",
+  "arguments": {"operator": true},
+  "idempotency_key": null
+}
+```
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE OPERATOR_CAPABILITIES_JSON
+```
+
+The host must already have selected `--operator-profile` and its native grants.
+The profile's socket and kernel peer-credential checks remain required; the
+request does not confer operator access. This mode also works through the
+operator endpoints on the original learned and native generated services.
+It does not enable actor exact-policy discovery on those restricted mounts or
+provide ordinary actor intake.
+
+The response kind is `operator-capabilities`, with closed schema
+`fa.operator-capabilities/1`. Its Known `configuration` reports exactly fourteen
+descriptors for the original supervisor roles, each with registered verbs,
+required purpose, mount-route availability, caller-purpose availability,
+installation status and native grant Knowledge. The
+[native discovery contract](TOWER_PUBLICATION.md#discover-the-selected-original-operator-capabilities)
+lists those roles and their routes. An installed grant can have a closed route
+or disallowed purpose; none of these observations is a recommendation to act.
+
+Known grant values carry the complete original native scope and acknowledged
+journal revision, plus only the finite counters and limits explicitly named.
+An exhausted grant remains Known with zero work. A revoked selected grant is
+Withheld, while a missing installation is also Withheld with `installed: false`.
+An unavailable, mutably borrowed, poisoned or replaced original owner is Unknown.
+An equal-scope replacement cannot substitute its state for the old custodian.
+Omitted limits and current execution eligibility remain explicitly
+`not_observed`; `signed_profile` and `effect_authority` are always false.
+
+Before emitting a complete reply, the client checks the closed schema, exact
+fourteen-role ordering, route/purpose types, role-specific limit names, native
+Knowledge variants, registration and request correlation. It additionally binds
+every Known native scope to all six fields of the independently loaded operator
+profile: tenant, principal, run, branch, authority and purpose. A response with
+the right tenant/run but another principal, branch or authority is rejected.
+Ordinary refusals remain refusals; relabeling a success or changing its declared
+scope cannot bypass these checks. The client sends no automatic follow-up,
+mutation, reconnect or retry after discovery.
+
+Reading this configuration spends no original inspection, explanation,
+resolution, policy, mutation, numerical replay or page allowance. It reads no
+policy definition or source, consumes no actor admission snapshot and changes
+no native state. The live connection, exchange, frame, byte, I/O and deadline
+bounds still apply. A successful exchange means the explicit observation was
+validated, not that a listed operation is currently permitted. Current source,
+review, predecessor and publication checks remain with the original operation.
+
 ## Preserve topology enforcement through Tower admission
 
 ```sh

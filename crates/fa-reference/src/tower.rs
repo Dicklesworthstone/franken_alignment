@@ -300,6 +300,8 @@ pub enum ReadArguments {
         query: u64,
         expected_policy_epoch: u64,
     },
+    /// Original operator grant discovery; separate from actor policy disclosure.
+    OperatorCapabilities,
     /// A separately granted comparison over the original owner's complete
     /// retained corpus. The campaign key identifies one exact historical cut;
     /// it neither installs the candidate nor grants publication authority.
