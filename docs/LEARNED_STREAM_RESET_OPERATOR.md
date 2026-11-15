@@ -441,7 +441,9 @@ An intent already interrupted by Fence or Stop stays interrupted.
 
 If the original reset completed but its exports were lost, and an admission Stop
 was subsequently acknowledged but its exports were also lost, the old source and
-history pair precedes both operations. Recover that exact terminal cut with:
+history pair precedes both operations. The same pair remains usable after original
+terminal `StopProgress` records have drained or retained its liabilities. Recover
+that exact terminal cut with:
 
 ```text
 supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
@@ -462,9 +464,12 @@ The sealed native `FileStoppedStreamResetRecovery` first proves that the matchin
 Stop already exists in the locked canonical history. The original complete
 guarded replay then verifies the exact profile, reset intent, incident frontier,
 policy, source inventory, credential epoch and independent floors. Only the
-selected reset completion, admission Stop and recovery Fence suffix is accepted.
-A missing or changed Stop, changed reset expectation, unrelated time/source work
-or later settlement `StopProgress` refuses this repair mode.
+selected reset completion, admission Stop, recovery Fence and subsequent original
+`StopProgress` suffix is accepted. Terminal progress requires the matching Stop
+before it, whether that Stop is in the retained prefix or the later suffix. The
+full original replay still validates each progress event and its clock semantics.
+A missing or changed Stop, changed reset expectation, progress before Stop, or
+unrelated time/source work refuses this repair mode.
 
 Confirmation uses the original exact Stop retry. It appends zero reset, Stop,
 Fence, clock or source events and never returns a live owner or reset finalizer.
@@ -475,14 +480,17 @@ Dropping an incomplete or Ready cursor confirms nothing and does not clean it.
 Both acknowledged archive exports are attempted before reporting, even if one
 fails or the original deadline has elapsed. The command emits the existing
 `fa.admission-stop/1` report with `appended_events: 0`, the original Stop receipt,
-and its remaining liabilities. It does not attempt settlement. Failed output or
-retention returns a nonzero diagnostic without repeating either operation. Keep
+and its current remaining liabilities, including the results of any already
+recorded native drainage. It does not acquire a new settlement clock or attempt
+another drain. Failed output or retention returns a nonzero diagnostic without
+repeating either operation. Keep
 the original paired archives and choose new output paths for a deliberate retry.
 A newly retained exact terminal pair also supports a zero-event repeat.
 
 The generic terminal checkpoint recovery path remains available for its original
-Stop/Fence-only successors. This dedicated mode supplies the extra independently
-selected reset identity needed to recover a compound reset/Stop suffix.
+Stop/Fence/StopProgress successors. This dedicated mode supplies the extra
+independently selected reset identity needed to recover a compound
+reset/Stop/StopProgress suffix.
 
 ## Source and verification
 
@@ -506,8 +514,12 @@ authenticated Stop arriving at Ready both before numerical completion and after
 an earlier completion whose exports were lost. These are
 authored source regressions. The terminal repair cases additionally cover
 missing or mismatched Stop refusal, original canonical-byte confirmation,
-incomplete and dropped replay, independent floors, zero-event retries from old
-and new custody pairs, output races, deadlines, and the actual executable grammar.
+incomplete and dropped replay, independent floors, zero-event retries from old,
+stopped and progressed custody pairs, actual native StopProgress event deltas,
+wrong Stop ordering and full-request binding, backward drain clocks rejected by
+original semantic replay, unrelated work after drainage, output races, deadlines,
+and the actual executable grammar. These empty-effect terminal fixtures do not
+establish settlement behavior for external unknown liabilities.
 Runtime execution and type checking remain pending
 under the required RCH runner.
 This increment does not close FA-108 or establish a production restart grade.

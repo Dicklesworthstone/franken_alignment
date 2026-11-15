@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-14: recover stream-reset custody through acknowledged cleanup
+
+- Recover paired history and topology/source-work archives after the original
+  stream reset, matching Stop and subsequent native StopProgress drainage.
+- Preserve exact original Stop identity, guarded replay, canonical confirmation,
+  source expenditure and charged liabilities; recovery adds no journal events.
+- Cover old and updated archive pairs, exact retries and invalid suffixes with
+  native regression source. Independent source review is complete; compilation,
+  runtime, formatting, Clippy and full qualification remain unexecuted.
+
 ## 2026-11-14: reject foreign-scope capability installation
 
 - Bind fresh precheck, journal-tail, narrowing and convening grants to the full

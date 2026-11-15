@@ -86,8 +86,10 @@ impl TopologyCheckpoint {
     /// Retain the original source work when an authenticated admission Stop wins
     /// over stream-reset completion. The native stopped result binds the selected
     /// Stop; any preceding suffix may contain only this reset and recovery Fence.
-    /// This also preserves custody if an earlier completion outlived its export.
-    /// No live owner, observer, new source read or numerical restart is produced.
+    /// This also preserves custody if an earlier completion outlived its export,
+    /// including original StopProgress records after that exact Stop. A retained
+    /// cut may already include Stop; its full request must still match the sealed
+    /// result. No new drain, source read or numerical restart is performed.
     pub fn after_stream_reset_admission_stop(&self, profile: &FileOversightProfile,
         identity: &Path, history: &FileAdmissionStoppedHistory,
         intent: &FileLearnedResetIntent, first_incident_sequence: u64,
@@ -102,10 +104,22 @@ impl TopologyCheckpoint {
         self.check_stream_reset_prefix(profile, identity, &events, intent, first_incident_sequence)?;
         let after = usize::try_from(self.history.revision()).map_err(|_| Error::Limit)?;
         let request = progress.receipt.request();
-        let mut stopped = false;
+        let original = events[..after].iter().rev().find_map(|event| match event {
+            Event::Core(BaseEvent::Stop(original)) => Some(*original), _ => None,
+        });
+        if let Some(original) = original
+            && original != request {
+            return Err(if original.operation == request.operation {
+                Error::Binding
+            } else {
+                Error::Duplicate
+            }.into());
+        }
+        let mut stopped = original.is_some();
         for event in &events[after..] {
             match event {
                 Event::Core(BaseEvent::Stop(original)) if *original == request => stopped = true,
+                Event::Core(BaseEvent::StopProgress(_)) if stopped => {},
                 Event::Core(BaseEvent::Fence) => {},
                 Event::Decoder(DecoderEvent::Learned(LearnedEvent::Checkpoint(
                     CheckpointEvent::StreamReset { operation, .. },
@@ -124,6 +138,7 @@ impl TopologyCheckpoint {
     // when this exact stream reset completed before the selected Stop. Unlike
     // reset completion, this admission REQUIRES a matching Stop already in the
     // original locked history; it cannot create a first Stop or another Fence.
+    // Existing StopProgress is admissible only after the exact selected Stop.
     // Full guarded semantic replay still validates every reset/terminal witness.
     pub(in super::super::super::super) fn stopped_stream_reset_successor_available(
         &self, profile: &FileOversightProfile, identity: &Path, events: &[Event],
@@ -157,6 +172,7 @@ impl TopologyCheckpoint {
                     stopped = Some(*request);
                 }
                 Event::Core(BaseEvent::Fence) if completed || stopped.is_some() => {}
+                Event::Core(BaseEvent::StopProgress(_)) if stopped.is_some() => {}
                 _ => return Err(Error::Stale),
             }
         }

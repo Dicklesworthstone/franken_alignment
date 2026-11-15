@@ -1,6 +1,6 @@
 //! Real command repair of a reset/Stop cut whose paired exports were lost.
 use super::*;
-use super::native_terminal::stopped_case;
+use super::native_terminal::{progressed_case, stopped_case};
 use std::cell::Cell;
 
 fn arguments(root: &Root, case: &SourceCase) -> Vec<String> {
@@ -22,9 +22,10 @@ fn confirmed(bytes: &[u8]) {
 
 #[test]
 fn terminal_command_repairs_lost_custody_and_retries_the_new_pair_without_new_events() {
-    for completed in [false, true] {
+    for (completed, progressed) in [(false, false), (true, false), (false, true), (true, true)] {
         let root = Root::new();
-        let case = stopped_case(&root, completed);
+        let case = if progressed { progressed_case(&root, completed).0 }
+            else { stopped_case(&root, completed) };
         let args = arguments(&root, &case);
         let canonical = disk(&case.case);
         let state = snapshot(&case.case);

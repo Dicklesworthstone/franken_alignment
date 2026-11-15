@@ -141,8 +141,11 @@ impl FileStreamResetTopologyRecovery {
 
 /// The original complete guarded replay, restricted to confirming a matching
 /// Stop already recorded after the independently selected stream-reset intent.
-/// This repairs paired custody after completion and Stop exports were both lost.
-/// Exact source bytes/work and every independent guard remain mandatory.
+/// This repairs paired custody after completion and Stop exports were both lost,
+/// including already-recorded StopProgress after the exact selected Stop. The
+/// original replay validates those drain records and retains their current
+/// observations; this capability cannot run another drain. Exact source
+/// bytes/work and every independent guard remain mandatory.
 ///
 /// The pre-replay admission proves that Stop is already recorded. Its native
 /// exact retry therefore acknowledges the same history without adding reset,
@@ -216,7 +219,8 @@ impl FileStoppedStreamResetRecovery {
     /// Confirm only the original native Stop already proved by admission and
     /// full guarded replay. Native canonical-byte revalidation and staging
     /// confirmation still must succeed before any acknowledged history escapes.
-    /// No additional Stop, Fence, clock, reset audit or source work occurs.
+    /// No additional Stop, Fence, clock, reset audit or source work occurs. Any
+    /// existing terminal progress is reflected in the same stopped observation.
     ///
     /// Pair the sealed result with the original source checkpoint through
     /// TopologyCheckpoint::after_stream_reset_admission_stop, then independently

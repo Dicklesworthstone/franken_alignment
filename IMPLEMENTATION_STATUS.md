@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: recover paired stream-reset custody after terminal drainage
+
+The recovery-only stream-reset capability now carries original topology and
+source-work custody across the selected acknowledged Stop and its later
+StopProgress cleanup records. A retained pair at the reset intent or at the
+matching stopped cut can recover the same current terminal history after
+exports were lost. Cleanup before the selected Stop, another Stop identity,
+ordinary time/source/numerical work and mismatched reset or independent guards
+remain inadmissible.
+
+The original complete guarded learned replay and native canonical-byte
+confirmation remain mandatory. Recovery issues no live owner or observer,
+performs no new source observation, numerical reset or drain, and appends no
+reset, Stop, Fence or clock event. Actual terminal state, spent/unknown liability,
+source expenditure and monotone recovery floors come from the same native
+history; export failure cannot undo it.
+
+Four new native regressions cover actual pending/completed reset, Stop and
+StopProgress histories; old/stopped/progressed retained pairs; exact retries;
+full Stop identity and ordering; malformed backwards drain clocks; and ordinary
+work after drainage. The existing real command regression now also covers both
+progressed histories, including paired exports and executable retries. These
+empty-effect fixtures do not establish external Unknown settlement behavior.
+Independent source review is recorded with this change. The execution
+environment disconnected during the session; the available RCH installation had
+no workers and no running daemon. No compilation, runtime test, rustfmt, Clippy
+or full-gate pass is claimed, and the related FA-014/FA-108 work remains open.
+Contract: `docs/LEARNED_STREAM_RESET_OPERATOR.md`.
+
 ## 2026-11-14: require complete scope when mounting native capabilities
 
 Fresh precheck, journal-tail, narrowing and held-review convening grants now

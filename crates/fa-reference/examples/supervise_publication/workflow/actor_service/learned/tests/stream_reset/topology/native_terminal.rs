@@ -3,9 +3,9 @@
 use super::*;
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::{
-    StopRequest,
+    StopProgress, StopRequest,
     persistent::{
-        JournalError,
+        FileDeliverySnapshot, JournalError,
         observed::{
             guarded::mediated::{
                 learned::FileMediatedLearnedRecovery,
@@ -292,4 +292,214 @@ fn an_unrelated_time_event_after_native_stop_cannot_repair_older_source_custody(
         &expected(&case, &case.saved)).err(), Some(Error::Stale.into()));
     assert_eq!(disk(&case.case), canonical);
     assert!(path.is_file());
+}
+
+
+/// Build an acknowledged StopProgress through the ORIGINAL live native method.
+/// The ordinary guarded recovery Fence is also retained in the suffix. The
+/// recovery feature under test neither creates these events nor exports a pair.
+pub(super) fn progressed_case(root: &Root, completed: bool)
+    -> (SourceCase, TopologyCheckpoint, FileDeliverySnapshot, StopProgress)
+{
+    progressed_case_with(root, completed, |_| {})
+}
+
+fn progressed_case_with(root: &Root, completed: bool,
+    after_progress: impl FnOnce(&mut FileOversight))
+    -> (SourceCase, TopologyCheckpoint, FileDeliverySnapshot, StopProgress)
+{
+    let case = stopped_case(root, completed);
+    let stopped = ready(&case, &case.saved).finish_admission_stop().unwrap();
+    let retained_stop = successor(&case, &case.saved, &stopped);
+    let request = stopped.progress().receipt.request();
+    let stopped_revision = stopped.snapshot().revision;
+    drop(stopped);
+    let mut run = raw(&case, &retained_stop, &expected(&case, &retained_stop)).unwrap()
+        .require_recovery_reserve(RecoveryReserve::terminal()).unwrap();
+    while run.progress().status == FileLearnedRecoveryStatus::Replaying {
+        run.advance(run.progress().replayed_events, 1).unwrap();
+    }
+    let (mut host, _roles) = run.finish().unwrap();
+    assert_eq!(host.revision(), stopped_revision + 1, "the original recovery Fence");
+    let before_progress = host.revision();
+    assert_eq!(host.inspect().control.ledger.elapsed, Some(ElapsedTick(1000)));
+    let sweep = host.progress_stop(before_progress, ElapsedTick(1001)).unwrap();
+    assert_eq!(host.revision(), before_progress + 1, "an actual native StopProgress");
+    assert_eq!(sweep.progress.receipt.request(), request);
+    assert_eq!(sweep.progress, host.stop_progress().unwrap());
+    assert_eq!(host.inspect().control.ledger.elapsed, Some(ElapsedTick(1001)));
+    let observed = host.inspect();
+    let progress = sweep.progress;
+    after_progress(&mut host);
+    drop(host);
+    (case, retained_stop, observed, progress)
+}
+
+#[test]
+fn native_terminal_progress_repairs_old_and_stopped_pairs_without_another_event() {
+    for completed in [false, true] {
+        let root = Root::new();
+        let (case, retained_stop, observed, progress) = progressed_case(&root, completed);
+        let canonical = disk(&case.case);
+        let original_source = fs::read(root.0.join("source-1.bin")).unwrap();
+        assert_eq!(observed.revision, case.case.before.revision + if completed { 6 } else { 4 });
+        remove_live_inputs(&root);
+        for saved in [&case.saved, &retained_stop] {
+            let path = staging(&case);
+            drop(ready(&case, saved));
+            assert_eq!(disk(&case.case), canonical);
+            assert!(path.is_file(), "Ready must not acknowledge a previous drain");
+            let stopped = ready(&case, saved).finish_admission_stop().unwrap();
+            assert_eq!(stopped.appended_events(), 0);
+            assert_eq!(stopped.snapshot(), &observed);
+            assert_eq!(stopped.progress(), &progress);
+            assert_eq!(stopped.history_anchor().revision(), observed.revision);
+            assert_eq!(disk(&case.case), canonical);
+            assert!(!path.exists());
+            let next = successor(&case, saved, &stopped);
+            unchanged_source(&case.saved, &next);
+            assert_eq!(next.history_anchor(), stopped.history_anchor());
+            let mut bytes = Vec::new();
+            next.write_to(&mut bytes, MAX_TOPOLOGY_CHECKPOINT_BYTES).unwrap();
+            let imported = TopologyCheckpoint::read_trusted(
+                &mut Cursor::new(bytes), MAX_TOPOLOGY_CHECKPOINT_BYTES).unwrap();
+            assert_eq!(imported, next);
+            let retry = ready(&case, &imported).finish_admission_stop().unwrap();
+            assert_eq!(retry.appended_events(), 0);
+            assert_eq!(retry.snapshot(), &observed);
+            assert_eq!(retry.progress(), &progress);
+            assert_eq!(successor(&case, &imported, &retry), next);
+        }
+        assert_eq!(disk(&case.case), canonical);
+        assert_eq!(fs::read(root.0.join("source-1.bin")).unwrap(), original_source);
+        let record = FileOversight::read_learned_reset_result(&case.case.config.store,
+            &case.case.config.profile, &case.case.loaded.generation, 900).unwrap();
+        match (completed, record.record()) {
+            (false, FileLearnedResetRecord::Pending(pending)) => {
+                assert!(pending.interrupted);
+                assert_eq!(pending.intent, case.case.request.intent);
+            }
+            (true, FileLearnedResetRecord::Completed { intent, result: Ok(receipt) }) => {
+                assert_eq!(intent, &case.case.request.intent);
+                assert!(receipt.control.restored);
+                assert_eq!(receipt.control.incident_count, 1);
+            }
+            other => panic!("terminal progress repair changed reset semantics: {other:?}"),
+        }
+    }
+}
+
+// The ORIGINAL canonical codec uses u32 big-endian record lengths, then the
+// Core tag and base-event tag. Assert the native fixture's exact tail before
+// perturbing a single boundary; these helpers do not supply a successful event.
+fn terminal_tail(bytes: &[u8]) -> usize {
+    let start = bytes.len().checked_sub(56).unwrap();
+    assert_eq!(&bytes[start..start + 6], &[0, 0, 0, 26, 0, 11]);
+    assert_eq!(&bytes[start + 30..start + 36], &[0, 0, 0, 2, 0, 9]);
+    assert_eq!(&bytes[start + 36..start + 42], &[0, 0, 0, 2, 0, 9]);
+    assert_eq!(&bytes[start + 42..start + 48], &[0, 0, 0, 10, 0, 12]);
+    assert_eq!(&bytes[start + 48..], &1001_u64.to_be_bytes());
+    start
+}
+
+#[test]
+fn terminal_progress_repair_requires_stop_before_progress_and_the_full_original_request() {
+    for completed in [false, true] {
+        let root = Root::new();
+        let (case, retained_stop, _, _) = progressed_case(&root, completed);
+        let canonical = disk(&case.case);
+        let tail = terminal_tail(&canonical);
+        let path = staging(&case);
+        let store = case.case.config.store.join("delivery.bin");
+        // Reorder only original framed records: progress cannot precede Stop,
+        // even though a matching Stop appears later in the same suffix.
+        let mut reordered = canonical[..tail].to_vec();
+        reordered.extend_from_slice(&canonical[tail + 42..]);
+        reordered.extend_from_slice(&canonical[tail..tail + 42]);
+        fs::write(&store, &reordered).unwrap();
+        assert_eq!(begin_with(&case, &case.saved, &case.case.request, 900,
+            &expected(&case, &case.saved)).err(), Some(Error::Stale.into()));
+        assert_eq!(disk(&case.case), reordered);
+        assert!(path.is_file());
+        // Replace only the later recovery Fence with a same-operation Stop
+        // whose sequence or epoch differs. Both old and already-stopped cuts
+        // must reject this before replay rather than treating the nonce alone
+        // as proof of the selected Stop.
+        for field in [14_usize, 22] {
+            let mut changed_stop = canonical[tail..tail + 30].to_vec();
+            let original = u64::from_be_bytes(changed_stop[field..field + 8].try_into().unwrap());
+            changed_stop[field..field + 8].copy_from_slice(&original.checked_add(1).unwrap().to_be_bytes());
+            let mut changed = canonical[..tail + 36].to_vec();
+            changed.extend_from_slice(&changed_stop);
+            changed.extend_from_slice(&canonical[tail + 42..]);
+            fs::write(&store, &changed).unwrap();
+            for saved in [&case.saved, &retained_stop] {
+                assert_eq!(begin_with(&case, saved, &case.case.request, 900,
+                    &expected(&case, saved)).err(), Some(Error::Binding.into()));
+            }
+            assert_eq!(disk(&case.case), changed);
+            assert!(path.is_file());
+        }
+        fs::write(&store, &canonical).unwrap();
+        for saved in [&case.saved, &retained_stop] {
+            for operation in [0, 901] {
+                assert!(begin_with(&case, saved, &case.case.request, operation,
+                    &expected(&case, saved)).is_err());
+            }
+        }
+        assert_eq!(disk(&case.case), canonical);
+        assert!(path.is_file());
+        assert_eq!(ready(&case, &case.saved).finish_admission_stop().unwrap().appended_events(), 0);
+        assert_eq!(disk(&case.case), canonical);
+    }
+}
+
+#[test]
+fn terminal_progress_repair_replays_the_original_drain_clock_semantics() {
+    for completed in [false, true] {
+        let root = Root::new();
+        let (case, retained_stop, observed, _) = progressed_case(&root, completed);
+        let canonical = disk(&case.case);
+        terminal_tail(&canonical);
+        let path = staging(&case);
+        // Keep a well-framed, correctly ordered StopProgress but move its tick
+        // behind the original elapsed time. Structural admission must succeed;
+        // only the full original semantic replay may reject this history.
+        let mut changed = canonical.clone();
+        let tick = changed.len() - 8;
+        changed[tick..].copy_from_slice(&999_u64.to_be_bytes());
+        fs::write(case.case.config.store.join("delivery.bin"), &changed).unwrap();
+        for saved in [&case.saved, &retained_stop] {
+            let mut run = begin(&case, saved);
+            assert!(drive(&mut run).is_err());
+            assert!(run.finish_admission_stop().is_err());
+            assert_eq!(disk(&case.case), changed);
+            assert!(path.is_file());
+        }
+        fs::write(case.case.config.store.join("delivery.bin"), &canonical).unwrap();
+        let stopped = ready(&case, &case.saved).finish_admission_stop().unwrap();
+        assert_eq!(stopped.appended_events(), 0);
+        assert_eq!(stopped.snapshot(), &observed);
+        assert_eq!(disk(&case.case), canonical);
+        assert!(!path.exists());
+    }
+}
+
+#[test]
+fn terminal_progress_repair_refuses_unrelated_time_even_after_a_valid_drain() {
+    for completed in [false, true] {
+        let root = Root::new();
+        let (case, retained_stop, observed, _) = progressed_case_with(&root, completed, |host| {
+            host.observe_time(host.revision(), ElapsedTick(1002)).unwrap();
+        });
+        let canonical = disk(&case.case);
+        let path = staging(&case);
+        assert_eq!(snapshot(&case.case).revision, observed.revision + 1);
+        for saved in [&case.saved, &retained_stop] {
+            assert_eq!(begin_with(&case, saved, &case.case.request, 900,
+                &expected(&case, saved)).err(), Some(Error::Stale.into()));
+        }
+        assert_eq!(disk(&case.case), canonical);
+        assert!(path.is_file());
+    }
 }
