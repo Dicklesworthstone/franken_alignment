@@ -371,3 +371,41 @@ fn malformed_tower_schedules_and_mixed_profiles_refuse_before_reading_files() {
         assert_eq!(super::super::command(&args, None).unwrap_err(), expected);
     }
 }
+
+#[test]
+fn scheduled_precheck_creation_keeps_all_selected_options_in_either_pair_order() {
+    for checked in [false, true] {
+        for auxiliary in [false, true] {
+            for reverse in [false, true] {
+                let mode = if checked { "serve-create-checked" } else { "serve-create" };
+                let mut args: Vec<_> = [mode, "config", "actor", "reviewer"]
+                    .into_iter().map(str::to_owned).collect();
+                if checked { args.push("witness".into()); }
+                let mut options = vec![
+                    [FLAG, "41"],
+                    ["--requests", "7,8"],
+                    ["--precheck-schedule", "schedule.json"],
+                ];
+                if auxiliary {
+                    options.extend([
+                        ["--topology-profile", "topology.json"],
+                        ["--operator-profile", "operator.json"],
+                    ]);
+                }
+                if reverse { options.reverse(); }
+                args.extend(options.into_iter().flatten().map(str::to_owned));
+                let selected = Arguments::parse(&args).unwrap();
+                assert!(!selected.open);
+                assert_eq!(selected.generation, 41);
+                assert_eq!(selected.requests, Some(vec![7, 8]));
+                assert_eq!(selected.precheck_schedule, Some(Path::new("schedule.json")));
+                assert!(selected.precheck.is_none());
+                assert_eq!(selected.publication, checked.then(|| Path::new("witness")));
+                assert_eq!(selected.topology, auxiliary.then(|| Path::new("topology.json")));
+                assert_eq!(selected.operator, auxiliary.then(|| Path::new("operator.json")));
+                assert!(selected.guarded.is_none());
+                assert!(selected.governor.is_none());
+            }
+        }
+    }
+}

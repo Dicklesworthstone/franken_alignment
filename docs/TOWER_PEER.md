@@ -49,8 +49,9 @@ opening their files. The grammar never silently selects a different protocol.
 Existing native actor commands retain their current mode.
 
 By default, the host grants only its configured tenant's control-ledger reads
-and existing actor-intake purpose. An explicit `--precheck-profile` also installs
-the original exact-predicate disclosure described below. The actor session gains
+and existing actor-intake purpose. An explicit `--precheck-profile` or a selected
+`--precheck-schedule` entry also installs the original exact-predicate disclosure
+described below. The actor session gains
 no operator status, experiment context or supervisor authority. Unselected
 operations return ordinary Tower refusals. A caller cannot add grants to JSON.
 
@@ -258,8 +259,9 @@ existing plain witness profile. Recovery requires the independently retained
 guarded history and exact `fa.mediated-submit/2` source checkpoint; its selected
 request must be absent from the recovered journal. Set the precheck profile's
 expected policy epoch to the recovered owner's epoch, including recovery fences.
-Precheck cannot be combined with a schedule or live governor. This ordinary
-Tower composition also excludes native text, generated/learned owners and
+The single `--precheck-profile` option cannot be combined with a schedule or
+live governor. This ordinary Tower composition also excludes native text,
+generated/learned owners and
 stronger witness profiles.
 
 Initial topology certification completes before the precheck endpoint is
@@ -330,6 +332,20 @@ execution order. Its first key must equal the actor profile's `request`.
 Malformed schedules refuse before configuration reads; all scheduled actor,
 reviewer and Stop socket bindings are checked before creating the actor socket
 or publication store.
+
+Ordinary `serve-create` and `serve-create-checked` with the plain witness profile
+may additionally select `--precheck-schedule PRECHECK_SCHEDULE`. This create-only
+manifest names a profile or explicit `null` for every request; all profiles,
+cumulative disclosure bounds and future socket collisions are checked before
+startup. Each selected entry's native socket and existing Tower session share
+one finite native query allowance. Each entry's disclosure retires before
+review; a later handoff installs only its explicitly selected grant, and a null
+entry inherits none.
+The original topology and operator options can also be selected. This schedule
+option excludes open/recovery, governed services and `--precheck-profile`;
+the existing guarded single-new-request recovery option described above remains
+available. See [scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md) for the
+closed grammar, profile selection and grant lifecycle.
 
 The service uses the original [sequential actor lifecycle](SEQUENTIAL_ACTOR_SERVICE.md)
 with one authority owner and one Tower session. Tickets and cumulative candidate,

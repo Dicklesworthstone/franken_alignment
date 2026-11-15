@@ -1,5 +1,51 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: select bounded prechecks across ordinary Tower request schedules
+
+Ordinary plain and simple-witness checked Tower creation now accepts an explicit
+`--precheck-schedule` alongside `--requests`. The closed
+`fa.actor-precheck-schedule/1` manifest must select every original request key in
+order, with an existing v1/v2/v3 precheck profile or an explicit null. All profiles
+are admitted once before clock, source-content, listener or store work and stay
+immutable through handoff. Missing/extra rows, duplicate disclosure IDs and
+aggregate query, exchange, candidate or connection allowances beyond the native
+single-service limits refuse before startup.
+
+Each selected new row receives its own original finite native disclosure only
+after the preceding request's helpers are confirmed reaped and its independent
+Stop listener exists. Stop remains first before bootstrap and every ingress
+turn. The same original owner, actor connection/session, topology custody,
+consequence ledger and global deadline span the whole schedule. Native framing
+enters source preparation only for a complete selected proposal: idle sockets,
+partial frames and precheck queries do not append owner events. Actual admission
+still reacquires fresh evidence and requires original helper and human approval
+and all selected witness and final topology checks.
+
+Each row shares the same exact-only weak grant with its original Tower actor
+session; native and Tower queries spend one allowance, and full-policy contents
+remain confined to the explicitly selected native endpoint. Their original
+transport allowances stay separate. Retirement before review or on Stop, error
+or timeout revokes both transports; handoff and service exit withdraw the Tower
+copy. Reconnects and later rows cannot replenish its spent allowance. Null rows
+create no disclosure or additional precheck bootstrap. When a disclosure is selected,
+canonical preflight includes all future actor/reviewer/Stop/operator and selected
+precheck sockets, the authority store subtree, source and original topology
+inputs and checkpoint output, including parent-symlink aliases. Recovery,
+policy-governed creation, richer checked profiles and the single-request
+precheck flag remain excluded from this new composition.
+
+Regression sources cover real consecutive effects on one actor connection, all
+three disclosure profiles, immutable admitted later profiles, exhausted queries,
+fresh-source and human-rejection controls, null rows, Stop retirement, aggregate
+bounds, future path aliases and unsupported selections. Additional command cases
+exercise positive option orderings, shared native/Tower query exhaustion and
+checked topology-supervised publication. Integration preserves the concurrent
+native-generated and single-request recovered-topology precheck capabilities.
+Independent source review is complete. The executor remained disconnected and
+the available RCH setup had no remote workers or running daemon. No compilation, runtime test, rustfmt,
+Clippy or full-gate pass is claimed; no Bead acceptance is closed. Contract:
+`docs/SCHEDULED_ACTOR_PRECHECK.md`.
+
 ## 2026-11-15: route multiple original publication owners without shared authority
 
 A host can now mount zero through 64 original same-tenant publication facades

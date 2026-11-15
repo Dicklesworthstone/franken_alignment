@@ -568,3 +568,6 @@ fn recorded_tower_requests_cannot_acquire_a_new_precheck_disclosure() {
     assert_eq!(disk.executions, 1);
     assert_eq!(disk.control.ledger.charged, 7);
 }
+
+#[path = "precheck/schedule.rs"]
+mod schedule;

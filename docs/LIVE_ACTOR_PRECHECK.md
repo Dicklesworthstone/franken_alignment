@@ -21,10 +21,11 @@ supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE
 supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --precheck-profile PRECHECK_PROFILE
 ```
 
-The ordinary precheck option is final after positional arguments. Existing open
-modes can also use their independent credibility activation option. Ordinary
-request schedules, multi-peer, receipt-only, native-transport topology and
-standalone `create-generated` combinations remain unsupported. Native-text and
+The ordinary `--precheck-profile` option is final after positional arguments.
+Existing open modes can also use their independent credibility activation option.
+With this single-profile option, ordinary request schedules, multi-peer,
+receipt-only, native-transport topology and standalone `create-generated`
+combinations remain unsupported. Native-text and
 learned release selections have the explicit integrations below. An already
 recorded selected request remains observation/reconciliation-only: requesting a
 new disclosure for it is refused, without a source read or new grant. Its existing
@@ -47,8 +48,11 @@ sidecar has a full-policy profile, Tower receives only exact checks and
 capability data; policy definitions and literals remain unavailable through that
 mount. Retirement revokes both views without replacing the Tower session or its
 retained request tickets. Actual Tower submission still reacquires source
-evidence and performs both reviews. The request-sequence option remains
-incompatible with precheck disclosure.
+evidence and performs both reviews. This single-profile option cannot be
+combined with `--requests`. New ordinary Tower creation schedules use the
+separate `--precheck-schedule PRECHECK_SCHEDULE` contract for explicitly
+selected per-request disclosure; see
+[scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md).
 See [the Tower composition](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
 
 Explicit single-request Tower `serve-create` and `serve-create-checked` can also
@@ -85,8 +89,9 @@ inventory inputs, the evidence source and authority store are checked for the
 relevant canonical path collisions before recovery starts. An alias through a
 different parent spelling does not permit the precheck listener to replace
 custody. Actual submission and publication retain their fresh evidence, helper,
-human, final topology and checked-witness gates. Ordinary schedules and
-live-governor compositions remain incompatible with precheck disclosure.
+human, final topology and checked-witness gates. These single-request recovery
+forms do not accept `--requests` or a live governor. The separate
+`--precheck-schedule` selection applies only to new ordinary Tower creation.
 
 The actor and precheck profiles are public connection context. The private
 supervisor Config, evidence, journal and independent reviewer roles must not be

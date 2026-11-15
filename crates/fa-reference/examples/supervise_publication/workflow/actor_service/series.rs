@@ -121,6 +121,7 @@ where
         None,
         None,
         None,
+        None,
         time,
     )
 }
@@ -152,6 +153,7 @@ where
         options,
         Some(generation),
         operator_settings,
+        None,
         None,
         time,
     )
@@ -411,6 +413,45 @@ where
         Some(generation),
         operator_settings,
         Some(topology),
+        None,
+        time,
+    )
+}
+
+/// Explicit independently selected disclosures for new ordinary requests only.
+/// The original source, actor session, topology and deadline survive every row.
+pub(super) fn serve_tower_prechecked<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: Option<&operator::Settings>,
+    topology: Option<TopologySelection>,
+    prechecks: &precheck::schedule::Schedule,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    if generation == 0
+        || operator_settings.is_some_and(|settings| settings.policy_promotion.is_some())
+    {
+        return Err("scheduled prechecks require an ordinary Tower creation without a governor".into());
+    }
+    // Richer checked profiles must never lose a producer/feed/wait/joint gate.
+    publication.map(PublicationProfile::simple_limits).transpose()?;
+    serve_ingress(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        Options { requests, open: false, credibility: None },
+        Some(generation),
+        operator_settings,
+        topology,
+        Some(prechecks),
         time,
     )
 }
@@ -424,6 +465,7 @@ fn serve_ingress<F>(
     tower_generation: Option<u64>,
     operator_settings: Option<&operator::Settings>,
     topology_selection: Option<TopologySelection>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -443,6 +485,15 @@ where
     }
     actor.check_host(&config)?;
     reviewer_profile.check_host(&config)?;
+    if let Some(schedule) = prechecks {
+        if open || tower_generation.is_none() {
+            return Err("scheduled prechecks require a new ordinary Tower owner".into());
+        }
+        schedule.check_host(
+            &config, actor, reviewer_profile, requests, operator_settings,
+            topology_selection.as_ref(),
+        )?;
+    }
     let topology_publication = if let Some(selection) = &topology_selection {
         if open || tower_generation.is_none() {
             return Err(
@@ -507,7 +558,8 @@ where
             (host, reviewer, None, None)
         }
     };
-    serve_ready_ingress(
+    let (port, driver) = host.into_supervised_driver();
+    serve_ready_driver_selected(
         config,
         actor,
         reviewer_profile,
@@ -520,10 +572,14 @@ where
         tower_generation,
         operator_settings,
         socket,
-        host,
+        port,
+        driver,
         reviewer,
         topology,
         OwnerStart::Ordinary,
+        None,
+        None,
+        prechecks,
         deadline,
         time,
         |host, source, _succeeded| {
@@ -634,6 +690,37 @@ where
 }
 
 pub(super) fn serve_ready_driver_with_governor<F, R>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    tower_generation: Option<u64>,
+    operator_settings: Option<&operator::Settings>,
+    socket: BoundSocket,
+    port: Port,
+    driver: FileSupervisedDriver,
+    reviewer: super::super::FileHumanReviewer,
+    topology: Option<FileDriverTopology>,
+    owner_start: OwnerStart,
+    early_control: Option<super::super::control::Control>,
+    governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
+    deadline: Deadline,
+    time: F,
+    retain: R,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
+{
+    serve_ready_driver_selected(
+        config, actor, reviewer_profile, publication, options, tower_generation,
+        operator_settings, socket, port, driver, reviewer, topology, owner_start,
+        early_control, governor, None, deadline, time, retain,
+    )
+}
+
+fn serve_ready_driver_selected<F, R>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
@@ -649,6 +736,7 @@ pub(super) fn serve_ready_driver_with_governor<F, R>(
     owner_start: OwnerStart,
     mut early_control: Option<super::super::control::Control>,
     governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     deadline: Deadline,
     mut time: F,
     retain: R,
@@ -705,6 +793,7 @@ where
         completed.try_reserve_exact(requests.len()).map_err(debug)?;
         let mut activated = false;
         let mut frames_seen = 0_usize;
+        let mut sidecar: Option<precheck::Service> = None;
         // A reconciled history has no live admission to revoke merely because an
         // observer disconnected or timed out. The first new scheduled request ends
         // that observational mode, retaining ordinary error containment thereafter.
@@ -721,6 +810,11 @@ where
                     early_control = None;
                 }
                 ingress.select(request);
+                if prechecks.is_some() {
+                    // A null row inherits no predecessor disclosure. Clearing
+                    // the facade never changes the original actor session.
+                    ingress.set_precheck(None)?;
+                }
                 deadline.check(time())?;
                 let recorded = {
                     let host = driver.supervisor().host().map_err(debug)?;
@@ -777,6 +871,32 @@ where
                         // fallback to unqualified weights. Historical retries skip it.
                         host.check_credibility().map_err(debug)?;
                     }
+                    if let Some(settings) = prechecks.and_then(|schedule| schedule.selected(request)) {
+                        // The original preceding request is already reaped. Its
+                        // disclosure was retired before review; this row explicitly
+                        // selects its own finite grant and one additional source
+                        // bootstrap. Stop always gets the first scheduling turn.
+                        let control = early_control.as_mut().expect("selected precheck Stop control");
+                        if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
+                            return Ok(());
+                        }
+                        if let Some(service) = &mut operator {
+                            service.checkpoint_driver(&mut driver);
+                        }
+                        if control.native_stop(&mut driver, &mut time)? {
+                            return Ok(());
+                        }
+                        let mut selected_actor = actor.clone();
+                        selected_actor.request = request;
+                        sidecar = Some(precheck::Service::start(
+                            settings, &selected_actor, reviewer_profile, &mut config,
+                            &mut driver, &deadline, &mut time,
+                        )?);
+                        // Mount this same weak exact-only port once. Both
+                        // transports spend the row's original native allowance;
+                        // native wire and actor exchange limits stay separate.
+                        ingress.set_precheck(sidecar.as_ref().and_then(precheck::Service::port))?;
+                    }
                     loop {
                         deadline.check(time())?;
                         if early_control
@@ -796,6 +916,18 @@ where
                         {
                             return Ok(());
                         }
+                        let sidecar_retired = if let Some(service) = &mut sidecar {
+                            service.checkpoint(&driver, time());
+                            service.port().is_none()
+                        } else {
+                            false
+                        };
+                        if prechecks.is_some() && sidecar_retired {
+                            // The sole custodian is already revoked. Remove the
+                            // facade once without reissuing or reinstalling it.
+                            drop(sidecar.take());
+                            ingress.set_precheck(None)?;
+                        }
                         frames_seen = frames_seen.saturating_add(ingress.admit_sequence(
                             &mut driver,
                             &completed,
@@ -813,6 +945,15 @@ where
                             Err(error) => return Err(debug(error)),
                         }
                         pause(actor.poll_ms);
+                    }
+                    // Native revision invalidation is immediate during actual
+                    // source/admission work. No precheck processing interleaves
+                    // there; explicitly revoke before any helper/human review.
+                    if let Some(mut service) = sidecar.take() {
+                        service.retire();
+                    }
+                    if prechecks.is_some() {
+                        ingress.set_precheck(None)?;
                     }
                     let status = driver
                         .supervisor()
@@ -977,6 +1118,24 @@ where
             }
             Ok(())
         })();
+        // Also revoke on Stop, source/bootstrap errors, timeout or transport
+        // failure before original stop/drain and terminal reply grace.
+        if let Some(mut service) = sidecar.take() {
+            service.retire();
+        }
+        let work = if prechecks.is_some() {
+            // Revocation above remains effective even if facade removal fails.
+            // Preserve the original workflow failure while reporting cleanup.
+            match (work, ingress.set_precheck(None)) {
+                (Err(error), Err(retirement)) => {
+                    Err(format!("{error}; retire precheck facade: {retirement}"))
+                }
+                (Err(error), _) => Err(error),
+                (Ok(()), result) => result,
+            }
+        } else {
+            work
+        };
         let mut automatic_cleanup_attempted = false;
         let mut failure = work.err().map(|error| {
             if observational

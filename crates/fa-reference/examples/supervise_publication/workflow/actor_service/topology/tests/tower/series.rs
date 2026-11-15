@@ -567,3 +567,6 @@ fn topology_tower_schedule_rejects_later_checkpoint_socket_aliases_before_setup(
         }
     }
 }
+
+#[path = "series/precheck_schedule.rs"]
+mod precheck_schedule;

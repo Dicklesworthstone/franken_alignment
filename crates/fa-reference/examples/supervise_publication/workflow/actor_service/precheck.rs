@@ -6,6 +6,8 @@ mod profile;
 pub(super) use profile::Settings;
 #[path = "precheck/client.rs"]
 pub(super) mod client;
+#[path = "precheck/schedule.rs"]
+pub(super) mod schedule;
 
 use super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,

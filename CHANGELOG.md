@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-15: precheck each explicitly selected ordinary Tower request
+
+- Add an explicit finite per-request precheck manifest for plain and simple
+  checked Tower creation, with optional original topology and operator control.
+- Admit all profile selections, aggregate finite allowances and future socket,
+  source, topology and store identities before live startup.
+- Share each row's finite native grant with the original Tower connection,
+  retire both views before review, and preserve independent Stop, fresh evidence
+  and final effect gates across the same owner and actor session.
+- Add consecutive-publication and causal refusal regression sources plus operator
+  examples. Independent source review is complete; compilation, runtime,
+  formatting, Clippy and full qualification remain unexecuted.
+
 ## 2026-11-15: mount multiple independent native owners in one Tower router
 
 - Route up to 64 same-tenant original publication owners through the existing

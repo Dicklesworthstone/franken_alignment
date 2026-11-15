@@ -78,8 +78,15 @@ distinct from recovery archives, other endpoints and source inputs, and outside
 the authority store, including canonical aliases.
 
 Ordinary unguarded open remains outside this topology composition. Explicit
-Tower schedules retain their existing cumulative source contract; scheduled and
-live-governor services cannot select precheck. Creation continues to refuse
+Tower schedules retain their existing cumulative source contract. Ordinary
+Tower creation schedules can additionally select independent per-request
+disclosures with `--precheck-schedule PRECHECK_SCHEDULE`; see
+[scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md). Their complete manifest
+and future endpoint/checkpoint collisions are checked before startup, and each
+actual publication still needs fresh evidence and the final topology cut.
+The schedule option excludes recovery, governed services and the single
+`--precheck-profile` option. Guarded single-new-request recovery retains its
+`--precheck-profile` support described above. Creation continues to refuse
 credibility activation; guarded reopening applies the original option only to
 new work. No continuous watcher, OS-containment proof, new authority, journal
 format, effect adapter or executor is added. The recovered-precheck sources and

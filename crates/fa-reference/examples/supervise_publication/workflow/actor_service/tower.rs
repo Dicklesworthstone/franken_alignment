@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator and original topology, but never with recovery, governor or --precheck-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -37,6 +37,7 @@ struct Arguments<'a> {
     generation: u64,
     requests: Option<Vec<u64>>,
     precheck: Option<&'a Path>,
+    precheck_schedule: Option<&'a Path>,
     operator: Option<&'a Path>,
     topology: Option<&'a Path>,
     guarded: Option<&'a Path>,
@@ -71,6 +72,7 @@ impl<'a> Arguments<'a> {
         let mut generation = None;
         let mut requests = None;
         let mut precheck = None;
+        let mut precheck_schedule = None;
         let mut operator = None;
         let mut topology = None;
         let mut guarded = None;
@@ -106,6 +108,12 @@ impl<'a> Arguments<'a> {
                     }
                     precheck = Some(Path::new(&pair[1]));
                 }
+                "--precheck-schedule" if precheck_schedule.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    precheck_schedule = Some(Path::new(&pair[1]));
+                }
                 "--operator-profile" if operator.is_none() => {
                     if pair[1].is_empty() || pair[1].starts_with("--") {
                         return Err(USAGE.into());
@@ -133,7 +141,10 @@ impl<'a> Arguments<'a> {
                 _ => return Err(USAGE.into()),
             }
         }
-        if (requests.is_some() && precheck.is_some())
+        if (precheck_schedule.is_some()
+            && (requests.is_none() || open || guarded.is_some()
+                || governor.is_some() || precheck.is_some()))
+            || (requests.is_some() && precheck.is_some())
             || (guarded.is_some() && (!open || (topology.is_none() && governor.is_none())))
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()
@@ -154,6 +165,7 @@ impl<'a> Arguments<'a> {
             generation,
             requests,
             precheck,
+            precheck_schedule,
             operator,
             topology,
             guarded,
@@ -316,6 +328,21 @@ where
     }
     let topology = selected.topology.map(TopologySelection::read).transpose()?;
     if let Some(requests) = selected.requests.as_deref() {
+        if let Some(path) = selected.precheck_schedule {
+            let schedule = super::precheck::schedule::Schedule::read(path, requests)?;
+            return super::series::serve_tower_prechecked(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                requests,
+                selected.generation,
+                operator.as_ref(),
+                topology,
+                &schedule,
+                time,
+            );
+        }
         if let Some(topology) = topology {
             return super::series::serve_tower_with_topology(
                 config,
