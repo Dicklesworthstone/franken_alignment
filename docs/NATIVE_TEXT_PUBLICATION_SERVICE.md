@@ -50,9 +50,11 @@ loads a bounded Message/Finish manifest and retains this same numerical owner,
 source, stream and journal between releases. Every entry still needs its own
 actor submission, original helper review, independent human key and any selected
 final witness check. Handoff requires confirmed execution and reaped helpers;
-Stop and the original invocation deadline remain live throughout. The initial
-sequence command creates a new stream; the single-release forms below retain
-their explicit continuation, recovery, operator and precheck selections.
+Stop and the original invocation deadline remain live throughout. The sequence
+command creates a new stream or explicitly recovers a new remaining suffix with
+`--after-message PREVIOUS_REQUEST`, including a singleton Finish of the original
+prefix. The single-release forms below retain their own pending-generation
+recovery, operator and precheck selections.
 
 ## Invocation
 

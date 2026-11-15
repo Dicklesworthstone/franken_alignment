@@ -50,6 +50,8 @@ use fixture::{Root, inputs, profiles};
 
 #[path = "tests/checked.rs"]
 mod checked;
+#[path = "tests/recovery.rs"]
+mod recovery_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 

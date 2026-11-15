@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: recover a remaining native sequence through one original owner
+
+The resident native command now accepts explicit `--after-message` recovery of
+1–16 new selected releases, including a singleton Finish with the retained
+Message's exact recipe. Creation keeps its separate 2–16-entry admission.
+Closed CLI/profile checks reject ambiguous options, predecessor/request reuse
+and incompatible recipes before live setup.
+
+The first suffix actor and original Stop are bound before one cooperative native
+replay. The first entry's conjoined logical/wall deadline also covers replay and
+Ready. Successful ordinary recovery adds one original Fence; the same numerical
+owner, fresh reviewer and Stop session then serve the whole suffix. No entry
+reopens the store. Before source refresh, new inference or reference output,
+the complete suffix is checked for recorded request IDs, existing generations,
+remaining stream capacity and the exact original confirmed predecessor. These
+historical checks run after the Fence and do not promise byte-identical history
+on selection failure. Unknown effects and original numerical/effect spending
+retain their existing native meaning and liabilities.
+
+Fresh source evidence, original resume and independent helper/human approvals
+still gate each new release. Finish adds no inference. Recorded approvals and
+deadlines are never reused, and stale credibility qualification refuses without
+implicit activation. This uses the existing source-bound native recovery scope;
+it adds no independent latest-head or anti-rollback anchor. Authenticated Stop
+during replay cannot fall through to live work.
+
+Seven new runtime regression functions cover recovered publication and Finish
+without resampling, original Stop and deadline at final replay, whole-suffix
+history/capacity refusal and live-source loss. Four new profile regression
+functions pair explicit recovery admission with strict mode/identity refusals.
+Independent source
+review and targeted syntax/format checks are separate from the required RCH
+execution gate. RCH is unavailable; compilation, runtime tests, Clippy and full
+qualification remain pending, and no work packet or Bead is closed.
+Contract: `docs/RESIDENT_NATIVE_PUBLICATION.md`.
+
 ## 2026-11-15: keep native generated publication resident across Messages and Finish
 
 The explicit `serve-native-generated` command loads a closed, bounded sequence

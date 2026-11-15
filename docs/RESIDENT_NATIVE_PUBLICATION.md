@@ -22,6 +22,8 @@ qualification of this increment remain pending the required RCH verifier.
 supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE
 supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
   --publication-profile WITNESS_PROFILE
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST
 ```
 
 The optional publication profile retains the native service's existing simple
@@ -29,8 +31,8 @@ checked-publication contract. It applies to the same original owner and every
 selected release. The command owns its complete grammar before reading files;
 unsupported options are not consumed by another service.
 
-A version-one sequence contains 2 through 16 entries. The first entry is a
-Message. An optional Finish appears only once, last. Message followed directly
+For creation, a version-one sequence contains 2 through 16 entries. The first
+entry is a Message. An optional Finish appears only once, last. Message followed directly
 by Finish is valid, as are several Messages with no selected Finish. A sequence
 that ends after a Message does not implicitly close the stream.
 
@@ -62,7 +64,8 @@ NUL-containing and parent-traversal paths are refused. Each actor profile names
 its own nonzero request ID and endpoint. Every selected request ID is distinct;
 each Message selects a distinct native generation ID. Finish repeats the
 immediately preceding Message's generation and complete generation request,
-while using its own actor request ID.
+while using its own actor request ID. Explicit recovered suffixes may start
+with a final Finish using the retained predecessor's exact original recipe.
 
 All recipes and actor profiles are loaded before the first clock observation,
 listener or durable owner. Existing strict native recipe loading admits the
@@ -119,6 +122,51 @@ Explicit Finish uses the original confirmed-prefix builder and performs no
 sampling. It is still a separate effect requiring its own actor submission,
 helper review, independent human approval and any selected final witness check.
 
+## Recover an explicit remaining sequence
+
+`--after-message PREVIOUS_REQUEST` selects an existing confirmed native Message
+and a new suffix of 1 through 16 entries. The same option can accompany
+`--publication-profile WITNESS_PROFILE`, in either order; each option appears
+once. Omitting it continues to select creation. A recovered suffix may consist
+only of Finish, using the preceding Message's original generation and complete
+recipe; this closes the original prefix without sampling another token.
+
+The service binds the first suffix actor and its independent Stop before replay.
+It uses the existing cooperative native opener, checking Stop and the first
+entry's original logical and wall deadlines between historical events and at
+Ready. An authenticated Stop during replay uses the original terminal recovery
+path; it cannot fall through into live generation or publication. Ordinary
+successful recovery appends one original recovery Fence and returns a fresh
+reviewer role. That same owner, numerical state and Stop session then serve the
+complete suffix, without reopening between its entries.
+
+Use suffix recovery at the original confirmed-Message boundary. A pending or
+partly generated release must first use the existing single-release recovery
+path; this mode cannot skip its outstanding numerical or publication work.
+
+The complete remaining selection must describe new work. All actor request IDs
+must be absent from the retained request history, and every selected Message's
+generation ID must be unused. The predecessor must satisfy the original native
+confirmed-cut and continuation or Finish checks. A historical receipt, unknown
+effect, earlier superseded Message or altered Finish recipe cannot authorize the
+suffix. The original stream's remaining Message allowance also bounds the full
+selection. These historical checks run after the opener's ordinary Fence; a
+rejected selection does not imply that recovery left the journal byte-identical.
+It emits no new source reference and starts no new numerical work or review.
+
+Recovery preserves original numerical spending, retained effect charges,
+confirmed prefix, source identity and complete model/tokenizer/publication
+contracts. Fresh source evidence and an explicit original resume still precede
+any new numerical work or Finish. Every new release receives fresh helper and
+human approval at the recovered policy epoch. An old recorded request's deadline
+or approval is never renewed. Existing stale credibility qualification refuses;
+this command does not implicitly activate a new qualification.
+
+This is the same source-bound native recovery contract as the single-release
+native opener. It does not add an independent latest-head or anti-rollback
+anchor. Historical replay remains synchronous within each original event; the
+service's checkpoints do not establish a hard real-time Stop bound.
+
 ## Stop, deadlines and failure
 
 One authenticated Stop service remains owned for the entire invocation. Its
@@ -145,14 +193,17 @@ driver once, after the sequence has completed or stopped.
 
 ## Scope and verification
 
-This initial resident command creates a new native stream. Existing single-release
-native creation, continuation, recovery and receipt commands keep their own
-grammars. The resident command does not implicitly select recovery, operator,
-precheck, topology or policy-governor services.
+The resident command creates a new native stream or explicitly selects a new
+remaining suffix with `--after-message`. Existing single-release native
+creation, continuation, pending-generation recovery and receipt commands keep
+their own grammars. The resident command does not implicitly select recovery,
+credibility activation, operator, precheck, topology or policy-governor services.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,
 later rejection, independent Stop, fresh-source loss and checked witness failure.
+Recovery cases cover new suffix publication, singleton Finish without inference,
+original replay Stop and rejection of historical or incompatible selections.
 Profile cases pair admitted sequences with incompatible identities, duplicate
 keys, invalid release ordering, finite limits and canonical path collisions.
 These tests address contract enforcement; synthetic model and helper fixtures

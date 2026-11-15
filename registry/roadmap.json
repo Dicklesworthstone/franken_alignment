@@ -549,7 +549,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs"
       ],
       "founding_ideas": [
         "FI-A04"
@@ -778,7 +780,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs"
       ]
     },
     {
@@ -812,7 +816,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2650,7 +2656,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs"
       ],
       "founding_ideas": [
         "FI-A15",

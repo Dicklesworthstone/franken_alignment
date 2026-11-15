@@ -183,7 +183,7 @@ fn native_resident_command_owns_all_options_before_input_or_clock_work() {
     ]
     .map(str::to_owned)
     .to_vec();
-    assert!(options(&base, None).unwrap().is_none());
+    assert_eq!(options(&base, None).unwrap(), (None, None));
     let mut checked = base.clone();
     checked.extend([
         "--publication-profile".to_owned(),
@@ -191,12 +191,11 @@ fn native_resident_command_owns_all_options_before_input_or_clock_work() {
     ]);
     assert_eq!(
         options(&checked, None).unwrap(),
-        Some(PathBuf::from("/missing/witness"))
+        (Some(PathBuf::from("/missing/witness")), None)
     );
     let mut rejected = vec![vec![], base[..3].to_vec()];
     for flag in [
         "--continue-generation",
-        "--after-message",
         "--native-text",
         "--operator-profile",
         "--tower-generation",
@@ -249,6 +248,203 @@ fn native_resident_command_owns_all_options_before_input_or_clock_work() {
         ),
         Err(USAGE.to_owned()),
     );
+}
+
+#[test]
+fn native_resident_recovery_options_bind_one_canonical_predecessor_before_io() {
+    let base = [
+        "serve-native-generated",
+        "/missing/config",
+        "/missing/sequence",
+        "/missing/reviewer",
+    ]
+    .map(str::to_owned)
+    .to_vec();
+    for after in [1, u64::MAX] {
+        let mut resumed = base.clone();
+        resumed.extend(["--after-message".to_owned(), after.to_string()]);
+        assert_eq!(options(&resumed, None).unwrap(), (None, Some(after)));
+        let mut first_publication = base.clone();
+        first_publication.extend([
+            "--publication-profile".to_owned(),
+            "/missing/witness".to_owned(),
+            "--after-message".to_owned(),
+            after.to_string(),
+        ]);
+        let mut first_recovery = resumed;
+        first_recovery.extend([
+            "--publication-profile".to_owned(),
+            "/missing/witness".to_owned(),
+        ]);
+        for args in [first_publication, first_recovery] {
+            assert_eq!(
+                options(&args, None).unwrap(),
+                (Some(PathBuf::from("/missing/witness")), Some(after))
+            );
+            assert_eq!(
+                command_with_clock(
+                    &args,
+                    Some(Path::new("/missing/capsule")),
+                    || panic!("unsupported recovery activation acquired time"),
+                    &mut Vec::new()
+                ),
+                Err(USAGE.to_owned())
+            );
+        }
+    }
+    let mut rejected = Vec::new();
+    for after in [
+        "0",
+        "00",
+        "01",
+        "+1",
+        "-1",
+        "1.0",
+        " 1",
+        "1 ",
+        "",
+        "18446744073709551616",
+    ] {
+        let mut args = base.clone();
+        args.extend(["--after-message".to_owned(), after.to_owned()]);
+        rejected.push(args);
+    }
+    let mut missing = base.clone();
+    missing.push("--after-message".into());
+    rejected.push(missing);
+    let mut duplicate = base.clone();
+    duplicate.extend(["--after-message", "91", "--after-message", "92"].map(str::to_owned));
+    rejected.push(duplicate);
+    let mut unselected = base.clone();
+    unselected.extend(["--after-message", "91", "--continue-generation", "8"].map(str::to_owned));
+    rejected.push(unselected);
+    for args in rejected {
+        let mut output = Vec::new();
+        assert_eq!(
+            command_with_clock(
+                &args,
+                None,
+                || panic!("invalid recovery options acquired time"),
+                &mut output
+            ),
+            Err(USAGE.to_owned())
+        );
+        assert!(output.is_empty());
+    }
+}
+
+#[test]
+fn native_resident_remaining_manifest_requires_explicit_recovery_and_a_final_finish() {
+    let base = Path::new("/operator/native");
+    for release in ["message", "finish"] {
+        let remaining = document(&[entry("recipe.json", "actor.json", release)]);
+        assert!(decode(remaining.as_bytes(), base).is_err());
+        let parsed = decode_selected(remaining.as_bytes(), base, Some(91)).unwrap();
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(
+            matches!(parsed[0].release, Release::Finish),
+            release == "finish"
+        );
+        assert!(decode_selected(remaining.as_bytes(), base, Some(0)).is_err());
+        let unknown = remaining.replace("\"entries\":[", "\"automatic_resume\":true,\"entries\":[");
+        assert!(decode_selected(unknown.as_bytes(), base, Some(91)).is_err());
+    }
+    for invalid in [
+        vec![],
+        vec![entry("recipe.json", "actor.json", "message"); MAX_ENTRIES + 1],
+        vec![
+            entry("first.json", "actor-1.json", "finish"),
+            entry("next.json", "actor-2.json", "message"),
+        ],
+        vec![
+            entry("first.json", "actor-1.json", "message"),
+            entry("next.json", "actor-2.json", "finish"),
+            entry("third.json", "actor-3.json", "finish"),
+        ],
+    ] {
+        assert!(decode_selected(document(&invalid).as_bytes(), base, Some(91)).is_err());
+    }
+    let maximum = (0..MAX_ENTRIES)
+        .map(|index| {
+            entry(
+                &format!("recipe-{index}.json"),
+                &format!("actor-{index}.json"),
+                "message",
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        decode_selected(document(&maximum).as_bytes(), base, Some(91))
+            .unwrap()
+            .len(),
+        MAX_ENTRIES
+    );
+}
+
+#[test]
+fn native_resident_remaining_admission_keeps_creation_and_predecessor_boundaries() {
+    let root = Root::new();
+    let (config, peers, mut entries) = selected(&root);
+    validate(&config, &entries, &peers).unwrap();
+    for after in [0, 91, 92, 93] {
+        assert!(validate_selected(&config, &entries, &peers, Some(after)).is_err());
+    }
+    entries.remove(0);
+    validate_selected(&config, &entries, &peers, Some(91)).unwrap();
+    let finish = entries.remove(1);
+    assert!(validate(&config, &entries, &peers).is_err());
+    validate_selected(&config, &entries, &peers, Some(91)).unwrap();
+    entries[0] = finish;
+    assert!(validate(&config, &entries, &peers).is_err());
+    validate_selected(&config, &entries, &peers, Some(92)).unwrap();
+    entries[0].inputs.generation = 0;
+    assert!(validate_selected(&config, &entries, &peers, Some(92)).is_err());
+    assert!(!config.store.exists());
+    assert!(!entries[0].actor.socket.exists());
+}
+
+#[test]
+fn native_resident_remaining_loader_rejects_predecessor_reuse_before_recipe_reads() {
+    let root = Root::new();
+    let (config, peers, entries) = selected(&root);
+    for (index, entry) in entries.iter().enumerate() {
+        save_actor(&root.0.join(format!("actor-{index}.json")), &entry.actor);
+    }
+    let path = root.0.join("remaining.json");
+    std::fs::write(
+        &path,
+        document(&[
+            entry("missing-recipe.json", "actor-1.json", "message"),
+            entry("missing-recipe.json", "actor-2.json", "finish"),
+        ]),
+    )
+    .unwrap();
+    let error = load_selected(&path, &config, &peers, Some(93))
+        .err()
+        .unwrap();
+    assert!(
+        error.contains("predecessor cannot be a remaining actor request"),
+        "{error}"
+    );
+    let recipe = std::fs::read_to_string(root.0.join("recipe.json")).unwrap();
+    std::fs::write(
+        root.0.join("second.json"),
+        recipe.replace("\"generation\":7", "\"generation\":8"),
+    )
+    .unwrap();
+    std::fs::write(
+        &path,
+        document(&[entry("second.json", "actor-2.json", "finish")]),
+    )
+    .unwrap();
+    assert!(load(&path, &config, &peers).is_err());
+    let remaining = load_selected(&path, &config, &peers, Some(92)).unwrap();
+    assert_eq!(remaining.len(), 1);
+    assert!(matches!(remaining[0].release, Release::Finish));
+    assert_eq!(remaining[0].inputs.generation, 8);
+    assert_eq!(remaining[0].actor.request, 93);
+    assert!(!config.store.exists());
+    assert!(!remaining[0].actor.socket.exists());
 }
 
 #[test]

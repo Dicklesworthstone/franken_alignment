@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-15: recover an explicitly selected native resident suffix
+
+- Add `--after-message` to resident native publication, accepting 1–16 new
+  releases including singleton Finish while preserving creation's separate limits.
+- Bind the original finite Stop before one cooperative reopen and retain its
+  custody and original invocation deadline through the complete remaining suffix.
+- Check all selected requests/generations, remaining stream capacity and exact
+  confirmed predecessor before source refresh, inference, review or output.
+- Preserve one recovery Fence, original prefix, cumulative numerical/effect
+  spending and fresh helper/human approvals; Finish performs no resampling.
+- Add recovered publication, replay Stop and causal selection/profile regression
+  sources. Required RCH compilation and runtime qualification remain pending;
+  source/format checks do not close an execution gate.
+
 ## 2026-11-15: serve native Message and Finish sequences through one live owner
 
 - Add `serve-native-generated` with an explicit 2–16-entry sequence and optional

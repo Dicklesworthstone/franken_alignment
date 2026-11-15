@@ -3,6 +3,8 @@
 //! human review. Only a confirmed Executed predecessor permits another entry.
 #[path = "sequence/profile.rs"]
 mod profile;
+#[path = "sequence/recovery.rs"]
+mod recovered;
 #[cfg(test)]
 #[path = "sequence/tests.rs"]
 mod tests;
@@ -30,22 +32,47 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     profile::command(args, credibility)
 }
 
-/// Creation only: every entry was independently selected before the first
-/// listener or durable owner. The first image and original numerical context,
-/// source custodian, Stop admission history and invocation deadline survive
-/// every handoff. No entry reopens the store or replenishes original authority.
+/// Create the explicitly selected finite sequence on one original owner.
 pub(super) fn run<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_selected(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        None,
+        time,
+        output,
+    )
+}
+
+/// Every entry is independently selected before the first listener or durable
+/// owner. Explicit recovery opens the original stream exactly once, after the
+/// selected Message, under the SAME Stop and deadline as its live suffix.
+/// The original numerical context, source custodian and invocation deadline
+/// then survive every handoff without another reopen or authority reset.
+pub(super) fn run_selected<F>(
     mut config: Config,
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
+    after: Option<u64>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
-    profile::validate(&config, &entries, reviewer_profile)?;
+    profile::validate_selected(&config, &entries, reviewer_profile, after)?;
     let first = &entries[0];
     let selected = bootstrap::selection(&config, &first.inputs, publication)?;
     let start = time();
@@ -55,12 +82,24 @@ where
         wall: Duration::from_millis(config.timing.runtime_ms),
     };
     let first_deadline = entry_deadline(&global, &first.actor, start)?;
-    // Exclusive transport ownership precedes the new store. No stale socket
-    // or another workflow's path is removed to make this invocation start.
+    // Exclusive transport ownership precedes creation OR cooperative recovery.
+    // The same Stop candidate quota must cover replay and every live release.
+    // No stale path is removed to make this invocation start.
     let first_socket = BoundSocket::bind(&first.actor.socket, None)?;
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
-    let (host, reviewer) = bootstrap::prepare(&config, &first.inputs, selected, false)?;
+    let (host, reviewer) = if after.is_some() {
+        bootstrap::open_with_checkpoints(
+            &config,
+            &first.inputs,
+            selected,
+            Some(&mut control),
+            &first_deadline,
+            &mut time,
+        )?
+    } else {
+        bootstrap::prepare(&config, &first.inputs, selected, false)?
+    };
     if !host.generated_text_stream_required().map_err(debug)?
         || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
@@ -69,6 +108,12 @@ where
             != publication.map(|profile| profile.limits)
     {
         return Err("native sequence source, reserve and publication contracts must match".into());
+    }
+    if let Some(after) = after {
+        // The original opener has already applied its single recovery Fence.
+        // Inspect the complete suffix before a source read, fresh qualification,
+        // reference output or numerical command can start new work.
+        recovered::preflight(&host, &entries, after, first_deadline.logical)?;
     }
     host.check_credibility().map_err(debug)?;
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
@@ -79,12 +124,14 @@ where
     let programs = config.programs.clone();
     let mut first_socket = Some(first_socket);
     let mut first_deadline = Some(first_deadline);
-    let mut previous = None;
+    let mut previous = after;
     let mut completed = 0;
     let mut automatic_cleanup_attempted = false;
     let work = (|| {
-        for entry in &entries {
-            if let Some(request) = previous {
+        for (index, entry) in entries.iter().enumerate() {
+            if index != 0 {
+                let request =
+                    previous.expect("a resident successor retains its completed predecessor");
                 if !retire(
                     &mut driver,
                     request,

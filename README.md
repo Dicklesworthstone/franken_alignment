@@ -35,7 +35,9 @@ one original decoder, stream, source custodian and journal. Each release needs
 its own authenticated actor submission, fresh helper review and independent
 human approval. A successor starts only after the original executed receipt is
 confirmed and its helper cohort is reaped. One Stop listener and one invocation
-deadline remain in force across the whole sequence. Regression sources cover
+deadline remain in force across the whole sequence. Explicit recovered suffixes
+retain that owner after one cooperative replay, including a final Finish without
+new inference; Stop is live before recovery grants live custody. Regression sources cover
 actual fixture inference, cumulative frames, later rejection, Stop, source loss
 and final witness changes; required RCH execution qualification remains pending.
 
