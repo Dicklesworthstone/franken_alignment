@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14: precheck original native generated releases
+
+- Add separately selected exact-policy prechecks for original generated Message
+  and Finish intents, using the real cumulative stream action and unit charge.
+- Reuse the native Message builder without changing actual admission semantics;
+  preserve generation, source, issuer, scope, revision and finite query custody.
+- Keep source-only intake, fresh submission evidence and independent reviews;
+  queries cannot advance numerical work, reserve authority or expose output.
+- Add positive native-owner regressions and causal stale/incomplete/altered,
+  revoked/exhausted and current-source boundaries. Runtime and Clippy
+  qualification remain pending the required RCH environment.
+
 ## 2026-11-14: preserve the original authenticated Stop session deadline
 
 - Keep the peer's admission-time allowance through deferred review, numerical

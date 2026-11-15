@@ -13,7 +13,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::generatio
     GenerationFinish, MAX_GENERATION_TOKENS,
 };
 use crate::action::consequence::delivery::persistent::requests::FileRequestStatus;
-use crate::action::{ElapsedTick, ResolvedTarget};
+use crate::action::{ActionSpec, ElapsedTick, ResolvedTarget};
 use crate::{Error, Snapshot};
 
 /// Complete source and destination identity, with NO caller-supplied output.
@@ -122,6 +122,20 @@ impl Machine {
         request: &FileTextMessageRequest,
         snapshot: &Snapshot,
     ) -> Result<Event, Error> {
+        Ok(Event::Core(BaseEvent::SubmitRequest(
+            request.request,
+            self.decoder_text_message_spec(request)?,
+            snapshot.clone(),
+        )))
+    }
+
+    /// One source-only builder for actual admission and separately granted
+    /// precheck. It reads the original completed generation and current stream;
+    /// no caller-provided output or retained source claim can replace them.
+    pub(in super::super) fn decoder_text_message_spec(
+        &self,
+        request: &FileTextMessageRequest,
+    ) -> Result<ActionSpec, Error> {
         request.check()?;
         // A preexisting ordinary request cannot be recast as a generated one,
         // even if today's stream builder would now reject its old predecessor.
@@ -183,11 +197,7 @@ impl Machine {
         if spec.target != Some(request.target) || spec.policy_epoch != request.policy_epoch {
             return Err(Error::Stale);
         }
-        Ok(Event::Core(BaseEvent::SubmitRequest(
-            request.request,
-            spec,
-            snapshot.clone(),
-        )))
+        Ok(spec)
     }
 }
 

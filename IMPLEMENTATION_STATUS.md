@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: exact prechecks for original native generated releases
+
+The native generated-text supervisor now exposes separately selected exact
+prechecks for an original Message or explicit Finish. The original native
+message builder serves both actual admission and disclosure; policy evaluates
+the complete cumulative stream frame and charge rather than the 32-byte source
+reference. Generation completion, reviewed prompt, tokenizer, current numerical
+state, source, policy, target and confirmed stream prefix keep their existing
+contracts. A selected query may shorten its deadline without substituting output.
+
+The existing finite grant retains original issuer, scope, revision and weak
+custody. Queries neither advance inference nor consume admission snapshots,
+read source/clock, append journal events or issue review/effect keys. Native
+regressions pair actual generated Message and Finish behavior with incomplete,
+stale, substituted, revoked and exhausted cases. Contract:
+`docs/ACTOR_EXACT_PRECHECK.md`; test target: `generated_actor_precheck`.
+
+Source review and syntax/format validation are recorded with the commit. The
+required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+attempt exits 127 because `rch` is unavailable and no remote workers are
+configured. Installed Rust tools can parse and format source; no local build
+fallback is permitted. Compilation, runtime tests, Clippy and full qualification
+remain pending. FA-142 and the full Tower Bead remain in progress.
+
 ## 2026-11-14: retain authenticated Stop deadlines through driver handoff
 
 The live independent Stop service now uses the authenticated peer's original

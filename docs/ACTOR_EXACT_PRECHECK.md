@@ -295,12 +295,41 @@ The precheck never observes time itself: results describe the clock cut stated
 in the basis, not the current wall clock or the future dispatch boundary. The
 supervisor remains responsible for timely observation and fresh issuance.
 
-Only ordinary, source-backed publication is supported here. A raw proposal is
+The raw-proposal path supports only ordinary, source-backed publication. A raw proposal is
 not a valid substitute for a numerical generation, predictive observation or
 cumulative stream release. Histories containing decoder, consistency or stream
 operations refuse disclosure instead of approximating those lanes. Reopened
 owners need a newly acknowledged source before a new disclosure, and all old
 ports remain attached to the old gateway.
+
+### Original native generated Message and Finish
+
+`FileActorSupervisor::disclose_generated_text_precheck` separately selects one
+canonical intent produced by `FileGeneratedTextActorPort::encode_message` or
+`encode_finish`. It requires the original generated-only stream, an unrecorded
+request and the original current source, clock and policy epoch. This does not
+enable the raw-proposal path on a numerical owner.
+
+Message disclosure uses the same native builder as actual submission: the
+completed monitored generation, exact generation revision, full reviewed prompt,
+current numerical position, original tokenizer and complete cumulative stream
+frame. Finish uses the original stream builder and its confirmed prefix. The
+32-byte submission reference is never evaluated as the publication itself;
+policy sees the complete frame and its real unit charge.
+
+The grant fixes request, release kind, source identity, target and intent bytes.
+A query may shorten the selected deadline, but cannot replace the output,
+change generation or extend its lifetime. The independently chosen policy epoch
+is checked by the common boundary and can return typed Stale. Queries share the
+existing finite disclosure counter, original issuer, full scope and revision;
+dropping or revoking the sole custodian retires every clone. No cached or
+full-policy generated disclosure is introduced.
+
+Neither construction nor queries advance inference, draw sampler state, read a
+source file, acquire an admission snapshot or create a request, helper, human
+approval or effect. Actual source-only submission still captures fresh evidence
+and follows the original review and publication paths. A passing query is
+historical evidence for that exact cut, with `review_required: true`.
 
 ## Lifetime, bounded work and unchanged effects
 

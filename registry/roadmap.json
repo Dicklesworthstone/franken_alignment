@@ -3751,7 +3751,9 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/tests/wire.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs",
-        "crates/fa-reference/src/action/consequence/oversight/actor.rs"
+        "crates/fa-reference/src/action/consequence/oversight/actor.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/precheck/generated.rs",
+        "crates/fa-reference/tests/generated_actor_precheck.rs"
       ],
       "founding_ideas": [
         "FI-A13",

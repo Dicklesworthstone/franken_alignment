@@ -1,11 +1,15 @@
 //! A source-bound read projection for explicit exact-predicate disclosure.
 //! Capture no helper data and return no authority, worker or mutable source.
-use super::super::super::{FileOversight, Event};
-use crate::action::consequence::delivery::persistent::{JournalError,
-    requests::actor::precheck::PrecheckProjection};
-use crate::action::{ActionSpec, ElapsedTick};
-use crate::action::consequence::delivery::persistent::requests::actor::LearnedTextRelease;
+use super::super::super::{Event, FileOversight};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::{
+    JournalError, requests::actor::precheck::PrecheckProjection,
+};
+use crate::action::consequence::delivery::persistent::{
+    observed::stream::generated::FileTextMessageRequest, requests::actor::LearnedTextRelease,
+};
+use crate::action::consequence::oversight::actor::ActorProposal;
+use crate::action::{ActionSpec, ElapsedTick};
 
 impl FileOversight {
     pub(in crate::action::consequence::delivery::persistent) fn actor_precheck_projection(
@@ -26,7 +30,10 @@ impl FileOversight {
     /// actor. Derive the one selected release through the native builder, only
     /// before request admission and after the original generation is complete.
     pub(in crate::action::consequence::delivery::persistent) fn learned_actor_precheck_projection(
-        &self, request: u64, release: LearnedTextRelease, deadline: ElapsedTick,
+        &self,
+        request: u64,
+        release: LearnedTextRelease,
+        deadline: ElapsedTick,
     ) -> Result<(PrecheckProjection, ActionSpec), JournalError> {
         if !self.policy_only_file_source_required() { return Err(Error::WrongState.into()); }
         match self.request_status(request) {
@@ -35,6 +42,36 @@ impl FileOversight {
             Err(error) => return Err(error),
         }
         let action = self.prepare_learned_text_stream_request(request, release, deadline)?;
+        let projection = self.captured_actor_precheck_projection()?;
+        Ok((projection, action))
+    }
+
+    /// The private actor codec has already admitted the complete canonical
+    /// source intent. Use the same original numerical or Finish builder as
+    /// submission; a generic raw-proposal projection remains forbidden.
+    pub(in crate::action::consequence::delivery::persistent) fn generated_actor_precheck_projection(
+        &self,
+        request: u64,
+        intent: &ActorProposal,
+        message: Option<&FileTextMessageRequest>,
+    ) -> Result<(PrecheckProjection, ActionSpec), JournalError> {
+        if !self.generated_text_stream_required()? {
+            return Err(Error::WrongState.into());
+        }
+        match self.request_status(request) {
+            Err(JournalError::Contract(Error::Missing)) => {}
+            Ok(_) => return Err(Error::WrongState.into()),
+            Err(error) => return Err(error),
+        }
+        let action = match message {
+            Some(source) => self.machine.decoder_text_message_spec(source)?,
+            None => self.stream_finish_spec(intent.deadline)?,
+        };
+        if action.target != Some(intent.target)
+            || action.policy_epoch != intent.expected_policy_epoch
+        {
+            return Err(Error::Stale.into());
+        }
         let projection = self.captured_actor_precheck_projection()?;
         Ok((projection, action))
     }

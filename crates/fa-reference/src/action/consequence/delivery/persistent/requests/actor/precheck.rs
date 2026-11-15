@@ -16,6 +16,7 @@ use std::{
 };
 
 pub mod cache;
+mod generated;
 mod learned;
 pub const MAX_PRECHECK_QUERIES: usize = 128;
 
@@ -57,7 +58,20 @@ struct Disclosure {
     remaining: Cell<usize>,
     projection: PrecheckProjection,
     cache: Option<cache::Binding>,
-    learned: Option<learned::Release>,
+    release: Option<Release>,
+}
+
+enum Release {
+    Learned(learned::Release),
+    Generated(generated::Release),
+}
+impl Release {
+    fn action(&self, proposal: &ActorProposal) -> Result<ActionSpec, ActorError> {
+        match self {
+            Self::Learned(release) => release.action(proposal),
+            Self::Generated(release) => release.action(proposal),
+        }
+    }
 }
 
 /// Keep this with the supervisor. Dropping or consuming it revokes ALL copies
@@ -136,8 +150,12 @@ impl FileActorSupervisor<FileOversight> {
         self.disclose_exact_precheck_with_cache(expected_revision, disclosure, queries, None)
     }
 
-    fn disclose_exact_precheck_with_cache(&self, expected_revision: u64, disclosure: u64,
-        queries: usize, cache: Option<cache::Shared>,
+    fn disclose_exact_precheck_with_cache(
+        &self,
+        expected_revision: u64,
+        disclosure: u64,
+        queries: usize,
+        cache: Option<cache::Shared>,
     ) -> Result<(FileActorPrecheckPort, FilePrecheckDisclosure), JournalError> {
         if disclosure == 0 || queries == 0 { return Err(Error::InvalidInput.into()); }
         if queries > MAX_PRECHECK_QUERIES { return Err(Error::Limit.into()); }
@@ -151,7 +169,7 @@ impl FileActorSupervisor<FileOversight> {
             None => None,
         };
         let grant = Rc::new(Disclosure { id: disclosure, remaining: Cell::new(queries), projection, cache,
-            learned: None });
+            release: None });
         let port = FileActorPrecheckPort { owner: Rc::downgrade(&self.owner),
             disclosure: Rc::downgrade(&grant), issuer: owner.host.journal_tail_identity(),
             scope: grant.projection.scope };
@@ -171,9 +189,11 @@ impl FileActorPrecheckPort {
     /// Labels are echoed as read provenance only; repeated labels still spend
     /// query work, including cache hits. Invalid proposals and evaluator failures
     /// spend their entered query too. Revoked/stale grants do no evaluation.
-    pub fn check(&self, query: u64, proposal: &ActorProposal)
-        -> Result<FilePrecheckObservation, ActorError>
-    {
+    pub fn check(
+        &self,
+        query: u64,
+        proposal: &ActorProposal,
+    ) -> Result<FilePrecheckObservation, ActorError> {
         self.with_disclosure(|grant| {
             let projection = &grant.projection;
             let unknown = || Knowledge::Unknown { reason: UnknownReason::ControllerUnavailable };
@@ -181,7 +201,7 @@ impl FileActorPrecheckPort {
             if proposal.payload.len() > MAX_PAYLOAD_BYTES || proposal.payload.len() as u64 > proposal.units {
                 return Err(ActorError::Capacity);
             }
-            let spec = match &grant.learned {
+            let spec = match &grant.release {
                 Some(release) => release.action(proposal)?,
                 None => ActionSpec { version: VERSION, scope: projection.scope,
                     target: Some(proposal.target), payload: proposal.payload.clone(), required_witnesses: Vec::new(),

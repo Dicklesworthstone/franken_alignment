@@ -13,6 +13,7 @@ use crate::action::consequence::delivery::persistent::observed::{
 };
 use crate::action::consequence::delivery::stream::StreamProfile;
 use crate::action::{ElapsedTick, ResolvedTarget};
+pub(super) use wire::decode;
 
 /// Weak, source-only access to an already bootstrapped native-text stream.
 /// No arbitrary-message submit, raw-port getter, generation step, tokenizer,

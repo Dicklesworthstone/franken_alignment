@@ -75,7 +75,7 @@ fn encode(
 
 // Validate the entire fixed shape BEFORE gateway lookup or snapshot consumption.
 // The outer JSON parser remains the original duplicate-key/bounds authority.
-fn decode(
+pub(in super::super) fn decode(
     request: u64,
     proposal: &ActorProposal,
 ) -> Result<Option<FileTextMessageRequest>, ActorError> {
