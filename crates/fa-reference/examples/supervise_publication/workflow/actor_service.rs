@@ -166,7 +166,7 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     if args.iter().any(|arg| arg == "--native-text")
         && args
             .iter()
-            .any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation"))
+            .any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation" | "--precheck-profile"))
     {
         return native::command(args, credibility);
     }
@@ -421,8 +421,8 @@ where
     }
     // A selected precheck service keeps its independent native listener,
     // original disclosure custody and existing Stop-first lifecycle below.
-    // Switching actor ingress to Tower does not install disclosure in that
-    // actor session or let a request renew its source lease or query allowance.
+    // Tower shares only that explicitly selected exact-predicate port. Neither
+    // protocol can renew its source lease, query allowance or disclosure scope.
     if !open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
@@ -807,6 +807,10 @@ where
                     &deadline,
                     &mut time,
                 )?);
+                // The same optional grant serves both authenticated protocols.
+                // The sidecar retains its sole custodian, finite source cut and
+                // cumulative query allowance; retirement revokes every clone.
+                ingress.set_precheck(precheck.as_ref().and_then(precheck::Service::port))?;
             }
             loop {
                 deadline.check(time())?;

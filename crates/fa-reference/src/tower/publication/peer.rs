@@ -13,7 +13,7 @@ use super::PublicationTower;
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileSupervisorPolicyPromotionPort,
+    FileActorPort, FileActorPrecheckPort, FileSupervisorPolicyPromotionPort,
 };
 use crate::action::consequence::oversight::actor::{ActorError, ActorProposal};
 use crate::action::consequence::oversight::actor_peer::{
@@ -109,6 +109,19 @@ impl PublicationPeerSession {
 
     pub fn remaining_exchanges(&self) -> u64 {
         self.channel.remaining_exchanges()
+    }
+
+    /// Host-only installation of an existing exact-policy disclosure from this
+    /// session's original owner. The supervisor retains its sole custodian;
+    /// clones share the same query allowance, source cut and revocation.
+    /// Replacement preserves tickets, pending replies and transport counters,
+    /// and a foreign replacement withdraws this facade's previous installation.
+    /// No installation can revive a revoked peer session.
+    pub fn set_precheck(&mut self, port: Option<FileActorPrecheckPort>) -> Result<(), Error> {
+        if self.revoked {
+            return Err(Error::WrongState);
+        }
+        self.tower.set_precheck(port).map_err(|_| Error::Binding)
     }
 
     /// Host-only installation of an independently approved original campaign,

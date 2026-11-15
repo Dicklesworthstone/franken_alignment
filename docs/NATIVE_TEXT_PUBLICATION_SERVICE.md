@@ -62,6 +62,101 @@ Source-reference output failure stops new-work workflows; it does not send or
 retry the actor request. Receipt-only recovery does not issue Stop on output
 failure, because doing so could affect unrelated later work.
 
+## Exact policy prechecks before submission
+
+Select one bounded exact-policy disclosure alongside the native recipe:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE --precheck-profile PRECHECK_PROFILE > native-submit.json
+# Prepare native-precheck.json with the query wrapper described below.
+supervise_publication actor-precheck ACTOR_PROFILE PRECHECK_PROFILE native-precheck.json
+# Submit the original source reference separately, with independent review:
+supervise_publication actor-submit ACTOR_PROFILE native-submit.json
+```
+
+The same selection is available on `serve-open`, `serve-create-checked` and
+`serve-open-checked`; checked forms retain their required `WITNESS_PROFILE`
+positional argument. Open forms can select one explicit continuation with
+`--after-message PREVIOUS_REQUEST` or Finish with
+`--finish-after-message PREVIOUS_REQUEST`. Finish uses the preceding confirmed
+message's original recipe and performs no additional generation. The optional
+independent operator remains available through the pair
+`--operator-profile OPERATOR_PROFILE --tower-generation NONZERO`. Option pairs
+may appear in any order after the positional arguments; duplicate or
+incompatible modes are rejected before configuration and numerical assets open.
+For example, a separately reviewed Finish with both optional endpoints uses:
+
+```sh
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE \
+  --native-text ORIGINAL_RECIPE --finish-after-message PREVIOUS_REQUEST \
+  --precheck-profile PRECHECK_PROFILE --operator-profile OPERATOR_PROFILE \
+  --tower-generation 41 > finish-submit.json
+```
+
+The [live precheck profile](LIVE_ACTOR_PRECHECK.md#supervisor-opt-in) must be
+uncached `fa.actor-precheck-service/1` with
+`policy_disclosure: "exact_predicates"`. Cached version two and full-policy
+version three are unsupported for this native selection. Omitting the option
+leaves the existing native service without this endpoint or additional disclosure
+bootstrap. Request schedules, multi-peer, topology and governor combinations do
+not acquire native precheck support through this option.
+
+The actor command takes a **precheck query**, not the emitted Submit JSON. Build
+`native-precheck.json` using the strict wire fields:
+
+| Field | Value for the native query |
+| --- | --- |
+| `schema`, `operation` | `"fa.actor-precheck/1"`, `"precheck"` |
+| `query` | An independently chosen nonzero decimal-string label |
+| `target`, `payload_hex`, `units`, `expected_policy_epoch` | The original proposal fields from the emitted native Submit document |
+| `deadline` | The emitted deadline or a shorter one |
+
+Do not copy the Submit envelope's `version`, `operation: "submit"` or outer
+`request` field into this query. The fixed 32-byte payload already binds the
+selected source request, generation and generation revision, or explicit Finish.
+The existing [actor-only command](LIVE_ACTOR_PRECHECK.md#actor-only-command)
+authenticates the supervisor and validates the response against the independently
+selected epoch and disclosure ID. That profile must name the actual owner epoch
+after recovery; neither profile nor proposal is rewritten to repair a mismatch.
+The native Submit already carries the actual epoch, rather than the learned
+stream's zero-valued envelope marker.
+
+Disclosure begins only after the original Message has completed its monitored
+generation, or after explicit Finish preparation has checked the confirmed
+prefix. The same native builders bind the actual cumulative frame, including all
+prior messages, boundaries, target and full resource charge. Exact predicates
+evaluate that action rather than the 32-byte source reference. A query cannot
+replace bytes, change a Message to Finish, select another source identity or
+extend the deadline. Generated output and predicate details stay private.
+
+Bootstrap captures fresh registered evidence and clock state and can append
+their original journal events. Queries perform no additional inference,
+sampling, source reads, clock observation, journal changes, helper review or
+human approval. Passing the query does not consume the one-use intake snapshot
+or admit the actor request. Actual Submit reacquires fresh source evidence,
+checks the original generation and cumulative frame, and still requires both
+helper and independent human review keys. A later source change or checked
+publication witness can therefore prevent the effect after a pass.
+
+Before model loading, time observation or durable startup, canonical path checks
+separate the precheck listener from the actor, reviewer, Stop and optional
+operator endpoints, registered source and authority store. Existing paths are
+never removed to make startup succeed. Independent Stop runs before disclosure
+bootstrap and each live intake turn. The sole disclosure custodian retires
+before review, on owner or lease/clock invalidation, on service exit, or after
+terminal sidecar framing/transport failure. Revocation withdraws every port
+copy's access to the finite grant. A sidecar-only failure does not invoke native
+Stop/drain or grant a fresh allowance, and ordinary valid actor submission can
+continue.
+
+An already-recorded native Message or Finish cannot acquire a new disclosure on
+open. Selecting precheck for that historical receipt workflow refuses after
+exact canonical recovery identifies it, before source acquisition, new inference,
+precheck listener creation or review. The ordinary recovery Fence remains part
+of its original owner contract. Recover the receipt without the precheck option;
+its old target, epoch, deadline and effect outcome remain unchanged.
+
 ## Independent live operator
 
 Native services can select the same authenticated Tower operator profile used
@@ -237,6 +332,32 @@ no model-serving, package-registry, network-delivery or OS-isolation qualificati
 is claimed. File/clock authenticity and arithmetic-platform compatibility remain
 operator assumptions. All original model, wire, journal and authority formats
 remain unchanged.
+
+### Native exact-precheck integration
+
+Library regressions exercise actual native generation followed by exact checks
+and two-key Message/Finish publication; full cumulative frame byte/charge
+denial; immutable source binding and shorter deadlines; finite queries,
+revocation and owner replacement; incomplete generation; and fresh changed
+source admission after a pass. Live service regressions cover actual native
+creation with independent human approval/rejection, changed source after a pass,
+Stop during a partial query, sidecar transport failure and endpoint alias
+preflight. Parser regressions cover explicit open/checked continuation and
+Finish selections and reject incompatible options. Synthetic model and helper
+fixtures test contract enforcement, not trained detector quality.
+
+Central Rust syntax checks passed for this increment. Compilation, Clippy and
+runtime regressions remain pending the required remote verifier because `rch`
+is absent in the editing environment. The historical execution statements below
+remain unchanged; syntax review does not certify runtime behavior or close the
+corresponding feature gate.
+
+```sh
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
+  --test generated_actor_precheck
+RCH_REQUIRE_REMOTE=1 rch exec -- cargo test --locked -p fa-reference \
+  --example supervise_publication native::tests::precheck_tests
+```
 
 ### Recovery change record — 2026-09-25
 

@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-11-15: connect live native, Tower and recovered topology prechecks
+
+- Install explicitly selected exact prechecks on the existing actor Tower
+  session, sharing the native sidecar's original finite grant and revocation.
+  Preserve pending replies, request tickets and cumulative transport budgets;
+  full-policy disclosure remains narrowed to exact predicates on Tower.
+- Enable precheck for one genuinely new request after guarded topology recovery,
+  including plain and simple checked publication with all three profile versions.
+  Preserve independent replay Stop, explicit post-Fence epoch, paired source and
+  history custody, fresh admission and final topology/witness checks.
+- Add uncached exact prechecks to native generated Message and explicit Finish
+  services, including continuation and optional independent operator custody.
+  Evaluate original cumulative output and charge without numerical or journal
+  mutation; retain fresh source evidence and both original publication keys.
+- Add twenty live/public-peer regression functions and strengthen existing
+  Tower cases for source changes, sidecar retirement and independent Stop.
+  Update service commands and contracts. Independent review, Rust grammar,
+  targeted formatting and whitespace checks passed; compilation, runtime tests
+  and Clippy remain pending the required RCH environment.
+
 ## 2026-11-14: precheck original native generated releases
 
 - Add separately selected exact-policy prechecks for original generated Message

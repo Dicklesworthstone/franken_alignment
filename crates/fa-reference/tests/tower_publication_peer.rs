@@ -507,3 +507,6 @@ fn retained_peer_ticket_reports_original_owner_loss_after_journal_reopen() {
 
 #[path = "tower_publication_peer/sequence.rs"]
 mod sequence;
+
+#[path = "tower_publication_peer/precheck.rs"]
+mod precheck;

@@ -21,10 +21,11 @@ supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE
 supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --precheck-profile PRECHECK_PROFILE
 ```
 
-The precheck option is final after ordinary positional arguments. Existing open
-modes can also use their independent credibility activation option. Sequence,
-multi-peer, receipt-only, native-transport topology, generated and native-text combinations
-are refused before another service can consume or ignore the option. An already
+The ordinary precheck option is final after positional arguments. Existing open
+modes can also use their independent credibility activation option. Ordinary
+request schedules, multi-peer, receipt-only, native-transport topology and
+standalone `create-generated` combinations remain unsupported. Native-text and
+learned release selections have the explicit integrations below. An already
 recorded selected request remains observation/reconciliation-only: requesting a
 new disclosure for it is refused, without a source read or new grant. Its existing
 open/recovery fence remains part of the ordinary owner contract.
@@ -37,9 +38,17 @@ The four ordinary single-request modes also accept an explicit
 `--tower-generation GENERATION` alongside `--precheck-profile`, in either option
 order after the positional arguments. This changes the actor submission socket
 to Tower while keeping the precheck socket, profile, original grant and lifecycle
-described here. Run `actor-precheck` before an explicit `tower-exchange` proposal;
-the Tower submission still reacquires source evidence and performs both reviews.
-The request-sequence option remains incompatible with precheck disclosure.
+described here. The same authenticated Tower session also receives the explicitly
+selected exact-precheck port: its `precheck` and `capabilities` reads share the
+native sidecar's one finite query allowance. Either protocol can perform the
+read before an explicit `tower-exchange` proposal. Reconnecting, changing
+protocols or retaining the Tower socket cannot renew disclosure. Even when the
+sidecar has a full-policy profile, Tower receives only exact checks and
+capability data; policy definitions and literals remain unavailable through that
+mount. Retirement revokes both views without replacing the Tower session or its
+retained request tickets. Actual Tower submission still reacquires source
+evidence and performs both reviews. The request-sequence option remains
+incompatible with precheck disclosure.
 See [the Tower composition](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal).
 
 Explicit single-request Tower `serve-create` and `serve-create-checked` can also
@@ -50,9 +59,34 @@ grant and do not refresh topology. Actual submission reacquires policy evidence,
 requires fresh helper/human review and both keys, and performs the original
 final topology check. Uncached, cached and full-policy disclosure remain
 available under their existing leakage contracts. Stop retains priority over
-both ingress sockets. A version-2 retained checkpoint cannot alias the precheck
-socket, even through another spelling of its parent directory. Topology/precheck
-reopening, schedules and live-governor combinations remain unsupported.
+both ingress sockets.
+
+Guarded single-new-request Tower recovery supports the same disclosure on
+`serve-open` and `serve-open-checked`:
+
+```text
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --precheck-profile PRECHECK_PROFILE
+```
+
+The checked form includes its ordinary `WITNESS_PROFILE` positional argument.
+Both forms can additionally select an independent `--operator-profile`. Recovery
+requires the exact `fa.mediated-submit/2` checkpoint and original guarded history
+custody. It preserves cumulative source work, acknowledges the original recovery
+Fence, rebinds the independently selected next topology and inventory, and checks
+the current cut before exposing a fresh disclosure. The configured policy epoch
+must match the actual recovered owner after those transitions. Neither the
+precheck nor the actor proposal is silently rebased. A recorded request refuses
+a new disclosure and retains its acknowledged history/checkpoint without opening
+live topology, inventory, evidence or witness inputs. Independent Stop can win
+during replay before any new source or precheck bootstrap.
+
+Recovery archives, precheck/actor/reviewer/Stop/operator endpoints, topology and
+inventory inputs, the evidence source and authority store are checked for the
+relevant canonical path collisions before recovery starts. An alias through a
+different parent spelling does not permit the precheck listener to replace
+custody. Actual submission and publication retain their fresh evidence, helper,
+human, final topology and checked-witness gates. Ordinary schedules and
+live-governor compositions remain incompatible with precheck disclosure.
 
 The actor and precheck profiles are public connection context. The private
 supervisor Config, evidence, journal and independent reviewer roles must not be
@@ -87,10 +121,14 @@ from actor/reviewer/stop sockets. Its parent must be supervisor-owned and not
 group/other writable; the new socket is mode 0660. Existing files, sockets and
 symlinks are never removed to make bind succeed. Cleanup checks inode/device.
 
-This scoped service schema implements only explicit `exact_predicates`; omission
-of the option disables disclosure. `none` and `full` are not alternate values
-silently treated as exact disclosure. This is not the complete signed E27
-assurance-profile schema or its production qualification.
+The version-one schema shown here requires explicit `exact_predicates`; omission
+of the option disables disclosure. Ordinary source-backed services also accept
+explicit version two for bounded witness-sensitive caching and version three for
+full-policy disclosure under its required leakage declaration. A mismatched
+schema/disclosure is refused, never silently downgraded. Native and learned
+release-specific services accept only the uncached version-one profile. These
+schemas are not the complete signed E27 assurance profile or its production
+qualification.
 
 ## Learned actor releases
 
@@ -144,6 +182,70 @@ expiry, Stop or exhausted disclosure work retires the endpoint; malformed peer
 traffic cannot invoke the outer Stop/drain path. The endpoint is retired before
 the original release enters review. A recovered owner requires its actual new
 policy epoch, with no automatic repair of the actor's independent context.
+
+## Native generated Message and Finish
+
+The native text service explicitly composes `--precheck-profile` with its
+original `--native-text` selection:
+
+```text
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE --precheck-profile PRECHECK_PROFILE
+```
+
+Use the uncached `fa.actor-precheck-service/1` profile with
+`policy_disclosure: "exact_predicates"`. Versions two and three, cache selection
+and full-policy disclosure are unsupported for native generated releases. Open
+forms can additionally select one `--after-message PREVIOUS_REQUEST` continuation
+or `--finish-after-message PREVIOUS_REQUEST`. Finish retains the preceding
+message's original recipe. The independent operator may be selected with the
+pair `--operator-profile OPERATOR_PROFILE --tower-generation GENERATION`; both
+are required and the route generation must be nonzero. These complete option
+pairs may be ordered after the positional arguments. Duplicate, conflicting,
+scheduled, multi-peer, topology and governor selections refuse before startup.
+
+The selected native generation must actually complete with its original reviewed
+prompt, monitored Control stop and current numerical predecessor. Explicit
+Finish uses the receipt-confirmed stream prefix and advances no inference.
+Only then does the supervisor capture a fresh registered source and disclose the
+one selected original action. The actor still receives the original Submit
+document containing a fixed 32-byte source intent; native precheck adds no raw
+output or arbitrary-message submission path.
+
+Construct a separate strict `fa.actor-precheck/1` query using the emitted Submit
+document's original `target`, `payload_hex`, `units`, `deadline` and
+`expected_policy_epoch`, with `operation: "precheck"` and an independently chosen
+`query` label. Do not pass the Submit document itself to `actor-precheck`. The
+query wrapper carries neither the Submit `version` nor its outer `request`
+field; the source intent already binds the selected request. A query may shorten
+the selected deadline. It cannot change the source request, generation/revision,
+Message/Finish kind, target or fixed intent units. The independent precheck
+profile must select the actual current owner epoch, including recovery changes;
+unlike the learned release envelope, the native Submit epoch is already that
+actual epoch.
+
+The policy check evaluates the actual cumulative release frame and its full
+charge, including all confirmed prior messages and the selected Message or
+Finish. It never treats the 32-byte reference as the publication payload or
+resource charge. Querying performs no additional inference, sampling, source or
+clock observation, journal mutation, helper review or human approval. Bootstrap
+can append the original source/time observations; queries cannot repeat it.
+
+The original Submit must still acquire fresh source evidence and obtain both
+helper and independent human review keys. A changed source can deny submission
+after a pass, and checked forms retain their final witness checks. An already
+recorded request cannot acquire this new disclosure during native recovery.
+Endpoint/source/store aliases, including the optional operator endpoint, are
+checked canonically before model loading, clock access or durable startup.
+Independent Stop runs before bootstrap and each intake turn. The shared sidecar
+lifecycle revokes the grant before review, on owner mutation, clock rollback,
+lease expiry or service exit, and on terminal framing/transport faults.
+Sidecar-only faults do not invoke the native workflow's Stop/drain or prevent a
+later valid actor submission.
+See [the native service](NATIVE_TEXT_PUBLICATION_SERVICE.md#exact-policy-prechecks-before-submission)
+for the actor workflow and its separate source-reference file.
 
 ## Actor-only command
 
@@ -281,10 +383,20 @@ before bytes, complete strict/correlated output, independent disclosure binding,
 lifetime work/elapsed bounds, no resend on loss/output failure, unchanged owner
 state, and fresh ordinary admission after a real successful operator precheck.
 
+The native generated increment adds original inference/Message/Finish coverage,
+full-frame byte and charge checks, immutable source-intent binding, finite
+disclosure/revocation, source changes after a pass, incomplete generation and
+typed epoch mismatch. Same-session Tower and guarded topology
+recovery regressions cover shared work across protocols, retained tickets,
+exact-only narrowing, fresh final checks, cumulative recovery custody and
+independent Stop priority. Fixture model outputs and synthetic reviewer decisions
+test these contracts; they do not establish trained detector quality.
+
 The operator remains synchronous and cooperatively scheduled, not a new executor
 or hard real-time service. Clock checks do not preempt filesystem, kernel or
-evaluation work already entered. Source authenticity, deployment mediation,
-full assurance-profile options and witness-sensitive caching remain separate.
-The new source and tests are pending execution: required RCH commands cannot
-start in the editing environment because `rch` is absent (exit 127). No compiled,
-formatted, Clippy-clean, test-passing or production-qualified result is claimed.
+evaluation work already entered. Source authenticity, deployment mediation and
+full assurance-profile qualification remain separate. Central Rust syntax checks
+passed for the latest increment. Compilation, Clippy and runtime tests remain
+pending the required RCH verifier: its commands cannot start in the editing
+environment because `rch` is absent (exit 127). Syntax and source review do not
+claim a test-passing or production-qualified result.

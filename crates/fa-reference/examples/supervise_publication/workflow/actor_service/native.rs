@@ -2,10 +2,12 @@
 //! Stdout carries a submission reference, NEVER unapproved generated text.
 #[path = "native/bootstrap.rs"]
 mod bootstrap;
-#[path = "native/control.rs"]
-mod control;
 #[path = "native/continuation.rs"]
 mod continuation;
+#[path = "native/control.rs"]
+mod control;
+#[path = "native/precheck.rs"]
+mod exact_precheck;
 #[path = "native/finish.rs"]
 mod finish;
 #[path = "native/operator.rs"]
@@ -37,7 +39,8 @@ use recipe::Inputs;
 const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO";
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    let (selected_args, operator_option) = operator::take_option(args)?;
+    let (selected_args, precheck_path) = exact_precheck::take_option(args)?;
+    let (selected_args, operator_option) = operator::take_option(&selected_args)?;
     let (args, finishing) = finish::take_option(&selected_args)?;
     let (args, after) = continuation::take_option(args)?;
     let (open, checked) = match args.first().map(String::as_str) {
@@ -61,6 +64,12 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     if let Some(selected) = &operator {
         selected.check(&config, &actor, &reviewer)?;
     }
+    let precheck = precheck_path
+        .map(|path| exact_precheck::Selection::read(&path))
+        .transpose()?;
+    if let Some(selected) = &precheck {
+        selected.check(&config, &actor, &reviewer, operator.as_ref())?;
+    }
     let publication = if checked {
         Some(PublicationProfile::read(Path::new(&args[4]))?)
     } else {
@@ -71,19 +80,20 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes,
     )?;
-    if let Some(operator) = &operator {
+    if operator.is_some() || precheck.is_some() {
         let mode = match (finishing, after) {
             (Some(previous), _) => finish::Intent::Finish(previous),
             (None, Some(previous)) => finish::Intent::Continue(previous),
             (None, None) => finish::Intent::Existing,
         };
-        return serve_lifecycle_selected(
+        return serve_lifecycle_with_precheck(
             config,
             &actor,
             &reviewer,
             inputs,
             (open, publication.as_ref(), credibility, mode),
-            Some(operator),
+            operator.as_ref(),
+            precheck.as_ref(),
             super::super::clock,
             &mut std::io::stdout().lock(),
         );
@@ -301,6 +311,37 @@ where
 }
 
 fn serve_lifecycle_selected<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    inputs: Inputs,
+    deployment: (
+        bool,
+        Option<&PublicationProfile>,
+        Option<&Path>,
+        finish::Intent,
+    ),
+    operator_selection: Option<&operator::Selection>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_lifecycle_with_precheck(
+        config,
+        actor,
+        reviewer_profile,
+        inputs,
+        deployment,
+        operator_selection,
+        None,
+        time,
+        output,
+    )
+}
+
+fn serve_lifecycle_with_precheck<F>(
     mut config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
@@ -312,6 +353,7 @@ fn serve_lifecycle_selected<F>(
         finish::Intent,
     ),
     operator_selection: Option<&operator::Selection>,
+    precheck_selection: Option<&exact_precheck::Selection>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
@@ -323,6 +365,9 @@ where
     check_profiles(&config, actor, reviewer_profile)?;
     if let Some(selected) = operator_selection {
         selected.check(&config, actor, reviewer_profile)?;
+    }
+    if let Some(selected) = precheck_selection {
+        selected.check(&config, actor, reviewer_profile, operator_selection)?;
     }
     // Source and complete witness/joint policy belong to the same initial image.
     // Recovery checks this selection before cleaning staging or fencing keys.
@@ -370,6 +415,12 @@ where
         _ => None,
     };
     let recorded = recovered.is_some();
+    if recorded && precheck_selection.is_some() {
+        return Err("recorded native requests are observation-only and cannot acquire a new precheck disclosure".into());
+    }
+    if let Some(selected) = precheck_selection {
+        super::precheck::check_owner_epoch(&selected.settings, &host)?;
+    }
     if recorded {
         if let Some(selected) = operator_selection {
             selected.check_recorded()?;
@@ -420,6 +471,7 @@ where
     // Only an explicitly selected operator retains the existing Stop custody
     // through reply grace. The unselected path keeps its original lifetime.
     let mut operator_stop = None;
+    let mut precheck = None;
     let work = (|| {
         let proposal = if let Some(proposal) = recovered {
             // Even a supplied credibility path is not opened for receipt-only
@@ -505,6 +557,27 @@ where
                 FileGeneratedTextActorPort::encode_message(&source).map_err(debug)?
             }
         };
+        if let Some(selected) = precheck_selection {
+            // Independent Stop remains first, including the boundary after
+            // generation and before the fresh source/disclosure bootstrap.
+            if control
+                .as_mut()
+                .expect("live precheck Stop owner")
+                .checkpoint(&mut driver, &reviewer, &deadline, &mut time)?
+            {
+                return Ok(());
+            }
+            precheck = Some(super::precheck::Service::start_generated(
+                &selected.settings,
+                actor,
+                reviewer_profile,
+                &mut config,
+                &mut driver,
+                &deadline,
+                &mut time,
+                &proposal,
+            )?);
+        }
         let document = encode_command(&Command::Submit {
             request: actor.request,
             proposal,
@@ -542,6 +615,9 @@ where
             )? {
                 return Ok(());
             }
+            if let Some(service) = &mut precheck {
+                service.checkpoint(&driver, time());
+            }
             ingress.drive(&mut driver, &mut config, &mut time)?;
             match driver
                 .supervisor()
@@ -554,6 +630,9 @@ where
                 Err(error) => return Err(debug(error)),
             }
             pause(actor.poll_ms);
+        }
+        if let Some(service) = &mut precheck {
+            service.retire();
         }
         let (stop_service, selected_operator) = control
             .take()
@@ -602,6 +681,9 @@ where
             &mut time,
         )
     })();
+    if let Some(service) = &mut precheck {
+        service.retire();
+    }
     if let Some(control) = &mut control {
         operator = control.take_operator();
     }

@@ -302,6 +302,124 @@ where
     let response = client.join().unwrap();
     (result, output.bytes, response, packet)
 }
+
+#[test]
+fn native_full_stream_finish_prechecks_its_confirmed_prefix_without_resampling() {
+    use crate::workflow::actor_service::precheck::Settings;
+    use fa_reference::action::consequence::delivery::persistent::requests::actor::{
+        FilePrecheckOutcome,
+        precheck_wire::{PrecheckRequest, client::PrecheckPeerClient},
+    };
+    use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
+
+    let root = Root::new();
+    first(&root, None, true);
+    let config = configured(&root);
+    let native = native(&root, &config, true);
+    let decoder = native.decoder.clone();
+    let tokenizer = native.tokenizer.clone();
+    let store = config.store.clone();
+    let bootstrap = config.profile.clone();
+    let before =
+        FileOversight::read_decoder_text_progress(&store, &bootstrap, &decoder, &tokenizer, 7)
+            .unwrap();
+    let (mut peer, reviewer) = profiles(&root, &config);
+    peer.request = 92;
+    let selected = super::super::exact_precheck::Selection::new(Settings::decode(format!(
+        r#"{{"schema":"fa.actor-precheck-service/1","policy_disclosure":"exact_predicates","socket":"{}/precheck.sock","expected_policy_epoch":1,"disclosure_id":81,"query_limit":2,"exchange_limit":4,"candidate_limit":4,"connection_limit":4,"runtime_ms":15000}}"#,
+        root.0.display(),
+    ).as_bytes()).unwrap()).unwrap();
+    let socket = selected.settings.socket_path().to_owned();
+    let (source_sender, source_receiver) = mpsc::channel::<Vec<u8>>();
+    let (actor_sender, actor_receiver) = mpsc::channel();
+    let client = actor(peer.clone(), actor_receiver, true);
+    let review = human(reviewer.clone(), 92, &config, ReviewDecision::Approve);
+    let peer_context = peer.clone();
+    let endpoint = socket.clone();
+    let journal = store.join("delivery.bin");
+    let reviewer_socket = reviewer.socket(92);
+    let observer = std::thread::spawn(move || {
+        let document = source_receiver
+            .recv_timeout(Duration::from_secs(20))
+            .unwrap();
+        let Command::Submit { proposal, .. } = decode_command(&document).unwrap() else {
+            panic!("native Finish must remain a source-only Submit reference");
+        };
+        assert!(proposal.payload[16..].iter().all(|byte| *byte == 0));
+        let before = std::fs::read(&journal).unwrap();
+        let mut query = PrecheckPeerClient::connect(
+            UnixStream::connect(&endpoint).unwrap(),
+            peer_context.supervisor,
+            PrecheckRequest {
+                query: 17,
+                proposal,
+            },
+            1,
+        )
+        .unwrap();
+        let started = Instant::now();
+        loop {
+            assert!(started.elapsed() < Duration::from_secs(20));
+            let report = query.drive(DriveBudget::default()).unwrap();
+            assert!(report.status.failure.is_none(), "{:?}", report.status);
+            if let Some(response) = query.take_response() {
+                assert!(matches!(response.result, Ok(Knowledge::Known {
+                    value: FilePrecheckOutcome::PrecheckPassed, basis,
+                }) if basis.disclosure == 81 && basis.query == 17 && basis.policy_epoch == 1));
+                break;
+            }
+            assert!(!report.status.closed());
+            pause(1);
+        }
+        assert_eq!(std::fs::read(journal).unwrap(), before);
+        assert!(
+            !reviewer_socket.exists(),
+            "exact Finish precheck opened a human review"
+        );
+        actor_sender.send(document).unwrap();
+    });
+    let mut output = Output {
+        bytes: Vec::new(),
+        sender: Some(source_sender),
+    };
+    let result = super::super::serve_lifecycle_with_precheck(
+        config,
+        &peer,
+        &reviewer,
+        native,
+        (true, None, None, Intent::Finish(91)),
+        None,
+        Some(&selected),
+        || ElapsedTick(1000),
+        &mut output,
+    );
+    assert!(result.is_ok(), "{result:?}");
+    observer.join().unwrap();
+    assert!(executed(&client.join().unwrap()));
+    let packet = review.join().unwrap();
+    let frame = ReleaseFrame::decode(&packet.action().spec().payload).unwrap();
+    assert!(frame.is_finish());
+    assert_eq!(frame.prior_messages(), &["A"]);
+    let after =
+        FileOversight::read_decoder_text_progress(&store, &bootstrap, &decoder, &tokenizer, 7)
+            .unwrap();
+    assert_eq!(
+        after.text.generation_revision(),
+        before.text.generation_revision()
+    );
+    assert_eq!(
+        after.numerical.numerical.position,
+        before.numerical.numerical.position
+    );
+    assert_eq!(after.publication.executions, 2);
+    assert_eq!(after.publication.payload, b"A");
+    assert_eq!(
+        after.publication.control.ledger.charged,
+        before.publication.control.ledger.charged + packet.action().spec().units
+    );
+    assert!(!socket.exists());
+}
+
 fn witness_inputs(config: &Config, revision: u64, phantom: bool) -> FilePublicationInputs {
     let key = ProjectionKey {
         source: 40,

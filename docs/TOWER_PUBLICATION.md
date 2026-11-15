@@ -70,12 +70,13 @@ numerical replay, operation expenditure or native mutation. Inspection also
 withdraws its pending capture. Newly selected inspection custody records the
 replacement's actual scope and cannot mount under a foreign original actor.
 
-Ordinary transitions of the same native host preserve the existing grant and
-retry semantics. Returning that exact still-live host to its slot preserves its
-original custody; reopening its journal creates a new incarnation and cannot
-revive old grants. A replacement needs independently selected custody and a
-compatible route. This changes no public request/response format, journal
-encoding, resource-refund rule or production qualification.
+Ordinary transitions retain each capability's original lifetime and retry rules;
+exact-policy disclosure still requires its captured revision. Returning that
+exact still-live host to its slot preserves its original custody; reopening its
+journal creates a new incarnation and cannot revive old grants. A replacement
+needs independently selected custody and a compatible route. This changes no
+public request/response format, journal encoding, resource-refund rule or
+production qualification.
 
 Installation also checks the complete original native `Scope` for precheck,
 journal tail, narrowing and convening, including tenant, principal, run, branch,
@@ -337,12 +338,21 @@ connects this ingress to the original sequential review/publication lifecycle.
 
 Precheck defaults to unavailable. The supervisor explicitly issues an original
 `FileActorPrecheckPort` and retains its `FilePrecheckDisclosure` custodian. The
-host installs that port with `set_precheck(Some(port))`. The adapter checks the
-original owner allocation, not only numeric scope equality. A port from another
-owner refuses even when its tenant, run and complete native Scope are identical.
-Every replacement first withdraws the old installation, including an invalid
-replacement. `set_precheck(None)` withdraws this facade's copy without revoking
-other copies or changing the native grant's lifetime.
+host installs that port with `PublicationTower::set_precheck(Some(port))`. The
+adapter checks the original owner allocation and complete native scope. A port
+from another owner refuses even when its tenant, run and complete Scope are
+identical. Every replacement first withdraws the old installation, including an
+invalid replacement. `set_precheck(None)` withdraws this facade's copy without
+revoking other copies or changing the native grant's lifetime.
+
+An already constructed Linux `PublicationPeerSession` exposes the same host-only
+installation through `set_precheck`. It preserves the pending response, original
+request tickets, connection count and spent exchange allowance. Reinstalling a
+weak port does not replenish its shared native query allowance or retain its
+custodian. A revoked session returns `WrongState`; an incompatible owner/scope
+replacement returns `Binding` after withdrawing the prior installation. The
+native port still checks issuer identity, custody, current revision and source
+eligibility whenever a query enters it.
 
 Use `Verb::Precheck` at the mounted run with
 `ReadArguments::Precheck { query, proposal }`. The query label is nonzero; the
@@ -371,6 +381,23 @@ snapshot and review. A subsequent owner transition makes the old disclosure
 ineligible; it cannot reuse an earlier pass. The host may install a newly issued
 same-owner disclosure without discarding the session's existing request tickets.
 
+The [live ordinary Tower service](TOWER_PEER.md#check-exact-policy-before-a-tower-proposal)
+selects this capability with `--precheck-profile`. It installs an exact-only weak
+clone of the same grant used by the native precheck sidecar. Native and Tower
+evaluation/discovery queries, port clones, repeated labels, cache hits and
+reconnects share one cumulative allowance. Each transport keeps its own bounded
+connection and exchange accounting. The sidecar retains the sole custodian and
+the original source lease and deadline; retirement revokes every clone, including
+the actor Tower installation. Requests and reconnects cannot issue another grant.
+
+All three existing service profiles retain their native behavior. A full-policy
+profile keeps policy-definition access on its native endpoint, while its Tower
+clone is deliberately narrowed to `FileActorPrecheckPort`. Tower capability
+discovery therefore reports policy contents as withheld and exposes no policy
+structure or literals. The selected disclosure grants neither operator status
+nor a publication key. Independent Stop, fresh source acquisition on actual
+submission, helper/human review and the final publication checks remain required.
+
 ## Discover the actual disclosed boundary
 
 Use `Verb::Capabilities` at the mounted run with
@@ -396,6 +423,11 @@ with a stale expected policy epoch spends work and returns the native Stale
 result. Revoked custody remains Withheld; owner borrow, changed owner revision,
 ineligible source and owner loss preserve their original unavailable outcomes.
 No previously Known discovery is cached or reused after these changes.
+
+For the live shared profile, the reported remaining count includes work already
+spent through the native endpoint, including its separately selected full-policy
+reads. It is not a second Tower allowance. Sidecar retirement cannot be bypassed
+by reconnecting to the actor socket or reinstalling the original weak port.
 
 Discovery does not inspect an admission snapshot, evaluate a policy, populate
 the witness cache, read source files, observe a new clock or write a journal
@@ -867,3 +899,11 @@ uncertainty, strict encoding and routing. This scoped local result does not
 qualify the full repository, remote deployment or remaining dispatcher verbs;
 the [policy-replay verification section](TOWER_POLICY_REPLAY.md#executed-coverage-and-remaining-qualification)
 records its scope and corrected fixture attempt.
+
+The live same-session precheck extension adds six regression functions and
+strengthens three existing live-service cases for shared disclosure accounting,
+full-policy narrowing, source and lifetime boundaries, pending-response and
+counter preservation, foreign-owner installation and revocation. Centralized
+Rust 2024 parsing/formatting checks and source review completed. Compilation,
+Clippy, runtime execution and the canonical gate remain pending because RCH is
+unavailable; these checks do not establish deployment qualification.

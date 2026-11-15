@@ -11,6 +11,9 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     },
 };
 
+#[path = "precheck/shared_tower.rs"]
+mod shared_tower;
+
 fn settings_document(socket: &Path, version: u8, queries: usize) -> String {
     let (disclosure, extra) = match version {
         1 => ("exact_predicates", ""),
@@ -247,13 +250,15 @@ fn tower_submit_reacquires_changed_source_after_a_real_passing_precheck() {
     )
     .unwrap()
     .encode();
-    let candidate = candidate(&config);
+    let check = shared_tower::check_document(&config);
     let document = proposal_document(&config, 7);
     let profile = actor.clone();
     let peer = std::thread::spawn(move || {
-        passed(query(&profile, &precheck_socket, candidate));
+        wait(&precheck_socket);
+        let mut socket = connect(&profile);
+        shared_tower::passed(&raw_exchange(&mut socket, &check));
         fs::write(source_path, changed).unwrap();
-        raw_exchange(&mut connect(&profile), &document)
+        raw_exchange(&mut socket, &document)
     });
     serve_with_precheck(config, &actor, &reviewer, &settings).unwrap();
     let response = peer.join().unwrap();
@@ -397,10 +402,13 @@ fn a_truncated_sidecar_frame_does_not_stop_or_replace_tower_publication() {
     let (actor, reviewer) = profiles(&root, &config);
     let settings = settings(&root);
     let precheck_socket = root.0.join("actors/precheck.sock");
+    let check = shared_tower::check_document(&config);
     let document = proposal_document(&config, 7);
     let profile = actor.clone();
     let peer = std::thread::spawn(move || {
         wait(&precheck_socket);
+        let mut socket = connect(&profile);
+        shared_tower::passed(&raw_exchange(&mut socket, &check));
         let mut broken = UnixStream::connect(&precheck_socket).unwrap();
         broken.write_all(b"{").unwrap();
         broken.shutdown(std::net::Shutdown::Write).unwrap();
@@ -413,7 +421,8 @@ fn a_truncated_sidecar_frame_does_not_stop_or_replace_tower_publication() {
             pause(1);
         }
         assert!(UnixStream::connect(&precheck_socket).is_err());
-        raw_exchange(&mut connect(&profile), &document)
+        shared_tower::withheld(&raw_exchange(&mut socket, &check));
+        raw_exchange(&mut socket, &document)
     });
     let human = human(reviewer.clone());
     serve_with_precheck(config, &actor, &reviewer, &settings).unwrap();
@@ -441,13 +450,15 @@ fn independent_stop_drains_both_partial_ingresses_without_admitting_a_request() 
     let (actor, reviewer) = profiles(&root, &config);
     let settings = settings(&root);
     let precheck_socket = root.0.join("actors/precheck.sock");
+    let check = shared_tower::check_document(&config);
     let profile = actor.clone();
     let stop_profile = reviewer.clone();
     let peer = std::thread::spawn(move || {
         wait(&precheck_socket);
+        let mut tower = connect(&profile);
+        shared_tower::passed(&raw_exchange(&mut tower, &check));
         let mut precheck = UnixStream::connect(&precheck_socket).unwrap();
         precheck.write_all(b"{\"query\":").unwrap();
-        let mut tower = connect(&profile);
         tower.set_nonblocking(false).unwrap();
         tower
             .set_write_timeout(Some(Duration::from_secs(10)))

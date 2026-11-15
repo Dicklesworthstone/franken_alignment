@@ -144,7 +144,7 @@ impl Selection {
 
 /// Resolve existing ancestors without opening a source or authority store.
 /// Missing output/socket suffixes retain their exact filesystem identity.
-fn resolve(path: &Path) -> Result<PathBuf, String> {
+pub(super) fn resolve(path: &Path) -> Result<PathBuf, String> {
     let mut ancestor = std::path::absolute(path).map_err(super::debug)?;
     let mut suffix = Vec::new();
     loop {

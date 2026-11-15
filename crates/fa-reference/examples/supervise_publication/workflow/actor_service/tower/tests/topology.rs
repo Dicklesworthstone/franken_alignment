@@ -130,15 +130,36 @@ fn single_request_topology_precheck_creation_keeps_each_independent_selection() 
             }
         }
     }
-    // This composition has no recovery or scheduled disclosure contract.
-    // Those selections must continue to refuse before profile reads or clocks.
+}
+
+#[test]
+fn single_new_request_recovery_precheck_keeps_independent_custody_and_disclosure() {
     for mode in ["serve-open", "serve-open-checked"] {
-        let mut args = positional(mode);
-        args.extend([
-            FLAG, "11", "--topology-profile", "topology.json",
-            "--precheck-profile", "precheck.json", "--guarded", "recovery.json",
-        ].into_iter().map(str::to_owned));
-        refused_before_reads(&args);
+        for reverse in [false, true] {
+            let pairs = [
+                [FLAG, "11"], ["--topology-profile", "topology.json"],
+                ["--precheck-profile", "precheck.json"], ["--guarded", "recovery.json"],
+                ["--operator-profile", "operator.json"],
+            ];
+            let mut args = positional(mode);
+            for index in if reverse { [4, 3, 2, 1, 0] } else { [0, 1, 2, 3, 4] } {
+                args.extend(pairs[index].into_iter().map(str::to_owned));
+            }
+            let selected = Arguments::parse(&args).unwrap();
+            assert!(selected.open);
+            assert_eq!(selected.generation, 11);
+            assert_eq!(selected.topology, Some(Path::new("topology.json")));
+            assert_eq!(selected.guarded, Some(Path::new("recovery.json")));
+            assert_eq!(selected.precheck, Some(Path::new("precheck.json")));
+            assert_eq!(selected.operator, Some(Path::new("operator.json")));
+            assert_eq!(selected.publication.is_some(), mode.ends_with("-checked"));
+            assert!(selected.requests.is_none());
+            for pair in [["--requests", "7,8"], ["--governor-profile", "governor.json"]] {
+                let mut refused = args.clone();
+                refused.extend(pair.into_iter().map(str::to_owned));
+                refused_before_reads(&refused);
+            }
+        }
     }
 }
 

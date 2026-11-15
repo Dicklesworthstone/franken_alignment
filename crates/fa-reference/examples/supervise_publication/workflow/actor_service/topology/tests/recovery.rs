@@ -1,12 +1,14 @@
 //! Actual Tower restart across independently retained original custody. Synthetic
 //! helpers/captures exercise enforcement; they do not establish evaluator quality.
 
+#[path = "recovery/convening.rs"]
+mod convening;
+#[path = "recovery/precheck.rs"]
+mod precheck;
 #[path = "recovery/sequence.rs"]
 mod sequence;
 #[path = "recovery/stop.rs"]
 mod stop;
-#[path = "recovery/convening.rs"]
-mod convening;
 
 use super::*;
 use crate::workflow::actor_service::{operator::Settings, tower::command_with_clock};

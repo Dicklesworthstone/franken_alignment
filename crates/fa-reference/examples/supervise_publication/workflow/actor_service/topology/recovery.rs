@@ -2,11 +2,10 @@
 //! Recorded requests stay source-free; new work reuses the native source rebind.
 use super::super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
-    Instant, OwnerStart, PeerProfile, Profile, PublicationProfile, check_deployment,
-    debug, governor, operator, plus, serve_ready_driver,
+    Instant, OwnerStart, PeerProfile, Profile, PublicationProfile, check_deployment, debug,
+    governor, operator, plus, precheck, serve_ready_driver,
 };
 use crate::recover_stop::guarded::{Custody, SubmitProfile};
-use crate::workflow::{FileHumanReviewer, control::Control};
 use crate::workflow::continuation::{
     checkpoint::{self, AcknowledgedOutput},
     guarded::{
@@ -14,6 +13,7 @@ use crate::workflow::continuation::{
         mediated::{self, ReadyRecovery, Recovered, profile::Selection},
     },
 };
+use crate::workflow::{FileHumanReviewer, control::Control};
 use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
@@ -39,6 +39,7 @@ pub(in super::super) fn serve<F>(
     topology: &Selection,
     generation: u64,
     operator: Option<&operator::Settings>,
+    precheck: Option<&precheck::Settings>,
     time: F,
 ) -> Result<(), String>
 where
@@ -54,6 +55,7 @@ where
         topology,
         generation,
         operator,
+        precheck,
         None,
         None,
         time,
@@ -89,6 +91,7 @@ where
         topology,
         generation,
         operator,
+        None,
         Some(requests),
         None,
         time,
@@ -117,7 +120,7 @@ where
 {
     serve_selected(
         config, actor, reviewer, publication, credibility, recovery, topology,
-        generation, Some(operator), Some(requests), Some(governor), time,
+        generation, Some(operator), None, Some(requests), Some(governor), time,
     )
 }
 
@@ -131,6 +134,7 @@ fn serve_selected<F>(
     topology: &Selection,
     generation: u64,
     operator: Option<&operator::Settings>,
+    precheck: Option<&precheck::Settings>,
     requests: Option<&[u64]>,
     governor: Option<&governor::Settings>,
     mut time: F,
@@ -153,6 +157,9 @@ where
     }
     actor.check_host(&config)?;
     reviewer.check_host(&config)?;
+    if let Some(settings) = precheck {
+        settings.check_host(&config, actor, reviewer)?;
+    }
     let scheduled = requests.unwrap_or(std::slice::from_ref(&actor.request));
     super::super::series::validate(scheduled, actor, reviewer)?;
     if let Some(governor) = governor {
@@ -176,6 +183,7 @@ where
             })
             .collect();
         endpoints.extend(governor.map(|settings| settings.socket.clone()));
+        endpoints.extend(precheck.map(|settings| settings.socket_path().to_owned()));
         let paths: Vec<_> = endpoints.iter().map(|path| path.as_path()).collect();
         settings.check_host(&config, actor, reviewer, &paths)?;
     }
@@ -193,10 +201,28 @@ where
         actor,
         reviewer,
         operator,
+        precheck,
         scheduled,
         &custody,
         archive.as_ref(),
     )?;
+    if let Some(settings) = precheck {
+        // A retired listener must never unlink source custody or become an
+        // authority-store entry. Compare canonical parents even for next inputs
+        // that do not exist yet; no next-source read occurs during admission.
+        let socket = canonical_destination(settings.socket_path())?;
+        let store = fs::canonicalize(&config.store).map_err(debug)?;
+        if socket.starts_with(store) {
+            return Err("precheck endpoint must remain outside the authority store".into());
+        }
+        let mut paths = topology.input_paths();
+        paths.push(config.source.path());
+        for path in paths {
+            if socket == canonical_destination(path)? {
+                return Err("precheck endpoint and recovery source inputs must be distinct".into());
+            }
+        }
+    }
     if let Some(governor) = governor {
         let mut paths = topology.input_paths();
         paths.push(config.source.path());
@@ -272,6 +298,11 @@ where
             }
         }
         if !has_new_work {
+            if precheck.is_some() {
+                // Historical receipts retain the post-Fence checkpoint without
+                // binding a fresh source or issuing a new policy disclosure.
+                return Err("recorded requests are observation-only and cannot acquire a new precheck disclosure".into());
+            }
             if governor.is_some() {
                 return Err("governed mediated recovery requires a new scheduled request; use ordinary ungoverned recovery for source-free historical receipts".into());
             }
@@ -362,7 +393,7 @@ where
             reviewer,
             publication,
             credibility,
-            None,
+            precheck,
             Some(generation),
             operator,
             socket,
@@ -451,6 +482,7 @@ fn check_destinations(
     actor: &Profile,
     reviewer: &PeerProfile,
     operator: Option<&operator::Settings>,
+    precheck: Option<&precheck::Settings>,
     requests: &[u64],
     custody: &Custody,
     archive: Option<&AcknowledgedOutput>,
@@ -465,12 +497,15 @@ fn check_destinations(
     if let Some(operator) = operator {
         sockets.push(canonical_destination(&operator.socket)?);
     }
+    if let Some(settings) = precheck {
+        sockets.push(canonical_destination(settings.socket_path())?);
+    }
     if sockets
         .iter()
         .enumerate()
         .any(|(index, path)| sockets[..index].contains(path))
     {
-        return Err("actor, reviewer, Stop and operator endpoints must be distinct".into());
+        return Err("actor, reviewer, Stop, operator and precheck endpoints must be distinct".into());
     }
     let outputs: Vec<_> = [custody.output_path(), archive.map(AcknowledgedOutput::path)]
         .into_iter()
@@ -486,7 +521,7 @@ fn check_destinations(
         .any(|output| sockets.iter().any(|socket| socket.as_path() == *output))
     {
         return Err(
-            "recovery archives and actor, reviewer, Stop or operator sockets must be distinct"
+            "recovery archives and actor, reviewer, Stop, operator or precheck sockets must be distinct"
                 .into(),
         );
     }

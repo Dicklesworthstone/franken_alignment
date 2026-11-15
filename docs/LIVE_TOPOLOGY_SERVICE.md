@@ -61,10 +61,27 @@ Topology-supervised reopening uses the explicit
 `--guarded` history/floors and a `fa.mediated-submit/2` topology profile in either
 open mode. It consumes the independently retained source/history checkpoint and
 preserves cumulative work through the original recovery and source rebind.
+A single genuinely new request in either plain or simple-witness checked guarded
+recovery may also select `--precheck-profile`. The existing v1 uncached exact,
+v2 cached exact and v3 full-policy profiles retain their original disclosure and
+finite work limits. Supply `expected_policy_epoch` for the resulting owner after
+recovery fencing and source rebind; the service never rewrites that expectation.
+Disclosure starts only after initial topology certification and a fresh timed
+policy-source capture. Actual submission still requires fresh evidence,
+independent helper/human review and the final topology/witness gates.
+
+A recorded request with precheck selected is rejected before live source loading
+or rebind, with selected retention attempted from the exact post-Fence custody.
+The original independent Stop listener remains available throughout replay,
+source acquisition and live precheck intake. Precheck endpoints must also be
+distinct from recovery archives, other endpoints and source inputs, and outside
+the authority store, including canonical aliases.
+
 Ordinary unguarded open remains outside this topology composition. Explicit
-Tower schedules retain their existing cumulative source contract; precheck
-disclosure is limited to single-request Tower creation and is not admitted for
-scheduled, reopened or governed topology services. Creation continues to refuse credibility activation;
-guarded reopening applies the original option only to new work. No continuous
-watcher, OS-containment proof, new authority, journal format, effect adapter or
-executor is added.
+Tower schedules retain their existing cumulative source contract; scheduled and
+live-governor services cannot select precheck. Creation continues to refuse
+credibility activation; guarded reopening applies the original option only to
+new work. No continuous watcher, OS-containment proof, new authority, journal
+format, effect adapter or executor is added. The recovered-precheck sources and
+regressions have been reviewed and syntax-checked; runtime qualification remains
+pending because the required RCH runner is unavailable.

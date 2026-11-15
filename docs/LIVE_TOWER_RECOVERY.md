@@ -12,10 +12,11 @@ supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-g
 Option pairs may follow the positional files in any order. The service accepts
 one request or an explicit `--requests` schedule of 1–64 distinct keys, with the
 existing plain checked-publication profile and optional separate operator
-endpoint. A schedule must start with the actor profile's request. Precheck sidecars,
-multiple peers, generated/learned modes and stronger feed, wait, snapshot or joint
-witness profiles keep their separate lifecycles. Unsupported combinations refuse
-before service setup.
+endpoint. A schedule must start with the actor profile's request. A single
+genuinely new request may also select an explicit precheck profile, as described
+below. Multiple peers, generated/learned modes and stronger feed, wait, snapshot
+or joint witness profiles keep their separate lifecycles. Unsupported
+combinations refuse before service setup.
 
 The separately selected [live governor recovery command](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody)
 also composes with this original mediated service. It requires
@@ -24,7 +25,8 @@ an independent governor profile and a separately granted operator promotion
 allowance. The source profile remains exact `fa.mediated-submit/2` custody for
 the same history. A governed schedule must contain at least two request keys
 and at least one new request; an entirely historical schedule uses the ordinary
-source-free receipt service without a governor.
+source-free receipt service without a governor. Scheduled and live-governor
+recovery do not accept precheck profiles.
 
 ## Independent history and source custody
 
@@ -40,8 +42,11 @@ only strengthen external minima.
 
 Select new `retain_history_anchor` and `retain_checkpoint` destinations to retain
 the next pair. Each output uses existing create-new custody rules outside the
-authority store. Both outputs and the actor, human-review, Stop and operator
-sockets must be canonically distinct, including parent-directory aliases. An
+authority store. Both outputs and the actor, human-review, Stop, operator and
+selected precheck sockets must be canonically distinct, including
+parent-directory aliases. A selected precheck endpoint must also remain outside
+the authority store and distinct from topology/checkpoint inputs and the policy
+evidence source, including next inputs whose files do not yet exist. An
 explicit governor is checked against every selected source/checkpoint input and
 output as well as the original scheduled endpoint classes. These
 checks precede the clock, listeners and recovery mutation. Creation also checks
@@ -114,6 +119,48 @@ option applies to new work through its original path, and existing credibility
 requirements remain enforced. Operator situation/explanation reads remain
 observational.
 
+### Exact policy precheck after recovery
+
+Select `--precheck-profile` for the single new request named in `ACTOR_PROFILE`:
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --precheck-profile PRECHECK_PROFILE
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation 41 --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --precheck-profile PRECHECK_PROFILE --operator-profile OPERATOR_PROFILE
+```
+
+The existing profiles retain their original contracts:
+
+| Profile schema | Disclosure |
+| --- | --- |
+| `fa.actor-precheck-service/1` | Uncached exact policy predicates. |
+| `fa.actor-precheck-service/2` | Cached exact predicates with explicit cache limits. |
+| `fa.actor-precheck-service/3` | Full policy with explicit cache limits and its required leakage declaration. |
+
+Use the [live precheck profile](LIVE_ACTOR_PRECHECK.md) and
+[full-policy profile](LIVE_POLICY_DISCLOSURE.md) specifications. The profile's
+`expected_policy_epoch` must match the current owner after recovery fencing and
+the original source rebind. An earlier profile may therefore be stale. Recovery
+never adjusts the supplied epoch or the actor's target, proposal or deadline to
+make a query pass; an epoch mismatch follows the existing failure and retention
+path.
+
+The same driver completes anchored replay and reconciliation, rebinds the
+original source with its spent work, certifies the initial topology cut and
+acquires fresh timed policy evidence before exposing disclosure. Repeated
+queries and reconnects share one finite grant. Queries do not reserve an actor
+request, spend topology checks, invoke helpers or acquire the human key. A
+passing precheck still requires ordinary fresh Submit admission, independent
+helper and human review, both publication keys and the final topology/witness
+checks. Disclosure retires before effect review and on service exit.
+
+The original authenticated Stop remains first during replay, source acquisition
+and live intake, including incomplete precheck or actor frames. A pending replay
+Stop follows the sealed admission path described above before any disclosure or
+new source rebind. The optional operator endpoint retains its separate custody.
+`--requests` schedules and live-governor precheck remain unsupported.
+
+### Schedules and recorded requests
+
 All scheduled keys are inspected before choosing the recovery path. If any key
 is new, one original source rebind and initial qualification serve the entire
 schedule, including a retained prefix followed by new work. Source limits,
@@ -132,6 +179,11 @@ topology and independent custody inputs remain necessary. Actor traffic causes
 no extra sweep, source refresh or effect, and a recorded transport timeout does
 not automatically Stop the settled owner. The sealed successor can retain the
 same spent work for another exact paired-custody recovery with missing live assets.
+Selecting precheck for a recorded request is an explicit refusal: after original
+reconciliation establishes that the request exists, the service rejects the new
+disclosure before loading live assets or rebinding the source. It attempts the
+selected history and source exports from the exact post-Fence successor. To
+serve only the retained receipt, use the observation-only selection above.
 An entirely recorded schedule follows this observation-only path for every key,
 even when live source files, witness captures and helper programs are absent.
 Historical actor transport failure does not manufacture a Stop or refresh the
@@ -174,7 +226,15 @@ independently wrong requirements; and preserve each custody output after a lost
 reply, late deadline or failure of the other export. The recorded-Stop regression
 now waits for a complete native actor response to establish its live boundary.
 
-The new integration sources were reconstructed after the editing workspace
+Eight recovered-precheck regression functions add plain/checked publication
+through all three disclosure profiles, finite shared query limits, fresh-source
+denial, final topology and checked-witness failures after dispatch, partial-frame
+Stop, replay Stop without live assets, stale epoch refusal, recorded-request
+refusal and canonical endpoint/archive/source/store collisions. These additions
+have been source-reviewed and syntax-checked. Runtime execution and qualification
+remain pending because the required RCH runner is unavailable.
+
+The earlier mediated Stop integration sources were reconstructed after the editing workspace
 became unavailable and independently reviewed. After the workspace returned,
 all eleven changed Rust files passed installed-rustfmt syntax processing; both
 new test files were formatted and passed focused format checks, and

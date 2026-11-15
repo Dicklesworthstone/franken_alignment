@@ -1,5 +1,57 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: compose native, Tower and recovered topology prechecks
+
+Explicit live precheck selection now connects the native capability to three
+original service paths. Ordinary Tower sessions receive the same exact-predicate
+port as the native sidecar, so `capabilities`, `precheck` and actual submission
+can use one actor connection. Both protocols, cloned ports and reconnects spend
+one finite query allowance. The sidecar retains the sole disclosure custodian;
+retirement or expiry revokes Tower reads without renewing the original session's
+transport budgets or changing its pending reply and request tickets. Full-policy
+profiles expose only their narrowed exact-predicate capability through Tower.
+An unselected service does not acquire disclosure authority.
+
+Guarded, independently anchored topology recovery now accepts an explicit
+precheck profile for one genuinely new ordinary request, including the existing
+simple checked mode. Uncached, cached and full-policy profiles retain their
+original source, post-Fence policy epoch and finite budgets. Already-recorded
+requests refuse this new disclosure before live source loading or rebinding.
+Recovery Stop retains priority, canonical endpoint/source/store/checkpoint aliases
+refuse before replay, and actual publication still runs fresh source admission,
+both independent reviews and the original final topology and witness gates.
+Scheduled and governed precheck combinations remain outside this grammar.
+
+Native generated-text creation, reopening, explicit continuation and explicit
+Finish can select an uncached version-1 exact profile, with optional independent
+operator custody. Disclosure starts only after the original Message completes
+or the confirmed Finish prefix is selected. The original source-only intent is
+unchanged; queries evaluate the actual cumulative frame and charge without
+sampling, source reads, clock reads, journal writes, snapshot consumption or
+review. Stop remains first, and the grant retires before actual review and on
+sidecar faults. A passing query never replaces fresh submission evidence or
+either publication key. Cached/full profiles and recorded native receipts remain
+outside this selected path.
+
+Twenty new integration regression functions cover authenticated live native
+Message/Finish, shared Tower/native grants, public peer installation and
+recovered topology behavior. Together with the six native API regressions in the
+preceding increment, they pair real fixture publication with stale source/epoch,
+human rejection, final-cut failure, foreign or revoked grants, exhausted work,
+partial frames, independent Stop and canonical path collisions. The native
+fixture exercises actual deterministic inference; it is not empirical detector
+quality evidence.
+
+Independent cross-review found and corrected a test import and an alias fixture
+before the final source checks. All 26 changed Rust files passed grammar parsing,
+changed Rust sections received targeted rustfmt, and whitespace checks passed.
+The required RCH command remains blocked by the missing `rch` executable and
+remote worker configuration. No compilation, runtime, Clippy or full-gate result
+is claimed; no Bead or roadmap acceptance is closed. Contracts:
+`docs/LIVE_ACTOR_PRECHECK.md`, `docs/NATIVE_TEXT_PUBLICATION_SERVICE.md`,
+`docs/TOWER_PEER.md`, `docs/TOWER_PUBLICATION.md`,
+`docs/LIVE_TOWER_RECOVERY.md` and `docs/LIVE_TOPOLOGY_SERVICE.md`.
+
 ## 2026-11-14: exact prechecks for original native generated releases
 
 The native generated-text supervisor now exposes separately selected exact

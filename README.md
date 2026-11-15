@@ -29,6 +29,20 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+Explicit [live policy prechecks](docs/LIVE_ACTOR_PRECHECK.md) now connect three
+previously separate paths. A Tower actor can discover exact predicates, precheck
+and submit through its existing session, sharing one finite disclosure with the
+native sidecar. Guarded single-request topology recovery can disclose policy for
+a genuinely new plain or checked request after its original recovery fence.
+The [native generated-text service](docs/NATIVE_TEXT_PUBLICATION_SERVICE.md)
+can separately precheck its completed Message or explicit Finish against the
+actual cumulative frame and charge. Queries preserve numerical progress and
+journal state; actual publication still requires fresh evidence, the original
+source gates and both independent approval keys. Twenty-six new regression
+functions are authored across the native API and live integrations. Changed Rust
+sections have been formatted and all changed Rust files parsed; compilation and
+runtime qualification remain pending the required RCH environment.
+
 The [original target-narrowing operation](docs/SCOPED_AUTHORITY_NARROWING.md)
 now supports numerical and typed-stream owners through a separately budgeted
 native control grant. Exact target restrictions preserve retained reservations,

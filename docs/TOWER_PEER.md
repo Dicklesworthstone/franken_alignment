@@ -48,10 +48,11 @@ peers, receipt-only services, native text or learned generation refuse before
 opening their files. The grammar never silently selects a different protocol.
 Existing native actor commands retain their current mode.
 
-The selected host grants only its configured tenant's control-ledger reads and
-existing actor-intake purpose. It supplies no operator status, experiment
-context, precheck disclosure or supervisor capability. Unsupported operations
-return ordinary Tower refusals. A caller cannot add authority fields to JSON.
+By default, the host grants only its configured tenant's control-ledger reads
+and existing actor-intake purpose. An explicit `--precheck-profile` also installs
+the original exact-predicate disclosure described below. The actor session gains
+no operator status, experiment context or supervisor authority. Unselected
+operations return ordinary Tower refusals. A caller cannot add grants to JSON.
 
 An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
 service provisions a separate authenticated endpoint for selected native
@@ -198,6 +199,10 @@ supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-g
 
 `serve-open-checked` accepts the same options after its plain witness profile;
 both support an explicit `--requests` schedule and the separate operator endpoint.
+For one new request, either open mode can instead select `--precheck-profile`.
+That disclosure belongs to the recovered original owner and uses its current
+policy epoch after recovery fencing. Recorded requests, schedules and a live
+governor cannot acquire this single-request precheck selection.
 The explicit `fa.guarded-submit/1`
 history/floors and `fa.mediated-submit/2` source checkpoint must describe the same
 complete original cut. Recovery reuses the original native Fence/Time/Sweep,
@@ -230,7 +235,8 @@ The same composition is available for `serve-open` and `serve-create-checked`.
 Select one of the existing uncached, cached or full-policy precheck profiles;
 its original disclosure, socket, policy epoch, query and lifetime limits apply.
 `--requests` cannot be combined with this option: disclosure belongs to the
-single selected admission and is never renewed at a sequence handoff.
+single selected admission and is never renewed at a sequence handoff. A live
+governor is also incompatible with this selection.
 
 The create forms can additionally retain their original topology supervision:
 
@@ -239,12 +245,22 @@ supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower
 supervise_publication serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --precheck-profile PRECHECK_PROFILE --topology-profile TOPOLOGY_PROFILE --tower-generation 41
 ```
 
-All option pairs follow the positional files and can appear in any order. This
-combination is limited to one ordinary request and the existing simple checked
-witness profile. It does not admit topology/precheck recovery, schedules, a live
-governor, native text, generated/learned owners or stronger witness profiles.
-Uncached, cached and full-policy precheck profiles retain their original
-disclosure and leakage contracts.
+Guarded recovery can select the same disclosure for one new request:
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE --precheck-profile PRECHECK_PROFILE --tower-generation 41
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation 41 --precheck-profile PRECHECK_PROFILE --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE
+```
+
+All option pairs follow the positional files and can appear in any order. These
+topology compositions support one ordinary request and, for checked modes, the
+existing plain witness profile. Recovery requires the independently retained
+guarded history and exact `fa.mediated-submit/2` source checkpoint; its selected
+request must be absent from the recovered journal. Set the precheck profile's
+expected policy epoch to the recovered owner's epoch, including recovery fences.
+Precheck cannot be combined with a schedule or live governor. This ordinary
+Tower composition also excludes native text, generated/learned owners and
+stronger witness profiles.
 
 Initial topology certification completes before the precheck endpoint is
 exposed. The same original source custodian pays the final check before
@@ -256,11 +272,33 @@ or failed exit. The checkpoint destination and precheck socket must be distinct,
 including aliases through canonical parent directories; conflicts refuse before
 time, store or source admission.
 
-The actor calls `actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON`
-through the separate native socket, then sends its actual proposal with
-`tower-exchange ACTOR_PROFILE PROPOSE_JSON`. Tower actor grants stay unchanged;
-the option does not install an operator or disclosure capability in that Tower
-session. Both connections authenticate against their original peer policy.
+The selected profile installs a weak exact-predicate port on the existing actor
+Tower session. Its `precheck` and `capabilities` verbs use the printed run mount
+and the [Tower request schema](TOWER_REQUEST.md). The actor can send the complete
+explicit sequence through one authenticated connection:
+
+```sh
+supervise_publication tower-exchange ACTOR_PROFILE TOWER_CAPABILITIES_JSON TOWER_PRECHECK_JSON PROPOSE_JSON GET_JSON
+```
+
+The client sends each supplied document in order; it does not condition a later
+proposal on an earlier precheck result. To choose a proposal after inspecting the
+observations, send only the read documents first, then explicitly submit the
+chosen proposal. Reconnection does not replenish the original disclosure.
+
+The existing `actor-precheck ACTOR_PROFILE PRECHECK_PROFILE PRECHECK_JSON` command
+continues to use the separate native socket. Both protocols authenticate against
+the original actor peer policy and share one cumulative native query allowance,
+including discovery, repeated labels, cache hits and reconnects. Their configured
+transport connection and exchange limits remain separate. The sidecar retains
+the sole disclosure custodian; the Tower copy cannot extend its lifetime or
+issue a replacement grant.
+
+For a full-policy profile, the native endpoint retains its explicitly selected
+policy-definition access. The Tower receives only the narrowed exact-predicate
+port: its `capabilities` response reports `policy_contents: "withheld"`, and it
+does not expose policy structure or literals. Uncached and cached profiles keep
+their original witness-cache behavior and disclosure boundaries.
 
 The original supervisor bootstraps the source once before exposing precheck.
 Queries and reconnects share the same finite allowance and source lease. A
@@ -269,11 +307,13 @@ independent helper/human review and both publication keys. Checked service modes
 also keep their final-publication witness checks. A changed source or witness
 can therefore prevent publication after an earlier precheck pass.
 
-Independent Stop is checked before either ingress. Malformed precheck traffic
-retires that sidecar without cancelling ordinary Tower work; review and every
-service exit retire its disclosure. A recorded request cannot acquire a new
-precheck grant during recovery. Socket collisions and invalid combinations
-refuse before source acquisition or store creation.
+Independent Stop is checked before either ingress. A malformed native sidecar
+frame or an original sidecar lifetime/transport limit retires its disclosure,
+revoking the Tower copy while ordinary Tower work remains available. Recording
+the selected request, entering review, an owner change and every service exit
+also retire the original grant. A recorded request cannot acquire a new precheck
+grant during recovery. Socket collisions and invalid combinations refuse before
+source acquisition or store creation.
 
 ## Publish an explicit request sequence
 
@@ -367,6 +407,17 @@ source/time only for a new valid selected proposal; the latter accepts neither
 source nor clock and cannot admit unrecorded work. Both retain original helper
 maintenance and keep source preparation diagnostics outside actor response bytes.
 
+The host can install an existing disclosure with
+`PublicationPeerSession::set_precheck(Some(port))`, including while a response
+is pending. It delegates to the original Tower's owner-allocation and complete
+scope checks. Replacement preserves the pending response, request tickets,
+connection count and spent exchange/query allowances; a foreign replacement
+withdraws the previous installation before refusing. `set_precheck(None)` removes
+only this facade's copy. A revoked peer rejects installation, and the native
+port continues to check issuer identity, custody, revision and source eligibility
+on every query. The method creates no grant and retains no strong owner or
+disclosure-custodian reference.
+
 For a bounded schedule, use `drive_tower_sequence_from_file` and
 `drive_tower_sequence_observe` with the current key and completed prefix. Both
 check the exact original owner and the original journal's terminal dispositions
@@ -420,10 +471,20 @@ and the full canonical gate remain pending for this increment. This service
 does not claim the complete prospective `fa` CLI, all Tower verbs, learned
 publication transport or signed receipt verification.
 
-The precheck composition adds nine authored regression functions, including
-the three disclosure profiles, shared work across reconnects, real two-key
-publication, changed source/final witness, partial-frame Stop, socket preflight
-and recorded-request refusal. Source review and a Rust 2024 syntax/format pass
-do not establish execution: RCH has no configured workers and the required
-remote command refuses with an unavailable daemon. Compilation and runtime
-qualification remain open.
+The earlier native-sidecar composition added nine authored regression functions,
+including the three disclosure profiles, shared work across reconnects, real
+two-key publication, changed source/final witness, partial-frame Stop, socket
+preflight and recorded-request refusal. Source review and a Rust 2024
+syntax/format pass do not establish execution: RCH has no configured workers and
+the required remote command refuses with an unavailable daemon. Compilation and
+runtime qualification remain open.
+
+The same-session disclosure extension adds six regression functions and
+strengthens three existing live-service cases. They cover shared work across
+both protocols and all three profiles, full-policy narrowing, read-only queries
+with an absent source file, exhaustion/reconnect, original deadline retirement,
+missing grants, invalid and stale requests, pending-response preservation,
+foreign-owner replacement, revocation, changed-source denial and independent
+Stop. Centralized Rust 2024 parsing/formatting checks and source review completed;
+compilation, Clippy, runtime execution and the canonical gate remain pending
+because the required RCH service is unavailable.

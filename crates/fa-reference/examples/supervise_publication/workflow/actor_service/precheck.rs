@@ -7,13 +7,18 @@ pub(super) use profile::Settings;
 #[path = "precheck/client.rs"]
 pub(super) mod client;
 
-use super::{BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
-    Instant, PeerProfile, Profile, debug, io, plus};
-use fa_reference::action::consequence::delivery::persistent::requests::actor::FilePrecheckDisclosure;
+use super::{
+    BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, FileSupervisedDriver,
+    Instant, PeerProfile, Profile, debug, io, plus,
+};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::LearnedTextRelease;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::precheck_wire::{
     FilePrecheckPeerSession, FilePrecheckWire, MAX_PRECHECK_FRAME_BYTES,
 };
+use fa_reference::action::consequence::delivery::persistent::requests::actor::{
+    FileActorPrecheckPort, FilePrecheckDisclosure,
+};
+use fa_reference::action::consequence::oversight::actor::ActorProposal;
 use fa_reference::action::consequence::oversight::actor_peer::PeerRefusal;
 use fa_reference::action::consequence::oversight::actor_transport::DriveBudget;
 use fa_reference::action::consequence::oversight::actor_wire::{ChannelState, CloseReason};
@@ -23,6 +28,14 @@ struct Active {
     socket: BoundSocket,
     session: FilePrecheckPeerSession,
     disclosure: FilePrecheckDisclosure,
+    port: FileActorPrecheckPort,
+}
+
+#[derive(Clone, Copy)]
+enum Selection<'a> {
+    Ordinary,
+    Learned(LearnedTextRelease),
+    Generated(&'a ActorProposal),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -60,6 +73,15 @@ pub(super) fn check_learned(settings: &Settings) -> Result<(), String> {
     Ok(())
 }
 
+pub(super) fn check_generated(settings: &Settings) -> Result<(), String> {
+    if settings.cache.is_some() || settings.full_policy {
+        return Err(
+            "native generated precheck requires the explicit v1 exact-predicate profile".into(),
+        );
+    }
+    Ok(())
+}
+
 pub(super) fn check_owner_epoch(settings: &Settings, host: &FileOversight) -> Result<(), String> {
     if host.inspect().control.ledger.epoch != settings.expected_policy_epoch {
         return Err("precheck expected policy epoch does not match the original owner".into());
@@ -71,27 +93,100 @@ impl Service {
     /// One source/time bootstrap, one native grant, one finite peer session.
     /// Call only for a new selected ordinary request after independent stop has
     /// been installed. Source/clock work belongs to bootstrap, never to a query.
-    pub(super) fn start<F>(settings: &Settings, actor: &Profile, reviewer: &PeerProfile,
-        config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F)
-        -> Result<Self, String>
-    where F: FnMut() -> ElapsedTick {
-        Self::start_selected(settings, actor, reviewer, config, driver, deadline, time, None)
+    pub(super) fn start<F>(
+        settings: &Settings,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        config: &mut Config,
+        driver: &mut FileSupervisedDriver,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<Self, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        Self::start_selected(
+            settings,
+            actor,
+            reviewer,
+            config,
+            driver,
+            deadline,
+            time,
+            Selection::Ordinary,
+        )
     }
 
     /// Start after original learned generation/Finish preparation and before its
     /// selected actor admission. The separate Stop service must already be live.
-    pub(super) fn start_learned<F>(settings: &Settings, actor: &Profile, reviewer: &PeerProfile,
-        config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F,
-        release: LearnedTextRelease) -> Result<Self, String>
-    where F: FnMut() -> ElapsedTick {
+    pub(super) fn start_learned<F>(
+        settings: &Settings,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        config: &mut Config,
+        driver: &mut FileSupervisedDriver,
+        deadline: &Deadline,
+        time: &mut F,
+        release: LearnedTextRelease,
+    ) -> Result<Self, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         check_learned(settings)?;
-        Self::start_selected(settings, actor, reviewer, config, driver, deadline, time, Some(release))
+        Self::start_selected(
+            settings,
+            actor,
+            reviewer,
+            config,
+            driver,
+            deadline,
+            time,
+            Selection::Learned(release),
+        )
     }
 
-    fn start_selected<F>(settings: &Settings, actor: &Profile, reviewer: &PeerProfile,
-        config: &mut Config, driver: &mut FileSupervisedDriver, deadline: &Deadline, time: &mut F,
-        learned: Option<LearnedTextRelease>) -> Result<Self, String>
-    where F: FnMut() -> ElapsedTick {
+    /// Disclose the selected ORIGINAL native source reference after completed
+    /// generation or receipt-grounded Finish preparation. This never advances
+    /// inference or grants arbitrary-payload intake to the generated actor.
+    pub(super) fn start_generated<F>(
+        settings: &Settings,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        config: &mut Config,
+        driver: &mut FileSupervisedDriver,
+        deadline: &Deadline,
+        time: &mut F,
+        intent: &ActorProposal,
+    ) -> Result<Self, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        check_generated(settings)?;
+        Self::start_selected(
+            settings,
+            actor,
+            reviewer,
+            config,
+            driver,
+            deadline,
+            time,
+            Selection::Generated(intent),
+        )
+    }
+
+    fn start_selected<F>(
+        settings: &Settings,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        config: &mut Config,
+        driver: &mut FileSupervisedDriver,
+        deadline: &Deadline,
+        time: &mut F,
+        selection: Selection<'_>,
+    ) -> Result<Self, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         settings.check_host(config, actor, reviewer)?;
         {
             let host = driver.supervisor().host().map_err(debug)?;
@@ -130,15 +225,21 @@ impl Service {
         // No request or reconnect can change disclosure or replenish work.
         let cache = settings.cache.map(|limits|
             driver.supervisor().precheck_cache(limits).map_err(debug)).transpose()?;
-        let (wire, disclosure) = if let Some(release) = learned {
+        let (wire, disclosure, port) = if let Selection::Learned(release) = selection {
             let (port, disclosure) = driver.supervisor().disclose_learned_text_stream_precheck(
                 revision, settings.disclosure_id, settings.query_limit, actor.request,
                 release, deadline.logical).map_err(debug)?;
-            (FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?, disclosure)
+            (FilePrecheckWire::new(port.clone(), settings.exchange_limit).map_err(debug)?, disclosure, port)
+        } else if let Selection::Generated(intent) = selection {
+            let (port, disclosure) = driver.supervisor().disclose_generated_text_precheck(
+                revision, settings.disclosure_id, settings.query_limit, actor.request,
+                intent).map_err(debug)?;
+            (FilePrecheckWire::new(port.clone(), settings.exchange_limit).map_err(debug)?, disclosure, port)
         } else if settings.full_policy {
             let (port, disclosure) = driver.supervisor().disclose_full_precheck(
                 revision, settings.disclosure_id, settings.query_limit, cache.as_ref()).map_err(debug)?;
-            (FilePrecheckWire::with_policy(port, settings.exchange_limit).map_err(debug)?, disclosure)
+            let exact = port.prechecks();
+            (FilePrecheckWire::with_policy(port, settings.exchange_limit).map_err(debug)?, disclosure, exact)
         } else {
             let (port, disclosure) = match cache.as_ref() {
                 Some(cache) => driver.supervisor().disclose_exact_precheck_cached(
@@ -146,7 +247,7 @@ impl Service {
                 None => driver.supervisor().disclose_exact_precheck(
                     revision, settings.disclosure_id, settings.query_limit),
             }.map_err(debug)?;
-            (FilePrecheckWire::new(port, settings.exchange_limit).map_err(debug)?, disclosure)
+            (FilePrecheckWire::new(port.clone(), settings.exchange_limit).map_err(debug)?, disclosure, port)
         };
         let session = FilePrecheckPeerSession::new(actor.actor, wire, MAX_PRECHECK_FRAME_BYTES,
             settings.connection_limit).map_err(debug)?;
@@ -161,7 +262,7 @@ impl Service {
         lease.validate_at(before_bind).map_err(debug)?;
         let socket = BoundSocket::bind(&settings.socket, None)?;
         settings.socket_profile(actor).secure_socket()?;
-        let mut service = Self { active: Some(Active { socket, session, disclosure }),
+        let mut service = Self { active: Some(Active { socket, session, disclosure, port }),
             revision, lease, last_tick: before_bind, logical_end, started, wall,
             candidates: 0, candidate_limit: settings.candidate_limit, frames: 0,
             retirement: None };
@@ -236,6 +337,13 @@ impl Service {
     /// Retire before effect review or whenever the containing service exits.
     /// This revokes this disclosure and closes only its listener/connections.
     pub(super) fn retire(&mut self) { self.retire_with(Retirement::SupervisorEnded); }
+
+    /// A weak exact-only view of this SAME finite disclosure. The service keeps
+    /// the sole strong custodian; mounting another transport cannot extend its
+    /// lifetime or replenish queries, and full-policy literals remain withheld.
+    pub(super) fn port(&self) -> Option<FileActorPrecheckPort> {
+        self.active.as_ref().map(|active| active.port.clone())
+    }
 
     fn invalid(&self, driver: &FileSupervisedDriver, now: ElapsedTick) -> Option<Retirement> {
         if now < self.last_tick { return Some(Retirement::ClockMovedBack); }

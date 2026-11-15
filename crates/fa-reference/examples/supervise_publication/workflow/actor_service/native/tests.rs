@@ -18,6 +18,8 @@ mod checked_tests;
 mod fixture;
 #[path = "tests/operator.rs"]
 mod operator_tests;
+#[path = "tests/precheck.rs"]
+mod precheck_tests;
 #[path = "tests/recovery_tests.rs"]
 mod recovery_tests;
 #[path = "tests/sharded_tests.rs"]
