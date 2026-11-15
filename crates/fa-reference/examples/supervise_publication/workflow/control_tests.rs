@@ -437,7 +437,10 @@ fn authenticated_wrong_session_is_not_an_operator_stop_request() {
     peer.join().unwrap();
     assert_eq!(driver.supervisor().host().unwrap().revision(), before);
     assert!(driver.supervisor().host().unwrap().inspect().stop.is_none());
-    assert!(!service.native_cleanup_started(), "protocol refusal still needs failure cleanup");
+    assert!(
+        !service.native_cleanup_started(),
+        "protocol refusal still needs failure cleanup"
+    );
 }
 
 #[test]
@@ -446,8 +449,10 @@ fn failed_authenticated_native_drain_retains_one_attempt_and_original_reply() {
     let c = configured(&root, false);
     let profile = profile(&root, &c, false);
     let (mut host, reviewer) = FileOversight::create(&c.store, c.profile.clone()).unwrap();
-    host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal()).unwrap();
-    host.observe_time(host.revision(), ElapsedTick(1000)).unwrap();
+    host.enable_recovery_reserve(host.revision(), RecoveryReserve::terminal())
+        .unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1000))
+        .unwrap();
     let (_port, mut driver) = host.into_supervised_driver();
     let mut service = Control::new(&c, 1, Some(&profile)).unwrap();
     assert!(!service.native_cleanup_started());
@@ -465,12 +470,21 @@ fn failed_authenticated_native_drain_retains_one_attempt_and_original_reply() {
     assert!(receipt.acknowledged());
     assert!(!receipt.drained());
     assert!(service.native_cleanup_started());
-    assert!(service.native_outcome.borrow().is_none(), "the authenticated Stop owns this outcome");
+    assert!(
+        service.native_outcome.borrow().is_none(),
+        "the authenticated Stop owns this outcome"
+    );
     let before = driver.supervisor().host().unwrap().inspect();
     assert!(before.stop.is_some());
-    assert_eq!(service.native_stop(&mut driver, &mut || panic!("failed drain retried")), Err(failure));
+    assert_eq!(
+        service.native_stop(&mut driver, &mut || panic!("failed drain retried")),
+        Err(failure)
+    );
     assert_eq!(driver.supervisor().host().unwrap().inspect(), before);
-    assert!(socket_path(&profile, 1).exists(), "original reply custody stays retained");
+    assert!(
+        socket_path(&profile, 1).exists(),
+        "original reply custody stays retained"
+    );
 }
 
 #[test]
@@ -516,3 +530,6 @@ mod late_control_tests;
 
 #[path = "native_fence_tests.rs"]
 mod native_fence_tests;
+
+#[path = "control/lifetime_tests.rs"]
+mod lifetime_tests;

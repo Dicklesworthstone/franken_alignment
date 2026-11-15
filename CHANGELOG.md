@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-14: preserve the original authenticated Stop session deadline
+
+- Keep the peer's admission-time allowance through deferred review, numerical
+  recovery and shared driver handoff instead of starting a fresh exchange timer.
+- Reject expired sessions before offer construction and check clock-callback
+  delay before another protocol step; retain the original timeout across retries.
+- Preserve separately bounded historical reply cleanup after durable Stop,
+  without repeating the transition or refunding unresolved effects.
+- Add four real-owner/socket regression functions covering permitted remaining
+  time, expired admission, slow clocks, late acknowledgment cleanup and retries.
+  Source review and scoped formatting passed; execution qualification is pending.
+
 ## 2026-11-14: recover stream-reset custody through acknowledged cleanup
 
 - Recover paired history and topology/source-work archives after the original

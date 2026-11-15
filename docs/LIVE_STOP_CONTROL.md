@@ -24,6 +24,14 @@ journal is created. The operation identifier is the original actor request ID.
 Idle polling does not read the journal or advance its clock. Once a permitted
 peer is admitted, forward workflow progress pauses for its bounded stop exchange.
 The original logical/wall deadline and the peer profile's `runtime_ms` both apply.
+The peer allowance begins at its original kernel admission, including time
+retained during numerical review or cooperative recovery before the live driver
+becomes available. Handoff and shared control handles do not restart it. The
+service checks that retained allowance before constructing an offer and on both
+sides of each workflow-clock observation before a protocol step. An already
+expired peer receives no offer or native transition; its original timeout is
+retained for exact retries. After native Stop acknowledgment, the separately
+bounded historical reply cleanup still applies even if the peer session expires.
 Silence, malformed bytes, and admission exhaustion fail through the original
 workflow's stop/drain error path, never a weaker peer rule or reset quota. One
 unauthorized candidate below that quota is closed without disclosing offer bytes.

@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-14: retain authenticated Stop deadlines through driver handoff
+
+The live independent Stop service now uses the authenticated peer's original
+admission-time clock throughout deferred native review and cooperative recovery.
+It checks that retained allowance before creating a nonce-bound offer and on
+both sides of the workflow clock observation before a protocol step. Handoff to
+the original driver and shared-handle retries no longer start a new session
+allowance. An expired peer receives no offer and cannot apply Stop; its timeout
+remains the one-use result. A Stop already durably acknowledged still receives
+its original separately bounded reply cleanup, without another application or
+an unknown-effect refund.
+
+Four regression functions use original durable owners and authenticated Unix
+sockets. They pair immediate/deferred successful Stop with expired ordinary and
+recovery admission, a slow clock that exhausts the remaining session, and reply
+drain after acknowledgment crosses the cutoff. Exact retries preserve the same
+receipt or error and the original native state. These implement the existing
+registered-clock and recovery contracts (plan sections 6.5, 8.11 and 16.9;
+FA-014/FA-120), without changing a wire or journal format.
+
+Independent source review, scoped rustfmt with the installed dated nightly and
+Git whitespace checks passed. Example compilation and runtime qualification
+remain pending after an execution-service interruption; no passing runtime
+result, Bead closure or broader qualification is claimed. RCH is unavailable
+in this workspace. The session-lifetime check remains cooperative; it does not
+establish hard real-time preemption of kernel or disk work. Contract:
+`docs/LIVE_STOP_CONTROL.md`.
+
 ## 2026-11-14: recover paired stream-reset custody after terminal drainage
 
 The recovery-only stream-reset capability now carries original topology and

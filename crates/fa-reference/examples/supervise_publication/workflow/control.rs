@@ -50,7 +50,9 @@ impl Control {
             if profile.is_some() {
                 return Err("stop control requires Linux peer credentials".into());
             }
-            Ok(Self { native_outcome: Rc::new(RefCell::new(None)) })
+            Ok(Self {
+                native_outcome: Rc::new(RefCell::new(None)),
+            })
         }
     }
 
@@ -95,7 +97,9 @@ impl Control {
     where
         F: FnMut() -> ElapsedTick,
     {
-        let mut outcome = self.native_outcome.try_borrow_mut()
+        let mut outcome = self
+            .native_outcome
+            .try_borrow_mut()
             .map_err(|_| "native stop cleanup is already being driven")?;
         if let Some(result) = outcome.as_ref() {
             return result.clone();
@@ -104,7 +108,8 @@ impl Control {
         // retry its failed drain or relabel its acknowledgment through this path.
         #[cfg(target_os = "linux")]
         if let Some(service) = &self.service {
-            let service = service.try_borrow()
+            let service = service
+                .try_borrow()
                 .map_err(|_| "stop transport is already being driven")?;
             if let Some(result) = &service.outcome {
                 return result.clone();
@@ -114,11 +119,16 @@ impl Control {
             let host = driver.supervisor().host().map_err(super::debug)?;
             host.inspect().stop.map(|receipt| receipt.request())
         };
-        let Some(request) = request else { return Ok(false); };
+        let Some(request) = request else {
+            return Ok(false);
+        };
         // A caught clock/cleanup unwind must not turn the next poll into a retry.
-        *outcome = Some(Err("native stop cleanup did not acknowledge completion".into()));
+        *outcome = Some(Err(
+            "native stop cleanup did not acknowledge completion".into()
+        ));
         let result = (|| {
-            let stopped = driver.stop_with_recovery_reserve(request, &mut *time)
+            let stopped = driver
+                .stop_with_recovery_reserve(request, &mut *time)
                 .map_err(super::debug)?;
             let progress = match stopped.drain.map_err(super::debug)? {
                 fa_reference::action::consequence::delivery::persistent::observed::driver::CapacityDrain::AlreadyDrained(progress) => progress,
@@ -134,7 +144,11 @@ impl Control {
     }
 
     pub(super) fn native_cleanup_started(&self) -> bool {
-        if self.native_outcome.try_borrow().map_or(true, |outcome| outcome.is_some()) {
+        if self
+            .native_outcome
+            .try_borrow()
+            .map_or(true, |outcome| outcome.is_some())
+        {
             return true;
         }
         // The separately authenticated Stop transport owns an equally final
@@ -163,7 +177,9 @@ impl Control {
     where
         F: FnMut() -> ElapsedTick,
     {
-        if self.native_stop(driver, time)? { return Ok(true); }
+        if self.native_stop(driver, time)? {
+            return Ok(true);
+        }
         #[cfg(target_os = "linux")]
         if let Some(service) = &self.service {
             let mut service = service
@@ -212,10 +228,19 @@ impl Service {
         let path = socket_path(profile, operation);
         let socket = BoundSocket::bind(&path, Some(profile))?;
         eprintln!("Independent stop endpoint ready: {path:?}");
-        Ok(Self { socket, admission, operation, runtime: Duration::from_millis(profile.runtime_ms),
-            cleanup: Duration::from_millis(config.timing.cleanup_ms), poll_ms: profile.poll_ms,
-            outcome: None, application_started: false, pending: None, pending_since: None,
-            recovery_application: None })
+        Ok(Self {
+            socket,
+            admission,
+            operation,
+            runtime: Duration::from_millis(profile.runtime_ms),
+            cleanup: Duration::from_millis(config.timing.cleanup_ms),
+            poll_ms: profile.poll_ms,
+            outcome: None,
+            application_started: false,
+            pending: None,
+            pending_since: None,
+            recovery_application: None,
+        })
     }
     fn accept_peer(&mut self) -> Result<bool, String> {
         if self.outcome.is_some() || self.pending.is_some() {
@@ -266,6 +291,10 @@ impl Service {
         // A successful native admission is one-use. Never replace a failed or
         // silent checked connection with a fresh quota or an unchecked socket.
         let result = (|| {
+            // Native review and replay can retain this peer before the driver
+            // becomes available. Its allowance began at kernel admission, not
+            // at this handoff; an expired peer must not receive a new offer.
+            self.check_session()?;
             let mut connection = {
                 let host = driver.supervisor().host().map_err(debug)?;
                 verified
@@ -282,6 +311,17 @@ impl Service {
         self.outcome = Some(result.clone());
         result
     }
+
+    fn check_session(&self) -> Result<(), String> {
+        let started = self
+            .pending_since
+            .ok_or("missing original authenticated stop session")?;
+        if started.elapsed() >= self.runtime {
+            return Err("authenticated stop session timed out".into());
+        }
+        Ok(())
+    }
+
     fn exchange<F>(
         &self,
         connection: &mut StopControlConnection<UnixStream>,
@@ -292,12 +332,12 @@ impl Service {
     where
         F: FnMut() -> ElapsedTick,
     {
-        let started = Instant::now();
         loop {
+            // Check both sides of the caller's clock observation: it may take
+            // time, but it cannot extend the already admitted peer's lifetime.
+            self.check_session()?;
             deadline.check(time())?;
-            if started.elapsed() >= self.runtime {
-                return Err("authenticated stop session timed out".into());
-            }
+            self.check_session()?;
             match connection.step(driver, &mut *time).map_err(debug)? {
                 StopControlProgress::Applied => break,
                 StopControlProgress::Complete => {
