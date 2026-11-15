@@ -3,12 +3,18 @@
 use super::{
     BaseEvent, ByteBpe, DecoderEvent, Event, FileDecoderConfig, FileHumanReviewer, FileOversight,
     FileOversightProfile, GeneratedPublicationProfile, JournalError, MAX_FILE_TOKENIZER_BYTES,
-    Machine, Path, Rc, RecoveryReserve, StreamProfile, journal, replay_text_events, storage,
+    Machine, Path, Rc, RecoveryReserve, StreamProfile, journal, storage,
 };
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
     credibility::{CredibilityEvent, held_out_joint::HeldOutJointPolicy},
     source::{FileSourcePolicy, SourceEvent},
+};
+
+mod recovery;
+pub use recovery::{
+    FileGeneratedSourceRecovery, FileGeneratedSourceRecoveryProgress,
+    FileGeneratedSourceRecoveryStatus,
 };
 
 /// The complete publication selection, not a flag that can drop a joint policy.
@@ -249,24 +255,10 @@ impl FileOversight {
         tokenizer: &ByteBpe,
         selected: GeneratedSourceProfile,
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
-        profile.delivery.limits.check()?;
-        if !tokenizer.binds(decoder.profile()) {
-            return Err(Error::Binding.into());
-        }
-        let canonical = tokenizer.to_bytes()?;
-        if canonical.len() > MAX_FILE_TOKENIZER_BYTES {
-            return Err(Error::Limit.into());
-        }
-        let store = storage::Store::open(directory.as_ref())?;
-        let bytes = store.read(profile.delivery.limits.bytes)?;
-        let events = journal::decode(&profile, store.identity(), &bytes)?;
-        selected.check(&events)?;
-        let machine = replay_text_events(&profile, decoder, &canonical, &events)?;
-        selected.check_machine(&machine)?;
-        store.confirm_and_cleanup()?;
-        let (mut host, reviewer) = Self::owner(profile, store, events, machine);
-        host.transact(host.revision(), Event::Core(BaseEvent::Fence))?;
-        Ok((host, reviewer))
+        Self::begin_open_generated_text_stream_from_source(
+            directory, profile, decoder, tokenizer, selected,
+        )?
+        .finish_synchronously()
     }
 }
 

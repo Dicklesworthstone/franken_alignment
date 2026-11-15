@@ -385,7 +385,26 @@ where
     // Exclusive listener ownership precedes the durable owner. No stale path is removed.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    let (host, reviewer) = bootstrap::prepare(&config, &inputs, selected, open)?;
+    // Explicit continuation requests new work, so its original Stop transport
+    // must exist while historical numerical work is replayed. Other opens can
+    // be receipt-only; they do not gain a control listener before classification.
+    let mut recovery_control = if open && matches!(mode, finish::Intent::Continue(_)) {
+        Some(Control::new(&config, actor.request, Some(reviewer_profile))?)
+    } else {
+        None
+    };
+    let (host, reviewer) = if open {
+        bootstrap::open_with_checkpoints(
+            &config,
+            &inputs,
+            selected,
+            recovery_control.as_mut(),
+            &deadline,
+            &mut time,
+        )?
+    } else {
+        bootstrap::prepare(&config, &inputs, selected, false)?
+    };
     if !host.generated_text_stream_required().map_err(debug)?
         || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
@@ -450,6 +469,9 @@ where
     // numerical work. Their original source document is retained byte-for-byte.
     let mut control = if recorded {
         None
+    } else if let Some(control) = recovery_control.take() {
+        // Keep the same candidate quota, authenticated socket and deadline.
+        Some(control)
     } else {
         Some(Control::new(
             &config,

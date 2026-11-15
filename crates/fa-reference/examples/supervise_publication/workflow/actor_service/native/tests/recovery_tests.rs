@@ -2,6 +2,9 @@
 //! cursors/results. Socket/helper peers remain synthetic same-process fixtures.
 use super::*;
 
+#[path = "recovery_tests/cooperative.rs"]
+mod cooperative;
+
 fn seed(root: &Root, config: &mut Config, native: &Inputs, begin: bool, steps: u64) {
     let (mut host, _) = FileOversight::create_generated_text_stream_with_reserve(
         &config.store,

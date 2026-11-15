@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: checkpoint original native text recovery before live custody
+
+Native generated-text source recovery now exposes a consuming cooperative
+cursor over the original locked immutable journal. Each advance admits an
+exact predecessor and a finite event quantum; attempted work and failed or
+interrupted replay remain latched. Source policy, stream/reserve/publication
+selection, joint forecast budget, model and tokenizer must match before replay.
+Cancellation or an unfinished cursor grants no live owner and changes no
+canonical history or staging bytes. Ready finalization uses the already
+reconstructed original machine, avoiding a second full replay solely to append
+the ordinary recovery Fence.
+
+The native operator now checks the invocation deadline before replay, between
+every original event and again at Ready. Explicit continuation reopening binds
+its original finite Stop transport before replay and retains that same session
+for live service. A pending authenticated peer selects a sealed terminal path;
+the original complete history must still verify and an explicit Stop request
+must still arrive before the original admission Stop/Fence can become durable.
+No ordinary recovery Fence, source read, helper start or effect admission occurs
+on that path. A silent connection never becomes Stop authority or falls through
+to live work. Historical receipt paths retain their existing listener boundary.
+
+This is an event-count bound, not a hard elapsed-time bound. A single original
+numerical event, image decoding, encoding and filesystem work remain synchronous.
+Plain source recovery gains no latest-head, anti-rollback or independently
+anchored-history claim. Unknown effects and cumulative liabilities remain
+charged; reopening does not re-execute a recorded effect.
+
+Fifteen new regression functions cover native replay and finalization,
+continuation/unknown preservation, authenticated transport and deadline/Stop
+cuts before, during and after replay; two compile-fail examples specify cursor
+custody. The sources received independent review and changed Rust files passed
+rustfmt parsing. The required RCH runner is unavailable, so compilation, test
+execution, Clippy and the canonical gate remain pending. FA-014 stays in progress.
+Contracts: `docs/NATIVE_TEXT_RECOVERY.md` and
+`docs/NATIVE_TEXT_PUBLICATION_SERVICE.md`.
+
 ## 2026-11-15: conserve learned sequence disclosure and source custody
 
 Resident learned sequences now apply the same complete-invocation precheck

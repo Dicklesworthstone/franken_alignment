@@ -37,8 +37,11 @@ reference. Error handling uses the original stop/drain and helper cleanup path.
 At the final stamped clock, the service explicitly calls the original
 `capture_file_policy_state` gate before generation, resume or finish preparation;
 clock acknowledgment alone does not establish source freshness.
-Physical replay of earlier numerical history remains synchronous and may repeat;
-this is not a hard-real-time stop bound or an exactly-once CPU claim.
+Source-bound reopen now checkpoints between original historical events, as
+described under [cooperative recovery](#cooperative-reopen-and-continue-stop).
+Each event, new-work transaction and final persistence remains synchronous;
+physical numerical replay may repeat across separate recovery attempts. This is
+not a hard-real-time stop bound or an exactly-once CPU claim.
 
 ## Invocation
 
@@ -197,8 +200,9 @@ checkpoints run first. The service then pumps the selected operator and observes
 any acknowledged Fence through the original one-use Stop cleanup before further
 source, token or effect work. Reconnecting does not restore spent queries,
 operations or replay work, and operator disconnection does not itself issue Stop.
-Numerical replay remains synchronous under its original bounded work contract;
-this adds no hard real-time preemption guarantee.
+New-work transactions and independently budgeted operator history queries retain
+their original synchronous work contracts. Cooperative reopen checkpoints do
+not interrupt one of those operations or add a hard real-time preemption guarantee.
 
 The operator endpoint must be distinct from actor, reviewer and Stop sockets,
 the registered evidence source and the authority store, including aliases
@@ -211,7 +215,7 @@ An open that resolves to an already-recorded source-linked request accepts only
 observation operator grants. Selecting any mutation for that receipt workflow
 refuses explicitly after exact canonical recovery identifies it and before
 operator listener/grant creation. It is never silently downgraded. The historical
-path opens no Stop/reviewer listener, launches no inference or helpers and never
+path opens no Stop/reviewer listener, starts no new generation or helpers and never
 turns a failed receipt output into a new Stop. Its sidecar can only observe the
 original history while the original bounded actor receipt exchange completes.
 
@@ -256,6 +260,59 @@ the first accepted actor request fixes the durable source identity. Recovery is
 not an authenticated latest-head or anti-rollback guarantee. Existing anchored
 and guarded-role deployments still require their separately composed contracts.
 
+### Cooperative reopen and Continue Stop
+
+All native open modes, including checked publication, use the source-bound
+`FileGeneratedSourceRecovery` cursor. The service checks its existing logical
+and wall deadline before opening the canonical image, before each one-event
+replay quantum and again at `Ready`. It validates the fixed total and completed
+predecessor on every step. A deadline failure before finalization releases the
+private reconstruction without an ordinary recovery Fence or a partial live
+owner. Initial image read/decode, each individual event and final
+encoding/persistence remain synchronous, so the checkpoints bound event calls
+between opportunities to observe control, not elapsed execution time.
+
+Explicit `--after-message PREVIOUS_REQUEST` declares new continuation work. Its
+independent authenticated Stop endpoint is therefore created before historical
+numerical replay begins. The same existing candidate allowance, authenticated
+peer/session state and deadline survive every replay checkpoint and, when no
+peer selects the terminal path, continue into the normal live workflow. Recovery
+does not create a second allowance or replace the session after reconstruction.
+For example, the independent peer can use the existing command while this
+service is replaying:
+
+```sh
+supervise_publication serve-open CONFIG NEXT_ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text NEXT_RECIPE --after-message PREVIOUS_REQUEST > next-submit.json
+# In the independent reviewer process, using NEXT_ACTOR_PROFILE's request ID:
+supervise_publication stop-peer REVIEWER_PROFILE NEXT_REQUEST_ID
+```
+
+A pending authenticated peer selects the terminal branch, including at the
+checkpoint after the last event. The complete original history and exact
+model/tokenizer/source/publication/reserve contracts must still pass before the
+sealed Stop target is available. The target consumes that same verified machine
+and locked image; it does not reconstruct numerical history again or first
+return a live owner. Only the complete original nonce-bound request can append
+the original admission Stop/Fence pair. Source acquisition, helper/reviewer
+launch, new generation and Submit output have not begun. Unknown liabilities
+remain charged and endpoint drain remains separate.
+
+Once a peer selects this terminal branch, silence, disconnection, malformed
+input or deadline expiry cannot fall through to ordinary startup or cause an
+unrequested Stop. Acknowledged Stop and a lost acknowledgment remain terminal;
+the workflow does not retry new work or infer settlement. When no peer selects
+the branch, `finish()` publishes the one ordinary recovery Fence over the same
+verified machine, then normal fresh evidence/time and explicit resume apply.
+
+The early Stop listener is limited to explicit Continue. Plain `serve-open` and
+`--finish-after-message` can identify an already-recorded historical request,
+so they use cooperative deadline checkpoints without an early Stop listener.
+An actual new-work path creates its normal Stop control after classification.
+Receipt-only opens retain their original absence of Stop/reviewer listeners and
+new generation, and failed receipt output cannot issue Stop. Historical replay
+is still required to verify their original canonical image.
+
 ## Recipe
 
 ```json
@@ -296,6 +353,24 @@ or BOS/EOS guess runs.
 Full prompt plus requested continuation must fit the original context.
 
 ## Source and execution status
+
+### Cooperative native recovery — 2026-11-15
+
+Ten library regression functions cover exact original replay/finalization,
+immutable profile bindings, cancellation and stale quanta, failures and all
+storage barriers, retained Unknown liability and authenticated terminal Stop.
+Five service regression functions additionally cover one-event/deadline
+checkpoints, first/middle/final-Ready Stop selection, a silent connected peer
+without fallback, and explicit continuation Stop before missing live evidence
+or helper programs can be used. Their actual numerical models and protocol
+fixtures are synthetic; they do not establish detector quality or a latency
+guarantee. Existing receipt-only tests retain the historical no-Stop contract.
+
+These sources have independent static review. Targeted dated-rustfmt processing
+and whitespace checks are recorded for the library; required RCH is unavailable,
+so compilation, runtime execution, Clippy and full qualification of this
+increment remain pending. No runtime pass or Beads closure is inferred from
+authored tests or earlier execution records.
 
 ### Creation baseline
 

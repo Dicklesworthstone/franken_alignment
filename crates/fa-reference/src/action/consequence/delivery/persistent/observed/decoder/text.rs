@@ -366,6 +366,19 @@ pub(in super::super) fn replay_text_events(
     tokenizer_bytes: &[u8],
     events: &[Event],
 ) -> Result<Machine, JournalError> {
+    check_text_config(expected, tokenizer_bytes, events)?;
+    let machine = Machine::replay(profile, events)?;
+    check_text_machine(expected, tokenizer_bytes, &machine)?;
+    Ok(machine)
+}
+
+// Cooperative native recovery freezes the SAME exact inputs before its first
+// event and checks the reconstructed result before either live or terminal use.
+pub(in super::super) fn check_text_config(
+    expected: &FileDecoderConfig,
+    tokenizer_bytes: &[u8],
+    events: &[Event],
+) -> Result<(), Error> {
     let mut models = events.iter().filter_map(|event| match event {
         Event::Decoder(DecoderEvent::Enable(config)) => Some(config.as_ref()),
         _ => None,
@@ -379,13 +392,20 @@ pub(in super::super) fn replay_text_events(
         || tokenizers.next() != Some(tokenizer_bytes)
         || tokenizers.next().is_some()
     {
-        return Err(Error::Binding.into());
+        return Err(Error::Binding);
     }
-    let machine = Machine::replay(profile, events)?;
+    Ok(())
+}
+
+pub(in super::super) fn check_text_machine(
+    expected: &FileDecoderConfig,
+    tokenizer_bytes: &[u8],
+    machine: &Machine,
+) -> Result<(), Error> {
     if machine.decoder_contract() != Some(expected)
         || machine.decoder_tokenizer()?.to_bytes()?.as_slice() != tokenizer_bytes
     {
-        return Err(Error::Binding.into());
+        return Err(Error::Binding);
     }
-    Ok(machine)
+    Ok(())
 }

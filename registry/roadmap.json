@@ -464,7 +464,14 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/governed_tests/stop.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor_admission.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs",
+        "docs/NATIVE_TEXT_RECOVERY.md",
+        "docs/NATIVE_TEXT_PUBLICATION_SERVICE.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/recovery.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/recovery/tests.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/recovery/tests/transport.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/bootstrap/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/recovery_tests/cooperative.rs"
       ]
     },
     {

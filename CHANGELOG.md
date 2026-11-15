@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-15: make native text recovery cooperative and interruptible by Stop
+
+- Add an original-owner recovery cursor with exact-predecessor event quanta,
+  latched failure/interruption, cancellation and consuming finalization.
+- Check native operator deadlines at every replay boundary and Ready; retain
+  the original finite authenticated Stop session during explicit continuation
+  reopening and through any subsequent live service.
+- Finish recovery from the already verified native machine; select terminal
+  admission Stop without an intervening ordinary Fence or live capability.
+- Preserve exact source/model/reserve contracts, unknown charges and the
+  existing receipt-only listener boundary.
+- Add fifteen regression functions and two compile-fail custody examples.
+  Independent source review and Rust parsing completed; required RCH compilation
+  and runtime qualification remain pending.
+
 ## 2026-11-15: preserve learned sequence precheck budgets and topology inputs
 
 - Apply one shared aggregate disclosure validator to ordinary and learned

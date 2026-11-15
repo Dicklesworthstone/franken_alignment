@@ -5,6 +5,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::stream::g
     GeneratedSourceProfile, GeneratedSourcePublication,
 };
 
+mod recovery;
+pub(super) use recovery::open_with_checkpoints;
+
 pub(super) fn selection(
     config: &Config,
     inputs: &Inputs,

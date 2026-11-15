@@ -5,6 +5,7 @@
 use super::super::operator::Service;
 use super::{Config, Deadline, ElapsedTick, FileHumanReviewer, FileSupervisedDriver, PeerProfile};
 use crate::workflow::control::Control as StopControl;
+use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop;
 
 pub(super) struct Control {
     stop: StopControl,
@@ -65,5 +66,29 @@ impl Control {
 
     pub(super) fn native_cleanup_started(&self) -> bool {
         self.stop.native_cleanup_started()
+    }
+
+    pub(super) fn recovery_pending_peer(&mut self) -> Result<bool, String> {
+        self.stop.recovery_pending_peer()
+    }
+
+    pub(super) fn recovery_operation(&self) -> Result<u64, String> {
+        self.stop.recovery_operation()
+    }
+
+    /// A sealed terminal recovery never returns a live owner, even when the
+    /// original admission Stop was acknowledged and its reply was lost.
+    pub(super) fn stop_recovery<F>(
+        &mut self,
+        target: FileRecoveryStop,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<String, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        self.stop
+            .stop_recovery(target, deadline, time)
+            .map(|outcome| outcome.terminal_message())
     }
 }
