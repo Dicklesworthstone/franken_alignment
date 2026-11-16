@@ -24,6 +24,8 @@ supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PR
   --publication-profile WITNESS_PROFILE
 supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
   --after-message PREVIOUS_REQUEST
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation NONZERO
 ```
 
 The optional publication profile retains the native service's existing simple
@@ -167,6 +169,41 @@ native opener. It does not add an independent latest-head or anti-rollback
 anchor. Historical replay remains synchronous within each original event; the
 service's checkpoints do not establish a hard real-time Stop bound.
 
+## Independent live operator
+
+Creation and explicit suffix recovery accept the paired
+`--operator-profile OPERATOR_PROFILE --tower-generation NONZERO` selection,
+alongside either of the existing publication and recovery options. The profile
+uses the existing native generated-text operator contract. It must explicitly
+select each observation or control grant; numerical reconciliation, cancellation,
+abandonment, narrowing and Fence retain their original replay allowances.
+
+One authenticated operator service is installed on the original generated-text
+owner. Its native grants, registration, connection and exchange counters, and
+deadline survive Message/Finish handoffs. A new entry does not recreate the
+listener, renew a grant or replenish spent work. The effective operator lifetime
+is bounded by its own profile, the first selected actor's runtime and the
+original invocation deadline. Later entries cannot extend that lifetime.
+
+The operator can inspect the original run and its requests while numerical work,
+actor intake, independent review, reply grace and helper retirement proceed.
+Separately selected native controls act on that same owner. A granted Fence is
+observed through the original Stop cleanup before forward work continues.
+Operator access never submits an actor's source reference or supplies either
+publication approval. Transport failure retires the sidecar without creating a
+replacement service or granting new authority.
+
+All selected actor identities and future actor/reviewer/Stop endpoints are
+checked against the operator profile before model assets or live custody are
+opened. Canonical path aliases cannot place the operator listener over a future
+endpoint, the evidence source or the authority store. During suffix recovery,
+independent Stop remains available throughout the cooperative replay; live
+operator custody is installed only after the original owner has been recovered.
+
+Use the existing `tower-operator-exchange` client with this profile and the exact
+run registration. The complete profile, grant and response contracts are in
+[native Tower publication](TOWER_PUBLICATION.md#operate-an-original-native-generated-text-stream).
+
 ## Stop, deadlines and failure
 
 One authenticated Stop service remains owned for the entire invocation. Its
@@ -197,7 +234,8 @@ The resident command creates a new native stream or explicitly selects a new
 remaining suffix with `--after-message`. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
-credibility activation, operator, precheck, topology or policy-governor services.
+credibility activation, precheck, topology or policy-governor services. The
+independent operator is available only through its explicit paired selection.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

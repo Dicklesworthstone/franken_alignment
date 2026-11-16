@@ -52,6 +52,8 @@ use fixture::{Root, inputs, profiles};
 mod checked;
 #[path = "tests/recovery.rs"]
 mod recovery_tests;
+#[path = "tests/operator.rs"]
+mod operator_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 

@@ -13,7 +13,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
 
 struct Input {
     recipe: PathBuf,
@@ -22,7 +22,7 @@ struct Input {
 }
 
 /// Own the complete grammar before opening any input. Recovery requires an
-/// explicit original message predecessor; other native lifecycle, operator and
+/// explicit original message predecessor; other native lifecycle and
 /// disclosure selections cannot be silently consumed by this mode.
 fn options(
     args: &[String],
@@ -63,6 +63,60 @@ fn options(
     Ok((publication, after))
 }
 
+/// Admit the complete selected operator grammar before opening any file. The
+/// remaining original sequence options retain their own value validation;
+/// duplicates and unsupported modes cannot disappear during option removal.
+fn take_operator(
+    args: &[String],
+    credibility: Option<&Path>,
+) -> Result<(Vec<String>, Option<(PathBuf, u64)>), String> {
+    if !args
+        .iter()
+        .any(|value| matches!(value.as_str(), "--operator-profile" | "--tower-generation"))
+    {
+        return Ok((args.to_vec(), None));
+    }
+    if credibility.is_some()
+        || args.len() < 8
+        || args.len() > 12
+        || args.len() % 2 != 0
+        || args.first().map(String::as_str) != Some("serve-native-generated")
+        || args[1..4]
+            .iter()
+            .any(|value| value.is_empty() || value.starts_with("--"))
+    {
+        return Err(USAGE.into());
+    }
+    let mut remaining = args[..4].to_vec();
+    let mut profile = None;
+    let mut generation = None;
+    let mut seen = BTreeSet::new();
+    for pair in args[4..].chunks_exact(2) {
+        if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(&pair[0]) {
+            return Err(USAGE.into());
+        }
+        match pair[0].as_str() {
+            "--operator-profile" => profile = Some(PathBuf::from(&pair[1])),
+            "--tower-generation" => {
+                let value = &pair[1];
+                if value.len() > 20
+                    || value.starts_with('0')
+                    || !value.bytes().all(|byte| byte.is_ascii_digit())
+                {
+                    return Err(USAGE.into());
+                }
+                generation = Some(value.parse::<u64>().map_err(|_| USAGE.to_owned())?);
+            }
+            "--publication-profile" | "--after-message" => remaining.extend_from_slice(pair),
+            _ => return Err(USAGE.into()),
+        }
+    }
+    Ok((
+        remaining,
+        Some((profile.ok_or(USAGE)?, generation.ok_or(USAGE)?)),
+    ))
+}
+
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     command_with_clock(
         args,
@@ -81,14 +135,30 @@ pub(super) fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (publication_path, after) = options(args, credibility)?;
+    let (args, operator_option) = take_operator(args, credibility)?;
+    let (publication_path, after) = options(&args, credibility)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
+    let selected_operator = operator_option
+        .map(|(path, generation)| operator::Selection::read(&path, generation))
+        .transpose()?;
     let publication = publication_path
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
-    if after.is_none() {
+    if let Some(selected) = selected_operator.as_ref() {
+        let entries =
+            load_with_operator(Path::new(&args[2]), &config, &peers, after, Some(selected))?;
+        super::run_with_operator(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            (after, Some(selected)),
+            time,
+            output,
+        )
+    } else if after.is_none() {
         let entries = load(Path::new(&args[2]), &config, &peers)?;
         super::run(config, entries, &peers, publication.as_ref(), time, output)
     } else {
@@ -174,6 +244,18 @@ pub(super) fn load_selected(
     peers: &PeerProfile,
     after: Option<u64>,
 ) -> Result<Vec<Entry>, String> {
+    load_with_operator(path, config, peers, after, None)
+}
+
+/// Actor and operator scopes and ALL future endpoint aliases are admitted
+/// before loading any numerical recipe. This never starts a live service.
+pub(super) fn load_with_operator(
+    path: &Path,
+    config: &Config,
+    peers: &PeerProfile,
+    after: Option<u64>,
+    selected_operator: Option<&operator::Selection>,
+) -> Result<Vec<Entry>, String> {
     if after == Some(0) {
         return Err(
             "native sequence recovery requires a nonzero original message predecessor".into(),
@@ -192,6 +274,11 @@ pub(super) fn load_selected(
         .map(|entry| Profile::read(&entry.actor))
         .collect::<Result<Vec<_>, _>>()?;
     validate_actors(config, &actors.iter().collect::<Vec<_>>(), peers, after)?;
+    if let Some(selected) = selected_operator {
+        for actor in &actors {
+            selected.check(config, actor, peers)?;
+        }
+    }
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
     for (selected, actor) in plan.into_iter().zip(actors) {
@@ -338,7 +425,9 @@ fn validate_actors(
     let mut sockets = BTreeSet::new();
     for actor in actors {
         if after == Some(actor.request) {
-            return Err("native sequence recovery predecessor cannot be a remaining actor request".into());
+            return Err(
+                "native sequence recovery predecessor cannot be a remaining actor request".into(),
+            );
         }
         actor.check_host(config)?;
         if actor.request == 0 || !requests.insert(actor.request) {

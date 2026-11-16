@@ -41,6 +41,13 @@ new inference; Stop is live before recovery grants live custody. Regression sour
 actual fixture inference, cumulative frames, later rejection, Stop, source loss
 and final witness changes; required RCH execution qualification remains pending.
 
+Resident native creation and suffix recovery also accept an explicitly selected
+independent Tower operator. One original authenticated service retains its
+observation/control grants, finite counters and deadline through Message/Finish
+handoffs. Stop remains first, including when an operator Fence stops the original
+admission domain. The source and regression cases remain pending required RCH
+compilation and runtime qualification.
+
 Explicit [live policy prechecks](docs/LIVE_ACTOR_PRECHECK.md) now connect three
 previously separate paths. A Tower actor can discover exact predicates, precheck
 and submit through its existing session, sharing one finite disclosure with the

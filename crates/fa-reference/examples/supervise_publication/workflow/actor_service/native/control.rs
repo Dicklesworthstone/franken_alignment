@@ -29,6 +29,19 @@ impl Control {
         self.operator.take()
     }
 
+    pub(super) fn has_operator(&self) -> bool {
+        self.operator.is_some()
+    }
+
+    /// Pump the retained original operator session after a Stop/drain attempt.
+    /// Its selected grants remain independent; this never retries cleanup or
+    /// reissues a grant when actor ingress has failed.
+    pub(super) fn checkpoint_operator(&mut self) {
+        if let Some(operator) = &mut self.operator {
+            operator.checkpoint();
+        }
+    }
+
     pub(super) fn into_parts(self) -> (StopControl, Option<Service>) {
         (self.stop, self.operator)
     }

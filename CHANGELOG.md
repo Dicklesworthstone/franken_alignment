@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-15: retain independent operator control across native resident releases
+
+- Connect the existing generated-text Tower operator to resident native creation
+  and explicit suffix recovery through paired profile/generation options.
+- Preserve one original listener, native grant set, finite transport counters and
+  deadline across generation, independent review, reply grace and helper handoff.
+- Preflight every future endpoint and actor identity before model loading; keep
+  independent Stop priority and the original Fence cleanup and liability rules.
+- Add authenticated multi-release and causal boundary regression sources.
+  Compilation, runtime execution and full qualification require the unavailable
+  RCH runner; no execution gate or parent work packet is closed.
+
 ## 2026-11-15: recover an explicitly selected native resident suffix
 
 - Add `--after-message` to resident native publication, accepting 1–16 new

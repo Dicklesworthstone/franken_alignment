@@ -580,3 +580,89 @@ fn recovered_suffix_still_requires_its_original_live_source_before_new_numerical
     assert_eq!(after.stop.unwrap().request().operation, 93);
     closed(&actor_profiles, &reviewer);
 }
+
+#[test]
+fn recovered_singleton_finish_retains_operator_custody_without_new_inference() {
+    use super::operator_tests as live;
+    use fa_reference::tower::Verb;
+    use std::sync::mpsc;
+
+    let root = Root::new();
+    let Seed {
+        config,
+        reviewer,
+        reader,
+        ..
+    } = seed(&root, 2);
+    let before = reader.progress(8);
+    let entries = vec![entry(&root, &config, &reader, 93, 8, Release::Finish)];
+    let chosen = live::selection(&root, &entries[0].actor, 1, false);
+    let settings = chosen.settings.clone();
+    let actor = entries[0].actor.clone();
+    let (offered, offers) = mpsc::channel();
+    let (release, decisions) = mpsc::channel();
+    let human = live::held_reviews(reviewer.clone(), vec![93], offered, decisions);
+    let observer = thread::spawn(move || {
+        let mut socket = live::connect(&settings);
+        let (request_id, packet) = offers.recv_timeout(Duration::from_secs(20)).unwrap();
+        assert_eq!(request_id, 93);
+        assert_eq!(packet.action().spec().policy_epoch, 1);
+        assert!(
+            ReleaseFrame::decode(&packet.action().spec().payload)
+                .unwrap()
+                .is_finish()
+        );
+        let response = live::exchange(
+            &mut socket,
+            &live::request(&actor, "recovered-finish", Verb::Situation),
+            settings.response_bytes,
+        );
+        live::known(&response);
+        assert_eq!(live::summary(&response, "executions"), 2);
+        assert_eq!(live::summary(&response, "policy_epoch"), 1);
+        let exhausted = live::exchange(
+            &mut socket,
+            &live::request(&actor, "same-recovered-grant", Verb::Situation),
+            settings.response_bytes,
+        );
+        assert_eq!(
+            live::field(&exhausted, &["envelope", "reason_code"]).as_str(),
+            Some("BudgetExhausted"),
+        );
+        release.send(Some(ReviewDecision::Approve)).unwrap();
+    });
+    let mut output = Output::new(&entries);
+    let actor_profiles = output.profiles.clone();
+    let result = run_with_operator(
+        config,
+        entries,
+        &reviewer,
+        None,
+        (Some(AFTER), Some(&chosen)),
+        || ElapsedTick(1001),
+        &mut output,
+    );
+    assert!(result.is_ok(), "{result:?}");
+    observer.join().unwrap();
+    let packets = human.join().unwrap();
+    assert_eq!(packets.len(), 1);
+    assert!(output.join().iter().all(executed));
+    let progress = reader.progress(8);
+    assert_eq!(progress.numerical.numerical, before.numerical.numerical);
+    assert_eq!(
+        progress.text.generation_revision(),
+        before.text.generation_revision()
+    );
+    assert_eq!(progress.publication.executions, 3);
+    assert_eq!(progress.publication.payload, b"AA");
+    assert_eq!(progress.publication.control.ledger.epoch, 1);
+    assert_eq!(progress.publication.control.ledger.reserved, 0);
+    assert_eq!(
+        progress.publication.control.ledger.charged,
+        before.publication.control.ledger.charged + packets[0].action().spec().units
+    );
+    assert!(reader.stream().confirmed.finished());
+    reader.no_generation(9);
+    assert!(!chosen.settings.socket.exists());
+    closed(&actor_profiles, &reviewer);
+}

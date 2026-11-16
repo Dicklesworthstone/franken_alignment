@@ -61,18 +61,52 @@ where
 /// The original numerical context, source custodian and invocation deadline
 /// then survive every handoff without another reopen or authority reset.
 pub(super) fn run_selected<F>(
-    mut config: Config,
+    config: Config,
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
     after: Option<u64>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_operator(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        (after, None),
+        time,
+        output,
+    )
+}
+
+/// One explicitly selected operator retains its original native grants,
+/// authenticated session and elapsed lifetime through every release. Recovery
+/// installs it only after the original replay and suffix admission complete.
+pub(super) fn run_with_operator<F>(
+    mut config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
+    let (after, selected_operator) = selection;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
+    if let Some(selected) = selected_operator {
+        // Direct callers receive the same whole-sequence scope and canonical
+        // endpoint admission as the file loader, before time or owner setup.
+        for entry in &entries {
+            selected.check(&config, &entry.actor, reviewer_profile)?;
+        }
+    }
     let first = &entries[0];
     let selected = bootstrap::selection(&config, &first.inputs, publication)?;
     let start = time();
@@ -118,6 +152,10 @@ where
     host.check_credibility().map_err(debug)?;
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
+    let operator = selected_operator
+        .map(|selected| selected.start(&first.actor, port.clone(), &driver, &first_deadline))
+        .transpose()?;
+    control.install_operator(operator);
     // These are bounded executable configurations, not children or review
     // capabilities. A clone for a successor is installed ONLY after the old
     // request's retained child owner confirms complete reaping.
@@ -244,6 +282,9 @@ where
             &mut time,
         )
     });
+    if let Some(mut operator) = control.take_operator() {
+        operator.retire();
+    }
     // The original driver is consumed exactly once. No sequence entry can
     // detach the owner while its direct children still require cleanup.
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
@@ -430,7 +471,15 @@ where
     if !check_selected_admission(driver, entry, previous, &proposal, &expected_action)? {
         return Ok(false);
     }
+    // LiveControl services the shared original Stop before this callback and
+    // checks any newly acknowledged operator Fence before more workflow work.
+    // Take and restore the SAME service; no native grants, transport allowance
+    // or wall origin are recreated for another review.
+    let mut operator = control.take_operator();
     let mut pump = |driver: &mut FileSupervisedDriver| {
+        if let Some(service) = &mut operator {
+            service.checkpoint();
+        }
         ingress.observe(driver)?;
         let status = driver
             .supervisor()
@@ -449,7 +498,7 @@ where
             }
         ))
     };
-    execute_serviced(
+    let reviewed = execute_serviced(
         driver,
         reviewer,
         config,
@@ -462,7 +511,9 @@ where
             stop: Some(control.share_stop()),
         },
         &mut *time,
-    )?;
+    );
+    control.install_operator(operator);
+    reviewed?;
     confirmed(driver, entry.actor.request)
 }
 
@@ -623,11 +674,44 @@ where
     let started = Instant::now();
     let window = Duration::from_millis(ingress.profile.reply_ms);
     let mut stopped = false;
+    let operator_selected = control.has_operator();
+    let mut actor_failed = false;
+    let mut stop_failed = false;
+    let mut failure = None;
     while started.elapsed() < window && deadline.check(time()).is_ok() {
-        if pump_stop {
-            stopped |= control.checkpoint(driver, reviewer, deadline, &mut *time)?;
+        if pump_stop && !stop_failed {
+            match control.checkpoint(driver, reviewer, deadline, &mut *time) {
+                Ok(true) => {
+                    stopped = true;
+                    // A terminal Stop checkpoint deliberately returns before
+                    // operator work. Its original bounded reply channel remains
+                    // independent of that completed one-use cleanup.
+                    control.checkpoint_operator();
+                }
+                Ok(false) => {}
+                Err(error) => {
+                    if !operator_selected {
+                        return Err(error);
+                    }
+                    failure.get_or_insert(error);
+                    stop_failed = true;
+                    control.checkpoint_operator();
+                }
+            }
+        } else {
+            // Automatic failure cleanup already owns Stop/drain. Do not repeat
+            // it merely to deliver the original operator's historical reply.
+            control.checkpoint_operator();
         }
-        ingress.observe(driver)?;
+        if !actor_failed {
+            if let Err(error) = ingress.observe(driver) {
+                if !operator_selected {
+                    return Err(error);
+                }
+                actor_failed = true;
+                failure.get_or_insert(error);
+            }
+        }
         let remaining = window.saturating_sub(started.elapsed());
         let delay = ingress
             .profile
@@ -639,7 +723,7 @@ where
         }
         pause(delay);
     }
-    Ok(stopped)
+    failure.map_or(Ok(stopped), Err)
 }
 
 fn stop_after_failure<F>(

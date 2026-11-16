@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: retain one independent operator through resident native publication
+
+Resident native creation and explicit suffix recovery accept paired operator
+profile and nonzero Tower registration options. The selection checks every
+actor's exact scope and server identity, all future actor/reviewer/Stop endpoints,
+the evidence source and the authority store before numerical assets or live
+custody are opened.
+
+One existing generated-text operator service is installed on the original owner
+and retained across Message/Finish handoffs. Observation and explicitly selected
+native control grants, candidate/connection/exchange spending and the original
+effective deadline are not renewed. The service is pumped at the existing native
+checkpoints and during independent review. Stop keeps priority; an operator
+Fence reaches the original cleanup path before further forward work. Recovery
+exposes no live operator before its original cooperative replay has completed.
+
+Regression sources cover the actual resident fixture and authenticated operator
+transport, with permitted publication and causal refusals. Source parsing and
+independent review are distinct from the required RCH execution gate. RCH is
+unavailable; compilation, runtime tests, Clippy and full qualification remain
+pending. No Bead or work packet is closed. Contract:
+`docs/RESIDENT_NATIVE_PUBLICATION.md`.
+
 ## 2026-11-15: recover a remaining native sequence through one original owner
 
 The resident native command now accepts explicit `--after-message` recovery of

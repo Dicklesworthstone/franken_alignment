@@ -18,6 +18,9 @@ mod fixture {
 }
 use fixture::{Root, configured, inputs, profiles};
 
+#[path = "tests/operator.rs"]
+mod operator_tests;
+
 fn entry(recipe: &str, actor: &str, release: &str) -> String {
     format!(r#"{{"recipe":"{recipe}","actor_profile":"{actor}","release":"{release}"}}"#)
 }
