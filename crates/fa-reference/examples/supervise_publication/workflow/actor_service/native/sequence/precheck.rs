@@ -5,11 +5,27 @@
 
 use super::super::{exact_precheck, operator};
 use super::{
-    ActorProposal, Command, Config, ElapsedTick, Entry, EntryServices, Error,
-    FileSupervisedDriver, JournalError, PeerProfile, Profile, Write, debug, encode_command, pause,
+    ActorProposal, Command, Config, ElapsedTick, Entry, EntryServices, Error, FileSupervisedDriver,
+    JournalError, PeerProfile, Profile, Write, debug, encode_command, pause,
 };
 use crate::workflow::actor_service::precheck as shared;
 use std::collections::BTreeSet;
+
+/// A new original owner starts at policy epoch zero. Refuse an impossible first
+/// disclosure before loading numerical assets or consuming exclusive store
+/// creation. Recovery and future rows still bind to their actual owner epoch;
+/// neither can infer that epoch from the selected predecessor or row number.
+pub(super) fn check_initial_epoch(
+    first: Option<&exact_precheck::Selection>,
+    after: Option<u64>,
+) -> Result<(), String> {
+    if after.is_none()
+        && first.is_some_and(|selected| selected.settings.expected_policy_epoch() != 0)
+    {
+        return Err("first native sequence precheck must target initial policy epoch zero".into());
+    }
+    Ok(())
+}
 
 /// Check all future endpoints, including absent names, before any live owner,
 /// clock, model input or listener is acquired. Version one adds no disclosure
@@ -25,7 +41,9 @@ pub(super) fn check(
         return Ok(());
     }
     shared::Settings::check_schedule(
-        selections.iter().filter_map(|(_, selected)| selected.map(|value| &value.settings)),
+        selections
+            .iter()
+            .filter_map(|(_, selected)| selected.map(|value| &value.settings)),
     )?;
     let store = operator::resolve(&config.store)?;
     let mut reserved = BTreeSet::from([operator::resolve(config.source.path())?]);
@@ -33,7 +51,8 @@ pub(super) fn check(
         reserved.insert(operator::resolve(&actor.socket)?);
         reserved.insert(operator::resolve(&peers.socket(actor.request))?);
         reserved.insert(operator::resolve(&crate::workflow::control::socket_path(
-            peers, actor.request,
+            peers,
+            actor.request,
         ))?);
     }
     if let Some(selected) = selected_operator {
@@ -41,7 +60,9 @@ pub(super) fn check(
     }
     let mut sockets = BTreeSet::new();
     for (actor, selected) in selections {
-        let Some(selected) = selected else { continue; };
+        let Some(selected) = selected else {
+            continue;
+        };
         selected.check(config, actor, peers, selected_operator)?;
         let socket = operator::resolve(selected.settings.socket_path())?;
         if socket.starts_with(&store) || reserved.contains(&socket) || !sockets.insert(socket) {
@@ -67,7 +88,14 @@ pub(super) fn admit<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let EntryServices { control, reviewer, peers, deadline, ingress, .. } = services;
+    let EntryServices {
+        control,
+        reviewer,
+        peers,
+        deadline,
+        ingress,
+        ..
+    } = services;
     let mut service = None;
     let result = (|| {
         if let Some(selected) = &entry.precheck {

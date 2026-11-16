@@ -41,18 +41,26 @@ impl Settings {
         let mut connections = 0_u64;
         let mut disclosures = BTreeSet::new();
         for settings in selected {
-            queries = queries.checked_add(settings.query_limit)
+            queries = queries
+                .checked_add(settings.query_limit)
                 .ok_or("precheck schedule query allowance overflow")?;
-            exchanges = exchanges.checked_add(settings.exchange_limit)
+            exchanges = exchanges
+                .checked_add(settings.exchange_limit)
                 .ok_or("precheck schedule exchange allowance overflow")?;
-            candidates = candidates.checked_add(settings.candidate_limit)
+            candidates = candidates
+                .checked_add(settings.candidate_limit)
                 .ok_or("precheck schedule candidate allowance overflow")?;
-            connections = connections.checked_add(settings.connection_limit)
+            connections = connections
+                .checked_add(settings.connection_limit)
                 .ok_or("precheck schedule connection allowance overflow")?;
-            if queries > MAX_PRECHECK_QUERIES || exchanges > MAX_PRECHECK_EXCHANGES
-                || candidates > MAX_PEER_CONNECTIONS || connections > MAX_PEER_CONNECTIONS
+            if queries > MAX_PRECHECK_QUERIES
+                || exchanges > MAX_PRECHECK_EXCHANGES
+                || candidates > MAX_PEER_CONNECTIONS
+                || connections > MAX_PEER_CONNECTIONS
             {
-                return Err("aggregate precheck schedule allowance exceeds native service limits".into());
+                return Err(
+                    "aggregate precheck schedule allowance exceeds native service limits".into(),
+                );
             }
             if !disclosures.insert(settings.disclosure_id) {
                 return Err("precheck schedule requires distinct disclosure IDs".into());
@@ -65,24 +73,39 @@ impl Settings {
         &self.socket
     }
 
+    /// The immutable epoch selected by the public disclosure profile.
+    pub(crate) fn expected_policy_epoch(&self) -> u64 {
+        self.expected_policy_epoch
+    }
+
     pub(crate) fn read(path: &Path) -> Result<Self, String> {
         Self::decode(&read_regular(path, 16_384)?)
     }
 
     pub(crate) fn decode(bytes: &[u8]) -> Result<Self, String> {
-        let mut fields = Fields::new(strict_json::parse(bytes, Limits {
-            max_bytes: 16_384,
-            max_depth: 3,
-            max_items: 64,
-            max_string_bytes: 4_096,
-        }).map_err(debug)?)?;
+        let mut fields = Fields::new(
+            strict_json::parse(
+                bytes,
+                Limits {
+                    max_bytes: 16_384,
+                    max_depth: 3,
+                    max_items: 64,
+                    max_string_bytes: 4_096,
+                },
+            )
+            .map_err(debug)?,
+        )?;
         let (cached, full_policy) = match fields.text("schema")?.as_str() {
             "fa.actor-precheck-service/1" => (false, false),
             "fa.actor-precheck-service/2" => (true, false),
             "fa.actor-precheck-service/3" => (true, true),
             _ => return Err("unsupported precheck service schema".into()),
         };
-        let disclosure = if full_policy { "full" } else { "exact_predicates" };
+        let disclosure = if full_policy {
+            "full"
+        } else {
+            "exact_predicates"
+        };
         if fields.text("policy_disclosure")? != disclosure {
             return Err("policy disclosure does not match the selected service schema".into());
         }
@@ -91,24 +114,34 @@ impl Settings {
         if full_policy {
             let mut leakage = Fields::new(fields.take("leakage")?)?;
             for (key, expected) in [
-                ("policy_structure", "disclosed"), ("policy_literals", "disclosed"),
-                ("source_values", "withheld"), ("helper_feedback", "withheld"),
-                ("consequences", "withheld"), ("timing", "observable"),
+                ("policy_structure", "disclosed"),
+                ("policy_literals", "disclosed"),
+                ("source_values", "withheld"),
+                ("helper_feedback", "withheld"),
+                ("consequences", "withheld"),
+                ("timing", "observable"),
                 ("query_usage", "observable"),
             ] {
                 if leakage.text(key)? != expected {
-                    return Err("full-policy leakage declaration does not match the native boundary".into());
+                    return Err(
+                        "full-policy leakage declaration does not match the native boundary".into(),
+                    );
                 }
             }
             leakage.end()?;
         }
         let socket = PathBuf::from(fields.text("socket")?);
-        if !socket.is_absolute() || socket.file_name().is_none()
-            || socket.components().any(|part| !matches!(part, Component::RootDir | Component::Normal(_)))
+        if !socket.is_absolute()
+            || socket.file_name().is_none()
+            || socket
+                .components()
+                .any(|part| !matches!(part, Component::RootDir | Component::Normal(_)))
             || socket.as_os_str().as_encoded_bytes().contains(&0)
             || socket.as_os_str().as_encoded_bytes().len() > 100
         {
-            return Err("precheck socket must be an absolute normalized path of at most 100 bytes".into());
+            return Err(
+                "precheck socket must be an absolute normalized path of at most 100 bytes".into(),
+            );
         }
         let expected_policy_epoch = fields.number("expected_policy_epoch")?;
         let disclosure_id = fields.number("disclosure_id")?;
@@ -126,18 +159,36 @@ impl Settings {
             };
             limits.validate().map_err(debug)?;
             Some(limits)
-        } else { None };
+        } else {
+            None
+        };
         fields.end()?;
-        if disclosure_id == 0 || query_limit == 0 || query_limit > MAX_PRECHECK_QUERIES
-            || exchange_limit == 0 || exchange_limit > MAX_PRECHECK_EXCHANGES
-            || candidate_limit == 0 || candidate_limit > MAX_PEER_CONNECTIONS
-            || connection_limit == 0 || connection_limit > candidate_limit
-            || runtime_ms == 0 || runtime_ms > 3_600_000
+        if disclosure_id == 0
+            || query_limit == 0
+            || query_limit > MAX_PRECHECK_QUERIES
+            || exchange_limit == 0
+            || exchange_limit > MAX_PRECHECK_EXCHANGES
+            || candidate_limit == 0
+            || candidate_limit > MAX_PEER_CONNECTIONS
+            || connection_limit == 0
+            || connection_limit > candidate_limit
+            || runtime_ms == 0
+            || runtime_ms > 3_600_000
         {
             return Err("precheck disclosure, work or lifetime limit is out of range".into());
         }
-        Ok(Self { socket, expected_policy_epoch, disclosure_id, query_limit,
-            exchange_limit, candidate_limit, connection_limit, runtime_ms, cache, full_policy })
+        Ok(Self {
+            socket,
+            expected_policy_epoch,
+            disclosure_id,
+            query_limit,
+            exchange_limit,
+            candidate_limit,
+            connection_limit,
+            runtime_ms,
+            cache,
+            full_policy,
+        })
     }
 
     /// Public actor-side checks, with no private Config, source or journal access.
@@ -145,7 +196,9 @@ impl Settings {
         if self.full_policy && self.cache.is_none() {
             return Err("full-policy service requires explicit cache limits".into());
         }
-        if let Some(limits) = self.cache { limits.validate().map_err(debug)?; }
+        if let Some(limits) = self.cache {
+            limits.validate().map_err(debug)?;
+        }
         if self.socket == actor.socket {
             return Err("precheck and ordinary actor sockets must be distinct".into());
         }
@@ -157,9 +210,12 @@ impl Settings {
 
     /// Called before owner creation and again before the explicit bootstrap.
     /// A pre-existing path is never removed to make a disclosure service start.
-    pub(crate) fn check_host(&self, config: &Config, actor: &Profile, reviewer: &PeerProfile)
-        -> Result<(), String>
-    {
+    pub(crate) fn check_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+    ) -> Result<(), String> {
         actor.check_host(config)?;
         reviewer.check_host(config)?;
         self.check_actor(actor)?;
@@ -185,18 +241,32 @@ impl Settings {
 struct Fields(BTreeMap<String, Json>);
 impl Fields {
     fn new(value: Json) -> Result<Self, String> {
-        match value { Json::Object(fields) => Ok(Self(fields)), _ => Err("expected precheck profile object".into()) }
+        match value {
+            Json::Object(fields) => Ok(Self(fields)),
+            _ => Err("expected precheck profile object".into()),
+        }
     }
     fn take(&mut self, name: &str) -> Result<Json, String> {
-        self.0.remove(name).ok_or_else(|| format!("missing precheck field {name}"))
+        self.0
+            .remove(name)
+            .ok_or_else(|| format!("missing precheck field {name}"))
     }
     fn text(&mut self, name: &str) -> Result<String, String> {
-        self.take(name)?.as_str().map(str::to_owned).ok_or_else(|| format!("{name} must be text"))
+        self.take(name)?
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| format!("{name} must be text"))
     }
     fn number(&mut self, name: &str) -> Result<u64, String> {
-        self.take(name)?.as_u64().ok_or_else(|| format!("{name} must be an unsigned integer"))
+        self.take(name)?
+            .as_u64()
+            .ok_or_else(|| format!("{name} must be an unsigned integer"))
     }
     fn end(self) -> Result<(), String> {
-        if self.0.is_empty() { Ok(()) } else { Err("unknown precheck service field".into()) }
+        if self.0.is_empty() {
+            Ok(())
+        } else {
+            Err("unknown precheck service field".into())
+        }
     }
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-16: preserve retryable native creation and exact disclosure boundaries
+
+- Reject a nonzero first precheck epoch during new-sequence admission, before
+  recipes, clocks, listeners or exclusive authority-store creation. Preserve
+  actual recovered-owner and independently selected later-entry epoch checks.
+- Add causal coverage for wrong/predecessor intent charging, valid exact queries
+  followed by reconnect exhaustion, and a later epoch mismatch before inference.
+- Check immutable loaded disclosure budgets and explicit all-null manifests;
+  correct the alias fixture without relaxing protected-directory validation.
+- Retain pending compilation, runtime, Clippy and full qualification because
+  the required RCH runner is unavailable.
+
 ## 2026-11-15: precheck each resident native Message and Finish
 
 - Add explicit version-two sequence rows selecting a precheck profile or null,

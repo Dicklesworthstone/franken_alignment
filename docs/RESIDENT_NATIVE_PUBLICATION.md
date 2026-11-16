@@ -140,9 +140,12 @@ reacquires source evidence and retains the existing helper, human and final
 publication checks. Original Stop and deadline checks surround bounded
 precheck handling before actor mutation.
 
-Every profile independently selects its expected policy epoch. The first
-disclosure must match the original owner after any recovery Fence, before live
-gateway setup. Each later disclosure is checked when its release begins,
+Every profile independently selects its expected policy epoch. A new owner's
+initial epoch is zero, so a nonzero first disclosure is refused before recipe
+reads, clocks, listeners or authority-store creation. Correcting that selection
+can therefore retry creation without recovering an accidentally created store.
+Recovery retains its separate original-owner check after any recovery Fence,
+before live gateway setup. Each later disclosure is checked when its release begins,
 before qualification, source refresh or numerical work. A later row may
 explicitly name the epoch resulting from an independently authorized narrowing
 operation. Neither recovery nor a query rewrites a stale expectation to make it

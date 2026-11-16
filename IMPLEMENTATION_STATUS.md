@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: reject unusable initial native disclosures before store creation
+
+The first selected precheck of a new resident native sequence must name the
+original owner's initial policy epoch, zero. Both manifest loading and direct
+runtime admission now reject a nonzero first selection before model recipes,
+clocks, listeners or the exclusive authority-store creation. Previously this
+deterministic mismatch was detected only after a new store had been created,
+so correcting the profile could not simply retry creation. Recovery still
+checks its actual owner after the original Fence, and later selections retain
+their own independently chosen epochs and current-entry checks.
+
+Regression sources pair early invalid-creation refusal with permitted recovery
+and future-entry selections. Additional real-transport cases cover predecessor
+intent rejection consuming the current disclosure allowance, a subsequent valid
+observation, exhaustion across reconnects, and a later epoch mismatch after a
+confirmed prefix but before any successor inference. Loader checks retain frozen
+profile identities and budgets after file edits and admit explicit all-null
+version-two selections. A canonical-alias fixture now respects the unchanged
+protected immediate-directory contract.
+
+Independent source review, targeted Rust syntax/format checking and whitespace
+checking are separate from qualification. The required RCH gate cannot launch
+because `rch` is unavailable; compilation, runtime tests, Clippy and full
+qualification remain pending. No Bead or packet is closed.
+
 ## 2026-11-15: disclose exact policy for each original resident native release
 
 The closed version-two native sequence manifest requires every entry to select

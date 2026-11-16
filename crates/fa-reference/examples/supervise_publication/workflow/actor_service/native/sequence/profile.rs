@@ -303,6 +303,7 @@ pub(super) fn load_with_operator(
                 .transpose()
         })
         .collect::<Result<Vec<_>, _>>()?;
+    super::disclosure::check_initial_epoch(prechecks[0].as_ref(), after)?;
     super::disclosure::check(
         config,
         &actors
@@ -368,6 +369,7 @@ pub(super) fn validate_selected(
     after: Option<u64>,
 ) -> Result<(), String> {
     check_count(entries.len(), after)?;
+    super::disclosure::check_initial_epoch(entries[0].precheck.as_ref(), after)?;
     validate_actors(
         config,
         &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
@@ -376,7 +378,10 @@ pub(super) fn validate_selected(
     )?;
     super::disclosure::check(
         config,
-        &entries.iter().map(|entry| (&entry.actor, entry.precheck.as_ref())).collect::<Vec<_>>(),
+        &entries
+            .iter()
+            .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+            .collect::<Vec<_>>(),
         peers,
         None,
     )?;
