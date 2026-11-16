@@ -7,6 +7,8 @@ mod profile;
 mod disclosure;
 #[path = "sequence/recovery.rs"]
 mod recovered;
+#[path = "sequence/qualification.rs"]
+mod requalification;
 #[cfg(test)]
 #[path = "sequence/tests.rs"]
 mod tests;
@@ -90,11 +92,39 @@ where
 /// authenticated session and elapsed lifetime through every release. Recovery
 /// installs it only after the original replay and suffix admission complete.
 pub(super) fn run_with_operator<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_qualification(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        selection,
+        None,
+        time,
+        output,
+    )
+}
+
+/// Recovery can explicitly activate one independently supplied qualification.
+/// The source is consumed once before the first new release; later handoffs
+/// check the original retained qualification and cannot renew its evidence.
+pub(super) fn run_with_qualification<F>(
     mut config: Config,
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
     selection: (Option<u64>, Option<&operator::Selection>),
+    credibility: Option<&Path>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
@@ -102,6 +132,7 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (after, selected_operator) = selection;
+    requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
     if let Some(selected) = selected_operator {
         // Direct callers receive the same whole-sequence scope and canonical
@@ -120,6 +151,16 @@ where
             .collect::<Vec<_>>(),
         reviewer_profile,
         selected_operator,
+    )?;
+    requalification::check_paths(
+        &config,
+        &entries
+            .iter()
+            .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+            .collect::<Vec<_>>(),
+        reviewer_profile,
+        selected_operator,
+        credibility,
     )?;
     let first = &entries[0];
     let selected = bootstrap::selection(&config, &first.inputs, publication)?;
@@ -163,10 +204,10 @@ where
         // reference output or numerical command can start new work.
         recovered::preflight(&host, &entries, after, first_deadline.logical)?;
     }
-    if let Some(selected) = &first.precheck {
-        super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
+    requalification::check_epoch(first.precheck.as_ref(), &host, credibility.is_some())?;
+    if credibility.is_none() {
+        host.check_credibility().map_err(debug)?;
     }
-    host.check_credibility().map_err(debug)?;
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
     let operator = selected_operator
@@ -242,6 +283,7 @@ where
                 &mut config,
                 entry,
                 previous,
+                if index == 0 { credibility } else { None },
                 EntryServices {
                     control: &mut control,
                     reviewer: &reviewer,
@@ -386,6 +428,7 @@ fn execute_entry<F>(
     config: &mut Config,
     entry: &Entry,
     previous: Option<u64>,
+    credibility: Option<&Path>,
     services: EntryServices<'_>,
     time: &mut F,
     output: &mut impl Write,
@@ -403,12 +446,9 @@ where
     } = services;
     let prepared = {
         let host = driver.supervisor().host().map_err(debug)?;
-        if let Some(selected) = &entry.precheck {
-            // An independently granted restriction may advance the epoch
-            // between releases. Bind this row to its actual handoff before
-            // source refresh or numerical work; never rewrite its context.
-            super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
-        }
+        // A selected activation has one checked successor epoch. Every other
+        // handoff uses the actual retained epoch; neither rewrites a disclosure.
+        requalification::check_epoch(entry.precheck.as_ref(), &host, credibility.is_some())?;
         match (entry.release, previous) {
             (Release::Message, Some(after)) => Some(continuation::prepare(
                 &host,
@@ -439,11 +479,17 @@ where
     if !qualification::prepare(
         driver,
         config,
-        None,
+        credibility,
         (&mut *control, reviewer, deadline),
         &mut *time,
     )? {
         return Ok(false);
+    }
+    if let Some(selected) = &entry.precheck {
+        // Activation and its independent Stop/operator checkpoint have finished.
+        // Bind the actual resulting owner before any new source or inference.
+        let host = driver.supervisor().host().map_err(debug)?;
+        super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
     }
     let proposal = match entry.release {
         Release::Finish => {

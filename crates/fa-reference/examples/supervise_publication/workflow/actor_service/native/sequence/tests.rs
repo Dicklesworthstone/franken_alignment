@@ -56,6 +56,8 @@ mod recovery_tests;
 mod operator_tests;
 #[path = "tests/precheck.rs"]
 mod precheck_tests;
+#[path = "tests/qualification.rs"]
+mod qualification_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 

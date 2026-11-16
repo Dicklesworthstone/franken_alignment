@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-16: requalify resident native recovery before new releases
+
+- Connect explicit --credibility-activation to native --after-message recovery,
+  using the existing evidence reader and original activation exactly once.
+- Preserve the independently selected disclosure epoch, current source
+  requirement, original Stop/deadline, numerical spending and publication keys.
+- Reject creation and canonical source/store/future-transport collisions before
+  live work. Historical activation cannot authorize a new release.
+- Add ten paired runtime/profile/CLI regression functions; update the two
+  affected grammar expectations. Independent source review is complete;
+  compilation, formatting and required RCH execution remain pending.
+
 ## 2026-11-16: retain independent native service recovery checkpoints
 
 - Add optional retained-history input and create-new output to native

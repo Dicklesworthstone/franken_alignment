@@ -24,6 +24,8 @@ mod operator_tests;
 mod precheck_tests;
 #[path = "tests/combined.rs"]
 mod combined;
+#[path = "tests/qualification.rs"]
+mod qualification_tests;
 
 fn entry(recipe: &str, actor: &str, release: &str) -> String {
     format!(r#"{{"recipe":"{recipe}","actor_profile":"{actor}","release":"{release}"}}"#)
@@ -290,10 +292,16 @@ fn native_resident_recovery_options_bind_one_canonical_predecessor_before_io() {
                 (Some(PathBuf::from("/missing/witness")), Some(after))
             );
             assert_eq!(
+                options(&args, Some(Path::new("/missing/capsule"))).unwrap(),
+                (Some(PathBuf::from("/missing/witness")), Some(after))
+            );
+            // The admitted grammar now reaches the missing config, still
+            // before any clock, owner or qualification source can be acquired.
+            assert_ne!(
                 command_with_clock(
                     &args,
                     Some(Path::new("/missing/capsule")),
-                    || panic!("unsupported recovery activation acquired time"),
+                    || panic!("missing recovery config acquired time"),
                     &mut Vec::new()
                 ),
                 Err(USAGE.to_owned())

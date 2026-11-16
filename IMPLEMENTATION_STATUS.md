@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: requalify a resident native suffix through its original owner
+
+Explicit native sequence recovery now accepts --credibility-activation with
+--after-message. It reuses the existing bounded capsule reader and original
+activation protocol once before the first new release. Creation still refuses
+the option before configuration or clocks. All source, store and future
+transport aliases are checked before recipes or live custody.
+
+A selected first precheck must independently name the activation's required
+successor epoch; the actual owner epoch is checked again after activation and
+its original Stop/deadline checkpoints. Historical activation receipts cannot
+make recovered work eligible. Later Message/Finish handoffs retain the same
+qualification without rereading the capsule or resetting any allowance.
+Fresh source evidence, helper review and human approval remain independent.
+
+Ten new regression functions cover actual prefix/suffix publication and Finish,
+one-time capsule use, later human rejection, historical or mismatched evidence,
+exact disclosure epochs, post-activation Stop/deadline, source loss and closed
+command/path admission. Two existing grammar tests now distinguish permitted
+explicit recovery from refused creation. The synthetic fixtures test protocol
+enforcement; they do not establish detector quality or evaluator authentication.
+
+Independent production and test-source review is complete. The execution
+environment remains unavailable, so compilation, formatting, runtime tests,
+Clippy and required RCH qualification remain unexecuted. No Bead or packet is
+closed. Contract: docs/RESIDENT_NATIVE_PUBLICATION.md.
+
 ## 2026-11-16: retain independent history across native service lifecycles
 
 Native single-release create and explicit open commands now accept

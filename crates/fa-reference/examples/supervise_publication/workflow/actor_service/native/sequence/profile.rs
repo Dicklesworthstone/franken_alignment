@@ -13,7 +13,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--credibility-activation CAPSULE with --after-message]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
 
 struct Input {
     recipe: PathBuf,
@@ -29,8 +29,7 @@ fn options(
     args: &[String],
     credibility: Option<&Path>,
 ) -> Result<(Option<PathBuf>, Option<u64>), String> {
-    if credibility.is_some()
-        || !matches!(args.len(), 4 | 6 | 8)
+    if !matches!(args.len(), 4 | 6 | 8)
         || args.first().map(String::as_str) != Some("serve-native-generated")
         || args[1..4]
             .iter()
@@ -61,6 +60,9 @@ fn options(
             _ => return Err(USAGE.into()),
         }
     }
+    if credibility.is_some() && after.is_none() {
+        return Err(USAGE.into());
+    }
     Ok((publication, after))
 }
 
@@ -77,8 +79,7 @@ fn take_operator(
     {
         return Ok((args.to_vec(), None));
     }
-    if credibility.is_some()
-        || args.len() < 8
+    if args.len() < 8
         || args.len() > 12
         || args.len() % 2 != 0
         || args.first().map(String::as_str) != Some("serve-native-generated")
@@ -112,6 +113,9 @@ fn take_operator(
             _ => return Err(USAGE.into()),
         }
     }
+    // A selected capsule still requires explicit suffix recovery. Validate
+    // the retained native grammar before any configuration file is read.
+    options(&remaining, credibility)?;
     Ok((
         remaining,
         Some((profile.ok_or(USAGE)?, generation.ok_or(USAGE)?)),
@@ -147,7 +151,26 @@ where
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
-    if let Some(selected) = selected_operator.as_ref() {
+    if let Some(credibility) = credibility {
+        let entries = load_with_qualification(
+            Path::new(&args[2]),
+            &config,
+            &peers,
+            after,
+            selected_operator.as_ref(),
+            Some(credibility),
+        )?;
+        super::run_with_qualification(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            (after, selected_operator.as_ref()),
+            Some(credibility),
+            time,
+            output,
+        )
+    } else if let Some(selected) = selected_operator.as_ref() {
         let entries =
             load_with_operator(Path::new(&args[2]), &config, &peers, after, Some(selected))?;
         super::run_with_operator(
@@ -270,6 +293,20 @@ pub(super) fn load_with_operator(
     after: Option<u64>,
     selected_operator: Option<&operator::Selection>,
 ) -> Result<Vec<Entry>, String> {
+    load_with_qualification(path, config, peers, after, selected_operator, None)
+}
+
+/// The independently selected capsule is not read during model admission.
+/// Reserve its canonical name before any future listener or authority owner.
+pub(super) fn load_with_qualification(
+    path: &Path,
+    config: &Config,
+    peers: &PeerProfile,
+    after: Option<u64>,
+    selected_operator: Option<&operator::Selection>,
+    credibility: Option<&Path>,
+) -> Result<Vec<Entry>, String> {
+    super::requalification::check_mode(after, credibility)?;
     if after == Some(0) {
         return Err(
             "native sequence recovery requires a nonzero original message predecessor".into(),
@@ -313,6 +350,17 @@ pub(super) fn load_with_operator(
             .collect::<Vec<_>>(),
         peers,
         selected_operator,
+    )?;
+    super::requalification::check_paths(
+        config,
+        &actors
+            .iter()
+            .zip(&prechecks)
+            .map(|(actor, selected)| (actor, selected.as_ref()))
+            .collect::<Vec<_>>(),
+        peers,
+        selected_operator,
+        credibility,
     )?;
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;

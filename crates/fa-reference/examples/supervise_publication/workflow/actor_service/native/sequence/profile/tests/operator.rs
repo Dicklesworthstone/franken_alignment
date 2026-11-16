@@ -81,7 +81,14 @@ fn resident_native_operator_pair_has_one_closed_grammar_for_creation_and_recover
                 original.extend(suffix.clone());
                 assert_eq!(remaining, original);
                 options(&remaining, None).unwrap();
-                assert!(take_operator(&args, Some(Path::new("capsule"))).is_err());
+                let qualified = take_operator(&args, Some(Path::new("capsule")));
+                if suffix.iter().any(|value| value == "--after-message") {
+                    let (qualified_args, qualified_operator) = qualified.unwrap();
+                    assert_eq!(qualified_args, remaining);
+                    assert_eq!(qualified_operator, selected);
+                } else {
+                    assert!(qualified.is_err());
+                }
             }
         }
     }

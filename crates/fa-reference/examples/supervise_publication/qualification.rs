@@ -24,12 +24,12 @@ pub fn take_option(args: &mut Vec<String>) -> Result<Option<PathBuf>, String> {
     }
     let positional = match args.first().map(String::as_str) {
         Some("submit") => 3,
-        Some("submit-checked" | "serve-open" | "create-learned-generated" | "serve-learned-generated") => 4,
+        Some("submit-checked" | "serve-open" | "create-learned-generated" | "serve-learned-generated" | "serve-native-generated") => 4,
         Some("proposal-next" | "serve-open-checked") => 5,
         // Guarded resume is receipt-only: the caller never reads or activates
         // this capsule. Keep unguarded resume and other queries closed.
         Some("resume") if args.get(3).is_some_and(|arg| arg == "--guarded") => 5,
-        _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked or learned recovery".into()),
+        _ => return Err("credibility activation requires submit, submit-checked, proposal-next, serve-open, serve-open-checked, native suffix recovery or learned recovery".into()),
     };
     if index < positional
         || index + 1 >= args.len()
@@ -242,5 +242,44 @@ mod tests {
         let before = values.clone();
         assert_eq!(take_option(&mut values).unwrap(), None);
         assert_eq!(values, before);
+    }
+}
+
+#[cfg(test)]
+mod native_sequence_tests {
+    use super::*;
+
+    #[test]
+    fn resident_native_activation_routes_exactly_one_independent_capsule() {
+        for first in [false, true] {
+            let mut args = [
+                "serve-native-generated", "config", "sequence", "reviewer",
+            ].map(str::to_owned).to_vec();
+            let activation = [FLAG.to_owned(), "capsule".to_owned()];
+            if first {
+                args.extend(activation.clone());
+            }
+            args.extend(["--after-message".to_owned(), "91".to_owned()]);
+            if !first {
+                args.extend(activation);
+            }
+            assert_eq!(take_option(&mut args).unwrap(), Some(PathBuf::from("capsule")));
+            assert_eq!(args, [
+                "serve-native-generated", "config", "sequence", "reviewer",
+                "--after-message", "91",
+            ].map(str::to_owned));
+        }
+        for tail in [
+            vec![FLAG],
+            vec![FLAG, "--after-message", "91"],
+            vec![FLAG, "capsule", FLAG, "second"],
+        ] {
+            let mut args = vec!["serve-native-generated", "config", "sequence", "reviewer"];
+            args.extend(tail);
+            let mut args = args.into_iter().map(str::to_owned).collect::<Vec<_>>();
+            let before = args.clone();
+            assert!(take_option(&mut args).is_err());
+            assert_eq!(args, before);
+        }
     }
 }

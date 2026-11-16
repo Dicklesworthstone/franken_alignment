@@ -24,6 +24,8 @@ supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PR
   --publication-profile WITNESS_PROFILE
 supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
   --after-message PREVIOUS_REQUEST
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --credibility-activation CAPSULE
 supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
   --operator-profile OPERATOR_PROFILE --tower-generation NONZERO
 ```
@@ -145,7 +147,10 @@ initial epoch is zero, so a nonzero first disclosure is refused before recipe
 reads, clocks, listeners or authority-store creation. Correcting that selection
 can therefore retry creation without recovering an accidentally created store.
 Recovery retains its separate original-owner check after any recovery Fence,
-before live gateway setup. Each later disclosure is checked when its release begins,
+before live gateway setup. When explicit recovery requalification is selected,
+the first disclosure must name its single activation successor epoch; that
+selection is checked before the capsule read and again against the actual owner
+after activation. No selected expectation is rewritten. Each later disclosure is checked when its release begins,
 before qualification, source refresh or numerical work. A later row may
 explicitly name the epoch resulting from an independently authorized narrowing
 operation. Neither recovery nor a query rewrites a stale expectation to make it
@@ -228,13 +233,58 @@ confirmed prefix, source identity and complete model/tokenizer/publication
 contracts. Fresh source evidence and an explicit original resume still precede
 any new numerical work or Finish. Every new release receives fresh helper and
 human approval at the recovered policy epoch. An old recorded request's deadline
-or approval is never renewed. Existing stale credibility qualification refuses;
-this command does not implicitly activate a new qualification.
+or approval is never renewed. Existing stale credibility qualification refuses unless the operator
+explicitly selects the recovery requalification described below; the command
+never infers or renews a qualification.
 
 This is the same source-bound native recovery contract as the single-release
 native opener. It does not add an independent latest-head or anti-rollback
 anchor. Historical replay remains synchronous within each original event; the
 service's checkpoints do not establish a hard real-time Stop bound.
+
+## Explicit recovery requalification
+
+A resident suffix can select `--credibility-activation CAPSULE` together with
+`--after-message PREVIOUS_REQUEST`. This composes with the existing publication
+and independent operator selections. Creation rejects the option before
+configuration reads or clocks; an actor submission cannot supply the capsule.
+
+The original cooperative recovery and complete suffix-history admission run
+first. The existing native qualification operation then reads and validates the
+bounded capsule exactly once, under the same independent Stop and first-entry
+deadline. Scope, original committee, current control predecessor, policy epoch,
+evidence requirements, freshness and any retained joint policy remain the
+native operation's responsibility. The file supplies evaluation evidence; it
+does not authenticate an evaluator or import a score as permission.
+
+A successful new activation advances the original authority epoch once.
+Historical operation retries remain historical receipts and cannot qualify a
+new live suffix. Any first precheck explicitly selects that resulting epoch:
+the service checks the anticipated successor before reading the capsule and
+rechecks the actual owner after activation. Later releases check retained
+qualification and their own selected current epochs. They never reopen the
+capsule or activate it again. A missing, stale or incompatible capsule cannot
+fall back to the recovered qualification.
+
+Canonical admission reserves the capsule name against the authority store,
+evidence source, every scheduled actor/reviewer/Stop/precheck endpoint and the
+selected operator endpoint before recipe/model reads. The original bounded file
+reader still runs at the controlled qualification boundary. These path checks
+do not establish a hostile-filesystem isolation guarantee.
+
+Requalification precedes new source refresh, numerical resume, generated
+reference output and helper review. Stop and the original deadline are checked
+both before and after the operation. Fresh evidence, the original generation
+and cumulative work budgets, every helper review and every independent human
+approval remain mandatory. A final Finish can be requalified and published
+without additional inference. If a later approval fails, the previously
+confirmed prefix remains published and no later entry starts.
+
+Recovery and an accepted activation are durable transitions. A later refusal
+does not roll them back or promise byte-identical history. Authored regressions
+pair real Message/Message/Finish recovery with lost and historical evidence,
+stale disclosure epochs, human refusal, source loss and Stop/deadline boundaries.
+Compilation and runtime qualification remain pending the required RCH verifier.
 
 ## Independent live operator
 
@@ -310,7 +360,8 @@ The resident command creates a new native stream or explicitly selects a new
 remaining suffix with `--after-message`. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
-credibility activation, topology or policy-governor services. The independent
+credibility activation, topology or policy-governor services. Requalification
+requires its explicit capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows.
 
