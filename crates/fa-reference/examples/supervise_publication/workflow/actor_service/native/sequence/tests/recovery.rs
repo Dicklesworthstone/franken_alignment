@@ -81,6 +81,7 @@ fn entry(
         actor,
         inputs,
         release,
+        precheck: None,
     }
 }
 
@@ -665,4 +666,116 @@ fn recovered_singleton_finish_retains_operator_custody_without_new_inference() {
     reader.no_generation(9);
     assert!(!chosen.settings.socket.exists());
     closed(&actor_profiles, &reviewer);
+}
+
+#[test]
+fn recovered_native_prechecks_bind_new_grants_to_the_original_post_fence_epoch_before_inference() {
+    for stale_epoch in [false, true] {
+        let root = Root::new();
+        let Seed {
+            config,
+            reviewer,
+            reader,
+            packets: original,
+        } = seed(&root, 4);
+        let before = reader.progress(8);
+        let mut entries = suffix(&root, &config, &reader);
+        let sockets = super::precheck_tests::select(
+            &root,
+            &mut entries,
+            if stale_epoch { 0 } else { 1 },
+        );
+        let profiles = entries
+            .iter()
+            .map(|entry| entry.actor.clone())
+            .collect::<Vec<_>>();
+        let mut output =
+            super::precheck_tests::CheckedOutput::new(&entries, &reader, &reviewer, 1);
+        let mut humans = Reviewers::new(&reviewer, &reader, &entries);
+        let result = run_selected(
+            config,
+            entries,
+            &reviewer,
+            None,
+            Some(AFTER),
+            || {
+                for (index, request) in humans.requests.iter().copied().enumerate() {
+                    if reviewer.socket(request).exists() {
+                        assert!(!sockets[index].as_ref().unwrap().exists());
+                    }
+                }
+                humans.poll();
+                // Equal logical ticks remain legal. Recovery changes the
+                // original epoch, never a disclosure's independent selection.
+                ElapsedTick(1000)
+            },
+            &mut output,
+        );
+        if stale_epoch {
+            assert_eq!(
+                result.unwrap_err(),
+                "precheck expected policy epoch does not match the original owner"
+            );
+            assert!(output.documents.is_empty());
+            assert!(output.join().is_empty());
+            assert!(humans.seen.iter().all(|seen| !seen));
+            assert!(humans.clients.iter().all(Option::is_none));
+            assert_preserved_prefix(&reader, &before);
+            // Recovery already made its ONE original Fence. The stale grant
+            // adds no numerical command, fresh source transaction, or Stop.
+            let state = reader.publication();
+            assert_eq!(state.revision, before.publication.revision + 1);
+            assert_eq!(state.control.ledger.epoch, 1);
+            assert!(state.stop.is_none());
+        } else {
+            assert!(result.is_ok(), "{result:?}");
+            assert_eq!(output.documents.len(), 2);
+            assert!(output.join().iter().all(executed));
+            let packets = humans.join();
+            assert_eq!(packets.len(), 2);
+            let mut sessions = original
+                .iter()
+                .map(|packet| packet.binding().session)
+                .collect::<BTreeSet<_>>();
+            for (index, packet) in packets.iter().enumerate() {
+                assert!(sessions.insert(packet.binding().session));
+                assert_eq!(packet.action().spec().policy_epoch, 1);
+                let frame = ReleaseFrame::decode(&packet.action().spec().payload).unwrap();
+                assert_eq!(frame.prior_messages(), vec!["A"; 2 + index].as_slice());
+                assert_eq!(frame.message(), if index == 0 { Some("A") } else { None });
+                assert_eq!(frame.is_finish(), index == 1);
+            }
+            let state = reader.stream();
+            assert_eq!(state.publication.control.ledger.epoch, 1);
+            assert_eq!(state.publication.executions, 4);
+            assert_eq!(state.publication.payload, b"AAA");
+            assert_eq!(state.publication.control.ledger.reserved, 0);
+            assert_eq!(
+                state.publication.control.ledger.charged,
+                before.publication.control.ledger.charged
+                    + packets
+                        .iter()
+                        .map(|packet| packet.action().spec().units)
+                        .sum::<u64>()
+            );
+            assert_eq!(state.confirmed, state.published);
+            assert!(state.confirmed.finished());
+            assert!(state.pending.is_none());
+            assert!(state.publication.stop.is_none());
+            assert_eq!(
+                reader.progress(8).numerical.numerical,
+                before.numerical.numerical
+            );
+            let progress = reader.progress(9);
+            assert_eq!(progress.numerical.numerical.position, 12);
+            assert_eq!(progress.numerical.numerical.sampled_draws, 6);
+            assert_eq!(progress.text.command().position(), 8);
+            assert_eq!(progress.text.finish(), Some(Ok(GenerationFinish::StopToken)));
+            reader.no_generation(10);
+        }
+        assert!(sockets
+            .iter()
+            .all(|path| !path.as_ref().unwrap().exists()));
+        closed(&profiles, &reviewer);
+    }
 }

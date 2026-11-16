@@ -20,6 +20,10 @@ use fixture::{Root, configured, inputs, profiles};
 
 #[path = "tests/operator.rs"]
 mod operator_tests;
+#[path = "tests/precheck.rs"]
+mod precheck_tests;
+#[path = "tests/combined.rs"]
+mod combined;
 
 fn entry(recipe: &str, actor: &str, release: &str) -> String {
     format!(r#"{{"recipe":"{recipe}","actor_profile":"{actor}","release":"{release}"}}"#)
@@ -61,6 +65,7 @@ fn selected(root: &Root) -> (Config, PeerProfile, Vec<Entry>) {
             actor,
             inputs: copy_inputs(&original, generation),
             release,
+            precheck: None,
         }
     })
     .collect();
@@ -151,7 +156,7 @@ fn native_resident_profile_rejects_ambiguous_implicit_and_unbounded_releases() {
     }
     let valid = document(&[message, finish]);
     for invalid in [
-        valid.replace("sequence/1", "sequence/2"),
+        valid.replace("sequence/1", "sequence/3"),
         valid.replace(r#""entries":["#, r#""entries":[],"entries":["#),
         valid.replacen(
             r#""release":"message""#,

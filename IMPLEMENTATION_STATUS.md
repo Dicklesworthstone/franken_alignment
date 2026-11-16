@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: disclose exact policy for each original resident native release
+
+The closed version-two native sequence manifest requires every entry to select
+a precheck profile or explicitly use null. Version one keeps its existing
+meaning and rejects the additional field. All actor and disclosure profiles,
+distinct disclosure IDs, aggregate native service allowances and canonical
+aliases against every future transport, evidence source, authority store and
+selected operator are admitted before recipe/model reads. Direct runtime entry
+performs the same cross-role checks before its first clock or live setup.
+
+Each independently selected precheck uses the existing generated-text service
+after the original Message completes or Finish is prepared. Queries evaluate
+the actual cumulative frame and charge without new inference or journal
+mutation. Reconnects retain the same finite per-release grant; aggregate
+selection prevents handoffs from multiplying the native service ceilings.
+Stop and the original deadline surround bounded query handling. Every admission
+exit retires the disclosure before review or later release work.
+
+The first row's expected epoch is checked after original recovery preflight and
+before live gateway setup; each later row is checked before its own
+qualification, source refresh and numerical work. Future rows may explicitly
+select a later epoch following independent narrowing. No query changes that
+selection, and a pass supplies neither fresh source evidence nor helper/human
+approval. The original resident operator retains its grant custody and deadline.
+
+Eleven new regression functions cover versioned admission, exact aggregate
+limits, real Message/Message/Finish prechecks, reconnect exhaustion, immutable
+query history, cumulative frame/charge checks, fresh-source and human boundaries,
+partial-query Stop, current/stale recovery epochs and combined operator/precheck
+alias rejection before assets or clocks. The exact source and test designs
+received independent review. Execution-server interruptions prevented a completed
+final syntax/format check for this increment. RCH is unavailable; compilation,
+runtime tests, Clippy and full qualification remain pending. No Bead or work
+packet is closed. Contract: `docs/RESIDENT_NATIVE_PUBLICATION.md`.
+
 ## 2026-11-15: retain one independent operator through resident native publication
 
 Resident native creation and explicit suffix recovery accept paired operator

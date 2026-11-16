@@ -54,6 +54,8 @@ mod checked;
 mod recovery_tests;
 #[path = "tests/operator.rs"]
 mod operator_tests;
+#[path = "tests/precheck.rs"]
+mod precheck_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 
@@ -85,6 +87,7 @@ fn selected(root: &Root, finish: bool) -> (Config, Vec<Entry>, PeerProfile) {
             Entry {
                 actor,
                 inputs,
+                precheck: None,
                 release: if finish && index == 2 {
                     Release::Finish
                 } else {

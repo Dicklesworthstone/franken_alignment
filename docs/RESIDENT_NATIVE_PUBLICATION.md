@@ -89,6 +89,70 @@ Canonical aliases cannot let a later listener replace an earlier endpoint or
 an input needed by the original owner. No existing path is removed to make a
 listener bind succeed.
 
+## Exact policy prechecks for selected releases
+
+Version two uses the same command and bounded sequence rules, while requiring
+every entry to select `precheck_profile` as a path or explicitly use `null`.
+Paths follow the same sequence-relative rules as actor and recipe paths.
+Version one remains closed and does not accept this field.
+
+```json
+{
+  "schema": "fa.native-publication-sequence/2",
+  "entries": [
+    {
+      "actor_profile": "actors/first.json",
+      "recipe": "recipes/first.json",
+      "release": "message",
+      "precheck_profile": "prechecks/first.json"
+    },
+    {
+      "actor_profile": "actors/finish.json",
+      "recipe": "recipes/first.json",
+      "release": "finish",
+      "precheck_profile": null
+    }
+  ]
+}
+```
+
+Each selected disclosure uses the existing uncached
+`fa.actor-precheck-service/1` exact-predicate profile and the existing
+`actor-precheck` client. Cached and full-policy profiles are refused for this
+generated-text selection. All disclosure profiles are read before any model
+recipe. The complete schedule must fit the native aggregate query, exchange,
+candidate and connection ceilings and use distinct disclosure IDs. Canonical
+aliases against every future actor, reviewer, Stop and disclosure endpoint, the
+evidence source, authority store and selected operator endpoint are refused
+before model loading. A later release cannot create a fresh invocation-wide
+allowance.
+
+The sidecar starts only after the original Message completes or Finish is
+prepared, with independent Stop already active. It evaluates that exact
+cumulative frame and its charged units, rather than a caller-supplied replacement
+payload. Query turns do not sample tokens, refresh source evidence or append
+journal events. Each reconnect retains the same finite disclosure. The sidecar
+is retired before independent review, request handoff and every error exit.
+
+A passing precheck supplies neither publication approval nor a permit. The
+actor must still submit the original source reference; actual admission
+reacquires source evidence and retains the existing helper, human and final
+publication checks. Original Stop and deadline checks surround bounded
+precheck handling before actor mutation.
+
+Every profile independently selects its expected policy epoch. The first
+disclosure must match the original owner after any recovery Fence, before live
+gateway setup. Each later disclosure is checked when its release begins,
+before qualification, source refresh or numerical work. A later row may
+explicitly name the epoch resulting from an independently authorized narrowing
+operation. Neither recovery nor a query rewrites a stale expectation to make it
+pass. Historical recovery changes retain their existing meaning: a rejected
+stale suffix may already include its original recovery Fence.
+
+The optional independent operator can be selected with either manifest version.
+Its original service, grants and deadline remain resident while each separately
+selected disclosure retires at its own admission boundary.
+
 ## One owner, independently approved releases
 
 For the first Message, the original native bootstrap and monitored generation
@@ -234,8 +298,9 @@ The resident command creates a new native stream or explicitly selects a new
 remaining suffix with `--after-message`. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
-credibility activation, precheck, topology or policy-governor services. The
-independent operator is available only through its explicit paired selection.
+credibility activation, topology or policy-governor services. The independent
+operator requires its explicit paired selection, and release-specific prechecks
+require explicit version-two manifest rows.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

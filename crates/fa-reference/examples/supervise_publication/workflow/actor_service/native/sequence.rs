@@ -3,6 +3,8 @@
 //! human review. Only a confirmed Executed predecessor permits another entry.
 #[path = "sequence/profile.rs"]
 mod profile;
+#[path = "sequence/precheck.rs"]
+mod disclosure;
 #[path = "sequence/recovery.rs"]
 mod recovered;
 #[cfg(test)]
@@ -26,6 +28,7 @@ pub(super) struct Entry {
     pub actor: Profile,
     pub inputs: Inputs,
     pub release: Release,
+    pub precheck: Option<exact_precheck::Selection>,
 }
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
@@ -107,6 +110,17 @@ where
             selected.check(&config, &entry.actor, reviewer_profile)?;
         }
     }
+    // The independently selected endpoints share one invocation's namespace.
+    // Check their cross-role aliases before any clock, listener or live owner.
+    disclosure::check(
+        &config,
+        &entries
+            .iter()
+            .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+            .collect::<Vec<_>>(),
+        reviewer_profile,
+        selected_operator,
+    )?;
     let first = &entries[0];
     let selected = bootstrap::selection(&config, &first.inputs, publication)?;
     let start = time();
@@ -148,6 +162,9 @@ where
         // Inspect the complete suffix before a source read, fresh qualification,
         // reference output or numerical command can start new work.
         recovered::preflight(&host, &entries, after, first_deadline.logical)?;
+    }
+    if let Some(selected) = &first.precheck {
+        super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
     }
     host.check_credibility().map_err(debug)?;
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
@@ -358,6 +375,12 @@ where
     } = services;
     let prepared = {
         let host = driver.supervisor().host().map_err(debug)?;
+        if let Some(selected) = &entry.precheck {
+            // An independently granted restriction may advance the epoch
+            // between releases. Bind this row to its actual handoff before
+            // source refresh or numerical work; never rewrite its context.
+            super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
+        }
         match (entry.release, previous) {
             (Release::Message, Some(after)) => Some(continuation::prepare(
                 &host,
@@ -438,35 +461,23 @@ where
     // Pin this independently selected entry's complete original action before
     // actor intake so another valid source intent cannot change the sequence.
     let expected_action = selected_action(driver, entry, &proposal)?;
-    let document = encode_command(&Command::Submit {
-        request: entry.actor.request,
-        proposal: proposal.clone(),
-    })
-    .map_err(debug)?;
-    output
-        .write_all(&document)
-        .and_then(|()| output.write_all(b"\n"))
-        .and_then(|()| output.flush())
-        .map_err(|error| {
-            format!("source reference output failed: {error}; no actor request sent")
-        })?;
-    loop {
-        deadline.check(time())?;
-        if control.checkpoint(driver, reviewer, deadline, &mut *time)? {
-            return Ok(false);
-        }
-        ingress.drive(driver, config, &mut *time)?;
-        match driver
-            .supervisor()
-            .host()
-            .map_err(debug)?
-            .request_status(entry.actor.request)
-        {
-            Ok(_) => break,
-            Err(JournalError::Contract(Error::Missing)) => {}
-            Err(error) => return Err(debug(error)),
-        }
-        pause(entry.actor.poll_ms);
+    if !disclosure::admit(
+        driver,
+        config,
+        entry,
+        &proposal,
+        EntryServices {
+            control: &mut *control,
+            reviewer,
+            peers,
+            publication,
+            deadline,
+            ingress: &mut *ingress,
+        },
+        time,
+        output,
+    )? {
+        return Ok(false);
     }
     if !check_selected_admission(driver, entry, previous, &proposal, &expected_action)? {
         return Ok(false);

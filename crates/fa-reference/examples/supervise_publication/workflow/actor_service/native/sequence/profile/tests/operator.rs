@@ -2,7 +2,7 @@
 use super::*;
 use crate::workflow::actor_service::operator::Settings;
 
-fn operator_selection(root: &Root, actor: &Profile) -> operator::Selection {
+pub(super) fn operator_selection(root: &Root, actor: &Profile) -> operator::Selection {
     let scope = actor.scope;
     let identity = actor.supervisor;
     let settings = Settings::decode(

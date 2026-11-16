@@ -48,6 +48,15 @@ handoffs. Stop remains first, including when an operator Fence stops the origina
 admission domain. The source and regression cases remain pending required RCH
 compilation and runtime qualification.
 
+A version-two resident native sequence can also select an exact precheck
+profile for each release. All profiles, aggregate allowances and future endpoint
+aliases are admitted before model loading. Each completed Message or Finish
+receives its own finite disclosure, retired before review and handoff; a passing
+query still requires fresh source evidence and both independent publication
+keys. Recovery binds each disclosure to its explicitly selected current epoch.
+These changes have independent source review; final syntax/format checks and
+required RCH compilation/runtime qualification remain pending.
+
 Explicit [live policy prechecks](docs/LIVE_ACTOR_PRECHECK.md) now connect three
 previously separate paths. A Tower actor can discover exact predicates, precheck
 and submit through its existing session, sharing one finite disclosure with the

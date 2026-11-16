@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-15: precheck each resident native Message and Finish
+
+- Add explicit version-two sequence rows selecting a precheck profile or null,
+  preserving the closed version-one format and existing source-only actor wire.
+- Admit all disclosure profiles, aggregate native allowances, unique IDs and
+  canonical future endpoint identities before any model assets are read.
+- Evaluate each completed original cumulative frame and charge through the
+  existing generated-text precheck; retire its finite grant before review,
+  handoff and every failure exit.
+- Preserve fresh source and independent helper/human gates after a pass, original
+  Stop priority, recovery spending and explicitly selected per-release epochs.
+- Compose operator and precheck admission in both CLI loading and direct runtime
+  entry, with a paired real-asset/canonical-alias regression.
+- Add eleven schema, native socket, recovery and combined admission regression
+  functions. Independent source review is complete. Final syntax/format checks,
+  compilation, runtime execution and RCH qualification remain pending after
+  execution-server interruptions; no Bead or parent work packet is closed.
+
 ## 2026-11-15: retain independent operator control across native resident releases
 
 - Connect the existing generated-text Tower operator to resident native creation

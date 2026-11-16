@@ -3,7 +3,7 @@
 //! aggregate intake by sixteen such allowances. Matching immutable model and
 //! tokenizer inputs share the first recipe's retained allocations afterward.
 
-use super::super::{PublicationProfile, debug, operator, recipe};
+use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
 use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release};
 use crate::config::read_regular;
 use fa_reference::action::ElapsedTick;
@@ -19,6 +19,7 @@ struct Input {
     recipe: PathBuf,
     actor: PathBuf,
     release: Release,
+    precheck: Option<PathBuf>,
 }
 
 /// Own the complete grammar before opening any input. Recovery requires an
@@ -192,9 +193,11 @@ fn decode_selected(bytes: &[u8], base: &Path, after: Option<u64>) -> Result<Vec<
         )
         .map_err(debug)?,
     )?;
-    if text(&mut root, "schema")? != "fa.native-publication-sequence/1" {
-        return Err("unsupported native publication sequence schema".into());
-    }
+    let with_prechecks = match text(&mut root, "schema")?.as_str() {
+        "fa.native-publication-sequence/1" => false,
+        "fa.native-publication-sequence/2" => true,
+        _ => return Err("unsupported native publication sequence schema".into()),
+    };
     let Json::Array(values) = take(&mut root, "entries")? else {
         return Err("native sequence entries must be an array".into());
     };
@@ -218,8 +221,19 @@ fn decode_selected(bytes: &[u8], base: &Path, after: Option<u64>) -> Result<Vec<
                     );
                 }
             };
+            // Version one remains closed. Every version-two entry must
+            // explicitly select its own disclosure or decline it with null.
+            let precheck = if with_prechecks {
+                match take(&mut fields, "precheck_profile")? {
+                    Json::Null => None,
+                    Json::String(path) => Some(selected_path(&path, base)?),
+                    _ => return Err("native sequence precheck_profile must be a path or null".into()),
+                }
+            } else {
+                None
+            };
             end(fields)?;
-            Ok(Input { recipe, actor, release })
+            Ok(Input { recipe, actor, release, precheck })
         })
         .collect()
 }
@@ -279,9 +293,29 @@ pub(super) fn load_with_operator(
             selected.check(config, actor, peers)?;
         }
     }
+    let prechecks = plan
+        .iter()
+        .map(|entry| {
+            entry
+                .precheck
+                .as_deref()
+                .map(exact_precheck::Selection::read)
+                .transpose()
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    super::disclosure::check(
+        config,
+        &actors
+            .iter()
+            .zip(&prechecks)
+            .map(|(actor, selected)| (actor, selected.as_ref()))
+            .collect::<Vec<_>>(),
+        peers,
+        selected_operator,
+    )?;
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
-    for (selected, actor) in plan.into_iter().zip(actors) {
+    for ((selected, actor), precheck) in plan.into_iter().zip(actors).zip(prechecks) {
         let mut inputs = recipe::load(
             &selected.recipe,
             config.profile.delivery.scope.tenant,
@@ -306,6 +340,7 @@ pub(super) fn load_with_operator(
             actor,
             inputs,
             release: selected.release,
+            precheck,
         });
     }
     match after {
@@ -338,6 +373,12 @@ pub(super) fn validate_selected(
         &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
         peers,
         after,
+    )?;
+    super::disclosure::check(
+        config,
+        &entries.iter().map(|entry| (&entry.actor, entry.precheck.as_ref())).collect::<Vec<_>>(),
+        peers,
+        None,
     )?;
     let original = &entries[0].inputs;
     if original.decoder.profile().identity().tenant != config.profile.delivery.scope.tenant {
