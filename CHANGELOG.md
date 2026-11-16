@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-16: deliver native operator receipts after early resident Stop
+
+- Preserve each selected entry's one unused reply interval when control stops
+  resident publication before actor intake or during predecessor retirement.
+- Reuse the original bounded operator and Stop owners through the existing
+  reply loop, with optional actor ingress and no renewed grants or deadlines.
+- Keep normal paths to one reply window and preserve failed cleanup latches.
+- Add authenticated early-boundary retry and normal-progress regression
+  sources. Independent source review is complete; required RCH execution and
+  formatting remain pending.
+
 ## 2026-11-16: preserve retryable native creation and exact disclosure boundaries
 
 - Reject a nonzero first precheck epoch during new-sequence admission, before

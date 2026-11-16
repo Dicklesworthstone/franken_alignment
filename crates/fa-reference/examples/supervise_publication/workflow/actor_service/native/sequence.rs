@@ -182,8 +182,13 @@ where
     let mut previous = after;
     let mut completed = 0;
     let mut automatic_cleanup_attempted = false;
+    let mut pending_operator_reply = None;
     let work = (|| {
         for (index, entry) in entries.iter().enumerate() {
+            // Each selected entry owns at most one bounded reply interval.
+            // Retiring a predecessor or stopping before actor intake must not
+            // discard an operator receipt before this interval can be served.
+            pending_operator_reply = Some((entry.actor.reply_ms, entry.actor.poll_ms));
             if index != 0 {
                 let request =
                     previous.expect("a resident successor retains its completed predecessor");
@@ -272,6 +277,7 @@ where
                 !automatic_cleanup_attempted,
                 &mut time,
             );
+            pending_operator_reply = None;
             ingress.pool.revoke_all();
             drop(ingress);
             match (cycle, grace) {
@@ -289,7 +295,7 @@ where
         }
         Ok(())
     })();
-    let failure = work.err().map(|error| {
+    let mut failure = work.err().map(|error| {
         stop_after_failure(
             &mut driver,
             &control,
@@ -299,6 +305,28 @@ where
             &mut time,
         )
     });
+    if let Some(timing) = pending_operator_reply
+        && control.has_operator()
+    {
+        // No actor intake was left alive on this early exit. Retain only the
+        // same operator and original Stop for this entry's unused reply window,
+        // under the invocation deadline and the operator's original lifetime.
+        // A failed automatic drain is already final and must not be retried.
+        let grace = reply_grace_selected(
+            &mut driver,
+            None,
+            timing,
+            (&mut control, &reviewer, &global),
+            !automatic_cleanup_attempted,
+            &mut time,
+        );
+        if let Err(reply) = grace {
+            failure = Some(match failure.take() {
+                Some(error) => format!("{error}; operator reply: {reply}"),
+                None => reply,
+            });
+        }
+    }
     if let Some(mut operator) = control.take_operator() {
         operator.retire();
     }
@@ -681,9 +709,27 @@ fn reply_grace<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    let timing = (ingress.profile.reply_ms, ingress.profile.poll_ms);
+    reply_grace_selected(driver, Some(ingress), timing, controls, pump_stop, time)
+}
+
+/// The selected entry's original reply interval also covers exits before an
+/// actor inbox exists. No replacement transport, grant or deadline is issued.
+fn reply_grace_selected<F>(
+    driver: &mut FileSupervisedDriver,
+    mut ingress: Option<&mut Intake>,
+    timing: (u64, u64),
+    controls: (&mut Control, &FileHumanReviewer, &Deadline),
+    pump_stop: bool,
+    time: &mut F,
+) -> Result<bool, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     let (control, reviewer, deadline) = controls;
+    let (reply_ms, poll_ms) = timing;
     let started = Instant::now();
-    let window = Duration::from_millis(ingress.profile.reply_ms);
+    let window = Duration::from_millis(reply_ms);
     let mut stopped = false;
     let operator_selected = control.has_operator();
     let mut actor_failed = false;
@@ -714,7 +760,9 @@ where
             // it merely to deliver the original operator's historical reply.
             control.checkpoint_operator();
         }
-        if !actor_failed {
+        if !actor_failed
+            && let Some(ingress) = ingress.as_deref_mut()
+        {
             if let Err(error) = ingress.observe(driver) {
                 if !operator_selected {
                     return Err(error);
@@ -724,9 +772,7 @@ where
             }
         }
         let remaining = window.saturating_sub(started.elapsed());
-        let delay = ingress
-            .profile
-            .poll_ms
+        let delay = poll_ms
             .min(50)
             .min(u64::try_from(remaining.as_millis()).unwrap_or(u64::MAX));
         if delay == 0 {

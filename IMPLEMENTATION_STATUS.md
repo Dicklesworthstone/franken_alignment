@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: retain operator receipts across early resident termination
+
+Resident native service exits before actor intake and during helper retirement
+now consume the selected entry's original unused reply interval before retiring
+the independent operator. Previously, a Fence accepted at those checkpoints
+could terminate the service after one bounded transport frame, discarding a
+queued exact retry or an incomplete response despite the durable operation.
+
+The same reply loop now optionally runs without actor ingress. Entry timing is
+captured before the early checkpoints and cleared after ordinary per-entry
+reply handling, so normal paths receive no second interval. The original
+operator service, credentials, grants, counters, Stop custody, invocation
+deadline and service wall lifetime are retained. A failed automatic Stop/drain
+is not retried to deliver historical responses. No new actor, numerical work,
+helper or publication can start from this terminal reply opportunity.
+
+Regression sources exercise pre-intake and confirmed-prefix handoff checkpoints
+using authenticated queued requests against the actual owner. Exact Fence
+retries preserve the original receipt and settled history, while observational
+traffic retains the ordinary independently approved publication path.
+Independent production and regression source review is separate from execution.
+RCH is unavailable and the local workspace remains disconnected; compilation,
+runtime tests, formatting, Clippy and the canonical gate remain unexecuted.
+The scoped Beads remain open pending their original qualification requirements.
+
 ## 2026-11-16: reject unusable initial native disclosures before store creation
 
 The first selected precheck of a new resident native sequence must name the

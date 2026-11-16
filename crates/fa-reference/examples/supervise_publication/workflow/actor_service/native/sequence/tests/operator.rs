@@ -11,6 +11,9 @@ use fa_reference::strict_json::{self, Json};
 use fa_reference::tower::{ReadArguments, TowerRequest, Verb, encode_request};
 use std::{io::Read, os::unix::fs::MetadataExt, sync::mpsc};
 
+#[path = "operator/early.rs"]
+mod early_tests;
+
 pub(super) fn selection(
     root: &Root,
     actor: &Profile,

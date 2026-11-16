@@ -260,6 +260,15 @@ Operator access never submits an actor's source reference or supplies either
 publication approval. Transport failure retires the sidecar without creating a
 replacement service or granting new authority.
 
+A Fence accepted before actor intake or during predecessor retirement retains
+that selected entry's one unused reply interval. The same operator can finish
+its response or answer an already queued exact retry before retirement. This
+terminal interval starts no actor intake, numerical work, helpers or publication.
+It uses the original invocation deadline, operator lifetime and spent grants;
+ordinary per-entry reply handling consumes the interval instead of adding a
+second one. An already attempted automatic Stop/drain is never repeated merely
+to service a historical reply.
+
 All selected actor identities and future actor/reviewer/Stop endpoints are
 checked against the operator profile before model assets or live custody are
 opened. Canonical path aliases cannot place the operator listener over a future
