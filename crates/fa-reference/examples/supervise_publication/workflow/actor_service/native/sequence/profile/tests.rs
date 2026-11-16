@@ -24,6 +24,8 @@ mod operator_tests;
 mod precheck_tests;
 #[path = "tests/combined.rs"]
 mod combined;
+#[path = "tests/anchors.rs"]
+mod history_tests;
 #[path = "tests/qualification.rs"]
 mod qualification_tests;
 

@@ -9,6 +9,8 @@ mod disclosure;
 mod recovered;
 #[path = "sequence/qualification.rs"]
 mod requalification;
+#[path = "sequence/anchors.rs"]
+mod anchors;
 #[cfg(test)]
 #[path = "sequence/tests.rs"]
 mod tests;
@@ -119,12 +121,58 @@ where
 /// The source is consumed once before the first new release; later handoffs
 /// check the original retained qualification and cannot renew its evidence.
 pub(super) fn run_with_qualification<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    credibility: Option<&Path>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_history(
+        config, entries, reviewer_profile, publication, selection, credibility,
+        None, time, output,
+    )
+}
+
+/// Independently selected history never replaces the original native owner.
+/// Retention consumes only acknowledged cuts and runs once after every returned
+/// result, including an early recovery Fence or sealed terminal Stop.
+pub(super) fn run_with_history<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    credibility: Option<&Path>,
+    history: Option<&anchors::Selection>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut retention = anchors::Retention::new(history);
+    let result = run_retained(
+        config, entries, reviewer_profile, publication, selection, credibility,
+        history, &mut retention, time, output,
+    );
+    retention.finish(result)
+}
+
+fn run_retained<F>(
     mut config: Config,
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
     selection: (Option<u64>, Option<&operator::Selection>),
     credibility: Option<&Path>,
+    history: Option<&anchors::Selection>,
+    retention: &mut anchors::Retention<'_>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
@@ -162,6 +210,19 @@ where
         selected_operator,
         credibility,
     )?;
+    if let Some(history) = history {
+        history.check(
+            &config,
+            &entries
+                .iter()
+                .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+                .collect::<Vec<_>>(),
+            reviewer_profile,
+            selected_operator,
+            after,
+            credibility,
+        )?;
+    }
     let first = &entries[0];
     let selected = bootstrap::selection(&config, &first.inputs, publication)?;
     let start = time();
@@ -178,17 +239,25 @@ where
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
     let (host, reviewer) = if after.is_some() {
-        bootstrap::open_with_checkpoints(
+        let mut stopped = None;
+        let opened = bootstrap::open_with_retained_history(
             &config,
             &first.inputs,
             selected,
             Some(&mut control),
             &first_deadline,
             &mut time,
-        )?
+            history.and_then(anchors::Selection::input),
+            retention.requested().then_some(&mut stopped),
+        );
+        retention.observe_stop(stopped);
+        opened?
     } else {
         bootstrap::prepare(&config, &first.inputs, selected, false)?
     };
+    // No fallible startup admission can discard an acknowledged create/Fence
+    // cut. These checks are read-only; a live driver captures its later cut below.
+    retention.observe(&host);
     if !host.generated_text_stream_required().map_err(debug)?
         || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
@@ -210,9 +279,16 @@ where
     }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
-    let operator = selected_operator
+    let operator = match selected_operator
         .map(|selected| selected.start(&first.actor, port.clone(), &driver, &first_deadline))
-        .transpose()?;
+        .transpose()
+    {
+        Ok(operator) => operator,
+        Err(error) => {
+            retention.observe_driver(&driver);
+            return Err(error);
+        }
+    };
     control.install_operator(operator);
     // These are bounded executable configurations, not children or review
     // capabilities. A clone for a successor is installed ONLY after the old
@@ -372,6 +448,9 @@ where
     if let Some(mut operator) = control.take_operator() {
         operator.retire();
     }
+    // Capture only this owner's acknowledged prefix before helper cleanup
+    // consumes it. A poisoned owner cannot turn an ambiguous result into export.
+    retention.observe_driver(&driver);
     // The original driver is consumed exactly once. No sequence entry can
     // detach the owner while its direct children still require cleanup.
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);

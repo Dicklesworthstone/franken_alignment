@@ -5,7 +5,10 @@
 use super::super::operator::Service;
 use super::{Config, Deadline, ElapsedTick, FileHumanReviewer, FileSupervisedDriver, PeerProfile};
 use crate::workflow::control::Control as StopControl;
-use fa_reference::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop;
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    guarded::anchored::FileHistoryAnchor,
+    reviewer::peer::control::FileRecoveryStop,
+};
 
 pub(super) struct Control {
     stop: StopControl,
@@ -136,5 +139,23 @@ impl Control {
             });
         }
         Ok(message)
+    }
+
+    /// Preserve the already acknowledged original Stop archive even when its
+    /// reply or a later budget observation fails. No owner or new replay escapes.
+    pub(super) fn stop_recovery_with_anchor<F>(
+        &mut self,
+        target: FileRecoveryStop,
+        deadline: &Deadline,
+        time: &mut F,
+        retained: &mut Option<FileHistoryAnchor>,
+    ) -> Result<String, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        let outcome = self.stop.stop_recovery(target, deadline, time)?;
+        *retained = outcome.application.result.as_ref().ok()
+            .map(|history| history.history_anchor().clone());
+        Ok(outcome.terminal_message())
     }
 }

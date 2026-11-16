@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-16: retain independent history for resident native sequences
+
+- Add explicit retained-history input on suffix recovery and private create-new
+  output on creation or recovery, including checked publication and qualification.
+- Freeze selected input before recipes; compare the original exact prefix
+  before replay, staging cleanup or Fence. Preserve all original source contracts.
+- Retain acknowledged startup Fence and terminal Stop outcomes; reject poisoned
+  final owners and never export an earlier cached capture as current.
+- Keep prior archives intact on output races and retain original effect/Stop
+  results without retry. Reserve source/store/capsule and all future endpoints.
+- Preserve the concurrent native single-release APIs through one shared original
+  cooperative recovery loop.
+- Add thirteen substantive regression functions. Independent source review is
+  complete; compilation, formatting, runtime and required RCH remain unexecuted.
+
 ## 2026-11-16: requalify resident native recovery before new releases
 
 - Connect explicit --credibility-activation to native --after-message recovery,

@@ -2,6 +2,9 @@
 //! uses the original cooperative opener, source guard and new post-Fence keys.
 use super::*;
 
+#[path = "recovery/anchors.rs"]
+mod anchor_tests;
+
 const AFTER: u64 = 92;
 
 struct Seed {

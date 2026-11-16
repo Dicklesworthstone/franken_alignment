@@ -238,9 +238,71 @@ explicitly selects the recovery requalification described below; the command
 never infers or renews a qualification.
 
 This is the same source-bound native recovery contract as the single-release
-native opener. It does not add an independent latest-head or anti-rollback
-anchor. Historical replay remains synchronous within each original event; the
-service's checkpoints do not establish a hard real-time Stop bound.
+native opener. Select an independently retained history archive below when
+recovery must compare a known original prefix. Historical replay remains
+synchronous within each original event; the service's checkpoints do not
+establish a hard real-time Stop bound.
+
+## Independently retained history
+
+Creation and explicit suffix recovery accept
+`--retain-history-anchor NEW_OUTPUT`. Recovery also accepts
+`--history-anchor INPUT` together with `--after-message PREVIOUS_REQUEST`.
+These selections compose with checked publication, per-release prechecks,
+the independent operator and explicit credibility requalification.
+
+```sh
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --retain-history-anchor anchors/prefix.bin
+
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST \
+  --history-anchor anchors/prefix.bin \
+  --retain-history-anchor anchors/successor.bin
+```
+
+The selected input must be a private regular archive outside the authority
+store. Its bounded contents are decoded and frozen before recipe/model reads
+or any live clock. A later pathname edit cannot replace the retained selection.
+Missing, malformed or incompatible input refuses; the command never substitutes
+the current journal or falls back to unanchored recovery.
+
+Under the original exclusive recovery lock, the anchored cursor compares that
+exact retained prefix before historical numerical replay, staging cleanup or
+Fence. A valid older journal, a same-counter divergent history or a different
+store identity cannot satisfy the selection. A genuine append-only successor
+still undergoes all original replay and source/model/tokenizer checks. Anchor
+custody supplies no publication approval, fresh source evidence or credibility.
+
+Input and output paths must be distinct from one another, the evidence source,
+authority store, selected credibility capsule and every scheduled actor,
+reviewer, Stop, precheck and operator endpoint. Canonical directory aliases are
+checked before recipes and again before live setup. The output's parent
+directory must already exist, and its filename must be unused.
+
+The same healthy original owner captures the acknowledged successor after the
+sequence's work. When an input was selected, that capture must extend its exact
+prefix. Output uses the existing bounded archive format, an exclusive new
+private file, and file plus parent-directory synchronization. An existing archive
+is never overwritten. Keep the previous independent archive until its successor
+has been acknowledged.
+
+An acknowledged create or recovery Fence is also retainable when a later
+read-only startup check refuses the suffix. Authenticated terminal recovery
+Stop instead supplies its original sealed acknowledgment, including when a
+reply or later deadline check fails. Retention does not reopen a live owner or
+replay the journal again. A poisoned final owner refuses export and cannot
+silently substitute an earlier in-memory capture.
+
+An export failure makes the command fail while preserving its original
+publication or Stop outcome. It never resubmits a confirmed release or issues
+another Stop to recover from an archive error. An incomplete output is not an
+acknowledged checkpoint; preserve prior custody and select a new output name.
+
+These archives establish continuity from the selected original prefix. They
+do not authenticate the latest head, recover unseen later events or detect
+rollback of both the journal and its independently retained archive. They
+contain private original journal data and are not actor-facing output.
 
 ## Explicit recovery requalification
 
@@ -360,8 +422,9 @@ The resident command creates a new native stream or explicitly selects a new
 remaining suffix with `--after-message`. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
-credibility activation, topology or policy-governor services. Requalification
-requires its explicit capsule option and a selected recovered suffix. The independent
+credibility activation, topology or policy-governor services. History custody
+requires its explicit input/output options. Requalification requires its explicit
+capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows.
 
@@ -370,6 +433,9 @@ authenticated actor/human exchanges, cumulative Message/Finish publication,
 later rejection, independent Stop, fresh-source loss and checked witness failure.
 Recovery cases cover new suffix publication, singleton Finish without inference,
 original replay Stop and rejection of historical or incompatible selections.
+Retained-history cases cover actual prefix/suffix and Finish publication, frozen
+input, rollback and divergent-history refusal, startup Fence retention, Ready
+Stop and deadline boundaries, and output collision without effect retry.
 Profile cases pair admitted sequences with incompatible identities, duplicate
 keys, invalid release ordering, finite limits and canonical path collisions.
 These tests address contract enforcement; synthetic model and helper fixtures

@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: retain original history across resident native recovery
+
+The resident native sequence command now accepts --retain-history-anchor for
+creation or explicit recovery, and --history-anchor with --after-message.
+Private bounded input is frozen before recipes, then the original anchored
+cursor checks its exact retained prefix before historical numerical replay,
+staging cleanup or Fence. Older, divergent and foreign-store histories refuse;
+valid successors still undergo the complete original replay and source contracts.
+
+The same healthy owner supplies its acknowledged successor. Retention also
+preserves an acknowledged startup Fence after later admission refusal and the
+original sealed terminal Stop after reply/deadline failure. A poisoned final
+owner replaces its startup capture with an error, never a stale fallback.
+Create-new private output and file/directory synchronization preserve prior
+custody. Export failure preserves the original outcome without effect or Stop
+retry. Whole-sequence path admission includes the credibility capsule and every
+scheduled actor, reviewer, Stop, precheck and operator endpoint.
+
+The resident wrapper preserves the concurrent single-release native history
+API and terminal export behavior. Both share one original cooperative replay
+loop. Requalification still activates once under original Stop/deadline custody,
+and capture advances neither policy epoch nor numerical work.
+
+Thirteen new regression functions cover actual prefix/suffix and Finish
+publication, frozen input, valid rollback and same-counter divergence,
+foreign-store rejection, early Fence retention, output collisions before time
+and after execution, Ready Stop/deadline boundaries, actual occupied-staging
+owner poisoning, and closed grammar/private archive/canonical alias admission.
+Independent production, test and cross-feature source review is complete.
+Compilation, runtime tests, formatting, Clippy and required RCH qualification
+remain unexecuted because the execution environment is unavailable. No Bead
+closure or authenticated latest-head guarantee is claimed.
+Contract: docs/RESIDENT_NATIVE_PUBLICATION.md.
+
 ## 2026-11-16: requalify a resident native suffix through its original owner
 
 Explicit native sequence recovery now accepts --credibility-activation with

@@ -4,7 +4,7 @@
 //! tokenizer inputs share the first recipe's retained allocations afterward.
 
 use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
-use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release};
+use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors};
 use crate::config::read_regular;
 use fa_reference::action::ElapsedTick;
 use fa_reference::strict_json::{self, Json, Limits};
@@ -13,7 +13,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--credibility-activation CAPSULE with --after-message]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
 
 struct Input {
     recipe: PathBuf,
@@ -140,8 +140,10 @@ pub(super) fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (args, operator_option) = take_operator(args, credibility)?;
+    let (args, history_options) = anchors::take_options(args)?;
+    let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
+    history_options.check_mode(after)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     let selected_operator = operator_option
@@ -151,7 +153,28 @@ where
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
-    if let Some(credibility) = credibility {
+    if history_options.is_selected() {
+        let (entries, history) = load_with_history(
+            Path::new(&args[2]),
+            &config,
+            &peers,
+            after,
+            selected_operator.as_ref(),
+            credibility,
+            Some(history_options),
+        )?;
+        super::run_with_history(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            (after, selected_operator.as_ref()),
+            credibility,
+            history.as_ref(),
+            time,
+            output,
+        )
+    } else if let Some(credibility) = credibility {
         let entries = load_with_qualification(
             Path::new(&args[2]),
             &config,
@@ -306,6 +329,22 @@ pub(super) fn load_with_qualification(
     selected_operator: Option<&operator::Selection>,
     credibility: Option<&Path>,
 ) -> Result<Vec<Entry>, String> {
+    load_with_history(path, config, peers, after, selected_operator, credibility, None)
+        .map(|(entries, _)| entries)
+}
+
+fn load_with_history(
+    path: &Path,
+    config: &Config,
+    peers: &PeerProfile,
+    after: Option<u64>,
+    selected_operator: Option<&operator::Selection>,
+    credibility: Option<&Path>,
+    history_options: Option<anchors::Options>,
+) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    if let Some(options) = &history_options {
+        options.check_mode(after)?;
+    }
     super::requalification::check_mode(after, credibility)?;
     if after == Some(0) {
         return Err(
@@ -362,6 +401,20 @@ pub(super) fn load_with_qualification(
         selected_operator,
         credibility,
     )?;
+    let history = history_options.map(|options| {
+        options.admit(
+            config,
+            &actors
+                .iter()
+                .zip(&prechecks)
+                .map(|(actor, selected)| (actor, selected.as_ref()))
+                .collect::<Vec<_>>(),
+            peers,
+            selected_operator,
+            after,
+            credibility,
+        )
+    }).transpose()?;
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
     for ((selected, actor), precheck) in plan.into_iter().zip(actors).zip(prechecks) {
@@ -396,7 +449,7 @@ pub(super) fn load_with_qualification(
         Some(_) => validate_selected(config, &entries, peers, after)?,
         None => validate(config, &entries, peers)?,
     }
-    Ok(entries)
+    Ok((entries, history))
 }
 
 /// Direct callers receive the same complete admission checks as the manifest.
