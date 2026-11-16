@@ -18,6 +18,8 @@ mod checked_tests;
 mod fixture;
 #[path = "tests/history.rs"]
 mod history_tests;
+#[path = "tests/history_resume.rs"]
+mod history_resume_tests;
 #[path = "tests/operator.rs"]
 mod operator_tests;
 #[path = "tests/precheck.rs"]

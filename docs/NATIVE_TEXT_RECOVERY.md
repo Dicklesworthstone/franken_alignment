@@ -196,7 +196,10 @@ unchanged. The original lock stays held until the cursor or connection retires.
 
 After explicit Stop, the same original Unknown effect remains charged and no
 live owner or numerical continuation escapes. The regression independently
-retains and reloads the returned terminal history anchor, then repeats the same
+retains and reloads the returned terminal history anchor. It then restores the
+previously valid pre-Stop journal and requires `Stale` against that stronger
+anchor, preserving both canonical bytes and pending evidence without replay.
+After restoring the acknowledged terminal image, it repeats the same
 authenticated operation and requires a zero-event retry with the identical
 receipt and canonical bytes. This extends the existing direct-finalizer tests;
 it does not replace them or establish deployment authentication beyond the

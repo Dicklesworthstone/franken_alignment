@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: exercise anchored pending inference and retained Stop rollback
+
+One new single-service regression resumes an actually interrupted native
+generation through independent retained history, with paired fresh human
+approval and rejection. The original generation command and spent numerical
+progress survive; only approval publishes and charges the effect. Both paths
+retain the exact final acknowledged archive and preserve the selected input.
+
+The existing authenticated recovery Stop regression now also restores a valid
+pre-Stop canonical image after retaining the acknowledged terminal anchor.
+Recovery must refuse that rollback before replay and preserve pending evidence;
+restoring the stopped image still permits the original zero-event exact retry.
+
+These additions preserve the concurrent native and resident implementation and
+its existing regression functions. Independent source review is complete.
+Compilation, runtime tests, Rust formatting, Clippy and the required RCH gate
+remain unexecuted because the remote runner and execution workspace are
+unavailable. No Bead or packet is closed.
+
 ## 2026-11-16: retain original history across resident native recovery
 
 The resident native sequence command now accepts --retain-history-anchor for

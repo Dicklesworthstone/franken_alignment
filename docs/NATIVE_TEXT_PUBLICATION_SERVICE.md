@@ -327,6 +327,13 @@ budget and independent review contracts. They protect the selected prefix,
 not unseen later history or a rollback of both the journal and archive. The
 archive contains private original journal data and is not actor output.
 
+An additional paired regression in `native/tests/history_resume.rs` seeds an
+acknowledged partial native generation, retains its independent archive, and
+actually resumes the original numerical command through fresh human approval
+and rejection. It checks exact remaining progress, the recovered policy epoch,
+publication charges, unchanged input custody and the final retained canonical
+cut. These are authored, independently reviewed cases; execution remains pending.
+
 ### Cooperative reopen and Continue Stop
 
 All native open modes, including checked publication, use the source-bound

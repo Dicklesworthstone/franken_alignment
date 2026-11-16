@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-16: cover anchored pending inference and rollback of acknowledged Stop
+
+- Resume real partially computed native text under a retained input archive,
+  requiring fresh independent approval or rejection after recovery.
+- Verify original numerical progress, exact effect charges, immutable prior
+  custody and the retained final canonical cut.
+- Refuse a valid pre-Stop journal against its independently retained terminal
+  anchor, preserving pending evidence and the later exact-retry behavior.
+- Add one paired regression function and strengthen the existing Stop test.
+  Independently source-reviewed; compilation, execution and RCH remain pending.
+
 ## 2026-11-16: retain independent history for resident native sequences
 
 - Add explicit retained-history input on suffix recovery and private create-new

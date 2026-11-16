@@ -160,6 +160,20 @@ mod authenticated_stop {
 
         let stopped = portable(result.history_anchor());
         let stopped_bytes = canonical(&root);
+        // A previously valid pre-Stop image cannot erase the acknowledged Stop
+        // once its independently retained successor anchor is required.
+        fs::write(root.store().join(storage::CANONICAL), &before_bytes).unwrap();
+        fs::write(pending(&root), b"retain acknowledged Stop rollback evidence").unwrap();
+        assert_eq!(
+            begin_anchored(&root, selection(1), &stopped).err(),
+            Some(Error::Stale.into())
+        );
+        assert_eq!(canonical(&root), before_bytes);
+        assert_eq!(
+            fs::read(pending(&root)).unwrap(),
+            b"retain acknowledged Stop rollback evidence"
+        );
+        fs::write(root.store().join(storage::CANONICAL), &stopped_bytes).unwrap();
         let retry = ready_anchored(&root, &stopped);
         assert_eq!(retry.machine.broker.hosted_decoder().unwrap(), numerical);
         assert_eq!(retry.stop_request(702), Err(Error::Duplicate.into()));
