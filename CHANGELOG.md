@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-16: cover native precheck and operator composition through Finish
+
+- Exercise three real native prechecks and independently approved releases
+  against one retained operator listener and exhausted observation grant.
+- Check disclosure retirement before human review, unchanged operator custody
+  across reconnects, and the actual approved prefix before each new approval.
+- Preserve the concurrent precheck suite and production implementation.
+  Required RCH execution and formatting remain pending.
+
 ## 2026-11-16: share initial native precheck admission across service modes
 
 - Apply the retryable creation check to both the single-release CLI and direct

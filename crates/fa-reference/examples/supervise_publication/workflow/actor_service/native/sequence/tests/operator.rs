@@ -14,6 +14,9 @@ use std::{io::Read, os::unix::fs::MetadataExt, sync::mpsc};
 #[path = "operator/early.rs"]
 mod early_tests;
 
+#[path = "operator/combined_precheck.rs"]
+mod combined_precheck_tests;
+
 pub(super) fn selection(
     root: &Root,
     actor: &Profile,

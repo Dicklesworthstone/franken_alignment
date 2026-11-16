@@ -1,5 +1,21 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: exercise resident prechecks with retained operator custody
+
+A combined native transport regression now spans Message, Message and Finish
+with a fresh finite precheck for each release and one original operator service.
+The first human review spends the operator's observation grant; later prechecks
+and reconnects must retain the exhausted grant and the same listener identity.
+Each disclosure is already retired when its independent human approval is
+requested, and the actual owner must expose only the previously approved prefix.
+All three releases still require their original actor, helper and human steps.
+
+This adds the live composition case to the concurrent precheck implementation
+without replacing its admission, initial-epoch, source or budget checks.
+The regression source is independently reviewed; compilation and execution,
+formatting, Clippy and the required RCH gate remain pending because the remote
+runner is unavailable and the execution workspace disconnected. No Bead is closed.
+
 ## 2026-11-16: share retryable creation across native publication entry points
 
 Single-release native creation now performs the same initial disclosure epoch
