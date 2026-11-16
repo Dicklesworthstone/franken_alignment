@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-16: reserve resident archive custody against selected input files
+
+- Reject canonical archive aliases to configuration, manifest, reviewer,
+  publication and operator inputs before configuration reads.
+- Reserve every manifest actor, recipe and precheck input before file/model
+  reads, including missing future files and symlinked parent directories.
+- Add two paired admission regressions with positive independent-output controls.
+- Add two actual combined history/credibility regressions covering one-time
+  activation with fresh approval and rollback refusal before capsule reads.
+- Preserve the incoming resident implementation and its existing tests.
+  Independently source-reviewed; compilation, execution and RCH remain pending.
+
 ## 2026-11-16: cover anchored pending inference and rollback of acknowledged Stop
 
 - Resume real partially computed native text under a retained input archive,

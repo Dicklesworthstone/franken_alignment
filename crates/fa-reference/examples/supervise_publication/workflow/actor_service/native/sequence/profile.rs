@@ -144,6 +144,11 @@ where
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
     history_options.check_mode(after)?;
+    let mut selected_files = args[1..4].iter().map(PathBuf::from).collect::<Vec<_>>();
+    selected_files.extend(publication_path.iter().cloned());
+    selected_files.extend(operator_option.iter().map(|(path, _)| path.clone()));
+    selected_files.extend(credibility.map(Path::to_path_buf));
+    history_options.check_files(&selected_files)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     let selected_operator = operator_option
@@ -344,6 +349,7 @@ fn load_with_history(
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
     if let Some(options) = &history_options {
         options.check_mode(after)?;
+        options.check_files(&[path.to_path_buf()])?;
     }
     super::requalification::check_mode(after, credibility)?;
     if after == Some(0) {
@@ -359,6 +365,14 @@ fn load_with_history(
         Some(_) => decode_selected(&bytes, base, after)?,
         None => decode(&bytes, base)?,
     };
+    if let Some(options) = &history_options {
+        let mut files = Vec::with_capacity(plan.len() * 3);
+        for entry in &plan {
+            files.extend([entry.recipe.clone(), entry.actor.clone()]);
+            files.extend(entry.precheck.iter().cloned());
+        }
+        options.check_files(&files)?;
+    }
     let actors = plan
         .iter()
         .map(|entry| Profile::read(&entry.actor))

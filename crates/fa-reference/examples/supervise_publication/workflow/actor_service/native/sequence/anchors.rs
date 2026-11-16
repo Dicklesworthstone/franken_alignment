@@ -78,6 +78,23 @@ impl Options {
         self.input.is_some() || self.output.is_some()
     }
 
+    /// Archive custody cannot consume or later replace any explicitly selected
+    /// configuration or manifest input, including a file not yet created.
+    pub(super) fn check_files(&self, files: &[PathBuf]) -> Result<(), String> {
+        if !self.is_selected() {
+            return Ok(());
+        }
+        let selected = self.input.iter().chain(self.output.iter())
+            .map(|path| operator::resolve(path))
+            .collect::<Result<BTreeSet<_>, _>>()?;
+        for path in files {
+            if selected.contains(&operator::resolve(path)?) {
+                return Err("native history custody aliases a selected input file".into());
+            }
+        }
+        Ok(())
+    }
+
     pub(super) fn check_mode(&self, after: Option<u64>) -> Result<(), String> {
         if self.input.is_some() && after.is_none_or(|id| id == 0) {
             return Err(USAGE.into());

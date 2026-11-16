@@ -26,6 +26,8 @@ mod precheck_tests;
 mod combined;
 #[path = "tests/anchors.rs"]
 mod history_tests;
+#[path = "tests/history_inputs.rs"]
+mod history_inputs;
 #[path = "tests/qualification.rs"]
 mod qualification_tests;
 

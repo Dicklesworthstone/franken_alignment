@@ -159,6 +159,16 @@
       "additional_object_publication": "Explicit per-operation storage profile and full evidence closure required before activation.",
       "status": "proposed_unmeasured",
       "notes": "All native targets/gates, signed closure, exact downloaded asset verification and ambiguous-publication reconciliation; currently blocked."
+    },
+    {
+      "id": "OP-NATIVE-HISTORY-INPUT-CHECK",
+      "operation": "Separate resident history archives from selected configuration and manifest inputs",
+      "profile": "source_bound_native_text_reference",
+      "ordered_control_commits": 0,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "None. Canonical filesystem-name validation before configuration, actor, precheck and numerical recipe reads.",
+      "status": "proposed_unmeasured",
+      "notes": "Resolve at most two selected archive paths against the bounded command inputs, manifest path and up to three input paths for each of at most sixteen entries. Each check uses filesystem path-resolution metadata and a temporary set of at most two canonical archive names; it reads no archive payload, model or journal and appends no event. Existing archive admission, semantic replay and final export retain their own costs. Filesystem latency remains unmeasured; these checks do not establish hostile-filesystem isolation."
     }
   ],
   "logical_to_physical_rule": "Each storage profile must explicitly map logical commits to fsync/directory/replication barriers. Group commit amortizes physical work but does not erase causal order.",

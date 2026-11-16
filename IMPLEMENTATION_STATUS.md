@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: separate resident history archives from all selected inputs
+
+Resident history admission now checks CONFIG, sequence/reviewer/publication/
+operator profiles and a selected credibility capsule before configuration reads.
+The direct manifest loader checks its own path and every selected actor, recipe
+and precheck path before opening those inputs or numerical assets. Canonical
+resolution handles symlinked parents and missing future files. Unselected
+invocations retain their existing behavior; no authority transition or external
+effect is admitted by these path checks.
+
+Two paired profile regressions cover both archive roles, every command input,
+manifest self and future input aliases, with independent-output positive
+controls including real compatible model loading. Two additional regressions
+combine the concurrent resident history and credibility implementations: one
+explicit activation serves three separately approved suffix releases and
+retains the final original cut; a valid rolled-back journal refuses before a
+missing capsule/source can be read, without Fence or staging cleanup.
+
+The existing resident lifecycle, private archive checks, all thirteen prior
+history regressions and the single-service/Stop additions remain preserved.
+Independent production and regression source review is complete. Compilation,
+runtime tests, Rust formatting, Clippy and the required RCH gate remain
+unexecuted because the remote runner and execution workspace are unavailable.
+No Bead, packet or qualification gate is closed.
+Contract: `docs/RESIDENT_NATIVE_PUBLICATION.md`.
+
 ## 2026-11-16: exercise anchored pending inference and retained Stop rollback
 
 One new single-service regression resumes an actually interrupted native

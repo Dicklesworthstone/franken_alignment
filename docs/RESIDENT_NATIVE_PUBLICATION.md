@@ -276,9 +276,16 @@ custody supplies no publication approval, fresh source evidence or credibility.
 
 Input and output paths must be distinct from one another, the evidence source,
 authority store, selected credibility capsule and every scheduled actor,
-reviewer, Stop, precheck and operator endpoint. Canonical directory aliases are
-checked before recipes and again before live setup. The output's parent
-directory must already exist, and its filename must be unused.
+reviewer, Stop, precheck and operator endpoint. They must also remain separate
+from CONFIG, SEQUENCE_PROFILE, REVIEWER_PROFILE, the selected publication and
+operator profiles, and every manifest actor, recipe and precheck file.
+
+The complete command input names are checked before any configuration read.
+The manifest name is checked before it is opened; all of its selected input
+names are checked before actor, precheck or model reads. Canonical resolution
+includes symlinked parent directories and future files which do not exist yet.
+Endpoint checks still run before recipes and again before live setup. The
+output's parent directory must already exist, and its filename must be unused.
 
 The same healthy original owner captures the acknowledged successor after the
 sequence's work. When an input was selected, that capture must extend its exact
@@ -303,6 +310,21 @@ These archives establish continuity from the selected original prefix. They
 do not authenticate the latest head, recover unseen later events or detect
 rollback of both the journal and its independently retained archive. They
 contain private original journal data and are not actor-facing output.
+
+Two paired profile regressions exercise both input and output aliases for
+every command role and selected manifest input. Independent output paths provide
+positive controls, including loading a real compatible three-entry schedule
+without creating an archive, owner or listener.
+
+Two additional combined regressions run retained history through actual
+one-time credibility activation and separately approved suffix releases. They
+remove the capsule after its first use and check the final retained cut,
+cumulative work, effect charges and fresh human sessions. Their negative case
+restores a valid older journal while the capsule and evidence source are
+missing: the stronger retained prefix must refuse first, with no replay Fence,
+reference output or staging cleanup. These are authored and independently
+reviewed sources; compilation, formatting, runtime tests, Clippy and required
+RCH qualification remain pending.
 
 ## Explicit recovery requalification
 

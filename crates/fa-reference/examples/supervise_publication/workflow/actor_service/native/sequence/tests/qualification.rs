@@ -427,3 +427,6 @@ fn resident_requalification_does_not_replace_fresh_source_evidence() {
     preserved(&reader, &before);
     assert!(reader.publication().stop.is_some());
 }
+
+#[path = "qualification/history.rs"]
+mod history;

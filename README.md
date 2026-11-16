@@ -48,6 +48,13 @@ handoffs. Stop remains first, including when an operator Fence stops the origina
 admission domain. The source and regression cases remain pending required RCH
 compilation and runtime qualification.
 
+Resident [history custody](docs/RESIDENT_NATIVE_PUBLICATION.md#independently-retained-history)
+also reserves every selected configuration and manifest input before those
+files are read. Canonical aliases through symlinked directories and future
+recipe/precheck paths cannot share an archive's role. New combined regression
+sources exercise anchored recovery with one-time credibility activation and
+fresh independent approval throughout a suffix; required execution remains pending.
+
 A version-two resident native sequence can also select an exact precheck
 profile for each release. All profiles, aggregate allowances and future endpoint
 aliases are admitted before model loading. Each completed Message or Finish
