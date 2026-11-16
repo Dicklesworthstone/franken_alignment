@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-16: preserve retained native history when requalification fails
+
+- Add paired anchored recovery cases for stale evidence and a deadline after
+  acknowledged activation, preserving exact terminal history and prior custody.
+- Require no new inference or effect and verify the exported original cut
+  through sealed replay without another recovery Fence.
+- Preserve concurrent positive requalification, rollback, selected-input and
+  resident lifecycle coverage. Keep the legacy cooperative wrapper test-only.
+- Independently source-reviewed; compilation, runtime tests, formatting, Clippy
+  and required RCH qualification remain unexecuted.
+
 ## 2026-11-16: reserve resident archive custody against selected input files
 
 - Reject canonical archive aliases to configuration, manifest, reviewer,

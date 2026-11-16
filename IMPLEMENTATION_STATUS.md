@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: retain qualified native history across activation failures
+
+An additional composed regression pairs stale-capsule refusal with deadline
+failure immediately after acknowledged activation on the same anchored resident
+recovery path. Both outcomes prevent new inference and publication while
+retaining the actual acknowledged terminal history and preserving the prior
+independent archive. The original qualified-success and rollback cases remain
+unchanged; sealed replay checks the retained failure cut without adding a Fence.
+
+The concurrently added resident lifecycle, selected-input separation, private
+archive checks and prior regression functions remain intact. The old
+unanchored bootstrap wrapper and reexport are test-only now that both production
+service paths use their selected recovery openers.
+
+Independent source review is complete. Compilation, runtime tests, Rust
+formatting, Clippy and the required RCH gate remain unexecuted because the
+execution workspace is unavailable. No Bead, work packet or qualification gate
+is closed. Contract: docs/RESIDENT_NATIVE_PUBLICATION.md.
+
 ## 2026-11-16: separate resident history archives from all selected inputs
 
 Resident history admission now checks CONFIG, sequence/reviewer/publication/

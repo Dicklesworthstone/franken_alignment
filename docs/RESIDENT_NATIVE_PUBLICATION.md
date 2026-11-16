@@ -326,6 +326,13 @@ reference output or staging cleanup. These are authored and independently
 reviewed sources; compilation, formatting, runtime tests, Clippy and required
 RCH qualification remain pending.
 
+A further paired regression covers stale qualification evidence and a deadline
+immediately after a successful activation. Both refuse new generation and
+publication while retaining the actual acknowledged failure/Stop history. The
+selected prior archive remains unchanged, and sealed replay verifies the exported
+successor without adding another recovery Fence. This coverage shares the
+qualified-success fixtures above and retains the same pending execution boundary.
+
 ## Explicit recovery requalification
 
 A resident suffix can select `--credibility-activation CAPSULE` together with

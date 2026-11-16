@@ -232,3 +232,77 @@ fn anchored_resident_requalification_rejects_rollback_before_capsule_read_or_rec
     preserved(&reader, &before);
     closed(&actor_profiles, &reviewer);
 }
+
+#[test]
+fn anchored_resident_requalification_retains_failures_before_and_after_activation() {
+    for scenario in ["stale_capsule", "deadline_after_activation"] {
+        let root = Root::new();
+        let (
+            Seed { config, reviewer, reader, before, mut fresh, .. },
+            prior,
+            _,
+        ) = retained_seed(&root);
+        let activation_epoch = fresh.expected_epoch + 1;
+        if scenario == "stale_capsule" {
+            fresh.expected_control_sequence -= 1;
+        }
+        let input = root.0.join("failed-qualification-prefix.anchor");
+        let retained_path = root.0.join("failed-qualification-successor.anchor");
+        archive::export_acknowledged(&prior, &input).unwrap();
+        let original_archive = fs::read(&input).unwrap();
+        let capsule = root.0.join("selected-qualification.bin");
+        fs::write(&capsule, fresh.encode_reference().unwrap()).unwrap();
+        let entries = suffix(&root, &config, &reader, false);
+        let selected = bootstrap::selection(&config, &entries[0].inputs, None).unwrap();
+        let actor_profiles = entries.iter().map(|entry| entry.actor.clone()).collect::<Vec<_>>();
+        let history = selection(&config, &entries, &reviewer, &input, &retained_path, &capsule);
+        let mut observed_activation = false;
+        let mut document = Vec::new();
+        let error = run_with_history(
+            config,
+            entries,
+            &reviewer,
+            None,
+            (Some(AFTER), None),
+            Some(&capsule),
+            Some(&history),
+            || {
+                let state = reader.publication();
+                // Automatic Stop can advance the epoch too. Count only the
+                // live acknowledged activation before failure cleanup.
+                if state.stop.is_none() && state.control.ledger.epoch == activation_epoch {
+                    observed_activation = true;
+                }
+                ElapsedTick(
+                    if scenario == "deadline_after_activation" && observed_activation {
+                        100_000
+                    } else {
+                        1000
+                    },
+                )
+            },
+            &mut document,
+        )
+        .unwrap_err();
+        assert!(!error.contains("retention failed"), "{scenario}: {error}");
+        if scenario == "deadline_after_activation" {
+            assert!(observed_activation, "the selected capsule must activate first");
+            assert!(error.contains("deadline"), "{error}");
+        } else {
+            assert!(!observed_activation, "a stale capsule must never activate");
+        }
+        assert!(document.is_empty(), "{scenario}");
+        preserved(&reader, &before);
+        let after = reader.stream();
+        assert!(after.publication.stop.is_some(), "{scenario}");
+        assert_eq!(after.confirmed, after.published);
+        assert!(!after.confirmed.finished());
+        assert_eq!(after.publication.control.ledger.reserved, 0);
+        let retained = archive::load(&retained_path).unwrap();
+        assert_eq!(retained.revision(), after.publication.revision);
+        assert!(retained.revision() > prior.revision());
+        assert_eq!(fs::read(&input).unwrap(), original_archive);
+        verify_retained(&reader, selected, &retained);
+        closed(&actor_profiles, &reviewer);
+    }
+}

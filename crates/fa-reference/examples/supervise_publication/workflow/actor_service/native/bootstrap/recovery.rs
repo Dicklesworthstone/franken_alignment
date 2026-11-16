@@ -9,6 +9,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     stream::generated::checked::source::FileGeneratedSourceRecoveryStatus,
 };
 
+#[cfg(test)]
 pub(in super::super) fn open_with_checkpoints<F>(
     config: &Config,
     inputs: &Inputs,
