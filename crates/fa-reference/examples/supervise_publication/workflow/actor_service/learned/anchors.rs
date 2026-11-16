@@ -130,7 +130,7 @@ fn require_new(path: &Path) -> Result<(), String> {
     }
 }
 
-pub(super) fn load(path: &Path) -> Result<FileHistoryAnchor, String> {
+pub(in super::super) fn load(path: &Path) -> Result<FileHistoryAnchor, String> {
     let bytes = read_regular(path, MAX_HISTORY_ANCHOR_BYTES)?;
     FileHistoryAnchor::read_trusted(&mut Cursor::new(bytes), MAX_HISTORY_ANCHOR_BYTES)
         .map_err(debug)
@@ -154,7 +154,7 @@ fn export(
 /// Persist an already acknowledged native anchor to a separately admitted NEW
 /// private file. This never reads the store, recreates an owner or captures a
 /// newer revision. The caller retains stop/effect acknowledgment on failure.
-pub(super) fn export_acknowledged(anchor: &FileHistoryAnchor, path: &Path) -> Result<(), String> {
+pub(in super::super) fn export_acknowledged(anchor: &FileHistoryAnchor, path: &Path) -> Result<(), String> {
     let parent = File::open(
         path.parent()
             .ok_or("history anchor needs a parent directory")?,

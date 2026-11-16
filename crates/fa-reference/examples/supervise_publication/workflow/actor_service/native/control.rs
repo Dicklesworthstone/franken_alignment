@@ -107,8 +107,34 @@ impl Control {
     where
         F: FnMut() -> ElapsedTick,
     {
-        self.stop
-            .stop_recovery(target, deadline, time)
-            .map(|outcome| outcome.terminal_message())
+        self.stop_recovery_with_history(target, None, deadline, time)
+    }
+
+    /// Preserve an acknowledged terminal cut even if its transport reply or a
+    /// post-acknowledgment deadline failed. This never opens another live owner.
+    pub(super) fn stop_recovery_with_history<F>(
+        &mut self,
+        target: FileRecoveryStop,
+        history: Option<&super::anchors::Selection>,
+        deadline: &Deadline,
+        time: &mut F,
+    ) -> Result<String, String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        let outcome = self.stop.stop_recovery(target, deadline, time)?;
+        let message = outcome.terminal_message();
+        if let (Some(selected), Ok(stopped)) = (history, &outcome.application.result) {
+            // The same sealed anchored replay supplied this successful native
+            // acknowledgment. Its exact successor is safe to retain directly.
+            return Ok(match selected.finish_capture(
+                Ok(Some(stopped.history_anchor().clone())),
+                Ok(()),
+            ) {
+                Ok(()) => message,
+                Err(error) => format!("{message}; {error}"),
+            });
+        }
+        Ok(message)
     }
 }

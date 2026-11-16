@@ -278,9 +278,54 @@ receipt output neither resends the effect nor issues a new Stop consequence.
 A first submission after interrupted, unsubmitted generation uses a new explicit
 service lifetime, but this grants no authority and renews no recorded request or
 permit. An unsubmitted reference emitted by an earlier process remains unapproved;
-the first accepted actor request fixes the durable source identity. Recovery is
-not an authenticated latest-head or anti-rollback guarantee. Existing anchored
-and guarded-role deployments still require their separately composed contracts.
+the first accepted actor request fixes the durable source identity.
+Unanchored recovery does not compare an independently retained prefix. Select
+`--history-anchor` below when that comparison is required; guarded-role and
+authenticated storage guarantees remain separate.
+
+### Independently retained history for native services
+
+Native creation and recovery accept an optional
+`--retain-history-anchor NEW_ARCHIVE`. Native recovery additionally accepts
+`--history-anchor RETAINED_ARCHIVE`, including checked publication, pending
+generation, exact recorded receipts, explicit Continue and explicit Finish.
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE --retain-history-anchor anchors/first.bin
+supervise_publication serve-open CONFIG NEXT_ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text NEXT_RECIPE --after-message PREVIOUS_REQUEST \
+  --history-anchor anchors/first.bin --retain-history-anchor anchors/next.bin
+```
+
+The input archive must be independently selected and retained outside the
+mutable authority store. Its exact canonical prefix is checked under the
+original exclusive recovery lock before any historical numerical event,
+staging cleanup or recovery Fence. Older journals, foreign store identities
+and divergent histories refuse; genuine append-only successors still undergo
+the complete original replay. A missing, malformed or incompatible input
+never falls back to the unanchored opener.
+
+The output is a new private file, never an overwrite of an existing checkpoint.
+The original healthy owner supplies its acknowledged history; when an input was
+selected, the new checkpoint must extend that exact prefix. Archive and
+directory synchronization must succeed before retention is acknowledged. A
+failed export makes the command fail, preserves the original publication
+outcome and sends no effect retry. Keep the prior independently retained
+archive until its successor has been acknowledged.
+
+A refusal before the anchor comparison succeeds creates no successor archive.
+If recovery has already acknowledged its Fence and a later startup check refuses,
+the same healthy owner can retain that exact successor. An authenticated terminal
+Stop instead retains the original sealed Stop acknowledgment, including when its
+reply or a deadline fails afterward; it never reopens a live owner to export it.
+Live and historical-receipt paths capture only after their original work ends,
+before the helper-only cleanup consumes the driver.
+
+These options preserve the original source, model/tokenizer, Stop, numerical
+budget and independent review contracts. They protect the selected prefix,
+not unseen later history or a rollback of both the journal and archive. The
+archive contains private original journal data and is not actor output.
 
 ### Cooperative reopen and Continue Stop
 

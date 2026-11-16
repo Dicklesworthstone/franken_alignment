@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: retain independent history across native service lifecycles
+
+Native single-release create and explicit open commands now accept
+`--retain-history-anchor NEW_ARCHIVE`; open also accepts
+`--history-anchor RETAINED_ARCHIVE`. Checked publication, pending generation,
+exact historical receipts, explicit Continue and explicit Finish share the
+same selection. The original anchored cursor checks the retained prefix before
+historical numerical replay, staging cleanup or Fence, without replacing the
+source/model/tokenizer checks, spending, original request fields or review keys.
+
+The existing bounded private archive codec and durable create-new writer are
+shared with learned recovery. Inputs and outputs are separated from the
+authority store, selected input files and every service endpoint before live
+startup. Retention captures only the healthy original owner's acknowledged
+history, including post-Fence startup refusal and original terminal Stop after
+a later deadline or reply error. A faulted owner refuses retention. Output
+races never overwrite the existing archive, issue another Stop or retry an effect.
+
+Seven authored regression functions exercise actual publication followed by
+expired receipt recovery, an output race after publication, exact Fence
+retention after startup refusal, rollback rejection before replay,
+authenticated Stop with late deadline failure, closed grammar/endpoint aliases
+and occupied-staging owner poisoning. Production and regression sources received
+independent review. The execution workspace remains unavailable; compilation,
+runtime tests, Rust formatting, Clippy and the required RCH gate have not run.
+No qualification result, Bead closure or authenticated latest-head guarantee
+is claimed. Contract: docs/NATIVE_TEXT_PUBLICATION_SERVICE.md.
+
 ## 2026-11-15: retain native anchors through authenticated recovery Stop
 
 The source-bound native recovery tests now compose the independent private

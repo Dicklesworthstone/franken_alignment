@@ -2,7 +2,7 @@
 //! Complete messages within one finite generation and explicit stream finish;
 //! all numerical and effect transitions belong to the existing original owners.
 #[path = "learned/fields.rs"] mod fields;
-#[path = "learned/anchors.rs"] mod anchors;
+#[path = "learned/anchors.rs"] pub(super) mod anchors;
 #[path = "learned/audit.rs"] mod audit;
 #[path = "learned/fit.rs"] mod fit;
 #[path = "learned/monitor.rs"] mod monitor;

@@ -71,6 +71,17 @@ functions are authored across the native API and live integrations. Changed Rust
 sections have been formatted and all changed Rust files parsed; compilation and
 runtime qualification remain pending the required RCH environment.
 
+Native single-release creation and recovery now accept independently retained
+[history anchors](docs/NATIVE_TEXT_PUBLICATION_SERVICE.md#independently-retained-history-for-native-services).
+Explicit recovery checks the selected original prefix before numerical replay
+or its Fence, and creation or recovery can retain a new private successor archive.
+A healthy original owner also retains acknowledged history after a later startup
+refusal or authenticated Stop; failed export never retries publication.
+Seven command and custody regression functions are authored, including real
+publication/receipt transport and rollback/fault boundaries. Independent source
+review is complete; compilation, runtime, formatting and RCH qualification remain
+pending.
+
 The [original target-narrowing operation](docs/SCOPED_AUTHORITY_NARROWING.md)
 now supports numerical and typed-stream owners through a separately budgeted
 native control grant. Exact target restrictions preserve retained reservations,

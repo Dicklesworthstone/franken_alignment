@@ -1,5 +1,7 @@
 //! Native monitored generation feeding the ORIGINAL source-only publication gate.
 //! Stdout carries a submission reference, NEVER unapproved generated text.
+#[path = "native/anchors.rs"]
+mod anchors;
 #[path = "native/bootstrap.rs"]
 mod bootstrap;
 #[path = "native/continuation.rs"]
@@ -39,14 +41,27 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT";
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
 }
 
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
-    let (selected_args, precheck_path) = exact_precheck::take_option(args)?;
+    command_with_clock(args, credibility, super::super::clock, &mut std::io::stdout().lock())
+}
+
+fn command_with_clock<F>(
+    args: &[String],
+    credibility: Option<&Path>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let (args, history_options) = anchors::take_options(args)?;
+    let (selected_args, precheck_path) = exact_precheck::take_option(&args)?;
     let (selected_args, operator_option) = operator::take_option(&selected_args)?;
     let (args, finishing) = finish::take_option(&selected_args)?;
     let (args, after) = continuation::take_option(args)?;
@@ -78,6 +93,14 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         selected.check_initial_epoch(open)?;
         selected.check(&config, &actor, &reviewer, operator.as_ref())?;
     }
+    let history = history_options.admit(&config, open)?;
+    if let Some(selected) = &history {
+        selected.check(&config, &[(&actor, precheck.as_ref())], &reviewer, operator.as_ref(), open)?;
+        let mut files: Vec<_> = args[1..option].iter().map(std::path::PathBuf::from).collect();
+        files.push(std::path::PathBuf::from(&args[option + 1]));
+        if let Some(path) = credibility { files.push(path.to_path_buf()); }
+        selected.check_files(&files)?;
+    }
     let publication = if checked {
         Some(PublicationProfile::read(Path::new(&args[4]))?)
     } else {
@@ -88,22 +111,20 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes,
     )?;
-    if operator.is_some() || precheck.is_some() {
+    if operator.is_some() || precheck.is_some() || history.is_some() {
         let mode = match (finishing, after) {
             (Some(previous), _) => finish::Intent::Finish(previous),
             (None, Some(previous)) => finish::Intent::Continue(previous),
             (None, None) => finish::Intent::Existing,
         };
-        return serve_lifecycle_with_precheck(
+        return serve_lifecycle_with_history(
             config,
-            &actor,
-            &reviewer,
+            (&actor, &reviewer),
             inputs,
             (open, publication.as_ref(), credibility, mode),
-            operator.as_ref(),
-            precheck.as_ref(),
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            (operator.as_ref(), precheck.as_ref(), history.as_ref()),
+            time,
+            output,
         );
     }
     if let Some(previous) = finishing {
@@ -113,8 +134,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &reviewer,
             inputs,
             (publication.as_ref(), credibility, previous),
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     } else if after.is_some() {
         serve_continued(
@@ -123,8 +144,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &reviewer,
             inputs,
             (open, publication.as_ref(), credibility, after),
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     } else if credibility.is_some() {
         serve_qualified(
@@ -133,8 +154,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &reviewer,
             inputs,
             (open, publication.as_ref(), credibility),
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     } else if let Some(publication) = &publication {
         serve_selected(
@@ -143,8 +164,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &reviewer,
             inputs,
             (open, Some(publication)),
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     } else if open {
         serve_mode(
@@ -153,8 +174,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &reviewer,
             inputs,
             true,
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     } else {
         serve(
@@ -162,8 +183,8 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
             &actor,
             &reviewer,
             inputs,
-            super::super::clock,
-            &mut std::io::stdout().lock(),
+            time,
+            output,
         )
     }
 }
@@ -357,7 +378,7 @@ where
 }
 
 fn serve_lifecycle_with_precheck<F>(
-    mut config: Config,
+    config: Config,
     actor: &Profile,
     reviewer_profile: &PeerProfile,
     inputs: Inputs,
@@ -369,12 +390,41 @@ fn serve_lifecycle_with_precheck<F>(
     ),
     operator_selection: Option<&operator::Selection>,
     precheck_selection: Option<&exact_precheck::Selection>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_lifecycle_with_history(
+        config, (actor, reviewer_profile), inputs, deployment,
+        (operator_selection, precheck_selection, None), time, output,
+    )
+}
+
+fn serve_lifecycle_with_history<F>(
+    mut config: Config,
+    peers: (&Profile, &PeerProfile),
+    inputs: Inputs,
+    deployment: (
+        bool,
+        Option<&PublicationProfile>,
+        Option<&Path>,
+        finish::Intent,
+    ),
+    services: (
+        Option<&operator::Selection>,
+        Option<&exact_precheck::Selection>,
+        Option<&anchors::Selection>,
+    ),
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
+    let (actor, reviewer_profile) = peers;
+    let (operator_selection, precheck_selection, history_selection) = services;
     let (open, publication, credibility, mode) = deployment;
     mode.check(open, actor.request)?;
     check_profiles(&config, actor, reviewer_profile)?;
@@ -384,6 +434,9 @@ where
     if let Some(selected) = precheck_selection {
         selected.check_initial_epoch(open)?;
         selected.check(&config, actor, reviewer_profile, operator_selection)?;
+    }
+    if let Some(selected) = history_selection {
+        selected.check(&config, &[(actor, precheck_selection)], reviewer_profile, operator_selection, open)?;
     }
     // Source and complete witness/joint policy belong to the same initial image.
     // Recovery checks this selection before cleaning staging or fencing keys.
@@ -414,10 +467,11 @@ where
         None
     };
     let (host, reviewer) = if open {
-        bootstrap::open_with_checkpoints(
+        bootstrap::open_with_history(
             &config,
             &inputs,
             selected,
+            history_selection,
             recovery_control.as_mut(),
             &deadline,
             &mut time,
@@ -425,374 +479,408 @@ where
     } else {
         bootstrap::prepare(&config, &inputs, selected, false)?
     };
-    if !host.generated_text_stream_required().map_err(debug)?
-        || !host.publication_guard_required()
-        || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
-        || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
-        || host.publication_validation_profile().map_err(debug)?
-            != publication.map(|profile| profile.limits)
-    {
-        return Err(
-            "native source, reserve and publication contracts must match this service".into(),
-        );
-    }
-    // New initiation is opt-in. Ordinary open still rejects a missing intent;
-    // duplicate IDs must use the existing exact recovery/receipt path instead.
-    let next = match mode {
-        finish::Intent::Continue(after) => {
-            Some(continuation::prepare(&host, actor.request, &inputs, after)?)
+    // Any startup refusal after the original recovery Fence retains that
+    // exact acknowledged successor while its owner is still available.
+    let prepared: Result<_, String> = (|| {
+        if !host.generated_text_stream_required().map_err(debug)?
+            || !host.publication_guard_required()
+            || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
+            || host.journal_capacity().map_err(debug)?.reserve() != Some(RecoveryReserve::terminal())
+            || host.publication_validation_profile().map_err(debug)?
+                != publication.map(|profile| profile.limits)
+        {
+            return Err(
+                "native source, reserve and publication contracts must match this service".into(),
+            );
         }
-        _ => None,
-    };
-    let recovered = match mode {
-        finish::Intent::Finish(after) => {
-            finish::select(&host, actor.request, &inputs, after, deadline.logical)?
-        }
-        finish::Intent::Existing if open => recovery::select(&host, actor.request, &inputs)?
-            .map(|source| FileGeneratedTextActorPort::encode_message(&source).map_err(debug))
-            .transpose()?,
-        _ => None,
-    };
-    let recorded = recovered.is_some();
-    if recorded && precheck_selection.is_some() {
-        return Err("recorded native requests are observation-only and cannot acquire a new precheck disclosure".into());
-    }
-    if let Some(selected) = precheck_selection {
-        super::precheck::check_owner_epoch(&selected.settings, &host)?;
-    }
-    if recorded {
-        if let Some(selected) = operator_selection {
-            selected.check_recorded()?;
-        }
-    }
-    if !recorded && credibility.is_none() {
-        host.check_credibility().map_err(debug)?;
-    }
-    let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
-    let mut driver = FileSupervisedDriver::new(supervisor);
-    let operator_port = operator_selection.map(|_| port.clone());
-    let inbox = FileActorInbox::new(
-        actor.actor,
-        ActorWire::new(port),
-        actor.channels(),
-        actor.connections,
-    )
-    .map_err(debug)?;
-    let pool = FileActorPool::for_requests(vec![(actor.request, inbox)]).map_err(debug)?;
-    let mut ingress = Intake {
-        socket,
-        pool,
-        profile: actor.clone(),
-        attempted: 0,
-    };
-    // Historical requests create no control/review listeners and never resume
-    // numerical work. Their original source document is retained byte-for-byte.
-    let mut control = if recorded {
-        None
-    } else if let Some(control) = recovery_control.take() {
-        // Keep the same candidate quota, authenticated socket and deadline.
-        Some(control)
-    } else {
-        Some(Control::new(
-            &config,
-            actor.request,
-            Some(reviewer_profile),
-        )?)
-    };
-    let mut operator = operator_selection
-        .map(|selected| {
-            selected.start(
-                actor,
-                operator_port.expect("selected native operator retains its source-only port"),
-                &driver,
-                &deadline,
-            )
-        })
-        .transpose()?;
-    if let Some(control) = &mut control {
-        control.install_operator(operator.take());
-    }
-    // Only an explicitly selected operator retains the existing Stop custody
-    // through reply grace. The unselected path keeps its original lifetime.
-    let mut operator_stop = None;
-    let mut precheck = None;
-    let work = (|| {
-        let proposal = if let Some(proposal) = recovered {
-            // Even a supplied credibility path is not opened for receipt-only
-            // recovery. The historical effect cannot be retried into new work.
-            resume_existing(&mut driver, actor.request, &mut time)?;
-            proposal
-        } else {
-            if !qualification::prepare(
-                &mut driver,
-                &config,
-                credibility,
-                (
-                    control.as_mut().expect("initial stop owner"),
-                    &reviewer,
-                    &deadline,
-                ),
-                &mut time,
-            )? {
-                return Ok(());
+        // New initiation is opt-in. Ordinary open still rejects a missing intent;
+        // duplicate IDs must use the existing exact recovery/receipt path instead.
+        let next = match mode {
+            finish::Intent::Continue(after) => {
+                Some(continuation::prepare(&host, actor.request, &inputs, after)?)
             }
-            if let finish::Intent::Finish(after) = mode {
-                let controls = (
-                    control.as_mut().expect("initial stop owner"),
-                    &reviewer,
+            _ => None,
+        };
+        let recovered = match mode {
+            finish::Intent::Finish(after) => {
+                finish::select(&host, actor.request, &inputs, after, deadline.logical)?
+            }
+            finish::Intent::Existing if open => recovery::select(&host, actor.request, &inputs)?
+                .map(|source| FileGeneratedTextActorPort::encode_message(&source).map_err(debug))
+                .transpose()?,
+            _ => None,
+        };
+        let recorded = recovered.is_some();
+        if recorded && precheck_selection.is_some() {
+            return Err("recorded native requests are observation-only and cannot acquire a new precheck disclosure".into());
+        }
+        if let Some(selected) = precheck_selection {
+            super::precheck::check_owner_epoch(&selected.settings, &host)?;
+        }
+        if recorded {
+            if let Some(selected) = operator_selection {
+                selected.check_recorded()?;
+            }
+        }
+        if !recorded && credibility.is_none() {
+            host.check_credibility().map_err(debug)?;
+        }
+        Ok((next, recovered, recorded))
+    })();
+    let (next, recovered, recorded) = match prepared {
+        Ok(prepared) => prepared,
+        Err(error) => return match history_selection {
+            Some(selected) => selected.retain(&host, Err(error)),
+            None => Err(error),
+        },
+    };
+    // This transfer itself performs no journal transition. Its failure may
+    // therefore retain this exact capture, never a later stale fallback.
+    let transfer = history_selection.map(|selected| selected.capture(&host)).transpose()?;
+    let (port, supervisor) = match host.into_generated_text_actor_gateway() {
+        Ok(gateway) => gateway,
+        Err(error) => return match history_selection {
+            Some(selected) => selected.finish_capture(Ok(transfer.flatten()), Err(debug(error))),
+            None => Err(debug(error)),
+        },
+    };
+    drop(transfer);
+    let mut driver = FileSupervisedDriver::new(supervisor);
+    let outcome: Result<(), String> = (|| {
+        let operator_port = operator_selection.map(|_| port.clone());
+        let inbox = FileActorInbox::new(
+            actor.actor,
+            ActorWire::new(port),
+            actor.channels(),
+            actor.connections,
+        )
+        .map_err(debug)?;
+        let pool = FileActorPool::for_requests(vec![(actor.request, inbox)]).map_err(debug)?;
+        let mut ingress = Intake {
+            socket,
+            pool,
+            profile: actor.clone(),
+            attempted: 0,
+        };
+        // Historical requests create no control/review listeners and never resume
+        // numerical work. Their original source document is retained byte-for-byte.
+        let mut control = if recorded {
+            None
+        } else if let Some(control) = recovery_control.take() {
+            // Keep the same candidate quota, authenticated socket and deadline.
+            Some(control)
+        } else {
+            Some(Control::new(
+                &config,
+                actor.request,
+                Some(reviewer_profile),
+            )?)
+        };
+        let mut operator = operator_selection
+            .map(|selected| {
+                selected.start(
+                    actor,
+                    operator_port.expect("selected native operator retains its source-only port"),
+                    &driver,
                     &deadline,
-                );
-                let Some(proposal) = finish::prepare(
-                    &mut driver,
-                    &mut config,
-                    actor.request,
-                    after,
-                    controls,
-                    &mut time,
-                )?
-                else {
-                    return Ok(());
-                };
+                )
+            })
+            .transpose()?;
+        if let Some(control) = &mut control {
+            control.install_operator(operator.take());
+        }
+        // Only an explicitly selected operator retains the existing Stop custody
+        // through reply grace. The unselected path keeps its original lifetime.
+        let mut operator_stop = None;
+        let mut precheck = None;
+        let work = (|| {
+            let proposal = if let Some(proposal) = recovered {
+                // Even a supplied credibility path is not opened for receipt-only
+                // recovery. The historical effect cannot be retried into new work.
+                resume_existing(&mut driver, actor.request, &mut time)?;
                 proposal
             } else {
-                let controls = (
-                    control.as_mut().expect("initial stop owner"),
-                    &reviewer,
-                    &deadline,
-                );
-                let completed = if let Some(prepared) = next {
-                    continuation::start(
+                if !qualification::prepare(
+                    &mut driver,
+                    &config,
+                    credibility,
+                    (
+                        control.as_mut().expect("initial stop owner"),
+                        &reviewer,
+                        &deadline,
+                    ),
+                    &mut time,
+                )? {
+                    return Ok(());
+                }
+                if let finish::Intent::Finish(after) = mode {
+                    let controls = (
+                        control.as_mut().expect("initial stop owner"),
+                        &reviewer,
+                        &deadline,
+                    );
+                    let Some(proposal) = finish::prepare(
                         &mut driver,
                         &mut config,
-                        &inputs,
-                        prepared,
+                        actor.request,
+                        after,
                         controls,
                         &mut time,
                     )?
-                } else if open {
-                    recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
+                    else {
+                        return Ok(());
+                    };
+                    proposal
                 } else {
-                    generate(&mut driver, &mut config, &inputs, controls, &mut time)?
-                };
-                if !completed {
+                    let controls = (
+                        control.as_mut().expect("initial stop owner"),
+                        &reviewer,
+                        &deadline,
+                    );
+                    let completed = if let Some(prepared) = next {
+                        continuation::start(
+                            &mut driver,
+                            &mut config,
+                            &inputs,
+                            prepared,
+                            controls,
+                            &mut time,
+                        )?
+                    } else if open {
+                        recovery::resume(&mut driver, &mut config, &inputs, controls, &mut time)?
+                    } else {
+                        generate(&mut driver, &mut config, &inputs, controls, &mut time)?
+                    };
+                    if !completed {
+                        return Ok(());
+                    }
+                    // Only a first, unsubmitted complete generation gets a NEW proposal.
+                    // An existing request above keeps its target, epoch and deadline.
+                    completed_message_proposal(&driver, actor.request, &inputs, &deadline)?
+                }
+            };
+            if let Some(selected) = precheck_selection {
+                // Independent Stop remains first, including the boundary after
+                // generation and before the fresh source/disclosure bootstrap.
+                if control
+                    .as_mut()
+                    .expect("live precheck Stop owner")
+                    .checkpoint(&mut driver, &reviewer, &deadline, &mut time)?
+                {
                     return Ok(());
                 }
-                // Only a first, unsubmitted complete generation gets a NEW proposal.
-                // An existing request above keeps its target, epoch and deadline.
-                completed_message_proposal(&driver, actor.request, &inputs, &deadline)?
+                precheck = Some(super::precheck::Service::start_generated(
+                    &selected.settings,
+                    actor,
+                    reviewer_profile,
+                    &mut config,
+                    &mut driver,
+                    &deadline,
+                    &mut time,
+                    &proposal,
+                )?);
             }
-        };
-        if let Some(selected) = precheck_selection {
-            // Independent Stop remains first, including the boundary after
-            // generation and before the fresh source/disclosure bootstrap.
-            if control
-                .as_mut()
-                .expect("live precheck Stop owner")
-                .checkpoint(&mut driver, &reviewer, &deadline, &mut time)?
-            {
-                return Ok(());
+            let document = encode_command(&Command::Submit {
+                request: actor.request,
+                proposal,
+            })
+            .map_err(debug)?;
+            output
+                .write_all(&document)
+                .and_then(|()| output.write_all(b"\n"))
+                .and_then(|()| output.flush())
+                .map_err(|error| {
+                    format!("source reference output failed: {error}; no actor request sent")
+                })?;
+            if recorded {
+                // Do not consume reply grace before an authenticated actor command.
+                // Even an expired old Submit is handled by the original retry path;
+                // no fresh evidence, helpers, human approval or publication occurs.
+                loop {
+                    deadline.check(time())?;
+                    if let Some(service) = &mut operator {
+                        service.checkpoint();
+                    }
+                    if ingress.observe_count(&mut driver)? != 0 {
+                        return Ok(());
+                    }
+                    pause(actor.poll_ms);
+                }
             }
-            precheck = Some(super::precheck::Service::start_generated(
-                &selected.settings,
-                actor,
-                reviewer_profile,
-                &mut config,
-                &mut driver,
-                &deadline,
-                &mut time,
-                &proposal,
-            )?);
-        }
-        let document = encode_command(&Command::Submit {
-            request: actor.request,
-            proposal,
-        })
-        .map_err(debug)?;
-        output
-            .write_all(&document)
-            .and_then(|()| output.write_all(b"\n"))
-            .and_then(|()| output.flush())
-            .map_err(|error| {
-                format!("source reference output failed: {error}; no actor request sent")
-            })?;
-        if recorded {
-            // Do not consume reply grace before an authenticated actor command.
-            // Even an expired old Submit is handled by the original retry path;
-            // no fresh evidence, helpers, human approval or publication occurs.
             loop {
                 deadline.check(time())?;
-                if let Some(service) = &mut operator {
-                    service.checkpoint();
-                }
-                if ingress.observe_count(&mut driver)? != 0 {
+                if control.as_mut().expect("retained stop owner").checkpoint(
+                    &mut driver,
+                    &reviewer,
+                    &deadline,
+                    &mut time,
+                )? {
                     return Ok(());
+                }
+                if let Some(service) = &mut precheck {
+                    service.checkpoint(&driver, time());
+                }
+                ingress.drive(&mut driver, &mut config, &mut time)?;
+                match driver
+                    .supervisor()
+                    .host()
+                    .map_err(debug)?
+                    .request_status(actor.request)
+                {
+                    Ok(_) => break,
+                    Err(JournalError::Contract(Error::Missing)) => {}
+                    Err(error) => return Err(debug(error)),
                 }
                 pause(actor.poll_ms);
             }
-        }
-        loop {
-            deadline.check(time())?;
-            if control.as_mut().expect("retained stop owner").checkpoint(
+            if let Some(service) = &mut precheck {
+                service.retire();
+            }
+            let (stop_service, selected_operator) = control
+                .take()
+                .expect("original live native Stop owner")
+                .into_parts();
+            operator = selected_operator;
+            if operator_selection.is_some() {
+                operator_stop = Some(stop_service.share());
+            }
+            let mut pump = |driver: &mut FileSupervisedDriver| {
+                // LiveControl services the original Stop first, then observes any
+                // newly acknowledged operator Fence before further workflow work.
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
+                ingress.observe(driver)?;
+                let status = driver
+                    .supervisor()
+                    .host()
+                    .map_err(debug)?
+                    .request_status(actor.request)
+                    .map_err(debug)?;
+                Ok(matches!(
+                    status.disposition,
+                    FileRequestDisposition::Admitted {
+                        stage: ActionState::Cancelled
+                            | ActionState::Denied
+                            | ActionState::Confirmed
+                            | ActionState::ConfirmedNotExecuted,
+                        ..
+                    }
+                ))
+            };
+            execute_serviced(
                 &mut driver,
                 &reviewer,
+                &mut config,
+                actor.request,
                 &deadline,
+                ExecuteServices {
+                    peers: Some(reviewer_profile),
+                    publication,
+                    ingress: &mut pump,
+                    stop: Some(stop_service),
+                },
                 &mut time,
-            )? {
-                return Ok(());
-            }
-            if let Some(service) = &mut precheck {
-                service.checkpoint(&driver, time());
-            }
-            ingress.drive(&mut driver, &mut config, &mut time)?;
-            match driver
-                .supervisor()
-                .host()
-                .map_err(debug)?
-                .request_status(actor.request)
-            {
-                Ok(_) => break,
-                Err(JournalError::Contract(Error::Missing)) => {}
-                Err(error) => return Err(debug(error)),
-            }
-            pause(actor.poll_ms);
-        }
+            )
+        })();
         if let Some(service) = &mut precheck {
             service.retire();
         }
-        let (stop_service, selected_operator) = control
-            .take()
-            .expect("original live native Stop owner")
-            .into_parts();
-        operator = selected_operator;
-        if operator_selection.is_some() {
-            operator_stop = Some(stop_service.share());
+        if let Some(control) = &mut control {
+            operator = control.take_operator();
         }
-        let mut pump = |driver: &mut FileSupervisedDriver| {
-            // LiveControl services the original Stop first, then observes any
-            // newly acknowledged operator Fence before further workflow work.
+        let mut automatic_cleanup_attempted = false;
+        let mut failure = work.err().map(|error| {
+            // A broken receipt connection must not stop unrelated later work in the
+            // recovered journal. New-work failures retain the original stop/drain.
+            if recorded
+                || control
+                    .as_ref()
+                    .is_some_and(Control::native_cleanup_started)
+                || operator_stop
+                    .as_ref()
+                    .is_some_and(crate::workflow::control::Control::native_cleanup_started)
+            {
+                return error;
+            }
+            automatic_cleanup_attempted = true;
+            match stop(&mut driver, actor.request, &mut time) {
+                Ok(()) => error,
+                Err(stopping) => format!("{error}; stop/drain: {stopping}"),
+            }
+        });
+        if automatic_cleanup_attempted && operator_selection.is_some() {
+            // The original failure path already attempted Stop AND its drain.
+            // Reply grace must not reinterpret that Stop as an unconsumed operator
+            // cleanup and repeat an acknowledged or failed sweep. Only the finite
+            // historical operator reply channel survives this original failure.
+            drop(control.take());
+            drop(operator_stop.take());
+        }
+        let grace = Instant::now();
+        let mut actor_transport_failed = false;
+        while grace.elapsed() < Duration::from_millis(actor.reply_ms) {
+            if operator_selection.is_some() {
+                // Keep independent Stop ahead of operator traffic while this
+                // explicitly selected live endpoint retains terminal reply custody.
+                // Historical receipt-only recovery still has no Stop listener.
+                let stopped = if let Some(control) = &mut control {
+                    control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                } else if let Some(control) = &mut operator_stop {
+                    control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                } else {
+                    Ok(false)
+                };
+                if let Err(error) = stopped {
+                    failure.get_or_insert(error);
+                }
+            }
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
-            ingress.observe(driver)?;
-            let status = driver
-                .supervisor()
-                .host()
-                .map_err(debug)?
-                .request_status(actor.request)
-                .map_err(debug)?;
-            Ok(matches!(
-                status.disposition,
-                FileRequestDisposition::Admitted {
-                    stage: ActionState::Cancelled
-                        | ActionState::Denied
-                        | ActionState::Confirmed
-                        | ActionState::ConfirmedNotExecuted,
-                    ..
+            if operator_selection.is_some() {
+                let stopped = if let Some(control) = &mut control {
+                    control.native_stop(&mut driver, &mut time)
+                } else if let Some(control) = &mut operator_stop {
+                    control.native_stop(&mut driver, &mut time)
+                } else {
+                    Ok(false) // Recorded recovery has observation-only custody.
+                };
+                if let Err(error) = stopped {
+                    failure.get_or_insert(error);
                 }
-            ))
-        };
-        execute_serviced(
-            &mut driver,
-            &reviewer,
-            &mut config,
-            actor.request,
-            &deadline,
-            ExecuteServices {
-                peers: Some(reviewer_profile),
-                publication,
-                ingress: &mut pump,
-                stop: Some(stop_service),
-            },
-            &mut time,
-        )
-    })();
-    if let Some(service) = &mut precheck {
-        service.retire();
-    }
-    if let Some(control) = &mut control {
-        operator = control.take_operator();
-    }
-    let mut automatic_cleanup_attempted = false;
-    let mut failure = work.err().map(|error| {
-        // A broken receipt connection must not stop unrelated later work in the
-        // recovered journal. New-work failures retain the original stop/drain.
-        if recorded
-            || control
-                .as_ref()
-                .is_some_and(Control::native_cleanup_started)
-            || operator_stop
-                .as_ref()
-                .is_some_and(crate::workflow::control::Control::native_cleanup_started)
-        {
-            return error;
-        }
-        automatic_cleanup_attempted = true;
-        match stop(&mut driver, actor.request, &mut time) {
-            Ok(()) => error,
-            Err(stopping) => format!("{error}; stop/drain: {stopping}"),
-        }
-    });
-    if automatic_cleanup_attempted && operator_selection.is_some() {
-        // The original failure path already attempted Stop AND its drain.
-        // Reply grace must not reinterpret that Stop as an unconsumed operator
-        // cleanup and repeat an acknowledged or failed sweep. Only the finite
-        // historical operator reply channel survives this original failure.
-        drop(control.take());
-        drop(operator_stop.take());
-    }
-    let grace = Instant::now();
-    let mut actor_transport_failed = false;
-    while grace.elapsed() < Duration::from_millis(actor.reply_ms) {
-        if operator_selection.is_some() {
-            // Keep independent Stop ahead of operator traffic while this
-            // explicitly selected live endpoint retains terminal reply custody.
-            // Historical receipt-only recovery still has no Stop listener.
-            let stopped = if let Some(control) = &mut control {
-                control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
-            } else if let Some(control) = &mut operator_stop {
-                control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
-            } else {
-                Ok(false)
-            };
-            if let Err(error) = stopped {
-                failure.get_or_insert(error);
             }
+            if !actor_transport_failed {
+                if let Err(error) = ingress.observe(&mut driver) {
+                    failure.get_or_insert(error);
+                    if operator_selection.is_none() {
+                        break;
+                    }
+                    // A broken actor channel cannot consume the independent
+                    // operator's remaining original opportunity to read its reply.
+                    actor_transport_failed = true;
+                    ingress.pool.revoke_all();
+                }
+            }
+            pause(actor.poll_ms);
         }
         if let Some(service) = &mut operator {
-            service.checkpoint();
+            service.retire();
         }
-        if operator_selection.is_some() {
-            let stopped = if let Some(control) = &mut control {
-                control.native_stop(&mut driver, &mut time)
-            } else if let Some(control) = &mut operator_stop {
-                control.native_stop(&mut driver, &mut time)
-            } else {
-                Ok(false) // Recorded recovery has observation-only custody.
-            };
-            if let Err(error) = stopped {
-                failure.get_or_insert(error);
-            }
+        ingress.pool.revoke_all();
+        match failure {
+            Some(error) => Err(error),
+            None => Ok(()),
         }
-        if !actor_transport_failed {
-            if let Err(error) = ingress.observe(&mut driver) {
-                failure.get_or_insert(error);
-                if operator_selection.is_none() {
-                    break;
-                }
-                // A broken actor channel cannot consume the independent
-                // operator's remaining original opportunity to read its reply.
-                actor_transport_failed = true;
-                ingress.pool.revoke_all();
-            }
-        }
-        pause(actor.poll_ms);
-    }
-    if let Some(service) = &mut operator {
-        service.retire();
-    }
-    ingress.pool.revoke_all();
+    })();
+    // All original Stop/drain and reply work has ended. The cleanup below only
+    // releases direct helper children; it cannot append a journal transition.
+    let outcome = match history_selection {
+        Some(selected) => selected.retain_driver(&driver, outcome),
+        None => outcome,
+    };
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
-    if let Some(error) = failure {
+    if let Err(error) = outcome {
         return Err(format!("{error}; helper cleanup pending={pending}"));
     }
     if pending != 0 {

@@ -16,6 +16,8 @@ use std::sync::mpsc;
 mod checked_tests;
 #[path = "tests/fixture.rs"]
 mod fixture;
+#[path = "tests/history.rs"]
+mod history_tests;
 #[path = "tests/operator.rs"]
 mod operator_tests;
 #[path = "tests/precheck.rs"]

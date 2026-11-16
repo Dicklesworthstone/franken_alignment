@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-16: retain independent native service recovery checkpoints
+
+- Add optional retained-history input and create-new output to native
+  single-release creation, recovery, continuation, Finish and receipt commands.
+- Check the independent original prefix through the shared anchored cursor
+  before historical work; preserve source contracts, spending and review keys.
+- Reuse the bounded private archive codec and durable writer, reject canonical
+  endpoint/input aliases, and preserve the old archive on output races.
+- Retain the original acknowledged cut after post-Fence refusal or terminal
+  recovery Stop, including later reply/deadline failure; reject faulted owners
+  and never retry an effect to recover from retention failure.
+- Add seven substantive regression functions. Independent source review is
+  complete; compilation, runtime, formatting, Clippy and RCH remain unexecuted.
+
 ## 2026-11-15: exercise anchored native recovery through authenticated Stop
 
 - Compose real independently retained anchor archives with the original Linux

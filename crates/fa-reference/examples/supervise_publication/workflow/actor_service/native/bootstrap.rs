@@ -6,7 +6,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::stream::g
 };
 
 mod recovery;
-pub(super) use recovery::open_with_checkpoints;
+pub(super) use recovery::{open_with_checkpoints, open_with_history};
 
 pub(super) fn selection(
     config: &Config,

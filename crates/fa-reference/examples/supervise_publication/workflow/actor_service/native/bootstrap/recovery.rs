@@ -10,6 +10,21 @@ pub(in super::super) fn open_with_checkpoints<F>(
     config: &Config,
     inputs: &Inputs,
     selected: GeneratedSourceProfile,
+    control: Option<&mut Control>,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<(FileOversight, FileHumanReviewer), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    open_with_history(config, inputs, selected, None, control, deadline, time)
+}
+
+pub(in super::super) fn open_with_history<F>(
+    config: &Config,
+    inputs: &Inputs,
+    selected: GeneratedSourceProfile,
+    history: Option<&super::super::anchors::Selection>,
     mut control: Option<&mut Control>,
     deadline: &Deadline,
     time: &mut F,
@@ -18,14 +33,16 @@ where
     F: FnMut() -> ElapsedTick,
 {
     deadline.check(time())?;
-    let mut recovery = FileOversight::begin_open_generated_text_stream_from_source(
-        &config.store,
-        config.profile.clone(),
-        &inputs.decoder,
-        &inputs.tokenizer,
-        selected,
-    )
-    .map_err(debug)?;
+    let mut recovery = match history.and_then(|selection| selection.input()) {
+        Some(anchor) => FileOversight::begin_open_generated_text_stream_from_source_anchored(
+            &config.store, config.profile.clone(), &inputs.decoder,
+            &inputs.tokenizer, selected, anchor,
+        ),
+        None => FileOversight::begin_open_generated_text_stream_from_source(
+            &config.store, config.profile.clone(), &inputs.decoder,
+            &inputs.tokenizer, selected,
+        ),
+    }.map_err(debug)?;
     let total = recovery.progress().total_events;
     let mut pending = false;
     loop {
@@ -58,7 +75,12 @@ where
                 let target = recovery
                     .into_recovery_stop(control.recovery_operation()?)
                     .map_err(debug)?;
-                return Err(control.stop_recovery(target, deadline, time)?);
+                return Err(match history {
+                    Some(selected) => control.stop_recovery_with_history(
+                        target, Some(selected), deadline, time,
+                    )?,
+                    None => control.stop_recovery(target, deadline, time)?,
+                });
             }
             return recovery.finish().map_err(debug);
         }
