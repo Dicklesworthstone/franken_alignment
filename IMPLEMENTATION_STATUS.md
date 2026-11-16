@@ -1,5 +1,22 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: retain native anchors through authenticated recovery Stop
+
+The source-bound native recovery tests now compose the independent private
+anchor archive with the actual Linux authenticated Stop transport. An offered
+operation without the peer's explicit nonce-bound request preserves canonical
+and pending bytes while retaining the original lock. An acknowledged Stop
+preserves Unknown liabilities; a retry through its newly retained terminal
+anchor repeats no event and keeps the original receipt.
+
+This adds one focused regression function to the eight concurrent native
+anchored-recovery cases without replacing their implementation or coverage.
+Independent source review is separate from execution. The local baseline
+Cargo check reached fa-reference but yielded no completion before workspace
+loss; the qualified toolchain installation failed for lack of disk space.
+No changed-code compilation, runtime test, formatting, Clippy or required RCH
+gate result is claimed. No Bead or work packet is closed.
+
 ## 2026-11-15: bind native text recovery to independently retained history
 
 Native source-bound recovery now offers explicit synchronous and cooperative

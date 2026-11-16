@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-15: exercise anchored native recovery through authenticated Stop
+
+- Compose real independently retained anchor archives with the original Linux
+  Stop transport, keeping offers and silent peers non-mutating.
+- Require explicit authenticated Stop to preserve charged Unknown effects and
+  a retry through its retained terminal anchor to append no event.
+- Preserve all eight concurrent native anchored-recovery tests and the shared
+  implementation. The added regression is source-reviewed; compilation and
+  execution remain pending because the execution workspace is unavailable.
+
 ## 2026-11-15: anchor native text recovery to an independent original prefix
 
 - Add synchronous and cooperative source-bound native openers accepting the

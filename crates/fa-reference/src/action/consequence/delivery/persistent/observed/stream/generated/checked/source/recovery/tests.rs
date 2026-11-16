@@ -1,6 +1,8 @@
 //! Actual native inference and canonical storage, with synthetic model weights.
 //! These tests cover recovery contracts, not empirical monitor quality.
 mod anchored;
+#[cfg(target_os = "linux")]
+mod anchored_transport;
 use super::*;
 use crate::Snapshot;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{

@@ -184,3 +184,22 @@ before compilation because `rch` is absent (exit 127). Rust compilation, the fiv
 new tests, rustfmt, Clippy and the full gate have not run. Static inspection is
 not execution evidence; historical gate receipts do not qualify these changes.
 No Beads item is closed or modified.
+
+## Anchored recovery through authenticated Stop
+
+The Linux regression in `source/recovery/tests/anchored_transport.rs` transports
+an actual acknowledged anchor through the bounded private archive and uses it
+to reopen the original source-bound native history. The existing authenticated
+socket protocol must receive an explicit nonce-bound Stop request: connecting,
+receiving an offer and remaining silent leave both canonical and pending files
+unchanged. The original lock stays held until the cursor or connection retires.
+
+After explicit Stop, the same original Unknown effect remains charged and no
+live owner or numerical continuation escapes. The regression independently
+retains and reloads the returned terminal history anchor, then repeats the same
+authenticated operation and requires a zero-event retry with the identical
+receipt and canonical bytes. This extends the existing direct-finalizer tests;
+it does not replace them or establish deployment authentication beyond the
+original Linux peer-credential contract. The test is authored and independently
+source-reviewed; compilation and execution remain pending while the execution
+workspace is unavailable.
