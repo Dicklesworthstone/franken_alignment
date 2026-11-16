@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-16: share initial native precheck admission across service modes
+
+- Apply the retryable creation check to both the single-release CLI and direct
+  native service before source, clock, listener or authority-store custody.
+- Reuse one immutable initial-epoch check for single and resident creation,
+  preserving explicit open, continuation, Finish and later-entry epoch binding.
+- Add direct-runtime and CLI refusal/eligibility regressions. Source and format
+  review remain separate from the pending required RCH execution gate.
+
 ## 2026-11-16: deliver native operator receipts after early resident Stop
 
 - Preserve each selected entry's one unused reply interval when control stops

@@ -1,5 +1,23 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-16: share retryable creation across native publication entry points
+
+Single-release native creation now performs the same initial disclosure epoch
+preflight as resident creation. Both the CLI and direct service entry reject an
+impossible nonzero create epoch before original custody can be acquired; the CLI
+also rejects before publication-profile and numerical-recipe reads. Resident
+admission delegates to the same immutable selection check. Explicit open,
+continuation, Finish and later resident entries retain their actual-owner epoch
+checks and existing recovery semantics.
+
+Two additional regression functions exercise the direct no-clock/no-store
+boundary with an unavailable source and the real CLI with a missing recipe.
+The CLI pairs invalid epoch-one creation with eligible epoch-zero creation and
+epoch-one open selections, alongside the existing real creation/recovery cases.
+Independent source review and targeted Rust syntax/format checks do not replace
+execution. RCH remains unavailable; compilation, runtime, Clippy and full
+qualification are pending, with no Bead or packet closed.
+
 ## 2026-11-16: retain operator receipts across early resident termination
 
 Resident native service exits before actor intake and during helper retirement

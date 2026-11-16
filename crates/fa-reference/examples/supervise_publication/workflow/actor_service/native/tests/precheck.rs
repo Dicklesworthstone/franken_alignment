@@ -17,10 +17,17 @@ use fa_reference::action::consequence::oversight::{
 use std::{collections::BTreeMap, fs, path::Path};
 
 fn selected(root: &Root, epoch: u64) -> exact_precheck::Selection {
-    exact_precheck::Selection::new(Settings::decode(format!(
+    exact_precheck::Selection::new(
+        Settings::decode(disclosure_document(root, epoch).as_bytes()).unwrap(),
+    )
+    .unwrap()
+}
+
+fn disclosure_document(root: &Root, epoch: u64) -> String {
+    format!(
         r#"{{"schema":"fa.actor-precheck-service/1","policy_disclosure":"exact_predicates","socket":"{}/precheck.sock","expected_policy_epoch":{epoch},"disclosure_id":81,"query_limit":2,"exchange_limit":8,"candidate_limit":8,"connection_limit":8,"runtime_ms":15000}}"#,
         root.0.display(),
-    ).as_bytes()).unwrap()).unwrap()
+    )
 }
 
 fn query(
@@ -438,4 +445,128 @@ fn generated_precheck_path_alias_is_rejected_before_clock_or_durable_creation() 
     assert!(error.contains("conflicts"), "{error}");
     assert!(!store.exists());
     assert!(!actor.socket.exists());
+}
+
+#[test]
+fn impossible_generated_create_epoch_preserves_the_store_before_clock_or_source_work() {
+    let root = Root::new();
+    let mut config = configured(&root);
+    let native = inputs(&root, &config);
+    let (actor, reviewer) = profiles(&root, &config);
+    let chosen = selected(&root, 1);
+    let store = config.store.clone();
+    // An unavailable source must not mask this independently knowable error.
+    // Actual source capture and numerical work belong after this preflight.
+    config.source =
+        fa_reference::action::consequence::oversight::evidence_source::FileEvidenceSource::new(
+            root.0.join("unread-source.json"),
+            51,
+            config.profile.delivery.scope,
+            1_048_576,
+        )
+        .unwrap();
+    let mut output = Vec::new();
+    let error = serve_lifecycle_with_precheck(
+        config,
+        &actor,
+        &reviewer,
+        native,
+        (false, None, None, finish::Intent::Existing),
+        None,
+        Some(&chosen),
+        || panic!("an impossible initial epoch must fail before the first clock observation"),
+        &mut output,
+    )
+    .unwrap_err();
+    assert_eq!(
+        error,
+        "native precheck creation requires initial policy epoch zero"
+    );
+    assert!(output.is_empty());
+    assert!(!store.exists());
+    assert!(!actor.socket.exists());
+    assert!(!reviewer.socket(actor.request).exists());
+    assert!(!crate::workflow::control::socket_path(&reviewer, actor.request).exists());
+    assert!(!chosen.settings.socket_path().exists());
+}
+
+#[test]
+fn native_precheck_cli_rejects_impossible_creation_before_recipe_reads_and_preserves_open_epochs() {
+    let root = Root::new();
+    let config = configured(&root);
+    let (actor, reviewer) = profiles(&root, &config);
+    let config_path = root.0.join("config.json");
+    let actor_path = root.0.join("actor.json");
+    let reviewer_path = root.0.join("reviewer.json");
+    let precheck_path = root.0.join("precheck.json");
+    let missing_recipe = root.0.join("missing-recipe.json");
+    let source = root.0.join("unread-source.json");
+    let config_document = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/fixtures/supervised_publication.json"
+    ))
+    .replace(
+        "/operator/publication-store",
+        config.store.to_str().unwrap(),
+    )
+    .replace("/operator/evidence.json", source.to_str().unwrap())
+    .replace(
+        r#""initial_payload_hex": "696e697469616c""#,
+        r#""initial_payload_hex": """#,
+    );
+    fs::write(&config_path, config_document).unwrap();
+    let scope = config.profile.delivery.scope;
+    let scope = format!(
+        r#"{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}"#,
+        scope.tenant, scope.principal, scope.run, scope.branch, scope.authority
+    );
+    let identity = format!(
+        r#"{{"uid":{},"gid":{},"pid":{}}}"#,
+        actor.supervisor.uid(),
+        actor.supervisor.gid(),
+        actor.supervisor.pid().unwrap()
+    );
+    fs::write(&actor_path, format!(
+        r#"{{"schema":"fa.actor-service/1","clock":"unix_milliseconds","request":91,"scope":{scope},"socket":"{}","supervisor":{identity},"actor":{identity},"candidate_limit":4,"connection_limit":4,"exchange_limit":4096,"runtime_ms":15000,"poll_ms":1,"reply_ms":20}}"#,
+        actor.socket.display(),
+    )).unwrap();
+    fs::write(&reviewer_path, format!(
+        r#"{{"version":1,"clock":"unix_milliseconds","scope":{scope},"reviewer_id":77,"socket_directory":"{}","supervisor":{identity},"reviewer":{identity},"candidate_limit":2,"runtime_ms":5000,"poll_ms":1}}"#,
+        root.0.display(),
+    )).unwrap();
+    let recipe_error = crate::config::read_regular(&missing_recipe, 16_384).unwrap_err();
+    for (mode, epoch, impossible) in [
+        ("serve-create", 1, true),
+        ("serve-create", 0, false),
+        ("serve-open", 1, false),
+    ] {
+        fs::write(&precheck_path, disclosure_document(&root, epoch)).unwrap();
+        let args = vec![
+            mode.to_owned(),
+            config_path.display().to_string(),
+            actor_path.display().to_string(),
+            reviewer_path.display().to_string(),
+            "--native-text".into(),
+            missing_recipe.display().to_string(),
+            "--precheck-profile".into(),
+            precheck_path.display().to_string(),
+        ];
+        let error = command(&args, None).unwrap_err();
+        if impossible {
+            assert_eq!(
+                error,
+                "native precheck creation requires initial policy epoch zero"
+            );
+        } else {
+            // Valid creation and explicit recovery must pass this preflight
+            // and reach the same original recipe reader. Recovery later binds
+            // the selected epoch to the actual post-Fence owner, not zero.
+            assert_eq!(error, recipe_error, "{mode} epoch {epoch}");
+        }
+        assert!(!config.store.exists());
+        assert!(!source.exists());
+        assert!(!actor.socket.exists());
+        assert!(!reviewer.socket(actor.request).exists());
+        assert!(!root.0.join("precheck.sock").exists());
+    }
 }

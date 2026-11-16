@@ -19,10 +19,8 @@ pub(super) fn check_initial_epoch(
     first: Option<&exact_precheck::Selection>,
     after: Option<u64>,
 ) -> Result<(), String> {
-    if after.is_none()
-        && first.is_some_and(|selected| selected.settings.expected_policy_epoch() != 0)
-    {
-        return Err("first native sequence precheck must target initial policy epoch zero".into());
+    if let Some(selected) = first {
+        selected.check_initial_epoch(after.is_some())?;
     }
     Ok(())
 }

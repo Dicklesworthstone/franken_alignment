@@ -84,6 +84,16 @@ impl Selection {
         Self::new(shared::Settings::read(path)?)
     }
 
+    /// A fresh original owner has epoch zero before any operator is installed.
+    /// Reject an impossible selection before consuming its exclusive store
+    /// creation. An opener still checks the actual recovered owner afterward.
+    pub(super) fn check_initial_epoch(&self, open: bool) -> Result<(), String> {
+        if !open && self.settings.expected_policy_epoch() != 0 {
+            return Err("native precheck creation requires initial policy epoch zero".into());
+        }
+        Ok(())
+    }
+
     /// Validate all endpoint aliases before a clock, model load, generation or
     /// durable startup. Canonical parents preserve symlink alias detection even
     /// for listeners and stores that do not exist yet.

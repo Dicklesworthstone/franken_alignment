@@ -118,6 +118,15 @@ leaves the existing native service without this endpoint or additional disclosur
 bootstrap. Request schedules, multi-peer, topology and governor combinations do
 not acquire native precheck support through this option.
 
+A fresh native owner begins at policy epoch zero. Create forms reject a
+precheck profile selecting any other epoch before publication-profile or recipe
+loading, and before clocks, listeners, source capture or exclusive authority
+store creation. The direct service entry performs the same preflight. Correcting
+this selection therefore leaves normal creation available. Open, continuation
+and Finish still bind the selected epoch to the actual recovered owner after
+its original Fence; they do not assume epoch zero or rewrite the profile.
+Resident sequence creation shares this initial-owner check for its first entry.
+
 The actor command takes a **precheck query**, not the emitted Submit JSON. Build
 `native-precheck.json` using the strict wire fields:
 

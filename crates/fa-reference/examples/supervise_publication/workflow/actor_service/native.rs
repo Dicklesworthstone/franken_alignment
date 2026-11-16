@@ -75,6 +75,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
         .map(|path| exact_precheck::Selection::read(&path))
         .transpose()?;
     if let Some(selected) = &precheck {
+        selected.check_initial_epoch(open)?;
         selected.check(&config, &actor, &reviewer, operator.as_ref())?;
     }
     let publication = if checked {
@@ -313,7 +314,14 @@ where
     F: FnMut() -> ElapsedTick,
 {
     serve_lifecycle_selected(
-        config, actor, reviewer_profile, inputs, deployment, None, time, output,
+        config,
+        actor,
+        reviewer_profile,
+        inputs,
+        deployment,
+        None,
+        time,
+        output,
     )
 }
 
@@ -374,6 +382,7 @@ where
         selected.check(&config, actor, reviewer_profile)?;
     }
     if let Some(selected) = precheck_selection {
+        selected.check_initial_epoch(open)?;
         selected.check(&config, actor, reviewer_profile, operator_selection)?;
     }
     // Source and complete witness/joint policy belong to the same initial image.
@@ -396,7 +405,11 @@ where
     // must exist while historical numerical work is replayed. Other opens can
     // be receipt-only; they do not gain a control listener before classification.
     let mut recovery_control = if open && matches!(mode, finish::Intent::Continue(_)) {
-        Some(Control::new(&config, actor.request, Some(reviewer_profile))?)
+        Some(Control::new(
+            &config,
+            actor.request,
+            Some(reviewer_profile),
+        )?)
     } else {
         None
     };
@@ -487,12 +500,14 @@ where
         )?)
     };
     let mut operator = operator_selection
-        .map(|selected| selected.start(
-            actor,
-            operator_port.expect("selected native operator retains its source-only port"),
-            &driver,
-            &deadline,
-        ))
+        .map(|selected| {
+            selected.start(
+                actor,
+                operator_port.expect("selected native operator retains its source-only port"),
+                &driver,
+                &deadline,
+            )
+        })
         .transpose()?;
     if let Some(control) = &mut control {
         control.install_operator(operator.take());
@@ -702,8 +717,12 @@ where
         // A broken receipt connection must not stop unrelated later work in the
         // recovered journal. New-work failures retain the original stop/drain.
         if recorded
-            || control.as_ref().is_some_and(Control::native_cleanup_started)
-            || operator_stop.as_ref().is_some_and(crate::workflow::control::Control::native_cleanup_started)
+            || control
+                .as_ref()
+                .is_some_and(Control::native_cleanup_started)
+            || operator_stop
+                .as_ref()
+                .is_some_and(crate::workflow::control::Control::native_cleanup_started)
         {
             return error;
         }
