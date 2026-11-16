@@ -1,5 +1,6 @@
 //! Actual native inference and canonical storage, with synthetic model weights.
 //! These tests cover recovery contracts, not empirical monitor quality.
+mod anchored;
 use super::*;
 use crate::Snapshot;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{

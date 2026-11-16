@@ -8,6 +8,7 @@ use super::{
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
     credibility::{CredibilityEvent, held_out_joint::HeldOutJointPolicy},
+    guarded::anchored::FileHistoryAnchor,
     source::{FileSourcePolicy, SourceEvent},
 };
 
@@ -246,8 +247,9 @@ impl FileOversight {
     /// eligibility, active qualification and effect keys. It preserves recorded
     /// intent, numerical/RNG spend, publication history and unresolved liabilities.
     /// Fresh source/time and explicit resume remain mandatory for new work.
-    /// Additional anchored/role-isolation contracts still need their own composed
-    /// opener. This reference store does not authenticate a file or latest head.
+    /// Independently retained prefixes require the explicit anchored opener;
+    /// role-isolation contracts still require their own composed recovery.
+    /// This reference store does not authenticate a file or latest head.
     pub fn open_generated_text_stream_from_source(
         directory: impl AsRef<Path>,
         profile: FileOversightProfile,
@@ -257,6 +259,29 @@ impl FileOversight {
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         Self::begin_open_generated_text_stream_from_source(
             directory, profile, decoder, tokenizer, selected,
+        )?
+        .finish_synchronously()
+    }
+
+    /// Require an independently retained exact prefix before any original event
+    /// executes. The same locked canonical image supplies the prefix comparison
+    /// and full source-bound native replay; a match never skips source, decoder,
+    /// tokenizer, publication or semantic checks. Only the existing finalizer
+    /// may publish its one Fence and return live custody.
+    ///
+    /// The anchor is trusted operator input, not authentication or fresh source
+    /// evidence. An unanchored suffix must still replay, and rolling back both
+    /// the journal and the independently retained anchor defeats this protection.
+    pub fn open_generated_text_stream_from_source_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedSourceProfile,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
+        Self::begin_open_generated_text_stream_from_source_anchored(
+            directory, profile, decoder, tokenizer, selected, anchor,
         )?
         .finish_synchronously()
     }

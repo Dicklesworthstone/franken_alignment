@@ -113,6 +113,51 @@ No new runtime pass, Beads closure or production qualification is claimed. The
 live service uses this cursor as described in the
 [native publication contract](NATIVE_TEXT_PUBLICATION_SERVICE.md#cooperative-reopen-and-continue-stop).
 
+## Independently retained prefixes for source-bound recovery
+
+`begin_open_generated_text_stream_from_source_anchored` and
+`open_generated_text_stream_from_source_anchored` accept the same source-bound
+configuration plus an independently retained `FileHistoryAnchor`. They serve
+FA-014 and plan sections 7.3, 8.5 and 16.5/16.9 without changing the ordinary
+openers or their journal format.
+
+Capture the prefix from the original acknowledged owner with `history_anchor()`
+and retain it separately from the mutable authority store. The existing
+`FileHistoryAnchor::write_to` / `read_trusted` framing can transport that private
+archive. Importing an archive does not authenticate its origin; the operator
+must select the independently retained copy. The canonical prefix includes
+private evidence and is not an actor-facing artifact.
+
+The anchored constructor compares the exact original encoded prefix, including
+its oversight profile and canonical store identity, immediately after decoding
+the exclusively locked image. This happens before machine construction or any
+historical numerical event. An older image refuses with `Stale`; a divergent
+equal-counter history or another store's prefix refuses with `Binding`.
+Refusal leaves canonical and pending files unchanged. A genuine append-only
+successor is accepted, including later numerical events, but its complete
+suffix must still satisfy the original source, model, tokenizer, publication
+and replay contracts.
+
+Both forms use the existing `FileGeneratedSourceRecovery`. Cancellation, Ready,
+the final canonical-image comparison, the single ordinary Fence and the
+authenticated terminal Stop handoff retain their original boundaries. Recovery
+preserves numerical spending, stream history and charged Unknown effects.
+Neither the anchor nor its successful comparison supplies fresh source evidence,
+current clock eligibility, helper judgment or human approval.
+
+This establishes continuity with the independently selected prefix. It does
+not establish an authenticated latest head, protect history newer than that
+prefix, or prevent rollback if both journal and retained anchor are replaced.
+Other guarded-role and deployment contracts remain separate.
+
+Eight additional regression functions in `source/recovery/tests/anchored.rs`
+pair actual resumed native computation under all six source/publication
+selections with equal-counter forks, valid truncation, foreign stores, invalid
+suffixes, changed independent inputs, Unknown-liability Stop/retry, cancellation
+and canonical replacement after Ready. Independent source review is complete.
+The execution environment is unavailable; compilation, Rust formatting, runtime
+tests, Clippy and the required RCH gate have not run for this increment.
+
 ## Source status and change record — 2026-09-25
 
 Added the two exact-bootstrap openers and their shared preflight to

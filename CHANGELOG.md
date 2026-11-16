@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-15: anchor native text recovery to an independent original prefix
+
+- Add synchronous and cooperative source-bound native openers accepting the
+  existing FileHistoryAnchor, checked before machine construction or replay.
+- Accept genuine append-only numerical history while rejecting equal-counter
+  forks, older cuts and foreign store identities without cleanup or mutation.
+- Reuse the original cursor, Fence, Stop and Unknown-liability contracts.
+- Add eight paired regression functions across the six source/publication
+  profiles. Independent source review is complete; execution and formatting
+  qualification remain pending an available RCH environment.
+
 ## 2026-11-16: cover native precheck and operator composition through Finish
 
 - Exercise three real native prechecks and independently approved releases

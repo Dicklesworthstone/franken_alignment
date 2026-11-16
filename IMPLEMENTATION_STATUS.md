@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-15: bind native text recovery to independently retained history
+
+Native source-bound recovery now offers explicit synchronous and cooperative
+anchored entry points using the existing FileHistoryAnchor. The exact original
+prefix is checked on the same exclusively locked image before machine
+construction or historical numerical work. Equal-counter forks, rollback
+before the retained prefix and another store's history refuse before cleanup
+or Fence. Genuine append-only successors still pass the complete original
+source, model, tokenizer, publication and semantic replay checks.
+
+The original cursor, cancellation, canonical recheck, single recovery Fence
+and terminal Stop finalizers remain shared. Fresh source/time, explicit resume
+and independent publication keys remain required; numerical spending, stream
+history and charged Unknown effects survive. This is retained-prefix continuity,
+not authenticated latest-head or deployment anti-rollback qualification.
+
+Eight authored regressions pair actual native resumption across all six source
+profiles with the relevant causal refusals and Stop/cancellation boundaries.
+Independent production and test-source review is complete. The required command
+could not start because no usable execution environment is available.
+Compilation, Rust formatting, runtime tests, Clippy and the full RCH gate remain
+unexecuted; no Bead or packet is closed. Contract: docs/NATIVE_TEXT_RECOVERY.md.
+
 ## 2026-11-16: exercise resident prechecks with retained operator custody
 
 A combined native transport regression now spans Message, Message and Finish

@@ -2,7 +2,8 @@
 //! Each event uses the original reducer; no partial owner or role escapes.
 use super::{
     BaseEvent, ByteBpe, Event, FileDecoderConfig, FileHumanReviewer, FileOversight,
-    FileOversightProfile, GeneratedSourceProfile, JournalError, MAX_FILE_TOKENIZER_BYTES, Machine,
+    FileHistoryAnchor, FileOversightProfile, GeneratedSourceProfile, JournalError,
+    MAX_FILE_TOKENIZER_BYTES, Machine,
     Path, journal, storage,
 };
 use crate::Error;
@@ -42,8 +43,10 @@ pub struct FileGeneratedSourceRecoveryProgress {
 
 /// One exclusively locked canonical image and its private native reconstruction.
 /// The same source, stream, reserve, publication, joint-policy, decoder and
-/// tokenizer bindings as the synchronous source opener are mandatory. This does
-/// not add independent latest-head, guard-role or anti-rollback assurance.
+/// tokenizer bindings as the synchronous source opener are mandatory. The
+/// explicitly anchored constructor additionally checks an independently retained
+/// exact history prefix before replay. Neither constructor authenticates a latest
+/// head or provisions additional guard roles.
 ///
 /// Creation reads and decodes the original bounded image but executes no event.
 /// Advance bounds event calls; one event, final encoding and persistence remain
@@ -95,6 +98,38 @@ impl FileOversight {
         tokenizer: &ByteBpe,
         selected: GeneratedSourceProfile,
     ) -> Result<FileGeneratedSourceRecovery, JournalError> {
+        FileGeneratedSourceRecovery::begin(
+            directory.as_ref(), profile, decoder, tokenizer, selected, None,
+        )
+    }
+
+    /// Admit an independently retained original prefix before ANY numerical
+    /// replay, staging cleanup, Fence or live role. The same exclusive image
+    /// supplies every later event and both original finalizers. A matching
+    /// prefix never supplies current source evidence or relaxes selected inputs.
+    pub fn begin_open_generated_text_stream_from_source_anchored(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedSourceProfile,
+        anchor: &FileHistoryAnchor,
+    ) -> Result<FileGeneratedSourceRecovery, JournalError> {
+        FileGeneratedSourceRecovery::begin(
+            directory.as_ref(), profile, decoder, tokenizer, selected, Some(anchor),
+        )
+    }
+}
+
+impl FileGeneratedSourceRecovery {
+    fn begin(
+        directory: &Path,
+        profile: FileOversightProfile,
+        decoder: &FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedSourceProfile,
+        anchor: Option<&FileHistoryAnchor>,
+    ) -> Result<Self, JournalError> {
         profile.delivery.limits.check()?;
         if !tokenizer.binds(decoder.profile()) {
             return Err(Error::Binding.into());
@@ -103,21 +138,23 @@ impl FileOversight {
         if tokenizer.len() > MAX_FILE_TOKENIZER_BYTES {
             return Err(Error::Limit.into());
         }
-        let store = storage::Store::open(directory.as_ref())?;
-        FileGeneratedSourceRecovery::begin_store(store, profile, decoder, tokenizer, selected)
+        let store = storage::Store::open(directory)?;
+        Self::begin_store(store, profile, decoder, tokenizer, selected, anchor)
     }
-}
 
-impl FileGeneratedSourceRecovery {
     fn begin_store(
         store: storage::Store,
         profile: FileOversightProfile,
         decoder: &FileDecoderConfig,
         tokenizer: Vec<u8>,
         selected: GeneratedSourceProfile,
+        anchor: Option<&FileHistoryAnchor>,
     ) -> Result<Self, JournalError> {
         let canonical = store.read(profile.delivery.limits.bytes)?;
         let events = journal::decode(&profile, store.identity(), &canonical)?;
+        if let Some(anchor) = anchor {
+            anchor.check(&profile, store.identity(), &events)?;
+        }
         selected.check(&events)?;
         check_text_config(decoder, &tokenizer, &events)?;
         let machine = Machine::new(&profile)?;
