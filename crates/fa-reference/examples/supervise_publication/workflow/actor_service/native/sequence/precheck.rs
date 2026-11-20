@@ -5,8 +5,8 @@
 
 use super::super::{exact_precheck, operator};
 use super::{
-    ActorProposal, Command, Config, ElapsedTick, Entry, EntryServices, Error, FileSupervisedDriver,
-    JournalError, PeerProfile, Profile, Write, debug, encode_command, pause,
+    ActionSpec, ActorProposal, Command, Config, ElapsedTick, Entry, EntryServices, Error,
+    FileSupervisedDriver, JournalError, PeerProfile, Profile, Write, debug, encode_command, pause,
 };
 use crate::workflow::actor_service::precheck as shared;
 use std::collections::BTreeSet;
@@ -78,7 +78,8 @@ pub(super) fn admit<F>(
     driver: &mut FileSupervisedDriver,
     config: &mut Config,
     entry: &Entry,
-    proposal: &ActorProposal,
+    previous: Option<u64>,
+    selected: (&mut ActorProposal, &mut ActionSpec),
     services: EntryServices<'_>,
     time: &mut F,
     output: &mut impl Write,
@@ -92,15 +93,33 @@ where
         peers,
         deadline,
         ingress,
+        governed,
         ..
     } = services;
+    let (proposal, action) = selected;
+    let mut refresh = PolicyRefresh {
+        enabled: governed,
+        used: false,
+        policy_generation: driver
+            .supervisor()
+            .host()
+            .map_err(debug)?
+            .current_policy()
+            .map_err(debug)?
+            .generation(),
+    };
     let mut service = None;
     let result = (|| {
         if let Some(selected) = &entry.precheck {
             if control.checkpoint(driver, reviewer, deadline, &mut *time)? {
                 return Ok(false);
             }
-            service = Some(shared::Service::start_generated(
+            // An independently selected disclosure is never rebound or renewed
+            // after promotion. The actor may use a newly emitted source intent,
+            // but any old exact-precheck grant has ended at its declared epoch.
+            refresh.update(driver, entry, previous, deadline, proposal, action)?;
+            if !refresh.used {
+                service = Some(shared::Service::start_generated(
                 &selected.settings,
                 &entry.actor,
                 peers,
@@ -109,24 +128,20 @@ where
                 deadline,
                 time,
                 proposal,
-            )?);
+                )?);
+            }
         }
-        let document = encode_command(&Command::Submit {
-            request: entry.actor.request,
-            proposal: proposal.clone(),
-        })
-        .map_err(debug)?;
-        output
-            .write_all(&document)
-            .and_then(|()| output.write_all(b"\n"))
-            .and_then(|()| output.flush())
-            .map_err(|error| {
-                format!("source reference output failed: {error}; no actor request sent")
-            })?;
+        emit(entry.actor.request, proposal, output)?;
         loop {
             deadline.check(time())?;
             if control.checkpoint(driver, reviewer, deadline, &mut *time)? {
                 return Ok(false);
+            }
+            if refresh.update(driver, entry, previous, deadline, proposal, action)? {
+                if let Some(mut stale) = service.take() {
+                    stale.retire();
+                }
+                emit(entry.actor.request, proposal, output)?;
             }
             if let Some(service) = &mut service {
                 service.checkpoint(driver, time());
@@ -136,6 +151,12 @@ where
                 if control.checkpoint(driver, reviewer, deadline, &mut *time)? {
                     return Ok(false);
                 }
+            }
+            if refresh.update(driver, entry, previous, deadline, proposal, action)? {
+                if let Some(mut stale) = service.take() {
+                    stale.retire();
+                }
+                emit(entry.actor.request, proposal, output)?;
             }
             ingress.drive(driver, config, &mut *time)?;
             match driver
@@ -155,4 +176,98 @@ where
         service.retire();
     }
     result
+}
+
+fn emit(request: u64, proposal: &ActorProposal, output: &mut impl Write) -> Result<(), String> {
+    let document = encode_command(&Command::Submit {
+        request,
+        proposal: proposal.clone(),
+    })
+    .map_err(debug)?;
+    output
+        .write_all(&document)
+        .and_then(|()| output.write_all(b"\n"))
+        .and_then(|()| output.flush())
+        .map_err(|error| format!("source reference output failed: {error}; no actor request sent"))
+}
+
+/// Exactly one fresh projection may follow the original governor's single
+/// promotion. A source reference is input, never a rewrite of an admitted
+/// request: any recorded disposition keeps its original frozen intent.
+struct PolicyRefresh {
+    enabled: bool,
+    used: bool,
+    policy_generation: u64,
+}
+
+impl PolicyRefresh {
+    fn update(
+        &mut self,
+        driver: &FileSupervisedDriver,
+        entry: &Entry,
+        previous: Option<u64>,
+        deadline: &super::Deadline,
+        proposal: &mut ActorProposal,
+        action: &mut ActionSpec,
+    ) -> Result<bool, String> {
+        if !self.enabled {
+            return Ok(false);
+        }
+        let host = driver.supervisor().host().map_err(debug)?;
+        match host.request_status(entry.actor.request) {
+            Ok(_) => return Ok(false),
+            Err(JournalError::Contract(Error::Missing)) => {}
+            Err(error) => return Err(debug(error)),
+        }
+        let epoch = host.inspect().control.ledger.epoch;
+        if epoch == proposal.expected_policy_epoch {
+            return Ok(false);
+        }
+        if self.used
+            || proposal.expected_policy_epoch.checked_add(1) != Some(epoch)
+            || host.current_policy().map_err(debug)?.generation() == self.policy_generation
+        {
+            return Err(
+                "native source reference cannot refresh a non-promotion authority change".into(),
+            );
+        }
+        let fresh = match entry.release {
+            super::Release::Message => super::completed_message_proposal(
+                driver,
+                entry.actor.request,
+                &entry.inputs,
+                deadline,
+            )?,
+            super::Release::Finish => {
+                let intent = host
+                    .prepare_decoder_text_finish(
+                        previous.ok_or("native Finish refresh needs its original predecessor")?,
+                        entry.actor.request,
+                        proposal.deadline,
+                    )
+                    .map_err(debug)?;
+                super::FileGeneratedTextActorPort::encode_finish(
+                    entry.actor.request,
+                    intent.target,
+                    intent.expected_policy_epoch,
+                    intent.deadline,
+                )
+                .map_err(debug)?
+            }
+        };
+        let fresh_action = super::selected_action(driver, entry, &fresh)?;
+        let mut same_intent = fresh.clone();
+        same_intent.expected_policy_epoch = proposal.expected_policy_epoch;
+        let mut same_action = fresh_action.clone();
+        same_action.policy_epoch = action.policy_epoch;
+        if same_intent != *proposal || same_action != *action {
+            return Err("native policy refresh changed the selected source, target, deadline or full action".into());
+        }
+        // No clock, source capture, inference, permit or journal mutation occurs.
+        // The independently authenticated actor must submit this NEW envelope.
+        *proposal = fresh;
+        *action = fresh_action;
+        self.used = true;
+        Ok(true)
+    }
 }

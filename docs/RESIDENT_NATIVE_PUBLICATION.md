@@ -13,7 +13,7 @@ actor's behalf. Generated text remains private until the original publication
 gate admits its cumulative frame.
 
 This is a bounded reference service under plan sections 8.7, 11.2, 16.4/16.9 and
-17.1, serving FA-017, FA-025, FA-026 and FA-107. Compilation and runtime
+17.1 and 22.7, serving FA-017, FA-025, FA-026, FA-107 and FA-130. Compilation and runtime
 qualification of this increment remain pending the required RCH verifier.
 
 ## Select the complete sequence
@@ -28,6 +28,9 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
   --after-message PREVIOUS_REQUEST --credibility-activation CAPSULE
 supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
   --operator-profile OPERATOR_PROFILE --tower-generation NONZERO
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation NONZERO \
+  --governor-profile GOVERNOR_PROFILE
 ```
 
 The optional publication profile retains the native service's existing simple
@@ -421,6 +424,64 @@ Use the existing `tower-operator-exchange` client with this profile and the exac
 run registration. The complete profile, grant and response contracts are in
 [native Tower publication](TOWER_PUBLICATION.md#operate-an-original-native-generated-text-stream).
 
+## Independent policy governance during native creation
+
+A new resident sequence can explicitly select `--governor-profile PROFILE`
+together with its operator profile and Tower generation. The governor profile
+supplies the exact campaign requirement installed atomically in the original
+first journal image. No second campaign profile or later guard installation is
+used. The governor and human reviewer are separate opaque roles returned only
+after acknowledged creation. Ordinary native operator selection continues to
+refuse policy promotion.
+
+Both sides must explicitly budget numerical reconstruction: the governor selects
+`numerical_replay`, and the operator's `policy_promotion` selects
+`numerical_replay_events`. Their original replay allowances, campaign limits,
+connection/exchange counts and deadlines remain independent and cumulative
+through every Message/Finish handoff. The complete profile and protocol are in
+[live policy governance](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-native-sequence).
+
+Governor credentials must be disjoint from every selected actor, operator and
+human reviewer. Admission reserves its canonical socket against the authority
+store, evidence source, every future actor/reviewer/Stop/precheck endpoint,
+selected configuration/profile files, publication witness inputs and retained
+history output. All selected role profiles are checked before model loading.
+For each recipe, its model, monitor, sampler, prompt, tokenizer, weight index and
+physical shard paths are checked before that recipe's referenced asset reads.
+Earlier compatible recipes may already have loaded assets when a later recipe
+is refused; no clock, listener or authority store has been acquired then.
+
+After an earlier publication provides the original retained policy corpus,
+withhold the next actor Submit at the post-generation source-reference boundary.
+The independent governor can Request and Approve the complete original replay
+report, then the operator can Next and Promote. Campaign processing does not
+reread source evidence or rerun helpers. Further numerical advancement stales a
+campaign; the service never silently rebases it.
+
+If promotion changes the policy epoch while the selected actor request is still
+entirely absent, the service emits one fresh reference for that same completed
+Message or confirmed-predecessor Finish. Only the expected policy epoch changes.
+The full source payload, generation, target, release kind, deadline, scope and
+units must remain identical. This projection consumes no inference, source
+capture, permit or journal event. The independent actor must submit the new
+reference itself; an earlier queued reference cannot authorize the new epoch.
+Any recorded request disposition keeps its original intent and prevents refresh.
+
+An old exact-precheck listener is retired at this boundary. It is not rebound,
+and its query allowance is not replenished. The operator and governor remain
+available after the original independent Stop check during generation, intake,
+helper/human review and retirement. Promotion preserves completed numerical work,
+the confirmed stream prefix and unresolved charges. Every next release still
+requires fresh current evidence, original helper review, independent human
+approval and its selected final publication checks.
+
+This creation selection accepts the existing publication profiles that need no
+joint-credibility activation, and optional `--retain-history-anchor NEW_OUTPUT`.
+It refuses `--after-message`, `--history-anchor`, credibility activation, topology
+selection and single-release commands. Retaining an archive does not select or
+authorize governed native recovery. A complete independently selected current
+policy and campaign recovery contract remains necessary for that future path.
+
 ## Stop, deadlines and failure
 
 One authenticated Stop service remains owned for the entire invocation. Its
@@ -455,7 +516,8 @@ credibility activation, topology or policy-governor services. History custody
 requires its explicit input/output options. Requalification requires its explicit
 capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
-require explicit version-two manifest rows.
+require explicit version-two manifest rows. Native governance requires the
+separate creation-only governor selection described above.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,
@@ -467,6 +529,10 @@ input, rollback and divergent-history refusal, startup Fence retention, Ready
 Stop and deadline boundaries, and output collision without effect retry.
 Profile cases pair admitted sequences with incompatible identities, duplicate
 keys, invalid release ordering, finite limits and canonical path collisions.
+Governance cases use a separate authenticated governor process, retained-corpus
+Request/Approve and actual operator promotion before further native publication.
+They pair fresh source references with human rejection, altered release/deadline
+submissions, cumulative campaign/replay limits and the original independent Stop.
 These tests address contract enforcement; synthetic model and helper fixtures
 do not establish trained detector quality or hostile-process containment.
 

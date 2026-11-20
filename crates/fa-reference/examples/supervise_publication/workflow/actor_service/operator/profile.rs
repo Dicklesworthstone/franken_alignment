@@ -927,11 +927,26 @@ impl Settings {
         self.check_numerical_operator("native text", false)
     }
 
+    /// Only native resident creation with separately selected governor custody
+    /// may admit promotion. Its reconstruction allowance remains independent.
+    pub(crate) fn check_governed_generated_operator(&self) -> Result<(), String> {
+        if self
+            .policy_promotion
+            .as_ref()
+            .is_none_or(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(
+                "governed native promotion requires an explicit numerical replay budget".into(),
+            );
+        }
+        self.check_numerical_operator("native text", true)
+    }
+
     fn check_numerical_operator(&self, profile: &str, governed: bool) -> Result<(), String> {
         self.validate()?;
         if self.policy_promotion.is_some() && !governed {
             return Err(
-                "numerical policy promotion requires the separately selected learned governor"
+                "numerical policy promotion requires a separately selected governor"
                     .into(),
             );
         }

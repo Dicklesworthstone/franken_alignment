@@ -229,7 +229,7 @@ impl Settings {
     ) -> Result<(), String> {
         if self.numerical_replay.is_some() {
             return Err(
-                "numerical governor work requires an explicitly governed learned sequence".into(),
+                "numerical governor work requires an explicitly governed native or learned sequence".into(),
             );
         }
         self.check_host_roles(config, actor, reviewer, operator, requests, 2)
@@ -257,6 +257,25 @@ impl Settings {
         requests: &[u64],
     ) -> Result<(), String> {
         self.check_learned_host_roles(config, actor, reviewer, operator, requests, 2)
+    }
+
+    /// Native creation installs the same original campaign guard but retains
+    /// its distinct source-only actor port and independently paid reconstruction.
+    pub(crate) fn check_generated_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+    ) -> Result<(), String> {
+        if self.numerical_replay.is_none() {
+            return Err(
+                "native governor requires its own explicit numerical replay allowance".into(),
+            );
+        }
+        operator.check_governed_generated_operator()?;
+        self.check_host_roles(config, actor, reviewer, operator, requests, 2)
     }
 
     /// An explicitly recovered learned owner may have only its final Message

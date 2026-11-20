@@ -1,16 +1,18 @@
 //! A finite sequence on one ORIGINAL native numerical/publication owner.
 //! Every release retains independent source-only actor admission, congress and
 //! human review. Only a confirmed Executed predecessor permits another entry.
-#[path = "sequence/profile.rs"]
-mod profile;
+#[path = "sequence/anchors.rs"]
+mod anchors;
 #[path = "sequence/precheck.rs"]
 mod disclosure;
+#[path = "sequence/governor.rs"]
+mod governor;
+#[path = "sequence/profile.rs"]
+mod profile;
 #[path = "sequence/recovery.rs"]
 mod recovered;
 #[path = "sequence/qualification.rs"]
 mod requalification;
-#[path = "sequence/anchors.rs"]
-mod anchors;
 #[cfg(test)]
 #[path = "sequence/tests.rs"]
 mod tests;
@@ -156,10 +158,42 @@ pub(super) fn run_with_history<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    run_with_governor(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        selection,
+        credibility,
+        history,
+        None,
+        time,
+        output,
+    )
+}
+
+/// A selected governor and numerical operator retain one original independent
+/// session each. Creation installs their campaign guard in the first image;
+/// neither a handoff nor a reconnect can replenish their finite allowances.
+pub(super) fn run_with_governor<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    credibility: Option<&Path>,
+    history: Option<&anchors::Selection>,
+    governor: Option<&governor::Settings>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     let mut retention = anchors::Retention::new(history);
     let result = run_retained(
         config, entries, reviewer_profile, publication, selection, credibility,
-        history, &mut retention, time, output,
+        history, governor, &mut retention, time, output,
     );
     retention.finish(result)
 }
@@ -172,6 +206,7 @@ fn run_retained<F>(
     selection: (Option<u64>, Option<&operator::Selection>),
     credibility: Option<&Path>,
     history: Option<&anchors::Selection>,
+    selected_governor: Option<&governor::Settings>,
     retention: &mut anchors::Retention<'_>,
     mut time: F,
     output: &mut impl Write,
@@ -180,8 +215,23 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (after, selected_operator) = selection;
+    governor::check_selection(selected_governor, selected_operator, after, credibility)?;
+    governor::check_publication(selected_governor, publication)?;
     requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
+    governor::check(
+        selected_governor,
+        selected_operator,
+        &config,
+        &entries
+            .iter()
+            .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+            .collect::<Vec<_>>(),
+        reviewer_profile,
+        after,
+        credibility,
+        history,
+    )?;
     if let Some(selected) = selected_operator {
         // Direct callers receive the same whole-sequence scope and canonical
         // endpoint admission as the file loader, before time or owner setup.
@@ -238,7 +288,7 @@ where
     let first_socket = BoundSocket::bind(&first.actor.socket, None)?;
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
-    let (host, reviewer) = if after.is_some() {
+    let (host, reviewer, governor_role) = if after.is_some() {
         let mut stopped = None;
         let opened = bootstrap::open_with_retained_history(
             &config,
@@ -251,9 +301,19 @@ where
             retention.requested().then_some(&mut stopped),
         );
         retention.observe_stop(stopped);
-        opened?
+        let (host, reviewer) = opened?;
+        (host, reviewer, None)
+    } else if let Some(settings) = selected_governor {
+        let (host, reviewer, governor) = bootstrap::prepare_governed(
+            &config,
+            &first.inputs,
+            selected,
+            settings.campaign_requirement(),
+        )?;
+        (host, reviewer, Some(governor))
     } else {
-        bootstrap::prepare(&config, &first.inputs, selected, false)?
+        let (host, reviewer) = bootstrap::prepare(&config, &first.inputs, selected, false)?;
+        (host, reviewer, None)
     };
     // No fallible startup admission can discard an acknowledged create/Fence
     // cut. These checks are read-only; a live driver captures its later cut below.
@@ -279,7 +339,7 @@ where
     }
     let (port, supervisor) = host.into_generated_text_actor_gateway().map_err(debug)?;
     let mut driver = FileSupervisedDriver::new(supervisor);
-    let operator = match selected_operator
+    let mut operator = match selected_operator
         .map(|selected| selected.start(&first.actor, port.clone(), &driver, &first_deadline))
         .transpose()
     {
@@ -289,6 +349,26 @@ where
             return Err(error);
         }
     };
+    if let (Some(settings), Some(role)) = (selected_governor, governor_role) {
+        let installed = crate::workflow::actor_service::governor::Service::start(
+            settings,
+            &first.actor,
+            role,
+            &first_deadline,
+        )
+        .and_then(|governor| {
+            operator
+                .as_mut()
+                .ok_or_else(|| {
+                    "native governor lost its independently selected operator".to_owned()
+                })?
+                .attach_governor(governor)
+        });
+        if let Err(error) = installed {
+            retention.observe_driver(&driver);
+            return Err(error);
+        }
+    }
     control.install_operator(operator);
     // These are bounded executable configurations, not children or review
     // capabilities. A clone for a successor is installed ONLY after the old
@@ -367,6 +447,7 @@ where
                     publication,
                     deadline: &deadline,
                     ingress: &mut ingress,
+                    governed: selected_governor.is_some(),
                 },
                 &mut time,
                 output,
@@ -500,6 +581,7 @@ struct EntryServices<'a> {
     publication: Option<&'a PublicationProfile>,
     deadline: &'a Deadline,
     ingress: &'a mut Intake,
+    governed: bool,
 }
 
 fn execute_entry<F>(
@@ -522,6 +604,7 @@ where
         publication,
         deadline,
         ingress,
+        governed,
     } = services;
     let prepared = {
         let host = driver.supervisor().host().map_err(debug)?;
@@ -570,7 +653,7 @@ where
         let host = driver.supervisor().host().map_err(debug)?;
         super::super::precheck::check_owner_epoch(&selected.settings, &host)?;
     }
-    let proposal = match entry.release {
+    let mut proposal = match entry.release {
         Release::Finish => {
             let Some(proposal) = finish::prepare(
                 driver,
@@ -613,12 +696,13 @@ where
     // The source-only port deliberately accepts both original release kinds.
     // Pin this independently selected entry's complete original action before
     // actor intake so another valid source intent cannot change the sequence.
-    let expected_action = selected_action(driver, entry, &proposal)?;
+    let mut expected_action = selected_action(driver, entry, &proposal)?;
     if !disclosure::admit(
         driver,
         config,
         entry,
-        &proposal,
+        previous,
+        (&mut proposal, &mut expected_action),
         EntryServices {
             control: &mut *control,
             reviewer,
@@ -626,6 +710,7 @@ where
             publication,
             deadline,
             ingress: &mut *ingress,
+            governed,
         },
         time,
         output,
@@ -642,7 +727,7 @@ where
     let mut operator = control.take_operator();
     let mut pump = |driver: &mut FileSupervisedDriver| {
         if let Some(service) = &mut operator {
-            service.checkpoint();
+            service.checkpoint_driver(driver);
         }
         ingress.observe(driver)?;
         let status = driver

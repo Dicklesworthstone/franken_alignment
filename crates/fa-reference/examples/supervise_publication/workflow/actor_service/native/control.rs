@@ -72,7 +72,7 @@ impl Control {
         let Some(operator) = &mut self.operator else {
             return Ok(false);
         };
-        operator.checkpoint();
+        operator.checkpoint_driver(driver);
         self.stop.native_stop(driver, time)
     }
 

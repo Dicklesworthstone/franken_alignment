@@ -72,6 +72,7 @@ pub(super) fn take_option(
 pub(super) struct Selection {
     pub(super) settings: shared::Settings,
     pub(super) generation: u64,
+    governed: bool,
 }
 
 impl Selection {
@@ -80,11 +81,38 @@ impl Selection {
             return Err(USAGE.into());
         }
         settings.check_generated_operator()?;
-        Ok(Self { settings, generation })
+        Ok(Self {
+            settings,
+            generation,
+            governed: false,
+        })
+    }
+
+    pub(super) fn new_governed(
+        settings: shared::Settings,
+        generation: u64,
+    ) -> Result<Self, String> {
+        if generation == 0 {
+            return Err(USAGE.into());
+        }
+        settings.check_governed_generated_operator()?;
+        Ok(Self {
+            settings,
+            generation,
+            governed: true,
+        })
+    }
+
+    pub(super) fn is_governed(&self) -> bool {
+        self.governed
     }
 
     pub(super) fn read(path: &Path, generation: u64) -> Result<Self, String> {
         Self::new(shared::Settings::read(path)?, generation)
+    }
+
+    pub(super) fn read_governed(path: &Path, generation: u64) -> Result<Self, String> {
+        Self::new_governed(shared::Settings::read(path)?, generation)
     }
 
     /// Check audience and all endpoint/source/store aliases before the first
@@ -98,7 +126,11 @@ impl Selection {
         if self.generation == 0 {
             return Err(USAGE.into());
         }
-        self.settings.check_generated_operator()?;
+        if self.governed {
+            self.settings.check_governed_generated_operator()?;
+        } else {
+            self.settings.check_generated_operator()?;
+        }
         self.settings.check_host(config, actor, reviewer, &[])?;
         let socket = resolve(&self.settings.socket)?;
         if socket.starts_with(resolve(&config.store)?) {
@@ -123,6 +155,7 @@ impl Selection {
             || self.settings.abandonment.is_some()
             || self.settings.fence.is_some()
             || self.settings.narrowing.is_some()
+            || self.settings.policy_promotion.is_some()
         {
             return Err("recorded native receipt recovery accepts only observation operator grants".into());
         }
@@ -136,9 +169,25 @@ impl Selection {
         driver: &FileSupervisedDriver,
         deadline: &Deadline,
     ) -> Result<shared::Service, String> {
-        shared::Service::start_generated(
-            &self.settings, actor, port, driver, self.generation, deadline,
-        )
+        if self.governed {
+            shared::Service::start_generated_governed(
+                &self.settings,
+                actor,
+                port,
+                driver,
+                self.generation,
+                deadline,
+            )
+        } else {
+            shared::Service::start_generated(
+                &self.settings,
+                actor,
+                port,
+                driver,
+                self.generation,
+                deadline,
+            )
+        }
     }
 }
 

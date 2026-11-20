@@ -4,7 +4,7 @@
 //! tokenizer inputs share the first recipe's retained allocations afterward.
 
 use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
-use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors};
+use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, governor};
 use crate::config::read_regular;
 use fa_reference::action::ElapsedTick;
 use fa_reference::strict_json::{self, Json, Limits};
@@ -13,7 +13,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with new creation and governed operator] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
 
 struct Input {
     recipe: PathBuf,
@@ -140,7 +140,8 @@ pub(super) fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (args, history_options) = anchors::take_options(args)?;
+    let (args, governor_path) = governor::take_option(args, credibility)?;
+    let (args, history_options) = anchors::take_options(&args)?;
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
     history_options.check_mode(after)?;
@@ -148,16 +149,66 @@ where
     selected_files.extend(publication_path.iter().cloned());
     selected_files.extend(operator_option.iter().map(|(path, _)| path.clone()));
     selected_files.extend(credibility.map(Path::to_path_buf));
+    selected_files.extend(governor_path.iter().cloned());
     history_options.check_files(&selected_files)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
-    let selected_operator = operator_option
-        .map(|(path, generation)| operator::Selection::read(&path, generation))
+    let selected_governor = governor_path
+        .as_deref()
+        .map(governor::Settings::read)
         .transpose()?;
+    let selected_operator = operator_option
+        .map(|(path, generation)| {
+            if selected_governor.is_some() {
+                operator::Selection::read_governed(&path, generation)
+            } else {
+                operator::Selection::read(&path, generation)
+            }
+        })
+        .transpose()?;
+    governor::check_selection(
+        selected_governor.as_ref(),
+        selected_operator.as_ref(),
+        after,
+        credibility,
+    )?;
     let publication = publication_path
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
+    governor::check_publication(selected_governor.as_ref(), publication.as_ref())?;
+    if let Some(governor) = selected_governor.as_ref() {
+        governor.check_custody_paths(
+            &selected_files
+                .iter()
+                .map(PathBuf::as_path)
+                .collect::<Vec<_>>(),
+        )?;
+        // A future listener cannot consume an independently retained archive.
+        history_options.check_files(&[governor.socket.clone()])?;
+        let (entries, history) = load_with_services(
+            Path::new(&args[2]),
+            &config,
+            &peers,
+            after,
+            selected_operator.as_ref(),
+            credibility,
+            Some(history_options),
+            Some(governor),
+        )?;
+        return super::run_with_governor(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            (after, selected_operator.as_ref()),
+            credibility,
+            history.as_ref(),
+            Some(governor),
+            time,
+            output,
+        );
+    }
     if history_options.is_selected() {
         let (entries, history) = load_with_history(
             Path::new(&args[2]),
@@ -347,6 +398,29 @@ fn load_with_history(
     credibility: Option<&Path>,
     history_options: Option<anchors::Options>,
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    load_with_services(
+        path,
+        config,
+        peers,
+        after,
+        selected_operator,
+        credibility,
+        history_options,
+        None,
+    )
+}
+
+fn load_with_services(
+    path: &Path,
+    config: &Config,
+    peers: &PeerProfile,
+    after: Option<u64>,
+    selected_operator: Option<&operator::Selection>,
+    credibility: Option<&Path>,
+    history_options: Option<anchors::Options>,
+    selected_governor: Option<&governor::Settings>,
+) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    governor::check_selection(selected_governor, selected_operator, after, credibility)?;
     if let Some(options) = &history_options {
         options.check_mode(after)?;
         options.check_files(&[path.to_path_buf()])?;
@@ -365,6 +439,17 @@ fn load_with_history(
         Some(_) => decode_selected(&bytes, base, after)?,
         None => decode(&bytes, base)?,
     };
+    if let Some(governor) = selected_governor {
+        let mut paths = vec![path];
+        for entry in &plan {
+            paths.extend([entry.recipe.as_path(), entry.actor.as_path()]);
+            paths.extend(entry.precheck.as_deref());
+        }
+        governor.check_custody_paths(&paths)?;
+        if let Some(options) = &history_options {
+            options.check_files(&[governor.socket.clone()])?;
+        }
+    }
     if let Some(options) = &history_options {
         let mut files = Vec::with_capacity(plan.len() * 3);
         for entry in &plan {
@@ -415,6 +500,20 @@ fn load_with_history(
         selected_operator,
         credibility,
     )?;
+    governor::check(
+        selected_governor,
+        selected_operator,
+        config,
+        &actors
+            .iter()
+            .zip(&prechecks)
+            .map(|(actor, selected)| (actor, selected.as_ref()))
+            .collect::<Vec<_>>(),
+        peers,
+        after,
+        credibility,
+        None,
+    )?;
     let history = history_options.map(|options| {
         options.admit(
             config,
@@ -432,10 +531,14 @@ fn load_with_history(
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
     for ((selected, actor), precheck) in plan.into_iter().zip(actors).zip(prechecks) {
-        let mut inputs = recipe::load(
+        let mut inputs = recipe::load_with_path_check(
             &selected.recipe,
             config.profile.delivery.scope.tenant,
             config.profile.delivery.limits.bytes,
+            |path| match selected_governor {
+                Some(governor) => governor.check_custody_paths(&[path]),
+                None => Ok(()),
+            },
         )?;
         let canonical = inputs.tokenizer.to_bytes().map_err(debug)?;
         if let Some(original) = entries.first() {

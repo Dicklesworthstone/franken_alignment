@@ -4,6 +4,9 @@ use super::{Config, FileOversight, FileHumanReviewer, Inputs, PublicationProfile
 use fa_reference::action::consequence::delivery::persistent::observed::stream::generated::checked::source::{
     GeneratedSourceProfile, GeneratedSourcePublication,
 };
+use fa_reference::action::consequence::delivery::persistent::observed::{
+    governance::campaigns::FilePolicyGovernor, guarded::FileCampaignRequirement,
+};
 
 mod recovery;
 #[cfg(test)]
@@ -56,5 +59,24 @@ pub(super) fn prepare(
             selected,
         )
     }
+    .map_err(debug)
+}
+
+/// The original complete first image returns the governor only after storage
+/// acknowledgment. It does not install a guard into an existing owner.
+pub(super) fn prepare_governed(
+    config: &Config,
+    inputs: &Inputs,
+    selected: GeneratedSourceProfile,
+    campaigns: FileCampaignRequirement,
+) -> Result<(FileOversight, FileHumanReviewer, FilePolicyGovernor), String> {
+    FileOversight::create_generated_text_stream_from_source_governed(
+        &config.store,
+        config.profile.clone(),
+        inputs.decoder.clone(),
+        inputs.tokenizer.clone(),
+        selected,
+        campaigns,
+    )
     .map_err(debug)
 }

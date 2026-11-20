@@ -112,7 +112,6 @@ fn resident_native_operator_pair_has_one_closed_grammar_for_creation_and_recover
         ["--operator-profile", "/missing/second"],
         ["--tower-generation", "42"],
         ["--native-text", "recipe"],
-        ["--governor-profile", "governor"],
         ["--precheck-profile", "precheck"],
         ["--requests", "91,92"],
         ["--finish-after-message", "90"],
@@ -122,15 +121,17 @@ fn resident_native_operator_pair_has_one_closed_grammar_for_creation_and_recover
         rejected.push(args);
     }
     for args in rejected {
+        let mut output = Vec::new();
         assert_eq!(
             command_with_clock(
                 &args,
                 None,
                 || panic!("invalid operator grammar read time"),
-                &mut Vec::new()
+                &mut output
             ),
             Err(USAGE.into()),
         );
+        assert!(output.is_empty());
     }
 }
 

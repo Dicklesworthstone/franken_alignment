@@ -2,6 +2,9 @@
 //! orchestration of the native publication gate, not another validation engine.
 #[path = "publication/feed.rs"]
 mod feed;
+#[cfg(test)]
+#[path = "publication/input_paths_tests.rs"]
+mod input_paths_tests;
 #[path = "publication/joint.rs"]
 mod joint;
 #[cfg(test)]
@@ -49,6 +52,7 @@ pub(crate) const PROFILE_BYTES: usize = 65_536;
 pub struct PublicationProfile {
     pub limits: PublicationLimits,
     sources: PublicationSources,
+    input_paths: Vec<PathBuf>,
     requests: Vec<WitnessRequest>,
     feed: Option<FeedProfile>,
     wait: Option<WaitPolicy>,
@@ -112,16 +116,22 @@ impl PublicationProfile {
             None
         };
         let source = root.number("source")?;
+        let mut input_paths = Vec::with_capacity(3);
         let (sources, feed) = match schema.as_str() {
             "fa.supervised-witnesses/1"
             | "fa.supervised-witnesses/2"
             | "fa.supervised-witnesses/4" => {
-                let original = PublicationInputFile::new(path(root.text("original")?)?, source)
-                    .map_err(debug)?;
-                let current = PublicationInputFile::new(path(root.text("current")?)?, source)
-                    .map_err(debug)?;
+                let original = path(root.text("original")?)?;
+                let current = path(root.text("current")?)?;
+                input_paths.extend([original.clone(), current.clone()]);
+                let original = PublicationInputFile::new(original, source).map_err(debug)?;
+                let current = PublicationInputFile::new(current, source).map_err(debug)?;
                 let feed = if schema != "fa.supervised-witnesses/1" {
-                    Some(FeedProfile::decode(root.take("feed")?)?)
+                    let value = root.take("feed")?;
+                    let selected = value.get("path").and_then(Json::as_str)
+                        .ok_or("publication feed path must be text")?;
+                    input_paths.push(path(selected.to_owned())?);
+                    Some(FeedProfile::decode(value)?)
                 } else {
                     None
                 };
@@ -133,6 +143,7 @@ impl PublicationProfile {
             | "fa.supervised-whole-input/2" => {
                 let mut producer = Fields::new(root.take("producer")?)?;
                 let path = path(producer.text("path")?)?;
+                input_paths.push(path.clone());
                 let mut scope = Fields::new(producer.take("scope")?)?;
                 let scope_value = Scope {
                     tenant: scope.number("tenant")?,
@@ -217,12 +228,24 @@ impl PublicationProfile {
         Ok(Self {
             limits,
             sources,
+            input_paths,
             requests,
             feed,
             wait,
             snapshot_fallback,
             joint,
         })
+    }
+
+    /// Declared original/current capture and feed paths, or the single coupled
+    /// producer path. These are retained by the original strict decoder so
+    /// endpoint admission can reserve their names without opening live inputs.
+    pub(crate) fn input_paths(&self) -> &[PathBuf] {
+        &self.input_paths
+    }
+
+    pub(crate) fn requires_joint(&self) -> bool {
+        self.joint.is_some()
     }
 
     pub(crate) fn simple_limits(&self) -> Result<PublicationLimits, String> {

@@ -20,6 +20,8 @@ use fixture::{Root, configured, inputs, profiles};
 
 #[path = "tests/operator.rs"]
 mod operator_tests;
+#[path = "tests/governor.rs"]
+mod governor_tests;
 #[path = "tests/precheck.rs"]
 mod precheck_tests;
 #[path = "tests/combined.rs"]
@@ -215,7 +217,6 @@ fn native_resident_command_owns_all_options_before_input_or_clock_work() {
         "--tower-generation",
         "--precheck-profile",
         "--precheck-schedule",
-        "--governor-profile",
         "--topology-profile",
         "--guarded",
         "--finish-after-message",

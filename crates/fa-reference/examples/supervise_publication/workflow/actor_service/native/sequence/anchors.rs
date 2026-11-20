@@ -152,6 +152,21 @@ impl Selection {
         self.input.as_ref().map(|(_, anchor)| anchor)
     }
 
+    pub(super) fn check_endpoint(&self, endpoint: &Path) -> Result<(), String> {
+        let endpoint = operator::resolve(endpoint)?;
+        if self
+            .input
+            .as_ref()
+            .is_some_and(|(path, _)| *path == endpoint)
+            || self.output.as_ref().is_some_and(|path| *path == endpoint)
+        {
+            return Err(
+                "native history custody conflicts with the independent governor endpoint".into(),
+            );
+        }
+        Ok(())
+    }
+
     pub(super) fn check(
         &self,
         config: &Config,

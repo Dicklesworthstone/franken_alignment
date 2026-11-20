@@ -39,6 +39,19 @@ pub(super) struct Inputs {
 
 /// No output, verdict, cursor, key or callback can be supplied in this document.
 pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs, String> {
+    load_with_path_check(path, tenant, byte_limit, |_| Ok(()))
+}
+
+/// Reserve caller-owned custody against every explicitly selected input after
+/// complete recipe admission and before opening any referred numerical asset.
+/// The callback receives recipe-relative paths resolved against the recipe's
+/// parent; it cannot supply bytes or replace the original loaders or budgets.
+pub(super) fn load_with_path_check(
+    path: &Path,
+    tenant: u64,
+    byte_limit: usize,
+    mut check: impl FnMut(&Path) -> Result<(), String>,
+) -> Result<Inputs, String> {
     let bytes = read_regular(path, MAX_RECIPE_BYTES.min(byte_limit))?;
     let mut f = Fields::new(
         strict_json::parse(
@@ -110,20 +123,22 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     {
         return Err("native generation bounds are invalid".into());
     }
+    let paths = paths
+        .iter()
+        .map(|name| input_path(name, base))
+        .collect::<Result<Vec<_>, _>>()?;
+    let tokenizer_path = input_path(tokenizer.path(), base)?;
+    check(path)?;
+    for path in &paths {
+        check(path)?;
+    }
+    check(&tokenizer_path)?;
+    weights.check_paths(&mut check)?;
     let mut remaining = byte_limit
         .checked_sub(bytes.len())
         .ok_or("recipe exceeds input allowance")?;
-    let read = |name: &str, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
-        if name.is_empty() || name.as_bytes().contains(&0) {
-            return Err("invalid native input path".into());
-        }
-        let path = PathBuf::from(name);
-        let path = if path.is_absolute() {
-            path
-        } else {
-            base.join(path)
-        };
-        let bytes = read_regular(&path, limit.min(*remaining))?;
+    let read = |path: &Path, limit: usize, remaining: &mut usize| -> Result<Vec<u8>, String> {
+        let bytes = read_regular(path, limit.min(*remaining))?;
         *remaining = remaining
             .checked_sub(bytes.len())
             .ok_or("native input allowance exhausted")?;
@@ -142,7 +157,7 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     // Its native immutable encoding is still the original durable binding.
     let tokenizer = tokenizer.decode(
         &profile,
-        &read(tokenizer.path(), tokenizer.byte_limit(), &mut remaining)?,
+        &read(&tokenizer_path, tokenizer.byte_limit(), &mut remaining)?,
     )?;
     let weights = weights.read(&profile, model.output_head(), &mut remaining)?;
     let monitor = read(&paths[1], MAX_MONITOR_CONFIG_BYTES, &mut remaining)?;
@@ -204,6 +219,18 @@ pub(super) fn load(path: &Path, tenant: u64, byte_limit: usize) -> Result<Inputs
     })
 }
 
+fn input_path(name: &str, base: &Path) -> Result<PathBuf, String> {
+    if name.is_empty() || name.as_bytes().contains(&0) {
+        return Err("invalid native input path".into());
+    }
+    let path = PathBuf::from(name);
+    Ok(if path.is_absolute() {
+        path
+    } else {
+        base.join(path)
+    })
+}
+
 struct Fields(BTreeMap<String, Json>);
 impl Fields {
     fn new(value: Json) -> Result<Self, String> {
@@ -254,3 +281,7 @@ impl Fields {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "recipe/custody_tests.rs"]
+mod custody_tests;

@@ -3,7 +3,7 @@
 The Linux reference executable can provision a separate governor endpoint for a
 new or independently recovered ordinary Tower publication run, or a new or
 independently recovered nonpredictive learned sequence with explicit numerical
-allowances. The governor
+allowances, or a new resident native generated-text sequence. The governor
 requests a replay of the
 complete original policy corpus and explicitly approves the exact returned
 report. That approval delegates one original opaque permit to the independently
@@ -37,6 +37,54 @@ invalid startup, all five storage failure barriers, actual fixture inference
 and two separately reviewed publications across promotion, Unknown liability,
 and foreign or fenced roles. Source review and Rust syntax/format checks are
 complete. Required RCH compilation and runtime qualification remain pending.
+
+## Govern a new resident native sequence
+
+```sh
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41 \
+  --governor-profile GOVERNOR_PROFILE \
+  --publication-profile WITNESS_PROFILE \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+The last two options are independent selections. The sequence retains its
+original 2–16-entry creation contract, per-entry actors and optional final Finish.
+The governor profile's exact campaign limits are installed with the original
+decoder, tokenizer, stream and source guards in the first acknowledged image.
+There is no separate `--campaign-profile` option for this native command.
+
+Use the same explicit `numerical_replay` governor allowance and independent
+`policy_promotion.numerical_replay_events` operator allowance documented for
+learned numerical governance below. A plain native operator profile cannot
+select promotion on its own. Original request/approval replay costs, campaign
+capacity, reconnect counters and the single delegated promotion survive the
+entire resident invocation; a release does not restart either service.
+
+The original campaign report uses retained history. At the next completed
+generation, withhold actor Submit while the governor requests and approves that
+report and the operator promotes it. The service can then reissue the absent
+request's source reference once at the new policy epoch, preserving every other
+intent and action field. It neither resubmits for the actor nor regenerates text.
+Any recorded disposition prevents this refresh. A stale exact-precheck listener
+is retired without a new grant. Publication still requires the actor's fresh
+submission, current evidence, original helper review and a new independent human
+approval. Promotion itself cannot publish or refund an unresolved effect.
+
+Complete role admission reserves the governor socket against every future
+actor/human/Stop/precheck endpoint and original source/store. Selected profile,
+publication-input and retained-output paths are reserved too. Each original
+native recipe checks all referenced asset paths before reading those assets,
+including explicit physical weight shards. Path checks use the same strict
+decoders and asset budgets as unselected native loading.
+
+This selection supports creation and publication profiles without joint
+activation. It refuses recovery, credibility activation, topology selection and
+single-release commands before live work. An independently retained output
+archive is not a governed native recovery contract. See the complete
+[resident native publication contract](RESIDENT_NATIVE_PUBLICATION.md#independent-policy-governance-during-native-creation).
+The source and authored regressions are independently reviewed; required RCH
+compilation and execution remain pending.
 
 ## Start with separate role custody
 

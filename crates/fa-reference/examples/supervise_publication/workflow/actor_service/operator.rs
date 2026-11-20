@@ -179,6 +179,29 @@ impl Service {
         deadline: &Deadline,
     ) -> Result<Self, String> {
         settings.check_generated_operator()?;
+        Self::start_generated_with(settings, actor, port, driver, generation, deadline)
+    }
+
+    pub(super) fn start_generated_governed(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileGeneratedTextActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
+        settings.check_governed_generated_operator()?;
+        Self::start_generated_with(settings, actor, port, driver, generation, deadline)
+    }
+
+    fn start_generated_with(
+        settings: &Settings,
+        actor: &Profile,
+        port: FileGeneratedTextActorPort,
+        driver: &FileSupervisedDriver,
+        generation: u64,
+        deadline: &Deadline,
+    ) -> Result<Self, String> {
         Self::start_with(
             settings,
             actor,
@@ -190,6 +213,7 @@ impl Service {
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
                     || settings.narrowing.is_some()
+                    || settings.policy_promotion.is_some()
                 {
                     PublicationTower::new_generated_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {

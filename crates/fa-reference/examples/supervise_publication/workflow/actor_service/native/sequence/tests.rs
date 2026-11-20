@@ -58,6 +58,8 @@ mod operator_tests;
 mod precheck_tests;
 #[path = "tests/qualification.rs"]
 mod qualification_tests;
+#[path = "tests/governor.rs"]
+mod governor_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 

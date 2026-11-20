@@ -48,6 +48,25 @@ impl WeightFiles {
         Ok(Self::Sharded { index, sources })
     }
 
+    /// Enumerate only the operator's declared paths, including repeated physical
+    /// names under different labels. The original index validator still owns
+    /// exact label/tensor admission before any shard is read.
+    pub(super) fn check_paths(
+        &self,
+        check: &mut impl FnMut(&Path) -> Result<(), String>,
+    ) -> Result<(), String> {
+        match self {
+            Self::Single(path) => check(path),
+            Self::Sharded { index, sources } => {
+                check(index)?;
+                for path in sources.values() {
+                    check(path)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
     pub(super) fn read(
         &self,
         profile: &DecoderProfile,

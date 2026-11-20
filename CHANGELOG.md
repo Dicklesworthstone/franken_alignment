@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-20: connect policy governance to resident native publication
+
+- Select an independent governor during new native sequence creation, with the
+  original atomic campaign guard and separately budgeted numerical operator.
+- Retain both services and their finite allowances across Message/Finish releases;
+  pump them through the original Stop, generation, intake and review checkpoints.
+- Reissue an unsubmitted reference once after promotion with only its policy
+  epoch changed; preserve the complete action and retire stale exact prechecks.
+- Reserve source, witness, profile, history and per-recipe model/shard paths
+  against the governor endpoint before live custody or that recipe's asset reads.
+- Add real-process governance/publication regressions, causal human/refreshed
+  intent/Stop negatives, path custody coverage and closed CLI grammar cases.
+- Independently source-reviewed and syntax-checked, with changed ranges/new
+  tests formatted. Required RCH compilation, runtime tests and qualification
+  remain pending; governed native recovery remains an explicit unsupported mode.
+
 ## 2026-11-20: prepare guarded learned prompt checkpoints
 
 - Connect existing final-publication and credential profiles to original prompt

@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-20: govern a live resident native sequence without replacing its owner
+
+New native sequence creation accepts an explicitly paired governor and numerical
+operator. The same original campaign guard, governor role and retained-corpus
+Request/Approve/Promote path now reach the resident service. One operator and
+governor retain their original deadlines, connection/exchange counts, campaign
+limits and independent numerical replay allowances across Message/Finish
+handoffs. The original Stop, source, helpers, human approval and final publication
+checks remain mandatory. Governed native recovery and joint activation stay
+outside this creation-only selection.
+
+After promotion, an entirely absent actor request can receive one freshly emitted
+source reference with only its policy epoch changed. The full action and source
+intent must otherwise match, and the independent actor must submit it. No
+inference, deadline extension, source capture or automatic retry is introduced;
+old precheck custody is retired without renewal. Any recorded request disposition
+prevents refresh. Canonical admission reserves selected witness, profile,
+history-output and per-recipe model/weight paths against the governor endpoint
+using the original strict decoders and asset ceilings.
+
+Six resident functional/admission regressions and two separate-process test
+entrypoints are authored in `native/sequence/tests/governor.rs`. They cover
+retained-corpus approval and actual operator promotion followed by native
+Message/Message/Finish publication, fresh evidence and independently approved or
+rejected human decisions, altered kind/deadline refusal, cumulative replay and
+campaign limits, role/path admission and the original Stop. Recipe/publication
+path regressions and closed command grammar cases accompany the integration.
+Contracts: `docs/RESIDENT_NATIVE_PUBLICATION.md`, `docs/LIVE_POLICY_GOVERNOR.md`.
+
+Independent static integration review is complete. Installed nightly rustfmt
+parses the changed Rust; changed production ranges and new test files are
+formatted, and whitespace checks pass. Required RCH targeted/full-gate commands
+cannot launch because `rch` is absent (exit 127). Compilation, Clippy, runtime
+tests and qualification remain pending. FA-130 and its native composition Bead
+remain in progress; no packet or deployment gate is closed.
+
 ## 2026-11-20: prepare learned checkpoints with original publication and credential guards
 
 Fresh prompt preparation now admits the existing checked-publication and
