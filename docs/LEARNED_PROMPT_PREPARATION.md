@@ -82,9 +82,8 @@ history anchor, actor or reviewer service selection, live prechecks, Finish, sim
 checkpoint capture, duplicate flags and held-out activation are refused before
 creation.
 
-This bounded preparation path also refuses numerical recipes requiring computed
-identity, checked final publication, credential custody or held-out joint
-activation, and refuses nonzero recovery floors. It does not drop those
+This bounded preparation path refuses numerical recipes requiring computed
+identity or held-out joint activation, and refuses nonzero recovery floors. It does not drop those
 requirements to obtain a simpler owner. Raw predictors, legacy owned predictors
 and nonpredictive streams remain outside this mode.
 An existing store is never reopened or replaced by preparation, including after
@@ -94,6 +93,25 @@ No actor/reviewer socket or helper process is started. The original native
 helper execution assets are loaded by the later live release command; they are
 not needed to prepare a prompt. The complete numerical and predictor contracts
 and all selected first-image guards are still admitted before creation.
+
+### Preserve credential and final-publication requirements
+
+The recipe can select its existing `credential` and `checked_publication`
+profiles, separately or together. Preparation admits the exact credential
+inventory and publication limits through the original guarded constructor.
+The nonsecret inventory shares the recipe's existing aggregate asset allowance;
+it is required even though later helper weights, live credential secrets and
+publication-witness files need not be available yet. This adds no recipe schema
+or command flag.
+
+The prepared checkpoint retains these requirements. Continuation must use the
+same numerical recipe and exact guards, acquire its live credential capability,
+read fresh source evidence, obtain native and independent human review, and
+pass the original final witness check. Missing or mismatched live credentials
+refuse continuation without consuming the prepared history or its anchor.
+Changing or omitting an original guard cannot downgrade that history. A late
+witness change or disappearing producer still prevents the affected publication;
+preparation cannot serve as evidence that the later world remained unchanged.
 
 ## Original generation and acknowledgment
 
@@ -196,3 +214,11 @@ missing source evidence, and post-acknowledgment export/report failures. The
 predictive stream-reset tests use this same production command before narrowing
 and original reset. These additions require the repository's RCH verification
 gate; this implementation session did not execute Rust compilation or tests.
+
+The six additional functions in `checkpoint_prepare/guarded.rs` pair actual
+prepared-to-published continuation with human rejection, absent/mismatched live
+credentials, late witness changes, invalid inventory/profile admission, exact
+aggregate asset exhaustion and altered recovery requirements. They inspect the
+original numerical continuation and retained history. Independent source review,
+syntax parsing and new-test formatting are complete; required RCH compilation,
+runtime execution and full qualification remain pending.

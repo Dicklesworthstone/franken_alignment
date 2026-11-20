@@ -818,7 +818,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/checked.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/recovery.rs",
+        "docs/LEARNED_PROMPT_PREPARATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2706,7 +2710,11 @@
         "docs/LEARNED_STREAM_RESET_OPERATOR.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/stream_reset/request.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset.rs",
+        "docs/LEARNED_PROMPT_PREPARATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs"
       ],
       "founding_ideas": [
         "FI-A09",

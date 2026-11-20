@@ -49,7 +49,7 @@ where F: FnMut() -> ElapsedTick {
     let selected = Selection::read(Path::new(&args[4]))?;
     // Original numerical, source, forecast and guard contracts are admitted;
     // helper execution assets belong to the later independently reviewed release.
-    let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
+    let mut loaded = recipe::load_for_preparation(Path::new(&args[2]), &config)?;
     campaigns::admit(&config, &mut loaded, campaign.as_deref(), false)?;
     custody.admit(&config, &mut loaded, false)?;
     topology::admit(&config, &mut loaded, topology_profile.as_deref(), topology::Mode::Create)?;
@@ -127,6 +127,7 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
 {
     checked::check_selection(config, loaded)?;
     recipe::check_creation(config, loaded)?;
+    super::credential::check_creation(loaded)?;
     selected.check(config, loaded)?;
     if loaded.generation.required_owned_pre_output_forecast().is_none()
         || !loaded.generation.requires_owned_forecast_stream_restart_audit()
@@ -134,10 +135,8 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
         return Err("prompt preparation requires the original owned prompt-audit stream recipe".into());
     }
     if loaded.identity.is_some() || loaded.generation.requires_computed_identity()
-        || loaded.publication.is_some() || loaded.generation.required_publication_validation().is_some()
-        || loaded.credential.is_some() || loaded.generation.required_credential_policy().is_some()
         || loaded.generation.required_held_out_joint().is_some() {
-        return Err("prompt preparation does not support identity, checked publication, credential or held-out activation selections".into());
+        return Err("prompt preparation does not support identity or held-out activation selections".into());
     }
     if loaded.recovery_anchor.is_some() || loaded.floor.journal_revision != 0
         || loaded.floor.control_sequence != 0 || loaded.floor.authority_epoch != 0 {

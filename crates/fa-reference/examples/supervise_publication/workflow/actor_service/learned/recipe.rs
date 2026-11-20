@@ -115,9 +115,27 @@ struct Files {
 }
 
 pub(super) fn load(file: &Path, config: &Config, require_native: bool) -> Result<Loaded, String> {
+    load_selected(file, config, if require_native { LoadMode::Publication } else { LoadMode::Historical })
+}
+
+/// Fresh prompt preparation needs the independently resolved nonsecret
+/// credential inventory for original first-image registration. It does not
+/// acquire a credential permit or load the later helper execution assets.
+pub(super) fn load_for_preparation(file: &Path, config: &Config) -> Result<Loaded, String> {
+    load_selected(file, config, LoadMode::CheckpointPreparation)
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum LoadMode {
+    Historical,
+    CheckpointPreparation,
+    Publication,
+}
+
+fn load_selected(file: &Path, config: &Config, mode: LoadMode) -> Result<Loaded, String> {
     let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
     let mut assets = Assets::new(recipe.assets_bytes)?;
-    load_recipe(recipe, config, require_native, &mut assets)
+    load_recipe(recipe, config, mode, &mut assets)
 }
 
 /// A complete original recipe document admitted before ANY sequence asset.
@@ -176,7 +194,7 @@ impl GovernedRecipe {
 
     pub(super) fn load(self, config: &Config) -> Result<Loaded, String> {
         let mut assets = Assets::new(self.0.assets_bytes)?;
-        load_recipe(self.0, config, true, &mut assets)
+        load_recipe(self.0, config, LoadMode::Publication, &mut assets)
     }
 }
 
@@ -203,15 +221,16 @@ pub(super) fn load_for_fleet(file: &Path, config: &Config, remaining: &mut usize
     let result = (|| {
         let recipe = Recipe::decode(&assets.read(file, MAX_RECIPE_BYTES)?)?;
         assets.constrain(recipe.assets_bytes)?;
-        load_recipe(recipe, config, false, &mut assets)
+        load_recipe(recipe, config, LoadMode::Historical, &mut assets)
     })();
     *remaining = remaining.saturating_sub(assets.consumed());
     result
 }
 
-fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
+fn load_recipe(recipe: Recipe, config: &Config, mode: LoadMode,
     assets: &mut Assets) -> Result<Loaded, String>
 {
+    let require_native = mode == LoadMode::Publication;
     if recipe.identity.tenant != config.profile.delivery.scope.tenant
         || !config.profile.delivery.initial_payload.is_empty()
     {
@@ -237,7 +256,8 @@ fn load_recipe(recipe: Recipe, config: &Config, require_native: bool,
         process.check_roster(config)?;
     }
     let mut credential = recipe.credential.as_ref()
-        .map(|path| super::credential::Selection::load(path, config, assets, require_native)).transpose()?;
+        .map(|path| super::credential::Selection::load(path, config, assets,
+            mode != LoadMode::Historical)).transpose()?;
     let publication = recipe.checked_publication.as_ref()
         .map(|path| super::checked::load(path, config, assets)).transpose()?;
     let identity_registration = recipe.computed_identity.as_ref()

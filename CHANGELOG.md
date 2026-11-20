@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-20: prepare guarded learned prompt checkpoints
+
+- Connect existing final-publication and credential profiles to original prompt
+  preparation, preserving their exact first-image and recovery requirements.
+- Load only the necessary nonsecret credential inventory under the same asset
+  ceiling; later helper execution and live credential acquisition stay separate.
+- Add six prepared-to-published and causal refusal regressions, including
+  independent human approval, live credentials, final witnesses and exact costs.
+- Independently source-reviewed; syntax checks and new-test formatting complete.
+  Required RCH compilation, runtime tests and qualification remain pending.
+
 ## 2026-11-20: install native policy governance in the original first image
 
 - Add explicit governed native stream creation with exact campaign limits and

@@ -12,6 +12,8 @@ use fa_reference::action::consequence::delivery::persistent::{FileDeliverySnapsh
 use fa_reference::strict_json::{self, Json, Limits};
 use std::{io::{self, Write}, path::{Path, PathBuf}};
 
+#[path = "checkpoint_prepare/guarded.rs"] mod guarded;
+
 struct Case {
     config: Config,
     config_path: PathBuf,

@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-20: prepare learned checkpoints with original publication and credential guards
+
+Fresh prompt preparation now admits the existing checked-publication and
+credential selections, separately or together. A dedicated recipe loading mode
+reads the nonsecret credential inventory under the unchanged aggregate asset
+budget while leaving later helper weights and live credential secrets unloaded.
+The original first-image constructor owns the exact guards; preparation issues
+no actor request or effect permit. Historical and live publication loading keep
+their original behavior. Identity and held-out joint preparation remain refused.
+
+Six new regression functions in `learned/tests/checkpoint_prepare/guarded.rs`
+exercise actual unsampled prompt preparation, exact anchored continuation and
+native/human publication with conserved numerical work, plus human rejection,
+missing/mismatched credentials without custody mutation, late witness changes,
+malformed inventory/profiles, aggregate budget exhaustion and changed/omitted
+recovery guards. Contract: `docs/LEARNED_PROMPT_PREPARATION.md`.
+
+Independent source review and installed nightly syntax parsing are complete;
+the new test file is formatted and whitespace checks pass. The required RCH
+commands cannot launch because `rch` is absent (exit 127). Compilation, runtime
+tests, Clippy and full qualification remain pending. This scoped FA-026/FA-108
+composition closes no Bead, parent packet or deployment gate.
+
 ## 2026-11-20: atomically govern native source-bound stream creation
 
 The original generated stream constructor now has an explicit governed variant
