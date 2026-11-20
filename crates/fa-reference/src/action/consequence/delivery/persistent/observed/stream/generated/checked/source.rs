@@ -8,6 +8,8 @@ use super::{
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
     credibility::{CredibilityEvent, held_out_joint::HeldOutJointPolicy},
+    governance::campaigns::{CampaignEvent, FilePolicyGovernor},
+    guarded::FileCampaignRequirement,
     guarded::anchored::FileHistoryAnchor,
     source::{FileSourcePolicy, SourceEvent},
 };
@@ -186,8 +188,24 @@ impl Prepared {
         tokenizer: &ByteBpe,
         selected: GeneratedSourceProfile,
     ) -> Result<Self, JournalError> {
+        Self::with_campaigns(profile, decoder, tokenizer, selected, None)
+    }
+
+    fn with_campaigns(
+        profile: FileOversightProfile,
+        decoder: FileDecoderConfig,
+        tokenizer: &ByteBpe,
+        selected: GeneratedSourceProfile,
+        campaigns: Option<FileCampaignRequirement>,
+    ) -> Result<Self, JournalError> {
         profile.delivery.limits.check()?;
-        let events = selected.events(decoder, tokenizer)?;
+        let mut events = selected.events(decoder, tokenizer)?;
+        if let Some(campaigns) = campaigns {
+            events.push(Event::Campaign(CampaignEvent::Enable(
+                campaigns.limits,
+                campaigns.max_campaigns,
+            )));
+        }
         if events.len() > profile.delivery.limits.events {
             return Err(Error::Limit.into());
         }
@@ -213,6 +231,22 @@ impl Prepared {
             self.machine,
         ))
     }
+
+    fn publish_governed(
+        self,
+        store: storage::Store,
+    ) -> Result<(FileOversight, FileHumanReviewer, FilePolicyGovernor), JournalError> {
+        // This private path cannot issue a role from an unguarded preparation.
+        // The ORIGINAL reducer, not the caller's selected flag, owns the guard.
+        if !self.machine.broker.policy_campaigns_required() {
+            return Err(Error::Binding.into());
+        }
+        let (host, reviewer) = self.publish(store)?;
+        let governor = FilePolicyGovernor {
+            issuer: Rc::clone(&host.issuer),
+        };
+        Ok((host, reviewer, governor))
+    }
 }
 
 impl FileOversight {
@@ -235,6 +269,34 @@ impl FileOversight {
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         Prepared::new(profile, decoder, &tokenizer, selected)?
             .publish(storage::Store::create(directory.as_ref())?)
+    }
+
+    /// Atomically create the original native stream with its independent policy
+    /// campaign guard. The exact limits are validated by the original reducer
+    /// alongside source, decoder, tokenizer, witnesses and terminal reserve
+    /// before creating a store. Encoding or storage can still fail; no role is
+    /// returned without acknowledgment. All configuration is published in ONE
+    /// initial replacement, so a partial bootstrap cannot omit governance.
+    ///
+    /// The governor is separately owned and issued only AFTER acknowledgment of
+    /// the complete image. It cannot publish an effect or replace human review.
+    /// A policy promotion still needs a complete original-corpus campaign,
+    /// independent approval and the original exact-current-input checks. This
+    /// constructor performs no inference, capture, clock read or policy change.
+    ///
+    /// Governed recovery requires its own complete independently selected guard,
+    /// policy and retained-history contracts; this creation entry point is not
+    /// a live governor getter or an implicit recovery profile.
+    pub fn create_generated_text_stream_from_source_governed(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        decoder: FileDecoderConfig,
+        tokenizer: ByteBpe,
+        selected: GeneratedSourceProfile,
+        campaigns: FileCampaignRequirement,
+    ) -> Result<(Self, FileHumanReviewer, FilePolicyGovernor), JournalError> {
+        Prepared::with_campaigns(profile, decoder, &tokenizer, selected, Some(campaigns))?
+            .publish_governed(storage::Store::create(directory.as_ref())?)
     }
 
     /// Pin source identity/generation/limits/lease AND complete publication mode

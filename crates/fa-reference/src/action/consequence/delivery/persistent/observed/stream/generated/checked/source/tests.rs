@@ -21,6 +21,9 @@ use crate::action::consequence::oversight::{
 use crate::witness::refinement::{RefinementBudget, index::routing::RoutingBudget};
 use std::collections::BTreeMap;
 
+#[path = "governed_tests.rs"]
+mod governed;
+
 #[allow(dead_code)]
 mod fixtures {
     include!(concat!(

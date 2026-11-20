@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-20: atomically govern native source-bound stream creation
+
+The original generated stream constructor now has an explicit governed variant
+that installs the exact campaign requirement in the same first image as its
+decoder, tokenizer, source, stream, selected witnesses/joint policy and recovery
+reserve. Only acknowledged publication returns independent human and governor
+roles. No new event format, dependency, late guard installation or live recovery
+governor getter is introduced. The existing campaign reducer and effect gates
+remain authoritative.
+
+Six regression functions in `stream/generated/checked/source/governed_tests.rs`
+cover all six original profiles, invalid startup without a partial store, the
+five storage barriers, actual native inference and two publications separated
+by independent campaign approval/promotion, direct replacement refusal, unknown
+effect liability, and foreign/fenced roles. Promotion preserves numerical work,
+confirmed output and charged rights; fresh source and human review remain
+required. Contract: `docs/LIVE_POLICY_GOVERNOR.md`; packet FA-130 remains open.
+
+Independent source review and installed nightly rustfmt parsing are complete.
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` could not
+start: `rch: command not found` (exit 127). Compilation, runtime tests, Clippy and
+full qualification remain unexecuted. No Bead or packet is closed by this source
+increment; resident service composition is a separate following increment.
+
 ## 2026-11-16: retain qualified native history across activation failures
 
 An additional composed regression pairs stale-capsule refusal with deadline

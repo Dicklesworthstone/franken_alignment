@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-20: install native policy governance in the original first image
+
+- Add explicit governed native stream creation with exact campaign limits and
+  original source, tokenizer, publication and terminal-reserve contracts.
+- Return independent governor custody only after storage acknowledgment.
+- Add six regression functions for actual inference/publication/promotion,
+  preserved Unknown charges, original role fencing and atomic startup faults.
+- Independently source-reviewed and syntax-checked; required RCH compilation,
+  runtime tests and full qualification remain pending.
+
 ## 2026-11-16: preserve retained native history when requalification fails
 
 - Add paired anchored recovery cases for stale evidence and a deadline after

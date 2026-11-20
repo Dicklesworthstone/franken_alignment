@@ -15,6 +15,29 @@ existing [native campaign gate](DURABLE_POLICY_CAMPAIGN_GUARD.md),
 [Tower promotion contract](TOWER_POLICY_PROMOTION.md) and original two-key effect
 workflow remain the decision and authority implementations.
 
+## Native source-bound creation API
+
+`FileOversight::create_generated_text_stream_from_source_governed` creates a
+native decoder stream with the exact `FileCampaignRequirement` in its first
+acknowledged image. The same image carries the selected tokenizer, source,
+stream, publication witnesses, held-out joint policy and terminal reserve.
+Invalid configuration creates no store; a failed storage acknowledgment returns
+no human or governor role. The returned `FilePolicyGovernor` remains separate
+from the human reviewer and cannot publish an effect.
+
+The existing original-corpus Request / Approve / Promote transitions apply to
+this native owner. Direct policy replacement stays blocked. Promotion retains
+native numerical spending, the confirmed message prefix and unresolved effect
+charges; a later message still needs fresh source evidence and both independent
+publication keys. Old governor and approval handles cannot survive the original
+recovery Fence. This constructor adds no implicit governed recovery selection.
+
+Six regression functions cover all six original source/publication profiles,
+invalid startup, all five storage failure barriers, actual fixture inference
+and two separately reviewed publications across promotion, Unknown liability,
+and foreign or fenced roles. Source review and Rust syntax/format checks are
+complete. Required RCH compilation and runtime qualification remain pending.
+
 ## Start with separate role custody
 
 ```sh
