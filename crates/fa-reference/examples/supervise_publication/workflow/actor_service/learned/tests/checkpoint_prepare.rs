@@ -14,6 +14,7 @@ use std::{io::{self, Write}, path::{Path, PathBuf}};
 
 #[path = "checkpoint_prepare/guarded.rs"] mod guarded;
 #[path = "checkpoint_prepare/identity.rs"] mod identity_tests;
+#[path = "checkpoint_prepare/identity_lifecycle.rs"] mod identity_lifecycle;
 
 struct Case {
     config: Config,

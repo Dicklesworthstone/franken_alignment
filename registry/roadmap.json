@@ -837,7 +837,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/requirements.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs",
+        "docs/LEARNED_IDENTITY_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2731,7 +2734,10 @@
         "docs/LEARNED_PROMPT_PREPARATION.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs",
+        "docs/LEARNED_IDENTITY_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
       ],
       "founding_ideas": [
         "FI-A09",
@@ -3020,7 +3026,7 @@
       "id": "FA-118",
       "gate": "G4",
       "title": "Model passports and identity liveness",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-023",
         "FA-024",
@@ -3037,7 +3043,13 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LEARNED_PROMPT_PREPARATION.md",
+        "docs/LEARNED_IDENTITY_OPERATOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
+      ],
       "founding_ideas": [
         "FI-A01",
         "FI-A10"

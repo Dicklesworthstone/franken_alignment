@@ -6,6 +6,11 @@ returns before obtaining a forecast or drawing output. The retained history is
 an active, quiet prompt boundary. Successful preparation appends no Stop or
 recovery Fence and admits no actor request.
 
+When the recipe requires computed model identity, preparation first performs
+the original actual-model measurement and installs its still-current result.
+The complete registered stimulus roster must match before prompt inference;
+a passport, manifest or earlier matching result alone cannot satisfy this step.
+
 This supplies a normal operator entry point for
 [owned predictive stream containment](LEARNED_PREDICTIVE_STREAM_RESET.md): prepare,
 narrow the original authority, begin the original reset, complete it, then resume
@@ -82,11 +87,11 @@ history anchor, actor or reviewer service selection, live prechecks, Finish, sim
 checkpoint capture, duplicate flags and held-out activation are refused before
 creation.
 
-This bounded preparation path accepts the original computed model-identity
-registration with its independently selected measurement profile. Held-out
-joint activation and nonzero recovery floors remain unsupported; preparation
-does not drop those requirements to obtain a simpler owner. Raw predictors, legacy owned predictors
-and nonpredictive streams remain outside this mode.
+This bounded preparation path supports the complete original computed identity
+registration and measurement selection. It still refuses held-out joint
+activation and nonzero recovery floors; neither requirement is dropped to obtain
+a simpler owner. Raw predictors, legacy owned predictors and nonpredictive
+streams remain outside this mode.
 An existing store is never reopened or replaced by preparation, including after
 a previous preparation's report was lost.
 
@@ -94,6 +99,31 @@ No actor/reviewer socket or helper process is started. The original native
 helper execution assets are loaded by the later live release command; they are
 not needed to prepare a prompt. The complete numerical and predictor contracts
 and all selected first-image guards are still admitted before creation.
+
+### Compute identity before the prompt
+
+Select the existing `fa.learned-identity-publication/1` recipe envelope described
+in [the identity operator contract](LEARNED_IDENTITY_OPERATOR.md). No new command
+flag or recipe schema is needed. The complete passport and identity policy are
+part of the original numerical configuration, and the separate per-attempt
+selection supplies a check ID, measurement sequence, work allowance and observed
+manifest path. A bare requirement without its registration, or an unmatched
+registration/measurement selection, refuses before creating an owner.
+
+The original guarded constructor supplies the unique identity observer together
+with the human and predictor roles. After qualification and any topology
+certification, preparation reads the independently observed manifest and drives
+the original cooperative `FileComputedIdentityRun` against this owner's actual
+model. It accepts no caller-supplied anchor frames or matching verdict. Manifest
+mismatch, actual anchor mismatch, unavailable input or exhausted work cannot
+advance the actor prompt. The complete matching computation must be acknowledged
+before a separate installation observes current time and validity.
+
+The observer and actual measured work remain in their original session through
+checkpoint capture, or through Stop, retained-history export and terminal cleanup
+on failure. Computation does not consume a sampled actor draw, acquire a forecast
+or replace either publication key. Matching eligibility is not effect authority;
+the preparation report retains `"effect_authority":"not_issued"`.
 
 ### Preserve credential and final-publication requirements
 
@@ -113,25 +143,6 @@ refuse continuation without consuming the prepared history or its anchor.
 Changing or omitting an original guard cannot downgrade that history. A late
 witness change or disappearing producer still prevents the affected publication;
 preparation cannot serve as evidence that the later world remained unchanged.
-
-### Measure the original model before preparing its prompt
-
-A recipe can select its existing computed identity registration and identity
-measurement profile alongside the credential and final-publication guards.
-Both parts must be present together. Preparation keeps the independent identity
-observer returned by the original constructor and runs the existing cooperative
-measurement before any prompt computation. The observed manifest is read from
-the selected input; it is never filled from the expected passport. Actual model
-weights, the measurement work allowance, source freshness, Stop and the original
-deadline retain their normal checks.
-
-A missing or mismatched manifest, changed model fingerprint, or exhausted
-measurement allowance prevents prompt capture. A successful match belongs to
-the same journal as the unsampled checkpoint and consumes the original check
-allowance. It supplies neither an actor request nor a publication approval.
-Later continuation must preserve the exact registration and perform a fresh
-identity check after recovery; an old match cannot cross the recovery Fence.
-Preparation and continuation share the original lifetime measurement limits.
 
 ## Original generation and acknowledgment
 
@@ -184,15 +195,22 @@ sampling, native helper review and independent human approval. It retains spent
 prompt work and cannot reuse preparation as a publication approval. When
 campaigns were installed, the recipe in this command must carry their exact
 independent recovery expectation.
+When computed identity was installed, recovery withdraws its old matching
+eligibility. Supply a fresh check ID and increasing measurement sequence while
+retaining the same complete registration and numerical configuration. The live
+command reads a fresh independently observed manifest and repeats the original
+measurement before further actor inference. A missing or mismatched current
+manifest cannot be replaced by the historical match; no prepared prompt token or
+spent work is reset to make another check succeed.
 When topology was installed, continuation also selects the matching v2 source
 checkpoint, fresh topology profile and new paired outputs; the plain command
 above is insufficient to recover that guarded history.
 
 ## Failure and lost acknowledgment
 
-An admission failure creates no owner. After creation, a prompt, source,
-deadline or checkpoint-boundary failure uses the original Stop/drain path and
-attempts to retain its resulting history. Admitted numerical work is preserved;
+An admission failure creates no owner. After creation, an identity, prompt,
+source, deadline or checkpoint-boundary failure uses the original Stop/drain path
+and attempts to retain its resulting history. Admitted numerical work is preserved;
 missing evidence or an incorrect boundary does not authorize sampling. A
 terminally stopped preparation is not relabeled as a reusable prompt cut.
 
@@ -226,6 +244,15 @@ operations. Original checkpoint capture still performs its synchronous bounded
 historical verification and serialization. This mode makes no new latency,
 calibration, restart secrecy or deployment containment claim.
 
+Selected identity computation retains its own original bounded stimulus work;
+it does not replenish numerical, predictor or effect budgets. The preparation
+report's actor-stream counters do not represent total identity inference or
+historical replay cost. The identity session keeps completed and interrupted
+work through cleanup. Partial computation accounting remains process-local,
+with no new crash-surviving work escrow or
+durable partial-token resume claim. The finite fixtures establish enforcement,
+not passport provenance, authenticated manifests or empirical detector quality.
+
 Regression sources in
 `examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare.rs`
 exercise real prompt preparation, exact campaign guards, zero-event capture
@@ -242,3 +269,26 @@ aggregate asset exhaustion and altered recovery requirements. They inspect the
 original numerical continuation and retained history. Independent source review,
 syntax parsing and new-test formatting are complete; required RCH compilation,
 runtime execution and full qualification remain pending.
+
+The five functions in `checkpoint_prepare/identity.rs` cover actual computed
+preparation without helper assets, exact zero-event capture reacquisition,
+anchored continuation with a fresh measurement and both publication keys,
+same-label parameter and manifest substitution, missing input, work exhaustion,
+exact original registration and the aggregate passport asset ceiling.
+
+Four complementary functions in `checkpoint_prepare/identity_lifecycle.rs`
+exercise expiry after acknowledged measurement but before installation, native
+and workflow deadlines during computation, fresh manifest acquisition on
+recovery, and missing unique observer custody. The successful one-tick expiry
+control prevents an unrelated early refusal from satisfying that scenario.
+A separate correction preserves the recovery clock boundary: live identity
+status is unavailable until current time is observed, then the previous match
+is missing while its historical report remains available.
+
+These nine functions are regression source, **not executed results**. Independent
+source/type/fixture review is complete. Qualified formatter and whitespace
+checks are recorded separately from execution. This integration session could
+not compile or run the extension because required RCH is unavailable; no local
+compilation fallback was used. Required RCH compilation, runtime execution and
+full qualification remain pending. Earlier identity execution records do not
+qualify this new preparation integration.

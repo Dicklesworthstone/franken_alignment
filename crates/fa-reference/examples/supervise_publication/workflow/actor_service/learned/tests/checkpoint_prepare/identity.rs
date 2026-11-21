@@ -1,6 +1,6 @@
 //! Actual independent model measurement before unsampled prompt preparation.
 //! These finite model fixtures exercise custody and enforcement, not H19.
-use super::super::identity as identity_fixture;
+use super::super::identity_tests as identity_fixture;
 use super::*;
 use fa_reference::action::consequence::activation::{
     identity::wire as identity_wire, tensor::kv::decoder::MAX_DECODER_PRODUCTS,
@@ -101,7 +101,7 @@ fn measured_preparation_retains_the_exact_unsampled_checkpoint_without_helper_as
     // The exact original registration yields a fresh observer after recovery,
     // but the preparation match is now historical and cannot authorize work.
     fs::remove_file(root.0.join("observed.manifest")).unwrap();
-    let (host, _, forecast, identity) = recovery::open_selected(&case.config, &loaded).unwrap();
+    let (mut host, _, forecast, identity) = recovery::open_selected(&case.config, &loaded).unwrap();
     assert!(forecast.is_some());
     assert!(identity.is_some());
     assert_eq!(
@@ -109,6 +109,11 @@ fn measured_preparation_retains_the_exact_unsampled_checkpoint_without_helper_as
         IdentityOutcome::Matched
     );
     assert!(host.identity_installation(901).unwrap().is_some());
+    // Recovery must observe current native time before reporting live identity.
+    assert!(!host.clock_ready());
+    assert!(host.identity_status().is_err());
+    let revision = host.revision();
+    host.observe_time(revision, ElapsedTick(1001)).unwrap();
     assert_eq!(host.identity_status().unwrap(), IdentityStatus::Missing);
     assert_eq!(
         host.learned_generation_inspection().unwrap().numerical,

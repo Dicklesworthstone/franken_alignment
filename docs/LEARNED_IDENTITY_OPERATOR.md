@@ -7,6 +7,8 @@ imported numerical owner before beginning a publication request. It executes the
 original registered stimuli and tapped activations against an independently
 provisioned passport. A successful measurement still needs separate native
 installation, helper Congress and fresh human approval before publication.
+The same computation can now precede fresh unsampled prompt-checkpoint
+preparation, without issuing a publication request or either effect key.
 
 ## Select the complete registration
 
@@ -88,6 +90,41 @@ human key. Generation and publication retain all original source, time,
 qualification, forecast and two-key gates. Actual anchor mismatch uses original
 incident and containment behavior; there is no manual-frame fallback.
 
+## Fresh prompt-checkpoint preparation
+
+`create-learned-generated ... --prepare-stream-checkpoint ...` accepts the
+complete identity envelope for its existing `functional_restart`, owned
+prompt-audit stream recipe. It requires the original passport/policy registration
+and a matching measurement selection; a bare identity requirement or omitted
+selection is refused before owner creation. Held-out joint activation remains
+unsupported in this preparation mode, including identity(joint(legacy)). See
+[the preparation command](LEARNED_PROMPT_PREPARATION.md) for its closed grammar,
+checkpoint profile and mandatory new history-anchor output.
+
+Preparation keeps the original first-image identity observer and calls the same
+cooperative measurement after qualification and any topology certification, before
+actor prompt inference. The independently observed manifest is read live. The
+actual model must complete and match the registered stimulus roster, acknowledge
+that computed result, and install it at a fresh still-valid tick. A manifest or
+anchor mismatch follows original containment; missing input, inadequate work,
+deadline expiry and lost observer custody cannot authorize prompt work.
+
+The identity session retains observer custody and measured work through the
+acknowledged checkpoint capture, or through original Stop, anchor retention and
+terminal cleanup on failure. Successful preparation stops scheduling at the
+unsampled prompt boundary: it produces no forecast, actor request, native-helper
+verdict, human approval or effect authority, and appends no Stop or recovery
+Fence. Later helper execution assets need not be available during preparation.
+
+The saved checkpoint preserves the exact identity registration. Ordinary
+anchored continuation performs its own recovery Fence, withdraws old matching
+eligibility, and requires a new check ID and increasing measurement sequence
+under the same passport, policy and numerical configuration. It re-reads an
+independently observed manifest and recomputes identity before new actor inference.
+The earlier match remains historical evidence; it cannot replace unavailable or
+mismatched current inputs, restore effect keys or refund prompt work. Native
+helper review and independent human approval remain necessary for publication.
+
 ## Recovery, historical commands and resident sequences
 
 All recipe modes load the independently supplied registration, including receipt,
@@ -127,9 +164,14 @@ propagation, H19 discrimination and the complete FA-118 packet remain open.
 
 ## Verification
 
-All thirteen new identity regression functions pass. They exercise original
-model computation and two-key publication across ordinary/raw/owned and mediated
-owners; same-label actual weight substitution; independent manifest mismatch;
+The following recorded results cover the earlier identity integration. They
+predate the prompt-checkpoint extension described above and do not establish its
+compilation or runtime result.
+
+All thirteen identity regression functions from that integration pass. They
+exercise original model computation and two-key publication across
+ordinary/raw/owned and mediated owners; same-label actual weight substitution;
+independent manifest mismatch;
 real authenticated Stop and deadline cancellation after token work; separate
 installation expiry; stale-sequence work retention and fresh recovery; exact
 historical registration before cleanup; offline receipt/audit/terminal operation;
@@ -164,3 +206,27 @@ then refuses the existing dependency graph at its initial admission guard before
 formatting, Clippy or the full test suite. That guard and the lockfile are
 unchanged. These are scoped compilation and runtime results, not release or full
 FA-118/FA-020 qualification.
+
+### Prompt-checkpoint extension: verification pending
+
+The five functions in
+`examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs`
+cover actual-model preparation, exact unsampled capture, fresh-measurement
+continuation with native and independent human review, parameter/manifest
+substitution, missing input, work exhaustion, exact registration and aggregate
+asset admission. Their fixture import and recovered-current-clock assertions
+are corrected without weakening the original gates.
+
+Four additional functions in `checkpoint_prepare/identity_lifecycle.rs` cover
+expiry between computed acknowledgment and installation, native and workflow
+deadline interruption, current manifest evidence after recovery, and absent
+unique observer custody. Historical completed reports, prompt progress, sampled
+work, checkpoint custody and absence of effect authority remain explicit
+assertions. The expiry refusal is paired with a successful current result.
+
+Independent source/type/fixture review is complete; formatting and whitespace
+checks are separate source checks. **These nine preparation regressions have not
+been executed in this integration session.** Required RCH is unavailable, and
+this session used no local compilation fallback. New compilation, runtime
+evidence and full qualification remain pending. The earlier thirteen-, 49- and
+25-function results above retain their original scope.

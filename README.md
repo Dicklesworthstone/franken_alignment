@@ -65,6 +65,14 @@ suffix. Activation does not approve an effect, and a later policy promotion
 invalidates the previous policy's qualification. Source implementation and
 regression coverage are present; RCH execution qualification remains pending.
 
+[Learned prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md) can require a
+computed identity check against its actual numerical model before prompt work.
+The complete registered passport and independently observed manifest remain
+separate inputs. A matching result must still be current when installed, and
+the retained checkpoint remains unsampled with no effect authority. Continuation
+performs a fresh measurement after recovery. Source and regression coverage are
+present; required RCH compilation and runtime qualification remain pending.
+
 Resident [history custody](docs/RESIDENT_NATIVE_PUBLICATION.md#independently-retained-history)
 also reserves every selected configuration and manifest input before those
 files are read. Canonical aliases through symlinked directories and future

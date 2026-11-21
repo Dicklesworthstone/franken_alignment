@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: preserve computed identity expiry and recovery boundaries in prompt preparation
+
+The concurrently landed identity preparation implementation is retained with
+all five original regression functions. Preparation measures the actual imported
+model against the complete registered stimulus roster and an independently
+observed manifest before prompt inference. A successful checkpoint remains
+unsampled and grants no publication authority; continuation still requires
+fresh identity, source evidence, helper review and independent human approval.
+
+Four complementary functions in
+`crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs`
+cover a completed match expiring before installation, native and workflow
+deadlines during measurement, missing or mismatched current evidence on anchored
+continuation, and absent unique observer custody. The expiry case pairs its
+failure with a successful one-tick control and checks the retained completed
+report; an earlier unrelated refusal cannot satisfy it. Original prompt work,
+sample counters, checkpoint custody and effect accounting remain checked.
+
+Two source defects in the concurrent tests are repaired: the fixture import now
+selects the actual `identity_tests` module, and the recovered owner must refuse
+live identity inspection before observing current time, then report its old
+match as missing. The original production recovery and clock requirements are
+preserved. The two operator contracts, FA-026/108/118 artifact mappings and
+unmeasured identity-preparation cost entry describe this integrated scope.
+
+Independent source/type/fixture review found no blocking issue. The required
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask -- check`
+could not start because `rch` is unavailable (exit 127), before compilation.
+This integration session used no local compilation fallback. New compilation,
+runtime, Clippy and full qualification remain pending; no Bead or parent gate
+is closed. Earlier execution records below retain their original scope.
+
 ## 2026-11-21: requalify governed resident native recovery
 
 The complete governed native suffix command now accepts one independently

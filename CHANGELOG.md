@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-21: complete identity preparation lifecycle coverage
+
+- Preserve the concurrent computed-identity preparation implementation and all
+  five existing regression cases.
+- Repair the test fixture import and enforce fresh current time before inspecting
+  live identity eligibility after the recovery Fence.
+- Add four complementary regression cases for expiry after computed acknowledgment,
+  native/workflow interruption, fresh recovery evidence and missing observer custody.
+- Document exact preparation and continuation contracts, original work accounting,
+  and the FA-026/108/118 result artifacts.
+- Independent source review is complete. Required RCH compilation and runtime
+  qualification remain pending; this change closes no execution gate.
+
 ## 2026-11-21: compose helper requalification with governed native recovery
 
 - Admit one explicit recovery credibility capsule and the complete original

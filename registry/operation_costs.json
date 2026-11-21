@@ -179,6 +179,17 @@
       "additional_object_publication": "One existing ActivateHeldOut event in the original canonical journal; optional acknowledged history archive export retains its existing file and directory synchronization.",
       "status": "proposed_unmeasured",
       "notes": "The independently selected capsule is read once under CredibilityActivation::MAX_ENCODED_BYTES after the original anchored recovery Fence and before new numerical work. The original reducer validates the complete committee and held-out joint requirements and advances the authority epoch once. Recovery replay/Fence, source refresh, subsequent generation, review, publication and archive retention retain their separate original costs. Stop/deadline checks surround activation. Later releases do not reread the capsule; policy promotion invalidates previous-policy qualification and cannot obtain free requalification. No latency or execution measurement is claimed."
+    },
+    {
+      "id": "OP-LEARNED-PROMPT-IDENTITY",
+      "operation": "Measure computed model identity before unsampled learned prompt preparation",
+      "profile": "owned_learned_prompt_audit",
+      "ordered_control_commits": null,
+      "control_ordering_contract": "Existing identity challenge, acknowledged complete computed measurement, and separate current-time installation precede actor prompt inference. Original source/time observations and checkpoint capture retain their own ordering and costs.",
+      "external_effect_admissions": 0,
+      "additional_object_publication": "Existing identity events in the original canonical journal. The independently retained prompt checkpoint and history archive use the existing capture and synchronization paths.",
+      "status": "proposed_unmeasured",
+      "notes": "The selected complete stimulus roster runs under the original scalar-product allowance, check capacity, source, Stop and deadline constraints. Actor-stream preparation counters do not measure total identity inference or historical replay. Observer custody and completed/interrupted work remain with the original session through capture or cleanup; no new durable partial-token escrow is claimed. Recovery withdraws matching eligibility and requires independently selected fresh evidence without refunding work. No measured latency, empirical detector quality or runtime qualification is claimed."
     }
   ],
   "logical_to_physical_rule": "Each storage profile must explicitly map logical commits to fsync/directory/replication barriers. Group commit amortizes physical work but does not erase causal order.",
