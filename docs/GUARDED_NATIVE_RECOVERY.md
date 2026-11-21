@@ -88,11 +88,22 @@ toolchain's Cranelift backend, no debug information and serial tests; it is not
 the canonical qualification gate. No packet, Bead or deployment gate is closed
 by this scoped result.
 
-The focused target is:
+The successful scoped invocation used these build and test settings:
 
 ```sh
-cargo +nightly-2026-09-08 test --locked -p fa-reference --test governed_generated_recovery
+CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 \
+CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0 RUST_MIN_STACK=33554432 \
+RUSTFLAGS='-Zunstable-options -Zthreads=1 --jobs-backend=1 -Zcodegen-backend=cranelift -Zhint-mostly-unused=yes' \
+cargo +nightly-2026-09-08 test --locked --offline -p fa-reference \
+  --test governed_generated_recovery -- --test-threads=1
 ```
 
-The canonical repository gate remains
-`cargo run --locked -p xtask -- check`; this change does not weaken it.
+The Cranelift component belongs to that pinned toolchain. This scoped execution
+does not qualify another compiler/backend or establish resident service runtime
+coverage. The resident example's corrected test build was terminated by
+`SIGKILL` before its tests ran.
+
+The canonical repository driver, `cargo run --locked -p xtask -- check`, was
+also executed and stopped at source-snapshot validation (202 unlisted files and
+158 digest mismatches, including untouched source), before formatting, Clippy
+or full tests. Its requirements and source manifest remain unchanged.

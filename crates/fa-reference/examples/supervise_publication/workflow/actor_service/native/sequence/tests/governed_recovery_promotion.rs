@@ -254,7 +254,9 @@ fn recovered_promotion(decision: ReviewDecision) {
     let previous_bytes = fs::read(&previous).unwrap();
     let mut entries = suffix(&root, &config, &reader, false);
     entries.truncate(1);
-    let peer_reader = Reader::new(&config, &entries[0]);
+    let peer_store = config.store.clone();
+    let peer_profile = config.profile.clone();
+    let peer_stream = entries[0].inputs.stream;
     let mut child = promotion_child(&root);
     let (governor, selected_operator) = selections(&root, &entries[0].actor, child.0.id());
     let requirements = expected(&config, &entries[0], &governor, &before.publication);
@@ -286,6 +288,21 @@ fn recovered_promotion(decision: ReviewDecision) {
     let settings = selected_operator.settings.clone();
     let human_socket = reviewer.socket(93);
     let operator = thread::spawn(move || {
+        // Reconstruct the identical immutable decoder assets in this thread;
+        // their Rc buffers must never cross the independent peer boundary.
+        let inputs = recipe::load(
+            &directory.join("recipe.json"),
+            peer_profile.delivery.scope.tenant,
+            peer_profile.delivery.limits.bytes,
+        )
+        .unwrap();
+        let peer_reader = Reader {
+            store: peer_store,
+            profile: peer_profile,
+            decoder: inputs.decoder,
+            tokenizer: inputs.tokenizer,
+            stream: peer_stream,
+        };
         wait(&directory.join("recovered-offered"));
         let before = peer_reader.publication();
         assert_eq!((before.executions, before.control.ledger.epoch), (2, 2));

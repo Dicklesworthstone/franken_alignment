@@ -550,7 +550,8 @@ fn governed_sequence(decision: ReviewDecision, change: FreshChange) {
     let (mut config, mut entries, reviewer) = selected(&root, true);
     config.programs = helper_programs(&root);
     let reader = Reader::new(&config, &entries[0]);
-    let peer_reader = Reader::new(&config, &entries[0]);
+    let peer_store = config.store.clone();
+    let peer_profile = config.profile.clone();
     let barrier = barrier(&root, &mut entries[1]);
     let mut child = GovernorChild::start(&root);
     assert_ne!(child.0.id(), std::process::id());
@@ -600,6 +601,21 @@ fn governed_sequence(decision: ReviewDecision, change: FreshChange) {
     .unwrap()
     .encode();
     let operator_peer = thread::spawn(move || {
+        // Decoder assets use local Rc custody. Reconstruct the same immutable
+        // recipe inside this peer instead of sending its reader across threads.
+        let inputs = recipe::load(
+            &directory.join("recipe.json"),
+            peer_profile.delivery.scope.tenant,
+            peer_profile.delivery.limits.bytes,
+        )
+        .unwrap();
+        let peer_reader = Reader {
+            store: peer_store,
+            profile: peer_profile,
+            decoder: inputs.decoder,
+            tokenizer: inputs.tokenizer,
+            stream: inputs.stream,
+        };
         wait(&barrier);
         let before = peer_reader.publication();
         assert_eq!(before.executions, 1);

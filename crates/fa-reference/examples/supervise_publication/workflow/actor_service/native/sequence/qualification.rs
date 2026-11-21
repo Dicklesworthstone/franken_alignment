@@ -6,7 +6,10 @@ use std::path::Path;
 
 pub(super) fn check_mode(after: Option<u64>, source: Option<&Path>) -> Result<(), String> {
     if source.is_some() && after.is_none_or(|value| value == 0) {
-        return Err("native sequence credibility activation requires explicit --after-message recovery".into());
+        return Err(
+            "native sequence credibility activation requires explicit --after-message recovery"
+                .into(),
+        );
     }
     Ok(())
 }
@@ -25,7 +28,10 @@ pub(super) fn check_paths(
     if source.starts_with(operator::resolve(&config.store)?)
         || source == operator::resolve(config.source.path())?
     {
-        return Err("native credibility input must be independent of source and authority-store custody".into());
+        return Err(
+            "native credibility input must be independent of source and authority-store custody"
+                .into(),
+        );
     }
     for (actor, precheck) in entries {
         for endpoint in [
@@ -34,19 +40,25 @@ pub(super) fn check_paths(
             crate::workflow::control::socket_path(peers, actor.request),
         ] {
             if source == operator::resolve(&endpoint)? {
-                return Err("native credibility input conflicts with a scheduled transport endpoint".into());
+                return Err(
+                    "native credibility input conflicts with a scheduled transport endpoint".into(),
+                );
             }
         }
         if let Some(selected) = precheck
             && source == operator::resolve(selected.settings.socket_path())?
         {
-            return Err("native credibility input conflicts with a scheduled precheck endpoint".into());
+            return Err(
+                "native credibility input conflicts with a scheduled precheck endpoint".into(),
+            );
         }
     }
     if let Some(selected) = selected_operator
         && source == operator::resolve(&selected.settings.socket)?
     {
-        return Err("native credibility input conflicts with the original operator endpoint".into());
+        return Err(
+            "native credibility input conflicts with the original operator endpoint".into(),
+        );
     }
     Ok(())
 }
@@ -72,7 +84,7 @@ pub(super) fn check_epoch(
         .epoch
         .checked_add(1)
         .ok_or("native credibility activation policy epoch exhausted")?;
-    if selected.settings.expected_policy_epoch != epoch {
+    if selected.settings.expected_policy_epoch() != epoch {
         return Err("precheck expected policy epoch must name the original owner's selected activation successor".into());
     }
     Ok(())

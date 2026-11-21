@@ -73,11 +73,23 @@ command/custody regressions accompany the integration. Contracts:
 `docs/RESIDENT_NATIVE_PUBLICATION.md`, `docs/LIVE_POLICY_GOVERNOR.md`.
 
 The core recovery integration target passes all seven tests on the pinned
-nightly. The first resident build exposed pre-existing ambiguous child-module
-paths that loaded the wrong recovery driver and admission tests; both now name
-their intended files explicitly. The corrected resident run is pending. Source
-review and changed-file formatting are complete. This increment does not close
-FA-026, FA-130, a Bead or a production qualification gate.
+nightly. Actual resident compilation exposed ambiguous child-module paths and
+test imports, outdated precheck epoch/target accesses, and decoder readers moved
+across threads despite their local `Rc` ownership. The fixes preserve the
+original predicates, exact target-mismatch negative, recipes and assertions;
+peer decoder readers are now constructed inside their own threads.
+
+The production `supervise_publication` example passed `cargo check --locked
+--offline -p fa-reference --example supervise_publication` on the pinned
+toolchain, before subsequent concurrent test-only additions were merged.
+
+The corrected resident test build emitted existing warnings and was terminated
+by `SIGKILL` before a test executable ran. Resident runtime execution is not
+established by that attempt. The canonical `cargo run --locked -p xtask -- check`
+driver was also executed: source-snapshot validation refused 202 unlisted files
+and 158 digest mismatches, including untouched source, before formatting,
+Clippy or full tests. Source review and changed-file formatting are complete.
+This increment does not close FA-026, FA-130, a Bead or a qualification gate.
 
 ## 2026-11-21: recover native generated publication with complete independent guards
 
@@ -103,8 +115,9 @@ After workspace recovery and a disk-backed installation, the pinned
 `governed_generated_recovery` integration tests passed. This was scoped serial
 execution with the toolchain's Cranelift backend and debug information disabled,
 not the canonical qualification gate. Changed Rust is formatted and whitespace
-checks pass. Clippy and canonical qualification remain pending; FA-026 and FA-130
-remain in progress.
+checks pass. The canonical driver subsequently stopped at source-snapshot
+validation before Clippy and full-suite execution; FA-026 and FA-130 remain in
+progress.
 
 ## 2026-11-20: govern a live resident native sequence without replacing its owner
 

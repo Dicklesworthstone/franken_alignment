@@ -19,18 +19,18 @@ mod fixture {
 }
 use fixture::{Root, configured, inputs, profiles};
 
-#[path = "tests/operator.rs"]
-mod operator_tests;
-#[path = "tests/governor.rs"]
-mod governor_tests;
-#[path = "tests/precheck.rs"]
-mod precheck_tests;
 #[path = "tests/combined.rs"]
 mod combined;
-#[path = "tests/anchors.rs"]
-mod history_tests;
+#[path = "tests/governor.rs"]
+mod governor_tests;
 #[path = "tests/history_inputs.rs"]
 mod history_inputs;
+#[path = "tests/anchors.rs"]
+mod history_tests;
+#[path = "tests/operator.rs"]
+mod operator_tests;
+#[path = "tests/precheck.rs"]
+mod precheck_tests;
 #[path = "tests/qualification.rs"]
 mod qualification_tests;
 

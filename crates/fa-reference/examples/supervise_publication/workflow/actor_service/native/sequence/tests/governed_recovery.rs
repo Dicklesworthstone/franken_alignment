@@ -123,7 +123,8 @@ fn prefix(root: &Root) -> Prefix {
     entries.truncate(2);
     config.programs = helper_programs(root);
     let reader = Reader::new(&config, &entries[0]);
-    let peer_reader = Reader::new(&config, &entries[0]);
+    let peer_store = config.store.clone();
+    let peer_profile = config.profile.clone();
     let ready = barrier(root, &mut entries[1]);
     let mut child = GovernorChild::start(root);
     let (governor, selected_operator) = selections(root, &entries[0].actor, child.0.id());
@@ -154,8 +155,11 @@ fn prefix(root: &Root) -> Prefix {
     let scope = entries[0].actor.scope;
     let evidence = current_evidence(scope);
     let peer = thread::spawn(move || {
+        // Publication inspection needs only the original store and profile;
+        // keep the decoder's thread-local weight buffers in the service thread.
+        let publication = || FileOversight::read_publication(&peer_store, &peer_profile).unwrap();
         wait(&ready);
-        let original = peer_reader.publication();
+        let original = publication();
         assert_eq!(original.executions, 1);
         assert_eq!(original.control.ledger.epoch, 0);
         let earlier = fs::read(root_path.join("store/delivery.bin")).unwrap();
@@ -181,7 +185,7 @@ fn prefix(root: &Root) -> Prefix {
         let planned = operator_known(&next, "policy-promotion-next");
         let action = live_governor::protocol::json(field(planned, "action"));
         operator_known(&operator_exchange(&mut socket, &action), "policy-promotion");
-        let promoted = peer_reader.publication();
+        let promoted = publication();
         assert_eq!(promoted.control.ledger.epoch, 1);
         assert_eq!(
             promoted.control.ledger.charged,
@@ -197,7 +201,7 @@ fn prefix(root: &Root) -> Prefix {
         write_complete(&evidence_path, evidence);
         release_actor.store(true, Ordering::Release);
         wait(&human_socket);
-        assert_eq!(peer_reader.publication().executions, 1);
+        assert_eq!(publication().executions, 1);
         release_human.store(true, Ordering::Release);
         earlier
     });

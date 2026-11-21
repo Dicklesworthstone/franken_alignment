@@ -33,8 +33,13 @@
 - Add composed process, human rejection, guard/policy/floor, rollback, archive,
   parser and CLI regressions. Repair original recovery/admission child-module
   paths exposed by the first resident build.
-- All seven core integration tests pass on the pinned nightly; corrected
-  resident execution and canonical qualification remain pending.
+- Repair original native precheck epoch/target API accesses and keep peer
+  decoder readers in their owning threads without changing assertions.
+- The production example passes its scoped `cargo check` on the pinned
+  compiler; concurrent test-only additions remain separately unqualified.
+- All seven core integration tests pass on the pinned nightly. The corrected
+  resident test build was killed before runtime execution; the canonical gate
+  stops at source-snapshot validation. Full qualification remains pending.
 
 ## 2026-11-21: recover native generated owners under their original guard contract
 
@@ -46,7 +51,8 @@
 - Add positive continuation/governance and causal recovery-refusal regressions.
 - Independent source review complete; after workspace recovery, all seven new
   integration tests pass on the pinned nightly with serial Cranelift compilation.
-  Canonical qualification remains pending.
+  The canonical driver stops at source-snapshot validation; qualification
+  remains pending.
 
 ## 2026-11-20: connect policy governance to resident native publication
 

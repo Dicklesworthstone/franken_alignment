@@ -191,7 +191,7 @@ impl Write for CheckedOutput {
                 if check_binding {
                     let wrong = previous.unwrap_or_else(|| {
                         let mut wrong = proposal.clone();
-                        wrong.target = wrong.target.checked_add(1).unwrap();
+                        wrong.target.object = wrong.target.object.checked_add(1).unwrap();
                         wrong
                     });
                     let rejected = query(&profile, &socket, wrong, 8);
