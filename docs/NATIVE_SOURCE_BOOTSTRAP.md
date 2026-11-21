@@ -105,3 +105,27 @@ The targeted `native_source_service_` tests and full RCH gate were freshly
 attempted and both stopped before compilation (`rch` missing, exit 127). These
 six tests and the nine library tests remain **UNEXECUTED**, as do Rust compilation,
 rustfmt and Clippy. No Beads closure or deployment qualification follows.
+
+
+## Guarded native recovery coverage — 2026-11-21
+
+The [complete guarded native recovery API](GUARDED_NATIVE_RECOVERY.md) composes
+this original source-bound cursor with independent full guard inventory,
+effective policy, credential state and retained recovery floors. Its mandatory
+history anchor and single original recovery Fence remain authoritative. The
+resident integration uses this existing API; no sibling recovery implementation
+or weaker implicit guard selection is introduced.
+
+Nine additional authored regression functions exercise all six original native
+publication/reserve selections, actual interrupted inference and post-recovery
+publication, revoked old governor/approval handles, complete policy and campaign
+mismatch, cumulative campaign exhaustion and Unknown effect liability. The
+matrix also covers extra guards, retained-history and canonical races,
+cancellation, authenticated Ready Stop and each of the five original storage
+barriers for both live and terminal finalizers. Test-only fault injection passes
+directly to the original Store; it exposes no production owner or role.
+
+Independent source review and installed-nightly syntax/format checks do not
+establish runtime behavior. Required RCH compilation, Clippy, targeted tests and
+the full repository gate remain pending because `rch` is absent. The scoped
+Bead and all parent acceptance remain open.

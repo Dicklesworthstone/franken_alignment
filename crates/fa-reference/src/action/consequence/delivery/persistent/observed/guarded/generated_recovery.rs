@@ -93,6 +93,14 @@ impl FileOversight {
 }
 
 impl FileGuardedGeneratedSourceRecovery {
+    // Keep fault injection behind cfg(test), forwarding to the same Store used
+    // by both original finalizers. Production exposes no internal state handle.
+    #[cfg(test)]
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn fail_storage_once(&self, barrier: crate::action::consequence::delivery::persistent::JournalIo) {
+        self.inner.fail_storage_once(barrier);
+    }
+
     pub fn progress(&self) -> FileGeneratedSourceRecoveryProgress {
         let mut progress = self.inner.progress();
         if let Some(error) = self.failure {

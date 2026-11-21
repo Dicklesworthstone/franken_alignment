@@ -13,6 +13,9 @@ use crate::action::consequence::oversight::{ReviewWindow, policy_governance::Cam
 use crate::action::consequence::policy_campaign::ReplayLimits;
 use crate::round::{Verdict, commitment};
 
+#[path = "governed_recovery_tests.rs"]
+mod recovery;
+
 fn campaigns() -> FileCampaignRequirement {
     FileCampaignRequirement {
         limits: ReplayLimits {

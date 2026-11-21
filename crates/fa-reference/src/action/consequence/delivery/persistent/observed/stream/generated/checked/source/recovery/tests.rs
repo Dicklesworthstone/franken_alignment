@@ -1,6 +1,7 @@
 //! Actual native inference and canonical storage, with synthetic model weights.
 //! These tests cover recovery contracts, not empirical monitor quality.
 mod anchored;
+mod governed;
 #[cfg(target_os = "linux")]
 mod anchored_transport;
 use super::*;

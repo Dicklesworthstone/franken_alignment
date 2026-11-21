@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-21: exercise complete guarded native recovery boundaries
+
+- Reuse the concurrently landed complete guarded recovery API, retaining its
+  independent inventory, current policy, credential state, floors and anchor.
+- Add nine original-inference/publication and boundary regressions across six
+  native publication/reserve profiles, cumulative campaign usage and liabilities.
+- Cover canonical races, cancellation, authenticated Ready Stop and all five
+  storage barriers through narrow test-only forwarding to the original Store.
+- Preserve original production custody and role boundaries. Source review and
+  syntax/format checks are separate from pending RCH compilation/runtime gates.
+
 ## 2026-11-21: restart governed resident native publication without weakening custody
 
 - Add complete independently selected native recovery requirements and retained

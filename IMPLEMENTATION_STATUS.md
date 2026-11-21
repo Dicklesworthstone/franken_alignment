@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: expand guarded native recovery boundary coverage
+
+The concurrently landed complete guarded native recovery API remains the sole
+implementation. The resident integration builds on its independently selected
+full guard inventory, current policy, credential state, recovery floors and
+mandatory history anchor. A narrower unpublished recovery wrapper was removed
+before integration, preserving the upstream role bundle and original cursor.
+
+Nine additional regression functions exercise all six publication/reserve
+selections, real interrupted inference and later independently reviewed
+publication, full-policy/guard mismatch, old role revocation, cumulative campaign
+capacity and Unknown liabilities, stale history/canonical races, cancellation,
+authenticated Ready Stop and all five original storage failure barriers for
+live and terminal finalizers. Test-only fault injection forwards to the original
+Store without adding a production custody escape. Source: the adjacent
+`governed_recovery_tests.rs` and `recovery/tests/governed.rs` under
+`observed/stream/generated/checked/`. Contract: `docs/NATIVE_SOURCE_BOOTSTRAP.md`.
+
+Independent source review and installed nightly syntax/format checks are
+recorded for this increment. Required targeted RCH and full xtask commands cannot
+launch because `rch` is absent (exit 127). Compilation, Clippy, runtime and
+compile-fail execution remain pending for these additional tests; no Bead or
+parent gate is closed. The concurrently landed resident governed suffix uses
+complete `--recovery-requirements`; its scoped qualification is recorded below.
+
 ## 2026-11-21: resume governed resident native publication with independent recovery custody
 
 The resident `serve-native-generated` command now composes the original guarded

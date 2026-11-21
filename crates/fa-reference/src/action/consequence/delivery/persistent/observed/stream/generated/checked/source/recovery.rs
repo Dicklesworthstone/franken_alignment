@@ -135,6 +135,14 @@ impl FileGeneratedSourceRecovery {
         Ok(&self.machine)
     }
 
+    // Test-only access to the original Store barriers through sealed wrappers.
+    // No replacement store, mutable machine or production field is exposed.
+    #[cfg(test)]
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn fail_storage_once(&self, barrier: crate::action::consequence::delivery::persistent::JournalIo) {
+        self.store.fail_once(barrier);
+    }
+
     fn begin(
         directory: &Path,
         profile: FileOversightProfile,
