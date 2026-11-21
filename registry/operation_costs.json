@@ -169,6 +169,16 @@
       "additional_object_publication": "None. Canonical filesystem-name validation before configuration, actor, precheck and numerical recipe reads.",
       "status": "proposed_unmeasured",
       "notes": "Resolve at most two selected archive paths against the bounded command inputs, manifest path and up to three input paths for each of at most sixteen entries. Each check uses filesystem path-resolution metadata and a temporary set of at most two canonical archive names; it reads no archive payload, model or journal and appends no event. Existing archive admission, semantic replay and final export retain their own costs. Filesystem latency remains unmeasured; these checks do not establish hostile-filesystem isolation."
+    },
+    {
+      "id": "OP-NATIVE-GOVERNED-REQUALIFY",
+      "operation": "Requalify an explicitly recovered governed native suffix",
+      "profile": "source_bound_native_text_reference",
+      "ordered_control_commits": 1,
+      "external_effect_admissions": 0,
+      "additional_object_publication": "One existing ActivateHeldOut event in the original canonical journal; optional acknowledged history archive export retains its existing file and directory synchronization.",
+      "status": "proposed_unmeasured",
+      "notes": "The independently selected capsule is read once under CredibilityActivation::MAX_ENCODED_BYTES after the original anchored recovery Fence and before new numerical work. The original reducer validates the complete committee and held-out joint requirements and advances the authority epoch once. Recovery replay/Fence, source refresh, subsequent generation, review, publication and archive retention retain their separate original costs. Stop/deadline checks surround activation. Later releases do not reread the capsule; policy promotion invalidates previous-policy qualification and cannot obtain free requalification. No latency or execution measurement is claimed."
     }
   ],
   "logical_to_physical_rule": "Each storage profile must explicitly map logical commits to fsync/directory/replication barriers. Group commit amortizes physical work but does not erase causal order.",

@@ -49,6 +49,21 @@ fn witness_inputs(reader: &Reader, revision: u64, keys: &[u64]) -> FilePublicati
 }
 
 fn publication(root: &Root, reader: &Reader) -> (PublicationProfile, FilePublicationProducer) {
+    selected_publication(root, reader, false)
+}
+
+pub(super) fn joint_publication(
+    root: &Root,
+    reader: &Reader,
+) -> (PublicationProfile, FilePublicationProducer) {
+    selected_publication(root, reader, true)
+}
+
+fn selected_publication(
+    root: &Root,
+    reader: &Reader,
+    joint: bool,
+) -> (PublicationProfile, FilePublicationProducer) {
     let scope = reader.profile.delivery.scope;
     let (producer, _) = FilePublicationProducer::create(
         root.0.join("producer"),
@@ -72,6 +87,13 @@ fn publication(root: &Root, reader: &Reader) -> (PublicationProfile, FilePublica
         scope.branch,
         scope.authority,
     );
+    let document = if joint {
+        format!(
+            r#"{{"schema":"fa.supervised-joint-publication/1","joint":{{"id":9,"generation":1,"minimum_safe_roots":2,"minimum_violation_roots":2,"maximum_escape_ppm":0,"maximum_false_stop_ppm":0,"max_cases":8,"max_member_outcomes":32}},"publication":{document}}}"#,
+        )
+    } else {
+        document
+    };
     (
         PublicationProfile::decode(document.as_bytes()).unwrap(),
         producer,

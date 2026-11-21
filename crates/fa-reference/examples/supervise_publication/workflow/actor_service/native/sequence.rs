@@ -275,7 +275,7 @@ where
         credibility,
         requirements.is_some(),
     )?;
-    governor::check_publication(selected_governor, publication)?;
+    governor::check_publication(selected_governor, publication, requirements.is_some())?;
     requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
     governor::check_recovery(

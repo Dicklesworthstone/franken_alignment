@@ -58,6 +58,13 @@ needs fresh evidence and an independent human decision. See
 [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for scoped execution
 results and the remaining qualification boundary.
 
+Governed native recovery also accepts one independently selected helper
+credibility activation, including the original held-out joint publication
+contract. The same recovered owner and fresh human/governor roles serve the
+suffix. Activation does not approve an effect, and a later policy promotion
+invalidates the previous policy's qualification. Source implementation and
+regression coverage are present; RCH execution qualification remains pending.
+
 Resident [history custody](docs/RESIDENT_NATIVE_PUBLICATION.md#independently-retained-history)
 also reserves every selected configuration and manifest input before those
 files are read. Canonical aliases through symlinked directories and future

@@ -69,8 +69,7 @@ pub(super) fn take_recovery_options(
         return Ok((remaining, governor, None));
     }
     const RECOVERY: &str = "native governed recovery requires --governor-profile, paired --operator-profile/--tower-generation, --recovery-requirements, --after-message and --history-anchor";
-    if credibility.is_some()
-        || args.len() < 16
+    if args.len() < 16
         || args.len() > 20
         || args.len() % 2 != 0
         || args.first().map(String::as_str) != Some("serve-native-generated")
@@ -131,9 +130,8 @@ pub(super) fn check_selected(
     if governor.is_none()
         || !operator.is_some_and(operator::Selection::is_governed)
         || after.is_none_or(|request| request == 0)
-        || credibility.is_some()
     {
-        return Err("native governance recovery requires independent governor/operator custody, a nonzero predecessor and no credibility activation".into());
+        return Err("native governance recovery requires independent governor/operator custody and a nonzero predecessor".into());
     }
     Ok(())
 }
@@ -188,9 +186,13 @@ pub(super) fn check_selection(
 pub(super) fn check_publication(
     governor: Option<&Settings>,
     publication: Option<&PublicationProfile>,
+    recovery: bool,
 ) -> Result<(), String> {
     if let (Some(governor), Some(publication)) = (governor, publication) {
-        if publication.requires_joint() {
+        // The independently selected guarded opener checks the COMPLETE joint
+        // profile before its Fence. Recovery can then requalify this same owner;
+        // creation still cannot install or activate that evidence implicitly.
+        if publication.requires_joint() && !recovery {
             return Err(
                 "native governance cannot activate a held-out joint profile during creation".into(),
             );
@@ -252,6 +254,11 @@ pub(super) fn check_with_recovery(
         .map(|(actor, _)| actor.request)
         .collect::<Vec<_>>();
     governor.check_custody_paths(&[config.source.path()])?;
+    if let Some(credibility) = credibility {
+        // Direct callers need the same separation as the command input loader.
+        // A future governor listener must not acquire the capsule's pathname.
+        governor.check_custody_paths(&[credibility])?;
+    }
     for (actor, precheck) in entries {
         if recovery {
             governor.check_generated_recovery_host(

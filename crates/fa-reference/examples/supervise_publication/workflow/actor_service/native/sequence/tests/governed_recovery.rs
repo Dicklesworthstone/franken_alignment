@@ -2,6 +2,8 @@
 //! suffix recovery. Model fixtures test custody and execution, not accuracy.
 #[path = "governed_recovery_promotion.rs"]
 mod promotion_tests;
+#[path = "governed_requalification.rs"]
+mod requalification_tests;
 
 use super::super::super::anchors as custody;
 use super::*;

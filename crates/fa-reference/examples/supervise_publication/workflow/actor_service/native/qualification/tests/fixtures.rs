@@ -96,7 +96,7 @@ fn snapshot() -> Snapshot {
         values: BTreeMap::from([(7, b"ok".to_vec())]),
     }
 }
-pub(super) fn activation(
+pub(crate) fn activation(
     config: &Config,
     sequence: u64,
     epoch: u64,

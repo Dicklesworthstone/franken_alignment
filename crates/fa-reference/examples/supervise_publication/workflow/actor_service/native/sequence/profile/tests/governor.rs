@@ -558,10 +558,16 @@ fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_befo
             assert_eq!(command_failure(&invalid, None), USAGE);
         }
     }
-    assert!(
-        governance::take_recovery_options(&valid, Some(Path::new("/missing/qualification")),)
-            .is_err()
-    );
+    // The capsule is separately parsed by the original qualification grammar.
+    // It cannot supply an omitted independent recovery contract or anchor.
+    let capsule = Some(Path::new("/missing/qualification"));
+    assert!(governance::take_recovery_options(&valid, capsule).is_ok());
+    for flag in ["--recovery-requirements", "--history-anchor"] {
+        let mut missing = valid.clone();
+        let index = missing.iter().position(|arg| arg == flag).unwrap();
+        missing.drain(index..index + 2);
+        assert!(governance::take_recovery_options(&missing, capsule).is_err());
+    }
     assert!(!root.0.join("store").exists());
 }
 

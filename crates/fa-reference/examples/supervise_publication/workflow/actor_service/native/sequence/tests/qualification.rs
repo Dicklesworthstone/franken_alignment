@@ -6,7 +6,7 @@ use fa_reference::action::consequence::delivery::persistent::credibility::Credib
 use std::fs;
 
 #[allow(dead_code)]
-mod evidence {
+pub(super) mod evidence {
     include!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/examples/supervise_publication/workflow/actor_service/native/qualification/tests/fixtures.rs"

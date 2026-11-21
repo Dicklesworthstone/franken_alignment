@@ -178,7 +178,11 @@ where
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
-    governor::check_publication(selected_governor.as_ref(), publication.as_ref())?;
+    governor::check_publication(
+        selected_governor.as_ref(),
+        publication.as_ref(),
+        recovery_path.is_some(),
+    )?;
     let recovery = recovery_path
         .as_deref()
         .map(|path| governor::requirements::Selection::read(path, &config))

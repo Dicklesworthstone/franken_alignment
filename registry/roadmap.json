@@ -836,7 +836,8 @@
         "crates/fa-reference/tests/governed_generated_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/requirements.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2587,7 +2588,7 @@
       "id": "FA-105",
       "gate": "G2",
       "title": "Implement the helper credibility ledger and andon budget",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-019",
         "FA-022"
@@ -2606,7 +2607,9 @@
       "result_artifacts": [
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/qualification.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/qualification.rs",
-        "docs/LEARNED_OPERATOR_PUBLICATION.md"
+        "docs/LEARNED_OPERATOR_PUBLICATION.md",
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3456,7 +3459,8 @@
         "crates/fa-reference/tests/governed_generated_recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/requirements.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
       ],
       "founding_ideas": [
         "FI-A14",

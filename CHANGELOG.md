@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-21: compose helper requalification with governed native recovery
+
+- Admit one explicit recovery credibility capsule and the complete original
+  held-out joint publication profile under independent guarded history.
+- Preserve fresh governor/human roles, cumulative work and unresolved charges;
+  do not reread or reactivate the capsule at later resident handoffs.
+- Reserve capsule custody against the governor endpoint before live startup.
+- Preserve old-qualification invalidation after policy promotion and fresh
+  independent review for every effect; creation activation remains unsupported.
+- Add composed positive and causal negative regressions. Required RCH
+  compilation and runtime qualification remain pending; no gate is closed.
+
 ## 2026-11-21: measure identity before preparing learned prompt checkpoints
 
 - Retain the original computed-identity observer and measure the selected model

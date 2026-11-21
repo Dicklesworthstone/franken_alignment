@@ -80,8 +80,9 @@ decoders and asset budgets as unselected native loading.
 
 This creation selection supports publication profiles without joint activation.
 An independently retained output archive alone does not select recovery.
-Governed native recovery requires the complete explicit selection below;
-credibility activation, topology selection and single-release commands remain
+Governed native recovery requires the complete explicit selection below and
+can independently select one recovery credibility activation. Creation still
+refuses activation; topology selection and single-release commands remain
 unsupported. See the complete
 [resident native publication contract](RESIDENT_NATIVE_PUBLICATION.md#independent-policy-governance-during-native-creation).
 The source and authored regressions are independently reviewed; required RCH
@@ -104,6 +105,15 @@ confirmed Messages and uncertain effect charges survive; old keys and evidence
 eligibility do not. A recovered suffix may be one final Finish, with no new
 sampled draw, or new Messages with an optional final Finish. Every effect retains fresh human
 approval and every later policy promotion retains its independent campaign.
+
+Recovery can select `--credibility-activation CAPSULE`, including with the
+original held-out joint publication profile. The original activation runs once
+before the suffix, retains fresh governor/human roles, and withdraws old approval
+keys. The governor can request and review a new campaign, but policy promotion
+invalidates qualification for the previous policy. Fresh policy evidence never
+comes from a surviving role handle; subsequent publication must wait for a
+separately selected current qualification. The capsule cannot alias the governor
+endpoint. This composition adds no activation route during fresh creation.
 
 Full grammar, JSON, custody and failure behavior:
 [governed native recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence).

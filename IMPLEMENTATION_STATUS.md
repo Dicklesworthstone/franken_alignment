@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: requalify governed resident native recovery
+
+The complete governed native suffix command now accepts one independently
+selected credibility capsule, including the exact retained held-out joint
+publication profile. Anchored guarded replay and the original recovery Fence
+still precede activation; no recovery expectation is inferred from the capsule.
+The original activation runs once before the first release, retaining recovered
+human/governor custody, numerical spending, confirmed output and uncertain
+charges while withdrawing old effect keys and campaign approvals.
+
+Later Messages and Finish use the same owner and retained qualification. Each
+still needs fresh source evidence, native review and an independent human key.
+Live governor custody survives, but a later policy promotion invalidates the
+previous policy's qualification and cannot authorize a new effect. Creation
+continues to refuse activation and joint profiles requiring it. The capsule is
+reserved against the governor endpoint before model reads or live startup.
+
+Regression sources pair actual governed joint-prefix recovery and separately
+approved releases with stale evidence/epochs, capsule path conflicts, human
+rejection, Stop/deadline and policy-promotion invalidation. Contract:
+`docs/RESIDENT_NATIVE_PUBLICATION.md`; original mechanisms and journal formats
+are unchanged. This serves FA-026, FA-105 and FA-130, with its bounded activation
+cost recorded in `registry/operation_costs.json`.
+
+The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask -- check`
+cannot start in this environment (`rch: command not found`, exit 127). Source
+review and qualified-formatter checks are separate from compilation, Clippy and
+runtime qualification. The new child Bead and parent gates remain open.
+
 ## 2026-11-21: measure model identity before learned prompt checkpoint preparation
 
 Fresh prompt preparation now accepts the complete original computed identity

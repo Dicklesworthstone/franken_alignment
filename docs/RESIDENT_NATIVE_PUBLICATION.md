@@ -340,8 +340,9 @@ qualified-success fixtures above and retains the same pending execution boundary
 
 A resident suffix can select `--credibility-activation CAPSULE` together with
 `--after-message PREVIOUS_REQUEST`. This composes with the existing publication
-and independent operator selections. Creation rejects the option before
-configuration reads or clocks; an actor submission cannot supply the capsule.
+and independent operator selections, including the complete governed recovery
+selection below. Creation rejects the option before configuration reads or
+clocks; an actor submission cannot supply the capsule.
 
 The original cooperative recovery and complete suffix-history admission run
 first. The existing native qualification operation then reads and validates the
@@ -362,7 +363,7 @@ fall back to the recovered qualification.
 
 Canonical admission reserves the capsule name against the authority store,
 evidence source, every scheduled actor/reviewer/Stop/precheck endpoint and the
-selected operator endpoint before recipe/model reads. The original bounded file
+selected operator and governor endpoints before recipe/model reads. The original bounded file
 reader still runs at the controlled qualification boundary. These path checks
 do not establish a hostile-filesystem isolation guarantee.
 
@@ -395,10 +396,46 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
 ```
 
 The new output archive is optional. The other recovery selections above are
-required together. An original simple checked-publication profile can also be
-selected with `--publication-profile`; recovery must preserve its exact original
-witness contract. This mode refuses credibility activation, held-out joint
-activation, topology selection and the single-release command family.
+required together. An original checked-publication profile can also be selected
+with `--publication-profile`; recovery must preserve its exact original witness
+and held-out joint contracts. Topology selection and the single-release command
+family remain outside this mode.
+
+### Requalify the original helper congress after recovery
+
+Add `--credibility-activation CAPSULE` to the complete governed recovery command
+to select one independently supplied qualification for the recovered suffix.
+A retained held-out joint publication profile is selected through the existing
+`--publication-profile` wrapper; it is never projected to its marginal or
+unchecked form. The recovery requirements and anchor still describe the exact
+original history and current policy. Neither the capsule nor the governor
+profile can supply a missing recovery expectation.
+
+The original guarded replay and single recovery Fence run first. The native
+activation then consumes the capsule once before the first new release, under
+the same Stop service and deadline. Successful activation advances the authority
+epoch once and withdraws old effect keys and campaign approvals. It retains the
+fresh recovered human and governor roles, original numerical spending, confirmed
+prefix and unresolved charges. Every later Message or Finish uses the retained
+qualification; a handoff cannot reread the capsule or renew its allowance.
+
+Successful credibility activation is not effect approval. New releases
+still require their own source evidence, helper review, independent human key
+and final publication checks. Governor custody remains usable for the original
+policy-replay protocol, but a subsequent policy promotion invalidates the old
+qualification. The service must refuse later publication until a separately
+selected fresh qualification is available; it cannot transfer the previous
+policy's credibility evidence into the new policy. This mode does not add a
+live per-release activation channel.
+
+The capsule must be separate from the governor socket and every other selected
+custody path. These checks precede model reads or listener creation. Stale
+capsules, stale first-release disclosure epochs, deadline or Stop after
+activation, and human rejection do not acquire publication authority. An
+acknowledged recovery/activation remains part of the retained failure history.
+Creation still refuses activation and held-out joint profiles requiring it.
+The new composition and regression sources require RCH compilation and runtime
+qualification before execution credit is assigned.
 
 The remaining sequence contains 1–16 genuinely new requests and may consist
 only of the final Finish. A Finish preserves its confirmed Message predecessor
