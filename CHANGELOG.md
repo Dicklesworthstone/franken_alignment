@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-21: exercise newly recovered native governance through publication
+
+- Extend the existing resident recovery fixture with a real governor campaign,
+  independent operator promotion and fresh source intent after restart.
+- Pair independent human approval and rejection after the recovered policy
+  promotion; promotion alone cannot authorize the next effect.
+- Preserve the acknowledged recovery anchor when later suffix/predecessor
+  admission refuses. Reuse the original complete requirements and recovery path.
+- Additional cases remain pending required RCH compilation and execution.
+
 ## 2026-11-21: exercise complete guarded native recovery boundaries
 
 - Reuse the concurrently landed complete guarded recovery API, retaining its

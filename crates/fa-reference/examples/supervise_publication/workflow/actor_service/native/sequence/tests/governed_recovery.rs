@@ -1,5 +1,8 @@
 //! An actual governed native prefix survives explicit independently guarded
 //! suffix recovery. Model fixtures test custody and execution, not accuracy.
+#[path = "governed_recovery_promotion.rs"]
+mod promotion_tests;
+
 use super::super::super::anchors as custody;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{

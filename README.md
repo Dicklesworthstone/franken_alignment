@@ -48,6 +48,16 @@ handoffs. Stop remains first, including when an operator Fence stops the origina
 admission domain. The source and regression cases remain pending required RCH
 compilation and runtime qualification.
 
+[Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)
+now requires an independently retained history anchor and complete current
+policy, guard and recovery-floor requirements. The original recovery Fence
+returns fresh human and governor roles while preserving numerical spending,
+campaign use and unresolved effects. Later policy promotion still needs a new
+governor-approved replay and separate operator action; each new publication still
+needs fresh evidence and an independent human decision. See
+[`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) for scoped execution
+results and the remaining qualification boundary.
+
 Resident [history custody](docs/RESIDENT_NATIVE_PUBLICATION.md#independently-retained-history)
 also reserves every selected configuration and manifest input before those
 files are read. Canonical aliases through symlinked directories and future

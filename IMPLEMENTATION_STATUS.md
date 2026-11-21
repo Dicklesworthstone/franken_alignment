@@ -1,5 +1,26 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: exercise live governance after native recovery
+
+Three additional resident regressions build on the concurrently landed complete
+`--recovery-requirements` service. A real native prefix has already published two
+Messages and promoted policy generation 1 to 2. After anchored recovery, a fresh
+authenticated governor requests and approves a new retained-corpus campaign;
+the independent operator promotes generation 2 to 3. The next Message must use
+the re-emitted source intent, fresh evidence and a new human decision. Paired
+Approve/Reject cases keep policy promotion distinct from effect permission.
+
+The third case selects an invalid historical predecessor and requires the
+acknowledged recovery Fence to survive the later suffix refusal in its newly
+retained anchor, before new source acquisition or inference. These cases extend
+the original resident fixture and recovery cursor without a second CLI schema,
+replay driver or owner implementation.
+
+Independent source review, changed-file Rust syntax/format checks and whitespace
+checks are recorded separately from execution. The required `rch` runner is
+absent, so these additions remain uncompiled and unexecuted. No Bead, FA-026,
+FA-130 or qualification gate is closed by this increment.
+
 ## 2026-11-21: expand guarded native recovery boundary coverage
 
 The concurrently landed complete guarded native recovery API remains the sole
