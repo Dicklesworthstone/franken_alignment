@@ -3,7 +3,7 @@
 use super::{Config, Control, Deadline, Duration, ElapsedTick, FileOversight,
     FileSupervisedDriver, GenerationGoal, GenerationOutcome, Instant, Loaded,
     anchors, campaigns, checked, checkpoint_on_generation::Selection, cleanup,
-    debug, drive_generation, fields, plus, prediction, qualification, recipe, stop, topology};
+    debug, drive_generation, fields, identity, plus, prediction, qualification, recipe, stop, topology};
 use crate::workflow::continuation::checkpoint::Output;
 use fa_reference::action::consequence::delivery::persistent::{FileDeliverySnapshot,
     observed::{decoder::learned::checkpoint::FileLearnedCheckpointInfo,
@@ -60,7 +60,7 @@ where F: FnMut() -> ElapsedTick {
         wall: Duration::from_millis(lifetime) };
     deadline.check(start)?;
     let mut control = Control::new(&config, loaded.request, None)?;
-    let topology::Started { custody: (host, reviewer, observer, identity), source,
+    let topology::Started { custody: (host, reviewer, observer, identity_observer), source,
         output: source_output } = topology::start(&config, &loaded, false,
             &mut control, &deadline, &mut time)?;
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().map_err(debug)?;
@@ -69,9 +69,9 @@ where F: FnMut() -> ElapsedTick {
     drop(port);
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut prediction = observer.map(|observer| prediction::Session::new(loaded.request, observer));
+    let mut identity = identity_observer.map(identity::Session::new);
     let prepared = (|| {
         topology::attach(&mut driver, source)?;
-        if identity.is_some() { return Err("unexpected identity custody during prompt preparation".into()); }
         if !qualification::prepare(&mut driver, &config, None,
             (&mut control, &reviewer, &deadline), &mut time)? {
             return Ok(GenerationOutcome::Stopped);
@@ -82,6 +82,13 @@ where F: FnMut() -> ElapsedTick {
             }
             topology::certify(&mut driver, &deadline, &mut time)?;
         }
+        // The original independent observer measures this actual model before
+        // any prompt work. A retained match is evidence, not a publication key;
+        // later recovery withdraws it and requires a fresh check.
+        if !identity::prepare(&mut driver, &mut config, &loaded, &mut identity,
+            (&mut control, &reviewer, &deadline), &mut time)? {
+            return Ok(GenerationOutcome::Stopped);
+        }
         drive_generation(&mut driver, &reviewer, &mut config, &mut control, &deadline,
             &mut time, (prediction.as_mut(), Some(selected), GenerationGoal::Checkpoint))
     })();
@@ -91,6 +98,7 @@ where F: FnMut() -> ElapsedTick {
             // cannot turn this successful maintenance boundary into a Stop.
             let acknowledged = Prepared::capture(&driver, selected, source_output.as_ref());
             drop(prediction);
+            drop(identity);
             drop(driver);
             let acknowledged = acknowledged.map_err(|error| format!(
                 "prompt checkpoint {} acknowledged but its report is unavailable: {error}; preserve the original store",
@@ -113,6 +121,7 @@ where F: FnMut() -> ElapsedTick {
                 .expect("incoming preparation failure is retained");
             drop(prediction);
             let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
+            drop(identity);
             Err(if pending == 0 { error } else {
                 format!("{error}; {pending} original helper children remain unconfirmed")
             })
@@ -134,9 +143,13 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
         || loaded.generation.text_stream_profile().is_none() {
         return Err("prompt preparation requires the original owned prompt-audit stream recipe".into());
     }
-    if loaded.identity.is_some() || loaded.generation.requires_computed_identity()
-        || loaded.generation.required_held_out_joint().is_some() {
-        return Err("prompt preparation does not support identity or held-out activation selections".into());
+    let registered_identity = loaded.generation.required_computed_identity_registration().is_some();
+    if loaded.identity.is_some() != registered_identity
+        || loaded.generation.requires_computed_identity() != registered_identity {
+        return Err("prompt preparation requires the complete original identity registration and measurement selection together".into());
+    }
+    if loaded.generation.required_held_out_joint().is_some() {
+        return Err("prompt preparation does not support held-out activation selections".into());
     }
     if loaded.recovery_anchor.is_some() || loaded.floor.journal_revision != 0
         || loaded.floor.control_sequence != 0 || loaded.floor.authority_epoch != 0 {

@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: measure model identity before learned prompt checkpoint preparation
+
+Fresh prompt preparation now accepts the complete original computed identity
+registration and its independently selected measurement profile. It retains the
+observer returned by the original constructor and runs the existing cooperative
+identity measurement after source/topology preparation and before prompt work.
+The same owner keeps the measurement costs, check allowance and historical
+result. Recovery still withdraws the match and requires a fresh check before
+continuation. No actor request, helper execution or publication key is issued by
+preparation; held-out joint activation remains outside this mode.
+
+Five new regression functions cover actual unsampled capture without helper
+assets, later fresh measurement with independent human approval/rejection,
+modified weights and manifests, unavailable measurement input, exhausted work,
+omitted or altered recovery guards, and the exact shared asset ceiling. The
+fixtures exercise the original numerical and publication machinery; they do not
+establish empirical model-substitution detection. Contract:
+`docs/LEARNED_PROMPT_PREPARATION.md`.
+
+Source review, new-test formatting on the pinned nightly and whitespace checks
+are recorded separately from runtime execution. Both the initial local baseline
+compiler and the lower-memory retry were killed before producing the core
+integration executable. A metadata-only check is in progress; this source
+checkpoint claims no test pass, RCH execution, Bead closure or full qualification. Subsequent execution evidence
+must name the actual source and compiler selection.
+
 ## 2026-11-21: exercise live governance after native recovery
 
 Three additional resident regressions build on the concurrently landed complete

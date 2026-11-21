@@ -82,9 +82,10 @@ history anchor, actor or reviewer service selection, live prechecks, Finish, sim
 checkpoint capture, duplicate flags and held-out activation are refused before
 creation.
 
-This bounded preparation path refuses numerical recipes requiring computed
-identity or held-out joint activation, and refuses nonzero recovery floors. It does not drop those
-requirements to obtain a simpler owner. Raw predictors, legacy owned predictors
+This bounded preparation path accepts the original computed model-identity
+registration with its independently selected measurement profile. Held-out
+joint activation and nonzero recovery floors remain unsupported; preparation
+does not drop those requirements to obtain a simpler owner. Raw predictors, legacy owned predictors
 and nonpredictive streams remain outside this mode.
 An existing store is never reopened or replaced by preparation, including after
 a previous preparation's report was lost.
@@ -112,6 +113,25 @@ refuse continuation without consuming the prepared history or its anchor.
 Changing or omitting an original guard cannot downgrade that history. A late
 witness change or disappearing producer still prevents the affected publication;
 preparation cannot serve as evidence that the later world remained unchanged.
+
+### Measure the original model before preparing its prompt
+
+A recipe can select its existing computed identity registration and identity
+measurement profile alongside the credential and final-publication guards.
+Both parts must be present together. Preparation keeps the independent identity
+observer returned by the original constructor and runs the existing cooperative
+measurement before any prompt computation. The observed manifest is read from
+the selected input; it is never filled from the expected passport. Actual model
+weights, the measurement work allowance, source freshness, Stop and the original
+deadline retain their normal checks.
+
+A missing or mismatched manifest, changed model fingerprint, or exhausted
+measurement allowance prevents prompt capture. A successful match belongs to
+the same journal as the unsampled checkpoint and consumes the original check
+allowance. It supplies neither an actor request nor a publication approval.
+Later continuation must preserve the exact registration and perform a fresh
+identity check after recovery; an old match cannot cross the recovery Fence.
+Preparation and continuation share the original lifetime measurement limits.
 
 ## Original generation and acknowledgment
 

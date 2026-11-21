@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-21: measure identity before preparing learned prompt checkpoints
+
+- Retain the original computed-identity observer and measure the selected model
+  before prompt computation or checkpoint capture.
+- Require the complete registration and measurement selection together; preserve
+  original costs, source checks, deadlines and fresh identity after recovery.
+- Add five substantive regression functions spanning successful capture and
+  publication, independent human rejection, changed models/manifests, omitted
+  guards and exhausted work/asset allowances.
+- Independently source-reviewed and syntax/format checked. Runtime verification
+  is tracked separately; this checkpoint closes no qualification gate.
+
 ## 2026-11-21: exercise newly recovered native governance through publication
 
 - Extend the existing resident recovery fixture with a real governor campaign,

@@ -13,6 +13,7 @@ use fa_reference::strict_json::{self, Json, Limits};
 use std::{io::{self, Write}, path::{Path, PathBuf}};
 
 #[path = "checkpoint_prepare/guarded.rs"] mod guarded;
+#[path = "checkpoint_prepare/identity.rs"] mod identity_tests;
 
 struct Case {
     config: Config,
