@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-21: restart governed resident native publication without weakening custody
+
+- Add complete independently selected native recovery requirements and retained
+  input history to the resident command, with strict bounded parsing and early
+  path-custody checks.
+- Resume new Message suffixes or a singleton Finish with fresh human/governor
+  roles, original numerical spending, confirmed output and unresolved charges.
+- Keep authenticated Stop and deadlines effective through the final replay
+  checkpoint; retain acknowledged recovery/Stop history across later failures.
+- Add composed process, human rejection, guard/policy/floor, rollback, archive,
+  parser and CLI regressions. Repair original recovery/admission child-module
+  paths exposed by the first resident build.
+- All seven core integration tests pass on the pinned nightly; corrected
+  resident execution and canonical qualification remain pending.
+
 ## 2026-11-21: recover native generated owners under their original guard contract
 
 - Add independently anchored native recovery with the exact guard inventory,
@@ -8,8 +23,9 @@
   human and governor roles; preserve cumulative work and uncertain effect charges.
 - Keep cancellation and authenticated terminal Stop on the same guarded cursor.
 - Add positive continuation/governance and causal recovery-refusal regressions.
-- Independent source review complete; compiler/runtime/full-gate qualification
-  remains pending after execution-workspace loss.
+- Independent source review complete; after workspace recovery, all seven new
+  integration tests pass on the pinned nightly with serial Cranelift compilation.
+  Canonical qualification remains pending.
 
 ## 2026-11-20: connect policy governance to resident native publication
 

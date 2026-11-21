@@ -380,6 +380,113 @@ pair real Message/Message/Finish recovery with lost and historical evidence,
 stale disclosure epochs, human refusal, source loss and Stop/deadline boundaries.
 Compilation and runtime qualification remain pending the required RCH verifier.
 
+## Recover a governed native sequence
+
+Governed suffix recovery has an explicit complete selection:
+
+```sh
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST \
+  --operator-profile OPERATOR_PROFILE --tower-generation NONZERO \
+  --governor-profile GOVERNOR_PROFILE \
+  --recovery-requirements RECOVERY_REQUIREMENTS \
+  --history-anchor PREVIOUS_INDEPENDENT_ANCHOR \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+The new output archive is optional. The other recovery selections above are
+required together. An original simple checked-publication profile can also be
+selected with `--publication-profile`; recovery must preserve its exact original
+witness contract. This mode refuses credibility activation, held-out joint
+activation, topology selection and the single-release command family.
+
+The remaining sequence contains 1–16 genuinely new requests and may consist
+only of the final Finish. A Finish preserves its confirmed Message predecessor
+and exact recipe without another sampled draw. New Message generations retain
+the original decoder, tokenizer, stream limits and cumulative numerical work.
+Creation keeps its original 2–16-entry contract.
+
+### Independently retained recovery requirements
+
+The recovery file is bounded to 64 KiB and uses this closed schema. The values
+below illustrate the format; supply the actual complete current policy and
+independently retained campaign settings and history floors for the run.
+Keep the original bootstrap policy in `CONFIG`; put the complete currently
+promoted policy in `effective_policy`. Recovery uses those two policies for
+different checks and must not replace the bootstrap policy with the current one.
+
+```json
+{
+  "schema": "fa.native-recovery-requirements/1",
+  "effective_policy": {
+    "generation": 2,
+    "nodes": [
+      { "op": "payload_at_most", "maximum": 2048 }
+    ]
+  },
+  "guards": {
+    "campaigns": {
+      "cases": 16,
+      "input_bytes": 1048576,
+      "max_campaigns": 4
+    },
+    "decoder_stop": null,
+    "identity": null,
+    "credential": null
+  },
+  "minimum": {
+    "journal_revision": 70,
+    "control_sequence": 9,
+    "authority_epoch": 1
+  }
+}
+```
+
+Every field is mandatory. Duplicate or unknown fields, invalid campaign bounds
+and non-null unsupported guards refuse. Explicit absence is a requirement,
+never permission to drop a guard found on disk. The independently supplied
+original configuration and recipes pin source, stream, decoder and tokenizer;
+the file neither replaces those inputs nor infers expectations from the
+journal. Campaign settings must also exactly match the independently selected
+governor profile. Effective-policy predicates are compared as well as the
+generation, so a same-generation policy substitution refuses.
+
+The command reserves the requirements file against the authority store, evidence
+source, every scheduled actor/human/Stop/precheck endpoint, governor and operator
+endpoints, and selected input/output archives before model assets or live
+custody are opened. Paths do not constitute a hostile-filesystem guarantee.
+
+### Recovery and live role custody
+
+The [guarded native cursor](GUARDED_NATIVE_RECOVERY.md) holds one exclusive
+canonical image and the original numerical reconstruction. Its independently
+retained anchor is checked before the first replay event. Complete guard,
+current-policy and history-floor checks must succeed before the original
+single recovery Fence returns fresh human and governor roles. A missing
+selection cannot fall back to the unguarded native opener.
+
+Replay uses the same one-event checkpoints and an additional Ready checkpoint
+under the resident invocation's deadline and independently authenticated Stop.
+A pending Stop consumes the same verified cursor through the original terminal
+Stop path before any ordinary recovery Fence or live role is issued.
+A deadline refusal during replay or at Ready, before either finalizer begins,
+changes no canonical or staged bytes. A deadline or transport failure after an
+acknowledged Stop or Fence does not undo that durable event.
+
+The recovery Fence withdraws old roles, source/time eligibility and approval
+keys. Confirmed output, numerical spending, retained campaign use and unresolved
+effect charges remain. A later policy change still requires a fresh original
+corpus replay, independent governor approval and separate operator promotion.
+Every new publication needs fresh source evidence, helper review and human
+approval.
+
+The service captures the acknowledged recovery cut before fallible suffix
+preflight or later operator/governor listener startup. Its existing retention
+path also preserves acknowledged terminal Stop. Failure to publish a new archive
+never retries an effect or
+overwrites the prior independent archive. A post-Fence refusal can therefore
+leave the acknowledged Fence in history; it does not roll back recovery.
+
 ## Independent live operator
 
 Creation and explicit suffix recovery accept the paired
@@ -479,8 +586,9 @@ This creation selection accepts the existing publication profiles that need no
 joint-credibility activation, and optional `--retain-history-anchor NEW_OUTPUT`.
 It refuses `--after-message`, `--history-anchor`, credibility activation, topology
 selection and single-release commands. Retaining an archive does not select or
-authorize governed native recovery. A complete independently selected current
-policy and campaign recovery contract remains necessary for that future path.
+authorize governed native recovery. Select the complete independently supplied
+current policy and campaign contract through the
+[governed recovery command](#recover-a-governed-native-sequence).
 
 ## Stop, deadlines and failure
 
@@ -517,7 +625,7 @@ requires its explicit input/output options. Requalification requires its explici
 capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows. Native governance requires the
-separate creation-only governor selection described above.
+explicit creation or independently guarded recovery governor selection described above.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

@@ -1,9 +1,14 @@
-//! Explicit governor custody for a NEW source-bound native sequence. Recovery
-//! needs a separately selected complete guard/policy contract and is not
-//! inferred from an archive or an operator profile.
+//! Explicit governor custody for one source-bound native sequence. Recovery
+//! requires its separately selected complete guard/policy contract and anchor;
+//! neither an archive nor an operator profile supplies missing expectations.
+#[path = "governor/recovery.rs"]
+pub(super) mod recovery;
+#[path = "governor/requirements.rs"]
+pub(super) mod requirements;
 use super::super::{Config, PeerProfile, Profile, PublicationProfile, exact_precheck, operator};
-use super::anchors;
+use super::{Inputs, anchors};
 pub(super) use crate::workflow::actor_service::governor::Settings;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileRecoveryRequirements;
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
@@ -51,6 +56,118 @@ pub(super) fn take_option(
         return Err(INVALID.into());
     }
     Ok((remaining, selected))
+}
+
+/// Governed recovery is an independently selected grammar. The creation parser
+/// remains unchanged, and no missing recovery expectation can fall back to it.
+pub(super) fn take_recovery_options(
+    args: &[String],
+    credibility: Option<&Path>,
+) -> Result<(Vec<String>, Option<PathBuf>, Option<PathBuf>), String> {
+    if !args.iter().any(|arg| arg == "--recovery-requirements") {
+        let (remaining, governor) = take_option(args, credibility)?;
+        return Ok((remaining, governor, None));
+    }
+    const RECOVERY: &str = "native governed recovery requires --governor-profile, paired --operator-profile/--tower-generation, --recovery-requirements, --after-message and --history-anchor";
+    if credibility.is_some()
+        || args.len() < 16
+        || args.len() > 20
+        || args.len() % 2 != 0
+        || args.first().map(String::as_str) != Some("serve-native-generated")
+        || args[1..4]
+            .iter()
+            .any(|arg| arg.is_empty() || arg.starts_with("--"))
+    {
+        return Err(RECOVERY.into());
+    }
+    let mut remaining = args[..4].to_vec();
+    let mut governor = None;
+    let mut requirements = None;
+    let mut seen = BTreeSet::new();
+    for pair in args[4..].chunks_exact(2) {
+        if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(pair[0].as_str()) {
+            return Err(RECOVERY.into());
+        }
+        match pair[0].as_str() {
+            "--governor-profile" => governor = Some(PathBuf::from(&pair[1])),
+            "--recovery-requirements" => requirements = Some(PathBuf::from(&pair[1])),
+            "--operator-profile"
+            | "--tower-generation"
+            | "--after-message"
+            | "--history-anchor"
+            | "--publication-profile"
+            | "--retain-history-anchor" => {
+                remaining.extend_from_slice(pair);
+            }
+            _ => return Err(RECOVERY.into()),
+        }
+    }
+    for required in [
+        "--governor-profile",
+        "--operator-profile",
+        "--tower-generation",
+        "--recovery-requirements",
+        "--after-message",
+        "--history-anchor",
+    ] {
+        if !seen.contains(required) {
+            return Err(RECOVERY.into());
+        }
+    }
+    Ok((remaining, governor, requirements))
+}
+
+/// Direct callers must select the same complete mode before opening listeners.
+pub(super) fn check_selected(
+    governor: Option<&Settings>,
+    operator: Option<&operator::Selection>,
+    after: Option<u64>,
+    credibility: Option<&Path>,
+    recovery: bool,
+) -> Result<(), String> {
+    if !recovery {
+        return check_selection(governor, operator, after, credibility);
+    }
+    if governor.is_none()
+        || !operator.is_some_and(operator::Selection::is_governed)
+        || after.is_none_or(|request| request == 0)
+        || credibility.is_some()
+    {
+        return Err("native governance recovery requires independent governor/operator custody, a nonzero predecessor and no credibility activation".into());
+    }
+    Ok(())
+}
+
+/// Expectations are selected data. Validate the service's entire supported
+/// inventory, including absent roles, before time, sockets or numerical replay.
+pub(super) fn check_recovery(
+    governor: Option<&Settings>,
+    expected: Option<&FileRecoveryRequirements>,
+    history: Option<&anchors::Selection>,
+    config: &Config,
+    inputs: &Inputs,
+) -> Result<(), String> {
+    let Some(expected) = expected else {
+        return Ok(());
+    };
+    let governor = governor.ok_or("native recovery requirements lack governor custody")?;
+    if history.and_then(anchors::Selection::input).is_none() {
+        return Err(
+            "native governed recovery requires an independently selected history anchor".into(),
+        );
+    }
+    if expected.guards.campaigns != Some(governor.campaign_requirement())
+        || expected.guards.source != Some(config.source_policy)
+        || expected.guards.stream != Some(inputs.stream)
+        || expected.guards.decoder.as_ref() != Some(&inputs.decoder)
+        || expected.guards.decoder_stop.is_some()
+        || expected.guards.identity.is_some()
+        || expected.guards.credential.is_some()
+        || expected.credential_epoch.is_some()
+    {
+        return Err("native governed recovery requires the complete selected campaign, source, stream and decoder contracts and absent unsupported guards".into());
+    }
+    Ok(())
 }
 
 pub(super) fn check_selection(
@@ -101,7 +218,31 @@ pub(super) fn check(
     credibility: Option<&Path>,
     history: Option<&anchors::Selection>,
 ) -> Result<(), String> {
-    check_selection(governor, operator, after, credibility)?;
+    check_with_recovery(
+        governor,
+        operator,
+        config,
+        entries,
+        peers,
+        after,
+        credibility,
+        history,
+        false,
+    )
+}
+
+pub(super) fn check_with_recovery(
+    governor: Option<&Settings>,
+    operator: Option<&operator::Selection>,
+    config: &Config,
+    entries: &[(&Profile, Option<&exact_precheck::Selection>)],
+    peers: &PeerProfile,
+    after: Option<u64>,
+    credibility: Option<&Path>,
+    history: Option<&anchors::Selection>,
+    recovery: bool,
+) -> Result<(), String> {
+    check_selected(governor, operator, after, credibility, recovery)?;
     let Some(governor) = governor else {
         return Ok(());
     };
@@ -112,7 +253,17 @@ pub(super) fn check(
         .collect::<Vec<_>>();
     governor.check_custody_paths(&[config.source.path()])?;
     for (actor, precheck) in entries {
-        governor.check_generated_host(config, actor, peers, &operator.settings, &requests)?;
+        if recovery {
+            governor.check_generated_recovery_host(
+                config,
+                actor,
+                peers,
+                &operator.settings,
+                &requests,
+            )?;
+        } else {
+            governor.check_generated_host(config, actor, peers, &operator.settings, &requests)?;
+        }
         if let Some(precheck) = precheck {
             governor.check_custody_paths(&[precheck.settings.socket_path()])?;
         }

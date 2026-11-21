@@ -242,7 +242,10 @@ impl Settings {
         let socket = resolved(&self.socket)?;
         for path in paths {
             if socket == resolved(path)? {
-                return Err("governor socket conflicts with original source or retained checkpoint custody".into());
+                return Err(
+                    "governor socket conflicts with original source or retained checkpoint custody"
+                        .into(),
+                );
             }
         }
         Ok(())
@@ -269,13 +272,45 @@ impl Settings {
         operator: &operator::Settings,
         requests: &[u64],
     ) -> Result<(), String> {
+        self.check_generated_host_roles(config, actor, reviewer, operator, requests, 2)
+    }
+
+    /// An explicitly recovered native owner may retain only one new Message or
+    /// Finish. Its role separation, scope and finite numerical work stay exact.
+    pub(crate) fn check_generated_recovery_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+    ) -> Result<(), String> {
+        self.check_generated_host_roles(config, actor, reviewer, operator, requests, 1)
+    }
+
+    fn check_generated_host_roles(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        operator: &operator::Settings,
+        requests: &[u64],
+        minimum_requests: usize,
+    ) -> Result<(), String> {
         if self.numerical_replay.is_none() {
             return Err(
                 "native governor requires its own explicit numerical replay allowance".into(),
             );
         }
         operator.check_governed_generated_operator()?;
-        self.check_host_roles(config, actor, reviewer, operator, requests, 2)
+        self.check_host_roles(
+            config,
+            actor,
+            reviewer,
+            operator,
+            requests,
+            minimum_requests,
+        )
     }
 
     /// An explicitly recovered learned owner may have only its final Message
@@ -307,7 +342,14 @@ impl Settings {
             );
         }
         operator.check_governed_learned_operator()?;
-        self.check_host_roles(config, actor, reviewer, operator, requests, minimum_requests)
+        self.check_host_roles(
+            config,
+            actor,
+            reviewer,
+            operator,
+            requests,
+            minimum_requests,
+        )
     }
 
     fn check_host_roles(

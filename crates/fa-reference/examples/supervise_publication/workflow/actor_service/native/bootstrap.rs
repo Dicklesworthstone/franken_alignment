@@ -8,6 +8,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     governance::campaigns::FilePolicyGovernor, guarded::FileCampaignRequirement,
 };
 
+#[path = "bootstrap/recovery.rs"]
 mod recovery;
 #[cfg(test)]
 pub(super) use recovery::open_with_checkpoints;

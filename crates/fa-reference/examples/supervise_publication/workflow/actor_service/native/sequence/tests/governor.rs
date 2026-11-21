@@ -1,6 +1,9 @@
 //! A separate authenticated governor changes one ORIGINAL resident native
 //! owner. Real source intake, numerical work, helper processes and human keys
 //! still precede each cumulative Message/Finish publication.
+#[path = "governed_recovery.rs"]
+mod recovery_tests;
+
 use super::*;
 use crate::workflow::actor_service::{governor as live_governor, operator as live_operator};
 use fa_reference::Snapshot;

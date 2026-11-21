@@ -80,11 +80,13 @@ all in-flight effects have drained.
 ## Verification boundary
 
 The implementation and regression sources received independent source review.
-The execution workspace became unavailable during this session after baseline
-compiler processes were killed and a qualified-toolchain installation failed
-for lack of space in the shared toolchain filesystem. Compilation and runtime
-execution of this increment are not established. No packet, Bead or deployment
-gate is closed by source review.
+Initial compiler attempts were killed and installation exhausted the shared
+toolchain filesystem. After workspace recovery and a separate disk-backed
+installation, the pinned `nightly-2026-09-08` compiled the library and all seven
+integration regressions passed. The scoped run used one compiler job, the
+toolchain's Cranelift backend, no debug information and serial tests; it is not
+the canonical qualification gate. No packet, Bead or deployment gate is closed
+by this scoped result.
 
 The focused target is:
 

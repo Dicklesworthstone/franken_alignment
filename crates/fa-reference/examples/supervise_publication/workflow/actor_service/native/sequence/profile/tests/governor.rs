@@ -449,3 +449,178 @@ fn native_governor_loader_admits_original_assets_and_refuses_unsupported_modes_a
     assert!(!chosen.settings.socket.exists());
     assert!(loaded.iter().all(|entry| !entry.actor.socket.exists()));
 }
+
+fn governed_recovery(root: &Root) -> Vec<String> {
+    let mut args = governed(root);
+    args.extend([
+        "--recovery-requirements".into(),
+        root.0.join("requirements.json").display().to_string(),
+        "--after-message".into(),
+        "90".into(),
+        "--history-anchor".into(),
+        root.0.join("history.anchor").display().to_string(),
+    ]);
+    args
+}
+
+#[test]
+fn native_governed_recovery_admits_complete_orderings_before_original_input_intake() {
+    let root = Root::new();
+    let base = base(&root);
+    let missing_config = Config::read(Path::new(&base[1])).err().unwrap();
+    let required = governed_recovery(&root);
+    for optional in [
+        vec![],
+        vec!["--publication-profile", "publication.json"],
+        vec!["--retain-history-anchor", "retained.anchor"],
+        vec![
+            "--publication-profile",
+            "publication.json",
+            "--retain-history-anchor",
+            "retained.anchor",
+        ],
+    ] {
+        let mut pairs = required[4..]
+            .chunks_exact(2)
+            .map(|pair| (pair[0].clone(), pair[1].clone()))
+            .collect::<Vec<_>>();
+        for pair in optional.chunks_exact(2) {
+            pairs.push((
+                pair[0].to_owned(),
+                root.0.join(pair[1]).display().to_string(),
+            ));
+        }
+        for shift in 0..pairs.len() {
+            for reversed in [false, true] {
+                let mut ordered = pairs.clone();
+                ordered.rotate_left(shift);
+                if reversed {
+                    ordered.reverse();
+                }
+                let mut args = base.clone();
+                for (flag, value) in ordered {
+                    args.extend([flag, value]);
+                }
+                let (remaining, governor, requirements) =
+                    governance::take_recovery_options(&args, None).unwrap();
+                assert_eq!(governor, Some(root.0.join("governor.json")));
+                assert_eq!(requirements, Some(root.0.join("requirements.json")));
+                let (remaining, history) = history_custody::take_options(&remaining).unwrap();
+                history.check_mode(Some(90)).unwrap();
+                let (remaining, selected) = take_operator(&remaining, None).unwrap();
+                assert_eq!(selected, Some((root.0.join("operator.json"), 41)));
+                assert_eq!(options(&remaining, None).unwrap().1, Some(90));
+                assert_eq!(command_failure(&args, None), missing_config);
+                assert!(!root.0.join("retained.anchor").exists());
+            }
+        }
+    }
+}
+
+#[test]
+fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_before_io() {
+    let root = Root::new();
+    let valid = governed_recovery(&root);
+    for index in (4..valid.len()).step_by(2) {
+        let mut missing = valid.clone();
+        missing.drain(index..index + 2);
+        assert!(
+            governance::take_recovery_options(&missing, None).is_err(),
+            "{missing:?}"
+        );
+        let _ = command_failure(&missing, None);
+        let mut duplicate = valid.clone();
+        duplicate.extend_from_slice(&valid[index..index + 2]);
+        assert!(
+            governance::take_recovery_options(&duplicate, None).is_err(),
+            "{duplicate:?}"
+        );
+        let _ = command_failure(&duplicate, None);
+    }
+    for flag in [
+        "--unknown",
+        "--credibility-activation",
+        "--native-text",
+        "--finish-after-message",
+        "--guarded",
+        "--topology-profile",
+    ] {
+        let mut invalid = valid.clone();
+        invalid.extend([flag.into(), "/missing/input".into()]);
+        assert!(governance::take_recovery_options(&invalid, None).is_err());
+        let _ = command_failure(&invalid, None);
+    }
+    for flag in ["--after-message", "--tower-generation"] {
+        let index = valid.iter().position(|arg| arg == flag).unwrap() + 1;
+        for value in ["0", "01", "+1", "-1", "1.0", "18446744073709551616"] {
+            let mut invalid = valid.clone();
+            invalid[index] = value.into();
+            assert_eq!(command_failure(&invalid, None), USAGE);
+        }
+    }
+    assert!(
+        governance::take_recovery_options(&valid, Some(Path::new("/missing/qualification")),)
+            .is_err()
+    );
+    assert!(!root.0.join("store").exists());
+}
+
+#[test]
+fn native_governed_recovery_reserves_requirements_custody_before_missing_model_assets() {
+    let root = Root::new();
+    let (config, peers, entries) = selected(&root);
+    let (governor, chosen) = selections(&root, &entries[0].actor);
+    for (index, entry) in entries.iter().enumerate() {
+        save_actor(&root.0.join(format!("actor-{index}.json")), &entry.actor);
+    }
+    let plan = root.0.join("remaining.json");
+    fs::write(
+        &plan,
+        document(&[
+            entry("recipe.json", "actor-0.json", "message"),
+            entry("recipe.json", "actor-1.json", "message"),
+            entry("recipe.json", "actor-2.json", "finish"),
+        ]),
+    )
+    .unwrap();
+    fs::remove_file(root.0.join("model.json")).unwrap();
+    std::os::unix::fs::symlink(&root.0, root.0.join("alias")).unwrap();
+    let mut paths = vec![
+        config.store.join("requirements.json"),
+        config.source.path().to_path_buf(),
+        chosen.settings.socket.clone(),
+        governor.socket.clone(),
+        root.0.join("alias/actor-0.sock"),
+    ];
+    for entry in &entries {
+        paths.extend([
+            entry.actor.socket.clone(),
+            peers.socket(entry.actor.request),
+            crate::workflow::control::socket_path(&peers, entry.actor.request),
+        ]);
+    }
+    for path in paths {
+        let error = super::super::load_with_recovery_services(
+            &plan,
+            &config,
+            &peers,
+            Some(90),
+            Some(&chosen),
+            None,
+            None,
+            Some(&governor),
+            Some(&path),
+        )
+        .err()
+        .unwrap();
+        assert!(
+            error.contains("native recovery requirements"),
+            "requirements custody lost to missing model at {}: {error}",
+            path.display(),
+        );
+        assert!(!config.store.exists());
+        assert!(!governor.socket.exists());
+        assert!(!chosen.settings.socket.exists());
+        assert!(entries.iter().all(|entry| !entry.actor.socket.exists()));
+    }
+}

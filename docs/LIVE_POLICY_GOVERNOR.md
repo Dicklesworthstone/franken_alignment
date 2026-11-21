@@ -3,7 +3,7 @@
 The Linux reference executable can provision a separate governor endpoint for a
 new or independently recovered ordinary Tower publication run, or a new or
 independently recovered nonpredictive learned sequence with explicit numerical
-allowances, or a new resident native generated-text sequence. The governor
+allowances, or a new or independently recovered resident native generated-text sequence. The governor
 requests a replay of the
 complete original policy corpus and explicitly approves the exact returned
 report. That approval delegates one original opaque permit to the independently
@@ -78,13 +78,37 @@ native recipe checks all referenced asset paths before reading those assets,
 including explicit physical weight shards. Path checks use the same strict
 decoders and asset budgets as unselected native loading.
 
-This selection supports creation and publication profiles without joint
-activation. It refuses recovery, credibility activation, topology selection and
-single-release commands before live work. An independently retained output
-archive is not a governed native recovery contract. See the complete
+This creation selection supports publication profiles without joint activation.
+An independently retained output archive alone does not select recovery.
+Governed native recovery requires the complete explicit selection below;
+credibility activation, topology selection and single-release commands remain
+unsupported. See the complete
 [resident native publication contract](RESIDENT_NATIVE_PUBLICATION.md#independent-policy-governance-during-native-creation).
 The source and authored regressions are independently reviewed; required RCH
 compilation and execution remain pending.
+
+## Recover a governed resident native sequence
+
+`serve-native-generated` now accepts an explicit remaining sequence with
+`--after-message`, the paired governed operator selection, an independent
+`--governor-profile`, `--recovery-requirements` and `--history-anchor`.
+The closed `fa.native-recovery-requirements/1` file pins the entire current
+policy, original campaign bounds, explicit absence of unsupported guards and
+all three independently retained recovery floors. Configuration and recipes
+continue to pin the original native source and numerical contracts.
+
+The same anchored native replay verifies those expectations before its original
+Fence provisions fresh human and governor roles. The original Stop and deadline
+remain active at each event and Ready. Campaign use, numerical spending,
+confirmed Messages and uncertain effect charges survive; old keys and evidence
+eligibility do not. A recovered suffix may be one final Finish, with no new
+sampled draw, or new Messages with an optional final Finish. Every effect retains fresh human
+approval and every later policy promotion retains its independent campaign.
+
+Full grammar, JSON, custody and failure behavior:
+[governed native recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence).
+The core contract is [guarded native recovery](GUARDED_NATIVE_RECOVERY.md).
+Execution scope for this increment is recorded in `IMPLEMENTATION_STATUS.md`.
 
 ## Start with separate role custody
 

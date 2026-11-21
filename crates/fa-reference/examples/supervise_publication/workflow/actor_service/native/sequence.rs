@@ -20,6 +20,7 @@ mod tests;
 use super::*;
 use fa_reference::action::ActionSpec;
 use fa_reference::action::consequence::delivery::EndpointOutcome;
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileRecoveryRequirements;
 use fa_reference::action::consequence::oversight::actor::ActorProposal;
 
 pub(super) const MAX_ENTRIES: usize = 16;
@@ -136,8 +137,15 @@ where
     F: FnMut() -> ElapsedTick,
 {
     run_with_history(
-        config, entries, reviewer_profile, publication, selection, credibility,
-        None, time, output,
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        selection,
+        credibility,
+        None,
+        time,
+        output,
     )
 }
 
@@ -190,10 +198,54 @@ pub(super) fn run_with_governor<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    run_with_governed_recovery(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        selection,
+        credibility,
+        history,
+        governor,
+        None,
+        time,
+        output,
+    )
+}
+
+/// Reconstruct a governed native suffix only under independently selected
+/// complete requirements and history. Fresh human/governor roles are returned
+/// together by the original owner's sole acknowledged recovery Fence.
+pub(super) fn run_with_governed_recovery<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    credibility: Option<&Path>,
+    history: Option<&anchors::Selection>,
+    governor: Option<&governor::Settings>,
+    requirements: Option<&FileRecoveryRequirements>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     let mut retention = anchors::Retention::new(history);
     let result = run_retained(
-        config, entries, reviewer_profile, publication, selection, credibility,
-        history, governor, &mut retention, time, output,
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        selection,
+        credibility,
+        history,
+        governor,
+        requirements,
+        &mut retention,
+        time,
+        output,
     );
     retention.finish(result)
 }
@@ -207,6 +259,7 @@ fn run_retained<F>(
     credibility: Option<&Path>,
     history: Option<&anchors::Selection>,
     selected_governor: Option<&governor::Settings>,
+    requirements: Option<&FileRecoveryRequirements>,
     retention: &mut anchors::Retention<'_>,
     mut time: F,
     output: &mut impl Write,
@@ -215,11 +268,24 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (after, selected_operator) = selection;
-    governor::check_selection(selected_governor, selected_operator, after, credibility)?;
+    governor::check_selected(
+        selected_governor,
+        selected_operator,
+        after,
+        credibility,
+        requirements.is_some(),
+    )?;
     governor::check_publication(selected_governor, publication)?;
     requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
-    governor::check(
+    governor::check_recovery(
+        selected_governor,
+        requirements,
+        history,
+        &config,
+        &entries[0].inputs,
+    )?;
+    governor::check_with_recovery(
         selected_governor,
         selected_operator,
         &config,
@@ -231,6 +297,7 @@ where
         after,
         credibility,
         history,
+        requirements.is_some(),
     )?;
     if let Some(selected) = selected_operator {
         // Direct callers receive the same whole-sequence scope and canonical
@@ -288,7 +355,26 @@ where
     let first_socket = BoundSocket::bind(&first.actor.socket, None)?;
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
-    let (host, reviewer, governor_role) = if after.is_some() {
+    let (host, reviewer, governor_role) = if let Some(requirements) = requirements {
+        let anchor = history
+            .and_then(anchors::Selection::input)
+            .ok_or("native governed recovery lost its independently selected anchor")?;
+        let mut stopped = None;
+        let opened = governor::recovery::open(
+            &config,
+            &first.inputs,
+            selected,
+            requirements,
+            anchor,
+            &mut control,
+            &first_deadline,
+            &mut time,
+            retention.requested().then_some(&mut stopped),
+        );
+        retention.observe_stop(stopped);
+        let (host, roles) = opened?;
+        (host, roles.human, roles.policy_governor)
+    } else if after.is_some() {
         let mut stopped = None;
         let opened = bootstrap::open_with_retained_history(
             &config,
@@ -318,6 +404,9 @@ where
     // No fallible startup admission can discard an acknowledged create/Fence
     // cut. These checks are read-only; a live driver captures its later cut below.
     retention.observe(&host);
+    if selected_governor.is_some() != governor_role.is_some() {
+        return Err("native governance lost its freshly fenced governor custody".into());
+    }
     if !host.generated_text_stream_required().map_err(debug)?
         || !host.publication_guard_required()
         || host.file_source_status().map(|status| status.policy) != Some(config.source_policy)
@@ -970,9 +1059,7 @@ where
             // it merely to deliver the original operator's historical reply.
             control.checkpoint_operator();
         }
-        if !actor_failed
-            && let Some(ingress) = ingress.as_deref_mut()
-        {
+        if !actor_failed && let Some(ingress) = ingress.as_deref_mut() {
             if let Err(error) = ingress.observe(driver) {
                 if !operator_selected {
                     return Err(error);

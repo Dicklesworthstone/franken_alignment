@@ -2,17 +2,15 @@
 //! survive recovery together. Synthetic weights exercise real inference and
 //! persistence; they do not establish detector accuracy or deployment isolation.
 
-#[path = "support/file_oversight_actor.rs"]
-mod support;
 #[path = "tower_generated_operator/fixture.rs"]
 #[allow(dead_code)]
 mod fixture;
+#[path = "support/file_oversight_actor.rs"]
+mod support;
 
 use fa_reference::Error;
-use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::action::consequence::activation::monitor::decoder::sampled::generation::{
-    GenerationBudget, MAX_SAMPLING_ENTRIES,
-    text::TextGenerationRequest,
+    GenerationBudget, MAX_SAMPLING_ENTRIES, text::TextGenerationRequest,
     tokenizer::TokenizationBudget,
 };
 use fa_reference::action::consequence::activation::tensor::kv::decoder::MAX_DECODER_PRODUCTS;
@@ -54,6 +52,7 @@ use fa_reference::action::consequence::oversight::{
     policy_state::{StateFreshness, StateLimits, StateSource},
 };
 use fa_reference::action::consequence::policy_campaign::ReplayLimits;
+use fa_reference::action::{ActionState, ElapsedTick};
 use fa_reference::witness::refinement::RefinementBudget;
 use std::{fs, rc::Rc};
 use support::{Directory, Supervisor};
@@ -100,7 +99,12 @@ fn campaigns() -> FileCampaignRequirement {
 
 fn create(root: &Directory) -> (FileOversight, FileHumanReviewer, FilePolicyGovernor) {
     FileOversight::create_generated_text_stream_from_source_governed(
-        root.store(), profile(), fixture::decoder(), fixture::tokenizer(), selection(), campaigns(),
+        root.store(),
+        profile(),
+        fixture::decoder(),
+        fixture::tokenizer(),
+        selection(),
+        campaigns(),
     )
     .unwrap()
 }
@@ -112,7 +116,11 @@ fn bytes(root: &Directory) -> Vec<u8> {
 fn evidence(root: &Directory) -> FileEvidenceSource {
     let scope = profile().delivery.scope;
     let observed = EvidenceSnapshot::new(
-        EvidenceIdentity { scope, source: 7, generation: 1 },
+        EvidenceIdentity {
+            scope,
+            source: 7,
+            generation: 1,
+        },
         support::snapshot(),
         support::oversight::MEMBERS
             .into_iter()
@@ -141,14 +149,19 @@ fn request() -> TextGenerationRequest {
 }
 
 fn generate(host: &mut FileOversight, source: &mut FileEvidenceSource) -> Rc<EvidenceSnapshot> {
-    let captured = host.refresh_file_source(host.revision(), source, ElapsedTick(1)).unwrap();
+    let captured = host
+        .refresh_file_source(host.revision(), source, ElapsedTick(1))
+        .unwrap();
     let numerical = host.decoder_inspection().unwrap().numerical;
-    let command = FileTextGenerationCommand::new(
-        7, numerical.actor_revision, numerical.position, request(),
-    )
-    .unwrap();
-    host.generate_decoder_text(host.revision(), command).unwrap();
-    assert_eq!(host.decoder_text_progress(7).unwrap().bytes().unwrap(), b"A");
+    let command =
+        FileTextGenerationCommand::new(7, numerical.actor_revision, numerical.position, request())
+            .unwrap();
+    host.generate_decoder_text(host.revision(), command)
+        .unwrap();
+    assert_eq!(
+        host.decoder_text_progress(7).unwrap().bytes().unwrap(),
+        b"A"
+    );
     captured
 }
 
@@ -167,25 +180,45 @@ fn release(
     let input = FileTextMessageRequest {
         request: id,
         generation,
-        generation_revision: host.decoder_text_progress(generation).unwrap().generation_revision(),
+        generation_revision: host
+            .decoder_text_progress(generation)
+            .unwrap()
+            .generation_revision(),
         target: host.inspect().target,
         policy_epoch: host.inspect().control.ledger.epoch,
         deadline: ElapsedTick(100),
     };
-    let status = host.submit_decoder_text_message(host.revision(), input, snapshot.clone()).unwrap();
+    let status = host
+        .submit_decoder_text_message(host.revision(), input, snapshot.clone())
+        .unwrap();
     let FileRequestDisposition::Admitted { attempt, .. } = status.disposition else {
         panic!("actual native text must be admitted");
     };
     let action = host.request_action(id).unwrap().clone();
     let inputs = captured.inputs_for(&action, &profile().committee).unwrap();
     support::oversight::review_existing(host, attempt, id + 100, &inputs);
-    let automatic = host.authorize(host.revision(), attempt, &inputs, snapshot.clone()).unwrap();
-    assert!(host.publish_checked(
-        host.revision(), attempt, Some(&inputs), snapshot.clone(), ElapsedTick(1),
-    ).is_err());
-    let human_request = host.request_human_approval(
-        host.revision(), id + 1000, attempt, &inputs, ElapsedTick(31),
-    ).unwrap();
+    let automatic = host
+        .authorize(host.revision(), attempt, &inputs, snapshot.clone())
+        .unwrap();
+    assert!(
+        host.publish_checked(
+            host.revision(),
+            attempt,
+            Some(&inputs),
+            snapshot.clone(),
+            ElapsedTick(1),
+        )
+        .is_err()
+    );
+    let human_request = host
+        .request_human_approval(
+            host.revision(),
+            id + 1000,
+            attempt,
+            &inputs,
+            ElapsedTick(31),
+        )
+        .unwrap();
     let revision = host.revision();
     if let Some(old) = old_human {
         let before = host.inspect();
@@ -196,12 +229,26 @@ fn release(
         assert_eq!(host.inspect(), before);
     }
     let human = human.approve(host, revision, &human_request).unwrap();
-    host.dispatch(host.revision(), &automatic, &human, &action, &inputs, snapshot.clone()).unwrap();
+    host.dispatch(
+        host.revision(),
+        &automatic,
+        &human,
+        &action,
+        &inputs,
+        snapshot.clone(),
+    )
+    .unwrap();
     if publish {
         assert!(matches!(
             host.publish_checked(
-                host.revision(), attempt, Some(&inputs), snapshot, ElapsedTick(1),
-            ).unwrap().outcome,
+                host.revision(),
+                attempt,
+                Some(&inputs),
+                snapshot,
+                ElapsedTick(1),
+            )
+            .unwrap()
+            .outcome,
             EndpointOutcome::Executed { .. },
         ));
         assert!(matches!(
@@ -213,7 +260,10 @@ fn release(
             host.reconcile(host.revision(), attempt).unwrap(),
             Reconciliation::AwaitingResolution,
         );
-        assert_eq!(host.inspect().control.ledger.stages[&attempt], ActionState::Unknown);
+        assert_eq!(
+            host.inspect().control.ledger.stages[&attempt],
+            ActionState::Unknown
+        );
     }
     attempt
 }
@@ -246,8 +296,13 @@ fn begin(
     anchor: &FileHistoryAnchor,
 ) -> Result<FileGuardedGeneratedSourceRecovery, JournalError> {
     FileOversight::begin_open_guarded_generated_text_stream_from_source_anchored(
-        root.store(), profile(), expected, &fixture::decoder(), &fixture::tokenizer(),
-        selection(), anchor,
+        root.store(),
+        profile(),
+        expected,
+        &fixture::decoder(),
+        &fixture::tokenizer(),
+        selection(),
+        anchor,
     )
 }
 
@@ -263,9 +318,16 @@ fn ready(
         let after = run.advance(before.replayed_events, 1)?;
         assert_eq!(after.replayed_events, before.replayed_events + 1);
         assert_eq!(after.total_events, before.total_events);
-        assert_eq!(bytes(root), canonical, "replay must not fence or change storage");
+        assert_eq!(
+            bytes(root),
+            canonical,
+            "replay must not fence or change storage"
+        );
     }
-    assert_eq!(run.progress().status, FileGeneratedSourceRecoveryStatus::Ready);
+    assert_eq!(
+        run.progress().status,
+        FileGeneratedSourceRecoveryStatus::Ready
+    );
     assert_eq!(run.progress().replayed_events, run.progress().total_events);
     Ok(run)
 }
@@ -273,10 +335,14 @@ fn ready(
 fn campaign(host: &mut FileOversight, id: u64) -> FilePolicyCampaignReview {
     let control = host.inspect().control;
     let update = PolicyUpdate::new(
-        id, control.sequence, control.ledger.epoch,
+        id,
+        control.sequence,
+        control.ledger.epoch,
         Policy::new(2, vec![Predicate::PayloadAtMost(2048)]).unwrap(),
-    ).unwrap();
-    host.request_policy_campaign(host.revision(), &update).unwrap()
+    )
+    .unwrap();
+    host.request_policy_campaign(host.revision(), &update)
+        .unwrap()
 }
 
 #[test]
@@ -289,7 +355,9 @@ fn fresh_governor_promotes_and_publishes_native_continuation_without_reviving_ol
     let old_review = campaign(&mut host, 900);
     assert_eq!(old_review.report().cases().len(), 2);
     let revision = host.revision();
-    let old_permit = old_governor.approve(&mut host, revision, &old_review, false).unwrap();
+    let old_permit = old_governor
+        .approve(&mut host, revision, &old_review, false)
+        .unwrap();
     let expected = requirements(&host);
     let anchor = host.history_anchor().unwrap();
     let before = host.inspect();
@@ -305,9 +373,15 @@ fn fresh_governor_promotes_and_publishes_native_continuation_without_reviving_ol
     assert_eq!(host.current_policy().unwrap(), &expected.effective_policy);
     assert_eq!(host.inspect().executions, before.executions);
     assert_eq!(host.inspect().payload, before.payload);
-    assert_eq!(host.inspect().control.ledger.charged, before.control.ledger.charged);
+    assert_eq!(
+        host.inspect().control.ledger.charged,
+        before.control.ledger.charged
+    );
     assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
-    assert_eq!(host.stream_snapshot().unwrap().confirmed, stream_before.confirmed);
+    assert_eq!(
+        host.stream_snapshot().unwrap().confirmed,
+        stream_before.confirmed
+    );
     assert!(host.decoder_inspection().unwrap().paused);
     assert!(!host.clock_ready());
     assert!(host.capture_file_policy_state().is_err());
@@ -323,11 +397,15 @@ fn fresh_governor_promotes_and_publishes_native_continuation_without_reviving_ol
     );
     let revision = host.revision();
     assert_eq!(
-        old_governor.approve(&mut host, revision, &old_review, false).err(),
+        old_governor
+            .approve(&mut host, revision, &old_review, false)
+            .err(),
         Some(JournalError::Contract(Error::Binding)),
     );
     assert_eq!(
-        old_governor.approve(&mut host, revision, &revoked, false).err(),
+        old_governor
+            .approve(&mut host, revision, &revoked, false)
+            .err(),
         Some(JournalError::Contract(Error::Binding)),
     );
     assert_eq!(
@@ -338,31 +416,67 @@ fn fresh_governor_promotes_and_publishes_native_continuation_without_reviving_ol
     assert_eq!(bytes(&root), canonical);
 
     let mut source = evidence(&root);
-    host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1)).unwrap();
-    host.resume_decoder(host.revision(), numerical.actor_revision, numerical.position).unwrap();
+    host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1))
+        .unwrap();
+    host.resume_decoder(
+        host.revision(),
+        numerical.actor_revision,
+        numerical.position,
+    )
+    .unwrap();
     let review = campaign(&mut host, 901);
     assert_eq!(review.report().cases().len(), 2);
     let revision = host.revision();
-    let permit = governor.approve(&mut host, revision, &review, false).unwrap();
-    host.promote_policy_campaign(host.revision(), &permit).unwrap();
+    let permit = governor
+        .approve(&mut host, revision, &review, false)
+        .unwrap();
+    host.promote_policy_campaign(host.revision(), &permit)
+        .unwrap();
     assert_eq!(host.current_policy().unwrap().generation(), 2);
     assert_eq!(host.decoder_inspection().unwrap().numerical, numerical);
-    assert_eq!(host.inspect().control.ledger.charged, before.control.ledger.charged);
-    let captured = host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1)).unwrap();
-    let command = host.prepare_decoder_text_continuation(REQUEST, 8, request()).unwrap();
-    host.begin_decoder_text_continuation(host.revision(), REQUEST, command).unwrap();
+    assert_eq!(
+        host.inspect().control.ledger.charged,
+        before.control.ledger.charged
+    );
+    let captured = host
+        .refresh_file_source(host.revision(), &mut source, ElapsedTick(1))
+        .unwrap();
+    let command = host
+        .prepare_decoder_text_continuation(REQUEST, 8, request())
+        .unwrap();
+    host.begin_decoder_text_continuation(host.revision(), REQUEST, command)
+        .unwrap();
     while host.decoder_text_progress(8).unwrap().finish().is_none() {
         let revision = host.decoder_text_progress(8).unwrap().generation_revision();
-        host.advance_decoder_text(host.revision(), 8, revision).unwrap();
+        host.advance_decoder_text(host.revision(), 8, revision)
+            .unwrap();
     }
-    assert_eq!(host.decoder_text_progress(8).unwrap().bytes().unwrap(), b"A");
-    release(&mut host, &roles.human, Some(&old_human), &captured, REQUEST + 1, 8, true);
     assert_eq!(
-        host.stream_snapshot().unwrap().confirmed.messages().collect::<Vec<_>>(),
+        host.decoder_text_progress(8).unwrap().bytes().unwrap(),
+        b"A"
+    );
+    release(
+        &mut host,
+        &roles.human,
+        Some(&old_human),
+        &captured,
+        REQUEST + 1,
+        8,
+        true,
+    );
+    assert_eq!(
+        host.stream_snapshot()
+            .unwrap()
+            .confirmed
+            .messages()
+            .collect::<Vec<_>>(),
         ["A", "A"],
     );
     assert_eq!(host.inspect().executions, 2);
-    assert_eq!(host.decoder_inspection().unwrap().numerical.sampled_draws, 4);
+    assert_eq!(
+        host.decoder_inspection().unwrap().numerical.sampled_draws,
+        4
+    );
     assert!(host.decoder_inspection().unwrap().numerical.position > numerical.position);
     assert!(host.inspect().control.ledger.charged > before.control.ledger.charged);
 }
@@ -384,16 +498,25 @@ fn complete_independent_requirements_fail_closed_and_latch_before_any_fence_or_c
             0 => changed.guards.campaigns = None,
             1 => changed.guards.campaigns.as_mut().unwrap().max_campaigns += 1,
             2 => changed.guards.campaigns.as_mut().unwrap().limits.cases += 1,
-            3 => changed.effective_policy = Policy::new(
-                expected.effective_policy.generation(), vec![Predicate::PayloadAtMost(4095)],
-            ).unwrap(),
+            3 => {
+                changed.effective_policy = Policy::new(
+                    expected.effective_policy.generation(),
+                    vec![Predicate::PayloadAtMost(4095)],
+                )
+                .unwrap()
+            }
             4 => changed.minimum.journal_revision += 1,
             5 => changed.minimum.control_sequence += 1,
             6 => changed.minimum.authority_epoch += 1,
             7 => changed.guards.source = None,
             8 => changed.guards.decoder = None,
             9 => changed.guards.stream = None,
-            _ => changed.credential_epoch = Some(FileCredentialEpoch { generation: 1, revoked: false }),
+            _ => {
+                changed.credential_epoch = Some(FileCredentialEpoch {
+                    generation: 1,
+                    revoked: false,
+                })
+            }
         }
         if let Ok(mut run) = begin(&root, &changed, &anchor) {
             loop {
@@ -402,11 +525,15 @@ fn complete_independent_requirements_fail_closed_and_latch_before_any_fence_or_c
                     break;
                 }
                 assert_ne!(
-                    run.progress().status, FileGeneratedSourceRecoveryStatus::Ready,
+                    run.progress().status,
+                    FileGeneratedSourceRecoveryStatus::Ready,
                     "incomplete contract reached Ready: variation {variation}",
                 );
             }
-            assert!(matches!(run.progress().status, FileGeneratedSourceRecoveryStatus::Failed(_)));
+            assert!(matches!(
+                run.progress().status,
+                FileGeneratedSourceRecoveryStatus::Failed(_)
+            ));
             assert!(run.advance(run.progress().replayed_events, 1).is_err());
             assert!(run.stop_request(800).is_err());
             assert!(run.finish().is_err());
@@ -459,10 +586,16 @@ fn cancellation_and_incomplete_finalizers_never_issue_roles_or_modify_storage() 
     fs::write(&pending, b"keep staging").unwrap();
     let mut run = begin(&root, &expected, &anchor).unwrap();
     assert_eq!(run.advance(1, 1), Err(JournalError::Contract(Error::Stale)));
-    assert_eq!(run.advance(0, 0), Err(JournalError::Contract(Error::InvalidInput)));
+    assert_eq!(
+        run.advance(0, 0),
+        Err(JournalError::Contract(Error::InvalidInput))
+    );
     assert_eq!(run.progress().attempted_events, 0);
     assert!(run.stop_request(800).is_err());
-    assert_eq!(run.finish().err(), Some(JournalError::Contract(Error::Incomplete)));
+    assert_eq!(
+        run.finish().err(),
+        Some(JournalError::Contract(Error::Incomplete))
+    );
     for phase in 0..3 {
         let mut run = begin(&root, &expected, &anchor).unwrap();
         if phase > 0 {
@@ -473,7 +606,10 @@ fn cancellation_and_incomplete_finalizers_never_issue_roles_or_modify_storage() 
                 run.advance(run.progress().replayed_events, 1).unwrap();
             }
         }
-        assert_eq!(run.cancel().status, FileGeneratedSourceRecoveryStatus::Cancelled);
+        assert_eq!(
+            run.cancel().status,
+            FileGeneratedSourceRecoveryStatus::Cancelled
+        );
         assert_eq!(bytes(&root), canonical);
         assert_eq!(fs::read(&pending).unwrap(), b"keep staging");
     }
@@ -524,17 +660,33 @@ fn guarded_ready_stop_preserves_unknown_liability_and_exact_retry_without_a_live
     let run = ready(&root, &expected, &anchor).unwrap();
     let request = run.stop_request(800).unwrap();
     let stopped = run.finish_admission_stop(request).unwrap();
-    assert_eq!(stopped.appended_events(), 2, "only the original Stop/Fence pair");
+    assert_eq!(
+        stopped.appended_events(),
+        2,
+        "only the original Stop/Fence pair"
+    );
     assert_eq!(stopped.snapshot().revision, before.revision + 2);
-    assert_eq!(stopped.snapshot().control.ledger.charged, before.control.ledger.charged);
-    assert_eq!(stopped.snapshot().control.ledger.available, before.control.ledger.available);
-    assert_eq!(stopped.snapshot().control.ledger.stages[&attempt], ActionState::Unknown);
+    assert_eq!(
+        stopped.snapshot().control.ledger.charged,
+        before.control.ledger.charged
+    );
+    assert_eq!(
+        stopped.snapshot().control.ledger.available,
+        before.control.ledger.available
+    );
+    assert_eq!(
+        stopped.snapshot().control.ledger.stages[&attempt],
+        ActionState::Unknown
+    );
     assert_eq!(stopped.snapshot().payload, before.payload);
     assert_eq!(stopped.snapshot().executions, 0);
     assert!(!stopped.progress().drained());
     let canonical = bytes(&root);
     let run = ready(&root, &expected, &anchor).unwrap();
-    assert_eq!(run.stop_request(801), Err(JournalError::Contract(Error::Duplicate)));
+    assert_eq!(
+        run.stop_request(801),
+        Err(JournalError::Contract(Error::Duplicate))
+    );
     assert_eq!(run.stop_request(800).unwrap(), request);
     let retried = run.finish_admission_stop(request).unwrap();
     assert_eq!(retried.appended_events(), 0);
@@ -547,8 +699,13 @@ fn guarded_ready_stop_preserves_unknown_liability_and_exact_retry_without_a_live
 fn exact_absence_recovers_no_governor_and_checked_publication_cannot_be_weakened() {
     let root = Directory::new();
     let (host, _) = FileOversight::create_generated_text_stream_from_source(
-        root.store(), profile(), fixture::decoder(), fixture::tokenizer(), selection(),
-    ).unwrap();
+        root.store(),
+        profile(),
+        fixture::decoder(),
+        fixture::tokenizer(),
+        selection(),
+    )
+    .unwrap();
     let mut expected = requirements(&host);
     let anchor = host.history_anchor().unwrap();
     drop(host);
@@ -567,33 +724,57 @@ fn exact_absence_recovers_no_governor_and_checked_publication_cannot_be_weakened
             reserve: Some(RecoveryReserve::terminal()),
             limits: PublicationLimits {
                 bindings: 4,
-                validation: RefinementBudget { steps: 1000, value_bytes: 10000 },
+                validation: RefinementBudget {
+                    steps: 1000,
+                    value_bytes: 10000,
+                },
             },
             feed: None,
         }),
         ..selection()
     };
     let (host, _, _) = FileOversight::create_generated_text_stream_from_source_governed(
-        root.store(), profile(), fixture::decoder(), fixture::tokenizer(), selected, campaigns(),
-    ).unwrap();
+        root.store(),
+        profile(),
+        fixture::decoder(),
+        fixture::tokenizer(),
+        selected,
+        campaigns(),
+    )
+    .unwrap();
     let expected = requirements(&host);
     let anchor = host.history_anchor().unwrap();
     drop(host);
     let canonical = bytes(&root);
     let pending = root.store().join("delivery.pending");
     fs::write(&pending, b"keep checked staging").unwrap();
-    assert!(begin(&root, &expected, &anchor).is_err(), "witness guards cannot disappear");
+    assert!(
+        begin(&root, &expected, &anchor).is_err(),
+        "witness guards cannot disappear"
+    );
     assert_eq!(bytes(&root), canonical);
     assert_eq!(fs::read(&pending).unwrap(), b"keep checked staging");
     let mut run = FileOversight::begin_open_guarded_generated_text_stream_from_source_anchored(
-        root.store(), profile(), &expected, &fixture::decoder(), &fixture::tokenizer(), selected,
+        root.store(),
+        profile(),
+        &expected,
+        &fixture::decoder(),
+        &fixture::tokenizer(),
+        selected,
         &anchor,
-    ).unwrap();
+    )
+    .unwrap();
     while run.progress().status == FileGeneratedSourceRecoveryStatus::Replaying {
         run.advance(run.progress().replayed_events, 1).unwrap();
     }
     let (host, roles) = run.finish().unwrap();
     assert!(roles.policy_governor.is_some());
-    assert_eq!(host.publication_validation_profile().unwrap().unwrap().bindings, 4);
+    assert_eq!(
+        host.publication_validation_profile()
+            .unwrap()
+            .unwrap()
+            .bindings,
+        4
+    );
     assert!(!pending.exists());
 }

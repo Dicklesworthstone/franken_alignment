@@ -1,8 +1,8 @@
 //! Cooperative native text recovery with the complete original guard contract.
 //! One anchored reconstruction retains custody through fencing or terminal Stop.
 use super::{
-    FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements, JournalError,
-    anchored::FileHistoryAnchor,
+    FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
+    JournalError, anchored::FileHistoryAnchor,
 };
 use crate::Error;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
@@ -188,7 +188,7 @@ impl FileGuardedGeneratedSourceRecovery {
     ) -> Result<
         crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop,
         JournalError,
-    > {
+    >{
         self.check_ready()?;
         self.inner.into_recovery_stop(operation)
     }

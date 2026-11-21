@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: resume governed resident native publication with independent recovery custody
+
+The resident `serve-native-generated` command now composes the original guarded
+native recovery cursor with an explicit `--recovery-requirements` file, retained
+input anchor, original bootstrap configuration and independently selected live
+governor/operator profiles. Its closed, bounded parser requires the complete
+current policy, exact campaign settings, explicit unsupported-guard absence and
+external journal/control/authority floors. Missing selections cannot fall back
+to ordinary recovery. Input custody is reserved before model asset reads.
+
+Recovered suffixes contain 1–16 new requests and may consist of a singleton
+Finish without another sampled draw. Creation retains its 2–16-entry contract.
+The original single Fence returns fresh human and governor roles; old approvals
+and evidence eligibility remain withdrawn while numerical spending, confirmed
+output, campaign use and unresolved effect charges survive. Stop and deadline
+checks run at each historical event and at Ready before finalization. Retention
+captures acknowledged recovery/Stop history before later suffix or live-role
+startup failures; archive publication failure never retries an effect.
+
+Six composed resident regressions plus a separate governor process entrypoint
+cover fresh human approval/rejection, policy promotion before restart, singleton
+Finish, wrong complete expectations, rollback, Stop and deadlines at replay/Ready,
+and independent archive collisions. Two strict parser regressions and three
+command/custody regressions accompany the integration. Contracts:
+`docs/RESIDENT_NATIVE_PUBLICATION.md`, `docs/LIVE_POLICY_GOVERNOR.md`.
+
+The core recovery integration target passes all seven tests on the pinned
+nightly. The first resident build exposed pre-existing ambiguous child-module
+paths that loaded the wrong recovery driver and admission tests; both now name
+their intended files explicitly. The corrected resident run is pending. Source
+review and changed-file formatting are complete. This increment does not close
+FA-026, FA-130, a Bead or a production qualification gate.
+
 ## 2026-11-21: recover native generated publication with complete independent guards
 
 The source-bound native cursor now has a sealed, independently anchored guarded
@@ -16,12 +49,16 @@ promotion approvals do not become current. No new event format, dependency,
 second replay engine or public mutable-machine escape is introduced.
 Contract: `docs/GUARDED_NATIVE_RECOVERY.md`.
 
-Independent source review is complete. Baseline compiler attempts were killed
-before completion; the qualified-toolchain installation then ran out of shared
-toolchain-filesystem space and the execution workspace became unavailable.
-The increment's compiler, formatting, Clippy, runtime tests and canonical
-qualification remain unexecuted. Its regression sources do not constitute a
-passing gate; FA-026 and FA-130 remain in progress.
+Independent source review is complete. Initial baseline compiler attempts were
+killed before completion; the first qualified-toolchain installation ran out of
+shared toolchain-filesystem space and the execution workspace became unavailable.
+After workspace recovery and a disk-backed installation, the pinned
+`nightly-2026-09-08` compiled the library and all seven
+`governed_generated_recovery` integration tests passed. This was scoped serial
+execution with the toolchain's Cranelift backend and debug information disabled,
+not the canonical qualification gate. Changed Rust is formatted and whitespace
+checks pass. Clippy and canonical qualification remain pending; FA-026 and FA-130
+remain in progress.
 
 ## 2026-11-20: govern a live resident native sequence without replacing its owner
 
