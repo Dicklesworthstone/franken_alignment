@@ -4,6 +4,7 @@
 
 pub mod anchored;
 pub mod evaluation;
+pub mod generated_recovery;
 pub mod investigation;
 pub mod learned_recovery;
 pub mod mediated;

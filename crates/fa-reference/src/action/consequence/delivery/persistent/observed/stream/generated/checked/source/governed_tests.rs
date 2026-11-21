@@ -62,7 +62,7 @@ fn generate(
     host: &mut FileOversight,
     source: &mut FileEvidenceSource,
     id: u64,
-) -> EvidenceSnapshot {
+) -> std::rc::Rc<EvidenceSnapshot> {
     let captured = host
         .refresh_file_source(host.revision(), source, ElapsedTick(1))
         .unwrap();

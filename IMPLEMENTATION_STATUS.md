@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: recover native generated publication with complete independent guards
+
+The source-bound native cursor now has a sealed, independently anchored guarded
+wrapper. It verifies the exact original native recipe and guard inventory,
+complete effective policy, credential epoch and external recovery floors before
+its original single recovery Fence. Fresh human and optional governor roles
+escape only after durable acknowledgment. The same original reconstruction
+serves authenticated terminal Stop; cancellation and failed expectations return
+no owner and preserve canonical and pending bytes.
+
+Numerical spending, confirmed stream state, campaign use and uncertain effect
+charges remain with the recovered owner. Old roles, evidence eligibility and
+promotion approvals do not become current. No new event format, dependency,
+second replay engine or public mutable-machine escape is introduced.
+Contract: `docs/GUARDED_NATIVE_RECOVERY.md`.
+
+Independent source review is complete. Baseline compiler attempts were killed
+before completion; the qualified-toolchain installation then ran out of shared
+toolchain-filesystem space and the execution workspace became unavailable.
+The increment's compiler, formatting, Clippy, runtime tests and canonical
+qualification remain unexecuted. Its regression sources do not constitute a
+passing gate; FA-026 and FA-130 remain in progress.
+
 ## 2026-11-20: govern a live resident native sequence without replacing its owner
 
 New native sequence creation accepts an explicitly paired governor and numerical

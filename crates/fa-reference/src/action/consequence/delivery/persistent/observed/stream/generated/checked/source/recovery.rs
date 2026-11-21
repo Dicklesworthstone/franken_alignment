@@ -122,6 +122,19 @@ impl FileOversight {
 }
 
 impl FileGeneratedSourceRecovery {
+    /// Immutable composition hooks for the original independently guarded
+    /// wrapper. Neither exposes a candidate owner or permits a second replay.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn guarded_history(&self) -> (&FileOversightProfile, &[Event], &Path) {
+        (&self.profile, &self.events, self.store.identity())
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn verified_guarded_machine(&self) -> Result<&Machine, JournalError> {
+        self.check_ready()?;
+        Ok(&self.machine)
+    }
+
     fn begin(
         directory: &Path,
         profile: FileOversightProfile,

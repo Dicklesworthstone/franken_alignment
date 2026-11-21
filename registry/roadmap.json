@@ -830,7 +830,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/precheck.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor.rs",
+        "docs/GUARDED_NATIVE_RECOVERY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/generated_recovery.rs",
+        "crates/fa-reference/tests/governed_generated_recovery.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -3444,7 +3447,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/recipe/weights.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/recipe/custody_tests.rs",
         "crates/fa-reference/examples/supervise_publication/publication.rs",
-        "crates/fa-reference/examples/supervise_publication/publication/input_paths_tests.rs"
+        "crates/fa-reference/examples/supervise_publication/publication/input_paths_tests.rs",
+        "docs/GUARDED_NATIVE_RECOVERY.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/generated_recovery.rs",
+        "crates/fa-reference/tests/governed_generated_recovery.rs"
       ],
       "founding_ideas": [
         "FI-A14",

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-21: recover native generated owners under their original guard contract
+
+- Add independently anchored native recovery with the exact guard inventory,
+  full effective policy, credential epoch and retained history floors.
+- Reuse the original exclusive replay and durable Fence before returning fresh
+  human and governor roles; preserve cumulative work and uncertain effect charges.
+- Keep cancellation and authenticated terminal Stop on the same guarded cursor.
+- Add positive continuation/governance and causal recovery-refusal regressions.
+- Independent source review complete; compiler/runtime/full-gate qualification
+  remains pending after execution-workspace loss.
+
 ## 2026-11-20: connect policy governance to resident native publication
 
 - Select an independent governor during new native sequence creation, with the
