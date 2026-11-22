@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-21: retain governance budgets across recovery qualification
+
+- Preserve the concurrent governed-recovery implementation and joint publication
+  suite; add complementary promoted-policy, replay-accounting, campaign-limit,
+  human-rejection and authenticated-Stop regressions.
+- Keep finite governor allowances across Message-to-Finish handoff and assert that
+  rejected capsules do not advance the activation epoch.
+- Extend admission coverage for complete option orderings, canonical path aliases
+  and direct caller custody; retain the independent missing-contract refusals.
+- Resolve the combined test-module namespace without replacing existing fixtures.
+- Record compiler termination and source-snapshot refusal separately from source
+  review; runtime and full qualification remain open.
+
 ## 2026-11-21: complete identity preparation lifecycle coverage
 
 - Preserve the concurrent computed-identity preparation implementation and all

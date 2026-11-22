@@ -5,6 +5,9 @@ mod promotion_tests;
 #[path = "governed_requalification.rs"]
 mod requalification_tests;
 
+#[path = "governed_qualification.rs"]
+mod governed_qualification_tests;
+
 use super::super::super::anchors as custody;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{

@@ -518,6 +518,66 @@ fn native_governed_recovery_admits_complete_orderings_before_original_input_inta
 }
 
 #[test]
+fn native_governed_recovery_admits_the_explicit_capsule_after_complete_option_intake() {
+    let root = Root::new();
+    let required = governed_recovery(&root);
+    let base = required[..4].to_vec();
+    let missing_config = Config::read(Path::new(&base[1])).err().unwrap();
+    let capsule = root.0.join("qualification.bin");
+    let mut pairs = required[4..]
+        .chunks_exact(2)
+        .map(|pair| (pair[0].clone(), pair[1].clone()))
+        .collect::<Vec<_>>();
+    pairs.extend([
+        (
+            "--credibility-activation".into(),
+            capsule.display().to_string(),
+        ),
+        (
+            "--publication-profile".into(),
+            root.0.join("publication.json").display().to_string(),
+        ),
+        (
+            "--retain-history-anchor".into(),
+            root.0.join("retained.anchor").display().to_string(),
+        ),
+    ]);
+    for shift in 0..pairs.len() {
+        for reversed in [false, true] {
+            let mut ordered = pairs.clone();
+            ordered.rotate_left(shift);
+            if reversed {
+                ordered.reverse();
+            }
+            let mut args = base.clone();
+            for (flag, value) in ordered {
+                args.extend([flag, value]);
+            }
+            // The common command layer owns this explicit option. Its value is
+            // retained separately; a leftover raw flag remains invalid below.
+            let selected = crate::qualification::take_option(&mut args).unwrap();
+            assert_eq!(selected.as_deref(), Some(capsule.as_path()));
+            let (remaining, governor, requirements) =
+                governance::take_recovery_options(&args, selected.as_deref()).unwrap();
+            assert_eq!(governor, Some(root.0.join("governor.json")));
+            assert_eq!(requirements, Some(root.0.join("requirements.json")));
+            let (remaining, history) = history_custody::take_options(&remaining).unwrap();
+            history.check_mode(Some(90)).unwrap();
+            let (remaining, operator) = take_operator(&remaining, selected.as_deref()).unwrap();
+            assert_eq!(operator, Some((root.0.join("operator.json"), 41)));
+            assert_eq!(
+                options(&remaining, selected.as_deref()).unwrap().1,
+                Some(90)
+            );
+            assert_eq!(command_failure(&args, selected.as_deref()), missing_config);
+            assert!(!capsule.exists());
+            assert!(!root.0.join("store").exists());
+            assert!(!root.0.join("retained.anchor").exists());
+        }
+    }
+}
+
+#[test]
 fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_before_io() {
     let root = Root::new();
     let valid = governed_recovery(&root);
@@ -569,6 +629,144 @@ fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_befo
         assert!(governance::take_recovery_options(&missing, capsule).is_err());
     }
     assert!(!root.0.join("store").exists());
+}
+
+#[test]
+fn native_governed_recovery_reserves_capsule_custody_for_direct_and_loaded_selections() {
+    let root = Root::new();
+    let (config, peers, entries) = selected(&root);
+    let (governor, chosen) = selections(&root, &entries[0].actor);
+    let selected = entries
+        .iter()
+        .map(|entry| (&entry.actor, entry.precheck.as_ref()))
+        .collect::<Vec<_>>();
+    for (index, entry) in entries.iter().enumerate() {
+        save_actor(&root.0.join(format!("actor-{index}.json")), &entry.actor);
+    }
+    let plan = root.0.join("remaining.json");
+    fs::write(
+        &plan,
+        document(&[
+            entry("missing-recipe.json", "actor-0.json", "message"),
+            entry("missing-recipe.json", "actor-1.json", "message"),
+            entry("missing-recipe.json", "actor-2.json", "finish"),
+        ]),
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(&root.0, root.0.join("alias")).unwrap();
+    let requirements = root.0.join("requirements.json");
+    for capsule in [governor.socket.clone(), root.0.join("alias/governor.sock")] {
+        let direct = governance::check_with_recovery(
+            Some(&governor),
+            Some(&chosen),
+            &config,
+            &selected,
+            &peers,
+            Some(90),
+            Some(&capsule),
+            None,
+            true,
+        )
+        .unwrap_err();
+        assert!(direct.contains("governor socket conflicts"), "{direct}");
+        let loaded = super::super::load_with_recovery_services(
+            &plan,
+            &config,
+            &peers,
+            Some(90),
+            Some(&chosen),
+            Some(&capsule),
+            None,
+            Some(&governor),
+            Some(&requirements),
+        )
+        .err()
+        .unwrap();
+        assert!(loaded.contains("governor socket conflicts"), "{loaded}");
+    }
+    let independent = root.0.join("qualification.bin");
+    governance::check_with_recovery(
+        Some(&governor),
+        Some(&chosen),
+        &config,
+        &selected,
+        &peers,
+        Some(90),
+        Some(&independent),
+        None,
+        true,
+    )
+    .unwrap();
+    let recipe = fs::read_to_string(root.0.join("recipe.json")).unwrap();
+    fs::write(
+        root.0.join("second.json"),
+        recipe.replace("\"generation\":7", "\"generation\":8"),
+    )
+    .unwrap();
+    fs::write(
+        &plan,
+        document(&[
+            entry("recipe.json", "actor-0.json", "message"),
+            entry("second.json", "actor-1.json", "message"),
+            entry("second.json", "actor-2.json", "finish"),
+        ]),
+    )
+    .unwrap();
+    let (loaded, history) = super::super::load_with_recovery_services(
+        &plan,
+        &config,
+        &peers,
+        Some(90),
+        Some(&chosen),
+        Some(&independent),
+        None,
+        Some(&governor),
+        Some(&requirements),
+    )
+    .unwrap();
+    assert_eq!(loaded.len(), entries.len());
+    assert!(history.is_none());
+    assert!(!independent.exists());
+    assert!(!config.store.exists());
+    assert!(!governor.socket.exists());
+    assert!(!chosen.settings.socket.exists());
+    assert!(entries.iter().all(|entry| !entry.actor.socket.exists()));
+}
+
+#[test]
+fn native_governed_joint_publication_is_recovery_only_and_keeps_producer_custody() {
+    let root = Root::new();
+    let (config, _, entries) = selected(&root);
+    let (governor, _) = selections(&root, &entries[0].actor);
+    let scope = config.profile.delivery.scope;
+    let publication = |producer: &Path| {
+        PublicationProfile::decode(format!(
+            r#"{{"schema":"fa.supervised-joint-publication/1",
+            "joint":{{"id":71,"generation":1,"minimum_safe_roots":1,"minimum_violation_roots":2,
+            "maximum_escape_ppm":0,"maximum_false_stop_ppm":0,"max_cases":3,"max_member_outcomes":12}},
+            "publication":{{"schema":"fa.supervised-whole-input/1","source":91,
+            "producer":{{"path":"{}","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}}},
+            "feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":5000,
+            "lookup":{{"steps":10000,"bytes":1048576}}}},
+            "limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[]}}}}"#,
+            producer.display(), scope.tenant, scope.principal, scope.run, scope.branch,
+            scope.authority,
+        ).as_bytes()).unwrap()
+    };
+    let independent = publication(&root.0.join("producer.bin"));
+    assert!(independent.requires_joint());
+    governance::check_publication(Some(&governor), Some(&independent), true).unwrap();
+    let creation =
+        governance::check_publication(Some(&governor), Some(&independent), false).unwrap_err();
+    assert!(creation.contains("during creation"), "{creation}");
+
+    std::os::unix::fs::symlink(&root.0, root.0.join("alias")).unwrap();
+    let conflicting = publication(&root.0.join("alias/governor.sock"));
+    let recovery =
+        governance::check_publication(Some(&governor), Some(&conflicting), true).unwrap_err();
+    assert!(recovery.contains("governor socket conflicts"), "{recovery}");
+    assert!(!config.store.exists());
+    assert!(!governor.socket.exists());
 }
 
 #[test]

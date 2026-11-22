@@ -367,6 +367,13 @@ selected operator and governor endpoints before recipe/model reads. The original
 reader still runs at the controlled qualification boundary. These path checks
 do not establish a hostile-filesystem isolation guarantee.
 
+With the complete governed recovery selection below, the same capsule is also
+reserved against the independent governor endpoint. The retained governor may
+operate after qualification, but any previously approved campaign is withdrawn
+by that transition. A later promotion needs a fresh campaign and approval under
+the actual resulting epoch; neither service allowances nor campaign capacity
+are renewed by qualification.
+
 Requalification precedes new source refresh, numerical resume, generated
 reference output and helper review. Stop and the original deadline are checked
 both before and after the operation. Fresh evidence, the original generation

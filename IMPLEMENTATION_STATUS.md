@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: retain finite governance after recovery qualification
+
+The concurrently landed governed recovery implementation and joint-publication
+regressions remain intact. Complementary regression sources exercise activation
+under the already promoted effective policy, a fresh authenticated governor
+campaign while an independent human effect decision is outstanding, exact
+cumulative replay spending, and refusal at the original campaign limit. The
+Message-to-Finish handoff must retain the same spent allowances and governor
+invocation; removing the capsule after the first intent prevents a second read.
+Additional controls cover stale authority epochs, wrong-policy or missing
+capsules, independent human rejection, and authenticated Stop immediately after
+activation with the terminal anchor preserved.
+
+Three admission functions cover complete option orderings, canonical
+capsule/governor aliases with permitted twins, and recovery-only joint selection.
+The combined suite preserves the incoming missing-contract and missing-anchor
+refusals. Its additional module uses a distinct name so the original joint suite
+continues resolving its original qualification fixture. Redundant joint coverage
+was omitted; the incoming joint suite and identity lifecycle repairs are retained.
+
+Independent production/test review, pinned-nightly syntax/format checks and
+whitespace checks are separate from runtime execution. Before integrating the
+concurrent commits, both local core codegen attempts and the metadata-only
+service check received SIGKILL while compiling the unchanged `fa-reference`
+library. No new test executable ran, and the changed service target did not reach
+type checking. The initial canonical `xtask check` driver exited 1 at
+source-snapshot admission with 208 unlisted files and 158 digest mismatches. The
+same pinned driver checked the final integrated tree and exited 1 with 209
+unlisted files and 159 digest mismatches. Existing snapshot drift remains; the
+manifest was not resealed. `rch` is unavailable in this environment. No runtime
+pass, remote execution, full qualification or Bead closure is claimed by this
+source increment.
+
 ## 2026-11-21: preserve computed identity expiry and recovery boundaries in prompt preparation
 
 The concurrently landed identity preparation implementation is retained with
@@ -81,12 +114,15 @@ fixtures exercise the original numerical and publication machinery; they do not
 establish empirical model-substitution detection. Contract:
 `docs/LEARNED_PROMPT_PREPARATION.md`.
 
-Source review, new-test formatting on the pinned nightly and whitespace checks
-are recorded separately from runtime execution. Both the initial local baseline
-compiler and the lower-memory retry were killed before producing the core
-integration executable. A metadata-only check is in progress; this source
-checkpoint claims no test pass, RCH execution, Bead closure or full qualification. Subsequent execution evidence
-must name the actual source and compiler selection.
+Source review, production-file syntax parsing, new-test formatting on the pinned
+nightly and whitespace checks are recorded separately from runtime execution.
+Both the initial local baseline compiler and the lower-memory retry were killed
+before producing the core integration executable. The metadata-only service
+check also received SIGKILL in the unchanged library, before the changed target
+could be type checked. The subsequent canonical driver refusal is recorded in
+the governed recovery increment above. This source checkpoint claims no test
+pass, RCH execution, Bead closure or full qualification. Subsequent execution
+evidence must name the actual source and compiler selection.
 
 ## 2026-11-21: exercise live governance after native recovery
 
