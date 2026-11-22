@@ -99,8 +99,11 @@ existing finite `convening` object in their independently authenticated
 
 The complete profile still supplies the original scope, independent operator
 and supervisor identities, socket and finite transport limits. The actual
-loaded recipe must use nonpredictive native model helpers. Process helpers and
-required raw or owned pre-output forecasts fail admission before startup.
+loaded recipe must use native model helpers. An ordinary recipe or an exact
+required raw or owned pre-output predictor can select this same reserve.
+Predictive successors retain their original settled observation and lifetime
+work; the grant provides no forecast capacity. Process helpers fail admission
+before startup.
 
 For a recipe with one scheduled native round, startup reserves the largest
 complete cohort count that fits the grant's remaining operations, original

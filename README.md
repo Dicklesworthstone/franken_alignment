@@ -68,8 +68,10 @@ zero funded successors remains accepted without an actionable continuation.
 An explicit fresh unused round ID then receives a host-selected window within
 the original deadline. Both modes retain the same wrapper, learned packet,
 generated output, reservation and cumulative polls, with independent Stop and
-fresh human approval. Process-helper and predictive recipes reject this
-selection. Core and authenticated service regression sources are present;
+fresh human approval. Exact required raw and owned pre-output predictors retain
+their original settled evidence through this same workflow; see the
+[predictive held-review contract](docs/PREDICTIVE_LEARNED_HELD_REVIEW.md).
+Process-helper recipes reject this selection. Core and authenticated service regression sources are present;
 required RCH compilation and runtime qualification remain pending.
 
 [Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)

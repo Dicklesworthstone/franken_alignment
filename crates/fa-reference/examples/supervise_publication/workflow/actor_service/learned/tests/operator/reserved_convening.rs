@@ -9,7 +9,7 @@ use fa_reference::action::consequence::oversight::sidecar::MAX_SIDECAR_REFINEMEN
 use fa_reference::tower::ReadArguments;
 use std::sync::atomic::AtomicU64;
 
-fn recipe_with_successors(root: &Root, verdict: &[u8], operations: usize) -> PathBuf {
+pub(super) fn recipe_with_successors(root: &Root, verdict: &[u8], operations: usize) -> PathBuf {
     let path = fixture::write(root, verdict);
     let total = operations + 1;
     let original = fs::read_to_string(&path).unwrap();
@@ -33,7 +33,7 @@ fn recipe_with_successors(root: &Root, verdict: &[u8], operations: usize) -> Pat
     path
 }
 
-fn selected(
+pub(super) fn selected(
     root: &Root,
     actor: &Profile,
     operations: usize,
@@ -48,7 +48,7 @@ fn selected(
     (path, selected)
 }
 
-fn exchange(socket: &mut UnixStream, command: &str) -> Json {
+pub(super) fn exchange(socket: &mut UnixStream, command: &str) -> Json {
     socket.write_all(command.as_bytes()).unwrap();
     socket.write_all(b"\n").unwrap();
     let mut bytes = Vec::new();
@@ -87,7 +87,7 @@ fn next(scope: Scope, round: u64) -> String {
     encode_request(&request).unwrap()
 }
 
-fn held(socket: &mut UnixStream, scope: Scope, round: u64) -> Json {
+pub(super) fn held(socket: &mut UnixStream, scope: Scope, round: u64) -> Json {
     let command = next(scope, round);
     let started = Instant::now();
     loop {
@@ -109,7 +109,7 @@ fn number(value: &Json) -> u64 {
     value.as_str().unwrap().parse().unwrap()
 }
 
-fn action(scope: Scope, plan: &Json) -> String {
+pub(super) fn action(scope: Scope, plan: &Json) -> String {
     let action = field(value(plan, "convene-next").unwrap(), &["action"]);
     let args = field(action, &["arguments"]);
     let expected = field(args, &["expected"]);
@@ -146,7 +146,7 @@ fn action(scope: Scope, plan: &Json) -> String {
     encode_request(&request).unwrap()
 }
 
-fn wait_outcome(socket: &mut UnixStream, command: &str, expected: &str) -> Json {
+pub(super) fn wait_outcome(socket: &mut UnixStream, command: &str, expected: &str) -> Json {
     let started = Instant::now();
     loop {
         assert!(started.elapsed() < Duration::from_secs(25));
@@ -160,7 +160,7 @@ fn wait_outcome(socket: &mut UnixStream, command: &str, expected: &str) -> Json 
     }
 }
 
-fn arguments(
+pub(super) fn arguments(
     root: &Root,
     config: &Config,
     recipe: &Path,
@@ -311,7 +311,14 @@ fn original_learned_command_convenes_fresh_native_review_and_requires_its_human_
 #[test]
 fn learned_reserved_capacity_preserves_admission_and_respects_original_work_and_grants() {
     for mode in [
-        "native", "process", "raw", "owned", "unfunded", "limited", "rounds",
+        "native",
+        "process",
+        "raw",
+        "owned",
+        "undeclared_native",
+        "unfunded",
+        "limited",
+        "rounds",
     ] {
         let root = Root::new();
         let config = configured(&root);
@@ -340,9 +347,12 @@ fn learned_reserved_capacity_preserves_admission_and_respects_original_work_and_
             _ => 1,
         };
         let (_, selected) = selected(&root, &profile, operations);
-        let loaded = recipe::load(&path, &config, true).unwrap();
+        let mut loaded = recipe::load(&path, &config, true).unwrap();
+        if mode == "undeclared_native" {
+            loaded.native = None;
+        }
         let admission = selected.check(&config, &loaded, &profile, &peers, None);
-        let supported = !matches!(mode, "process" | "raw" | "owned");
+        let supported = !matches!(mode, "process" | "undeclared_native");
         assert_eq!(admission.is_ok(), supported, "mode={mode}: {admission:?}");
         if supported {
             let expected = match mode {

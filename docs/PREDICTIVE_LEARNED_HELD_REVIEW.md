@@ -84,14 +84,39 @@ keeps its spent operation and work; it cannot replace a reviewer after seeing
 its answer. Only a new native Continue can advance the original effect to the
 separate current human decision and final publication checks.
 
+## Use the existing live operator workflow
+
+The [live learned operator](LIVE_LEARNED_OPERATOR.md#continue-a-held-native-model-review)
+and [resident learned service](RESIDENT_LEARNED_PUBLICATION.md#an-explicitly-selected-successor-after-hold)
+accept the existing finite `convening` selection for original native recipes
+with required raw or owned pre-output prediction. Select this grant before the
+first review; no new command flag, wire schema or authority is introduced.
+
+After an applied Hold without automatic refinement, send authenticated Tower
+`next` to the original request with `action: "convene_held"`. A progressive
+recipe selects its exact next fixed round; a one-round recipe with a funded
+reserve selects an unused round ID. Inspect the returned action and explicitly
+submit its `convene` document. A Pending response means admission; Opened
+requires the retained owner's fresh source checks and successful durable Begin.
+
+The original wrapper remains live throughout the wait, with independent Stop,
+actor cancellation, cumulative transport and native work, and the unchanged
+action deadline. Successful re-review proceeds to a fresh independent human
+Approve/Reject decision. Operator grants cannot fund a missing evaluator
+cohort, extend predictor work, authorize publication or recover a historical
+held owner. Every selected resident recipe must satisfy native admission, and
+the operator grant remains finite across releases and reconnects.
+
 ## Qualification
 
-Native lifecycle and causal-negative regression sources accompany this
-implementation. Synthetic actor and helper models exercise protocol behavior;
+Native lifecycle, causal-negative and actual operator-command regression
+sources accompany this implementation. Synthetic actor and helper models exercise protocol behavior;
 they do not establish predictor calibration or detector reliability. Scoped
 source review and syntax parsing are distinct from the required RCH compiler,
 runtime, formatting, Clippy and full qualification gates. Execution status is
 recorded in `IMPLEMENTATION_STATUS.md`; no gate is closed by this contract.
 
-The live operator integration is recorded separately when its actual command
-workflow and regressions are committed.
+The command regressions cover raw/owned prediction with independent human
+approval and rejection, retained original helper and forecast inputs, source
+loss, Stop and native capacity exhaustion. Their execution remains subject to
+the same pending RCH qualification.

@@ -190,18 +190,16 @@ impl Selection {
             self.settings.check_learned_operator()?;
         }
         if self.settings.convening.is_some()
-            && (loaded.process.is_some()
-                || loaded.native.is_none()
-                || loaded.generation.required_pre_output_forecast().is_some()
-                || loaded
-                    .generation
-                    .required_owned_pre_output_forecast()
-                    .is_some())
+            && (loaded.process.is_some() || loaded.native.is_none())
         {
             return Err(
-                "learned held-review convening requires the original nonpredictive native-model sequence".into(),
+                "learned held-review convening requires the original native-model sequence".into(),
             );
         }
+        // Recipe-required raw/owned prediction stays bound to the original
+        // generator. The retained native owner checks its settled observation
+        // again at offer, ticket and Begin; operator admission supplies no
+        // forecast, replacement observation or prediction-budget reset.
         let extra = precheck
             .map(|settings| settings.socket_path())
             .into_iter()

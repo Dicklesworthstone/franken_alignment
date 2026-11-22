@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: expose predictive held successors through the live operator
+
+The existing learned operator `convening` selection now admits original native
+recipes with required raw-residual or owned-K/V pre-output prediction. The same
+retained owner serves fixed-slot and prepaid one-round Next/Convene handoffs in
+single actor services and resident sequences. Process-helper and missing-native
+selections still refuse during admission. No wire format, command flag,
+publication key, native reserve or prediction allowance was added.
+
+The native owner rechecks the exact original settled observation before offers,
+ticket acquisition and final Begin. Current source, topology, policy, actor and
+authority requirements remain in force, as do independent Stop, cancellation,
+finite operator spending and fresh human approval after a new Continue.
+
+Two new actual-command regression functions cover twelve raw/owned scenarios:
+independent human Approve/Reject after a real Hold and prepaid successor,
+replacement of already-admitted helper/forecast files, current source loss,
+Stop with partial operator input, unfunded reserves and over-granted operator
+capacity. They assert the original action, actor draws, one likelihood sample
+and unchanged predictor lifetime work. Existing fixed and reserved admission
+regressions now pair supported prediction with process/missing-owner refusals.
+
+All thirteen changed Rust paths parsed successfully; new modules were formatted
+and existing sources received scoped changed-range formatting. The native public
+test pair passed `rustfmt --check`, and `git diff --check` is clean. This is
+source and syntax evidence only. Required RCH native-test and canonical-gate
+attempts exited 127 before compilation because `rch` is unavailable. No
+compiler/type/borrow, runtime, Clippy or full qualification pass is claimed.
+The scoped beads remain in progress; no acceptance packet or source manifest
+was resealed. See [the predictive workflow](docs/PREDICTIVE_LEARNED_HELD_REVIEW.md).
+
 ## 2026-11-22: retain exact predictive evidence through native held successors
 
 Native learned review now admits an originally required raw-residual or owned-K/V

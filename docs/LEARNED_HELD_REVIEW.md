@@ -143,8 +143,10 @@ The complete profile still needs its original scope, independently authenticated
 operator identity, supervisor identity, socket and finite transport/runtime
 limits. Select it before native review starts. Structural profile admission does
 not establish learned eligibility: the actual loaded recipe must use native
-model helpers with no raw or owned pre-output forecast. Process helpers and
-predictive recipes reject the selection before clock, source, store or listener
+model helpers. Ordinary recipes and exact required raw or owned pre-output
+predictors share that admission; the original native owner additionally checks
+its own current settled evidence before a predictive offer or successor Begin.
+Process helpers reject the selection before clock, source, store or listener
 startup. Every selected entry of a resident sequence must satisfy that admission.
 
 For this fixed-slot mode, use a progressive v2-or-later learned recipe with

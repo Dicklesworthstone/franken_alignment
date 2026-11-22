@@ -402,8 +402,8 @@ fn independent_stop_interrupts_a_held_native_sequence_with_partial_operator_inpu
 }
 
 #[test]
-fn learned_convening_admission_requires_actual_native_nonpredictive_selection() {
-    for mode in ["native", "process", "raw", "owned"] {
+fn learned_convening_admission_requires_actual_original_native_selection() {
+    for mode in ["native", "process", "raw", "owned", "undeclared_native"] {
         let root = Root::new();
         let config = configured(&root);
         let path = fixture::write(&root, b"allow");
@@ -412,12 +412,21 @@ fn learned_convening_admission_requires_actual_native_nonpredictive_selection() 
         } else if mode == "raw" || mode == "owned" {
             super::super::forecast::install(&root, &path, mode == "owned", 60_000);
         }
-        let loaded = recipe::load(&path, &config, true).unwrap();
+        let mut loaded = recipe::load(&path, &config, true).unwrap();
+        if mode == "undeclared_native" {
+            loaded.native = None;
+        }
         let actor = actor_profile(&root, &config, 1);
         let peers = fixture::peers(&root, &config);
         let selected = chosen(&root, &actor);
         let result = selected.check(&config, &loaded, &actor, &peers, None);
-        assert_eq!(result.is_ok(), mode == "native", "{mode}: {result:?}");
+        // Pinned raw and owned predictors can retain their original native
+        // sequence. Neither process ballots nor a missing native owner can.
+        assert_eq!(
+            result.is_ok(),
+            !matches!(mode, "process" | "undeclared_native"),
+            "{mode}: {result:?}"
+        );
         assert!(!config.store.exists());
         assert!(!selected.settings.socket.exists());
         assert!(!peers.socket(1).exists());

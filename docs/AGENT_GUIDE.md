@@ -305,8 +305,10 @@ and the original grant stays finite across releases and reconnects. Recorded
 native receipt opens remain observation-only. See the
 [ordinary/native contract](HELD_REVIEW_CONVENING.md).
 
-Nonpredictive learned native-model services accept the same explicit operator
-grant under a stricter [retained-evaluator contract](LEARNED_HELD_REVIEW.md).
+Learned native-model services accept the same explicit operator grant under a
+stricter [retained-evaluator contract](LEARNED_HELD_REVIEW.md). Exact required raw
+and owned pre-output predictors additionally retain their own current settled
+observation under the [predictive contract](PREDICTIVE_LEARNED_HELD_REVIEW.md).
 Select the grant before review starts. A progressive recipe provisions its
 complete native schedule and must request the exact next reserved round with
 its original fixed window.
@@ -323,9 +325,10 @@ window within the original deadline; it cannot extend the invocation.
 Both paths retain the same wrapper, learned packet, generated output, cumulative
 native polls and completed work. Independent Stop remains live while waiting,
 and a fresh Continue still needs human approval. Source loss or expiry cannot
-trigger replacement models, resampling or automatic retry. Process-helper and
-predictive learned selections remain unsupported; historical learned receipts
-remain observation-only.
+trigger replacement models, resampling or automatic retry. Predictive successors
+rerun neither generation nor forecasting and add no likelihood sample or work
+allowance. Process-helper selections remain unsupported; historical learned
+receipts remain observation-only.
 
 ### P2. Investigating an incident
 

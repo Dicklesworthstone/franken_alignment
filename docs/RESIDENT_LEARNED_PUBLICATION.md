@@ -391,9 +391,12 @@ retry or restore capacity.
 ### An explicitly selected successor after Hold
 
 A resident sequence may select the operator profile's finite `convening`
-grant when every scheduled recipe uses nonpredictive native model helpers.
-Process-helper and required raw/owned forecast recipes reject this selection
-during admission. Progressive recipes retain their original fixed-slot path:
+grant when every scheduled recipe uses its original native model helpers.
+Ordinary recipes and exact required raw or owned pre-output predictors can use
+the grant; process-helper recipes reject this selection during admission.
+Each predictive Message or separately forecast Finish retains its own settled
+observation, coverage and lifetime work. A prior release cannot supply another
+request's evidence or renew its predictor allowance. Progressive recipes retain their original fixed-slot path:
 the native review already reserves each successor's round ID, evaluators and
 window before the first review.
 

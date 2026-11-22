@@ -268,7 +268,7 @@ Unknown and refusals do not disclose an unobserved completion kind. See the
 
 ## Continue a held native-model review
 
-A nonpredictive learned recipe with native model helpers may select the existing
+A learned recipe with native model helpers may select the existing
 `convening` grant before its original review starts:
 
 ```json
@@ -279,8 +279,12 @@ A nonpredictive learned recipe with native model helpers may select the existing
 }
 ```
 
-The actual loaded recipe must have no process helpers or required raw/owned
-pre-output forecast. Those incompatible selections fail before startup.
+The actual loaded recipe must retain its original native model helpers;
+process helpers fail admission before startup. Ordinary recipes and exact
+required raw or owned pre-output predictors can use this grant. Predictive
+successors additionally retain their own current settled observation under the
+[original evidence contract](PREDICTIVE_LEARNED_HELD_REVIEW.md), without another
+forecast, likelihood sample or prediction allowance.
 Successor capacity is provisioned before the first review in one of two modes:
 
 - A progressive recipe preselects multiple `native_review.round_ids`, matching

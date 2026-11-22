@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22: integrate predictive native held reviews with live services
+
+- Allow required raw and owned pre-output native recipes through the existing
+  finite learned operator `convening` admission in single and resident services.
+- Reuse the original fixed-slot or prepaid owner and its exact settled evidence
+  for explicit Next/Convene; retain fresh source, Stop, cancellation and separate
+  human publication custody without another prediction or work allowance.
+- Add two actual-command regression functions covering twelve raw/owned cases
+  and update fixed/reserved admission regressions with missing-owner negatives.
+- Document the supported workflow and original evidence/budget constraints.
+  All thirteen Rust paths parse; required RCH compilation/runtime qualification
+  remains pending because the runner is unavailable.
+
 ## 2026-11-22: continue predictive learned Holds with original settled evidence
 
 - Admit exact originally required raw-residual and owned-K/V pre-output

@@ -2,16 +2,18 @@
 //! and independent Stop. Fixture weights establish protocol behavior only.
 #[path = "operator/admission_explanation.rs"]
 mod admission_explanation;
-#[path = "operator/fence.rs"]
-mod fence;
 #[path = "operator/convening.rs"]
 mod convening;
-#[path = "operator/reserved_convening.rs"]
-mod reserved_convening;
+#[path = "operator/fence.rs"]
+mod fence;
 #[path = "operator/journal_tail.rs"]
 mod journal_tail;
 #[path = "operator/narrowing.rs"]
 mod narrowing;
+#[path = "operator/predictive_convening.rs"]
+mod predictive_convening;
+#[path = "operator/reserved_convening.rs"]
+mod reserved_convening;
 #[path = "operator/resolution.rs"]
 mod resolution;
 #[path = "operator/review_explanation.rs"]
