@@ -17,6 +17,7 @@ use std::fmt;
 use std::rc::Rc;
 
 mod driving;
+mod convening;
 pub use driving::FileNativeDriverEvent;
 
 #[cfg(test)]
@@ -69,6 +70,9 @@ pub struct FileNativeSupervisedDriver {
     review: FileNativeSidecarSequence,
     request: u64,
     input_revision: u64,
+    // Only this retained native sequence can keep its sealed held-round offer
+    // alive. Handoff, cancellation and failed/resumed work withdraw it.
+    convene_custody: Option<Rc<()>>,
 }
 impl fmt::Debug for FileNativeSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -162,6 +166,7 @@ impl FileSupervisedDriver {
                 review,
                 request,
                 input_revision,
+                convene_custody: None,
             }),
             Err(error) => Err(Box::new(FileNativeDriverSetupError {
                 error,
@@ -294,6 +299,7 @@ impl FileNativeSupervisedDriver {
             }
         }
         self.driver.reap_helpers();
+        self.sync_native_convene_offer()?;
         Ok(self.progress())
     }
 
@@ -304,10 +310,14 @@ impl FileNativeSupervisedDriver {
         if expected_revision != self.review.revision() {
             return Err(Error::Stale.into());
         }
-        if self.review.status() == NativeReviewStatus::Running {
+        let cleared = self.clear_native_convene_offer();
+        if self.review.status() == NativeReviewStatus::Running
+            || self.review.held_successor_round().is_some()
+        {
             self.review.cancel(expected_revision)?;
         }
-        self.driver.cancel_active().map(|_| ())
+        self.driver.cancel_active()?;
+        cleared
     }
 
     /// Partial reviews never escape to an ordinary review/dispatch loop. A
@@ -318,6 +328,9 @@ impl FileNativeSupervisedDriver {
         if self.review.status() == NativeReviewStatus::Running {
             return Err(Box::new(self));
         }
+        // Dropping the weak-offer custodian is sufficient even if a faulted
+        // owner cannot update its local selection table during handoff.
+        let _ = self.clear_native_convene_offer();
         if let Some(job) = &mut self.driver.job
             && job.phase == Phase::Review
         {

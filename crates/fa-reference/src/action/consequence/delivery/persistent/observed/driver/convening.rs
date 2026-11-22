@@ -24,7 +24,9 @@ impl FileSupervisedDriver {
         if self.job.is_some() || !self.helpers_reaped() {
             return Ok(None);
         }
-        if self.learned_review.is_some() {
+        if self.learned_review.is_some()
+            || self.supervisor.host()?.learned_sidecar_required()
+        {
             return Err(Error::Incomplete.into());
         }
         // A mediated host needs its original fixed source custodian before a
@@ -99,7 +101,10 @@ impl FileSupervisedDriver {
         if launch.expected_input_revision != ticket.expected().input_revision {
             return Err(Error::Stale.into());
         }
-        if self.learned_review.is_some() {
+        if self.learned_review.is_some()
+            || ticket.is_native_learned()
+            || self.supervisor.host()?.learned_sidecar_required()
+        {
             return Err(Error::Incomplete.into());
         }
         if launch.window.commit_by >= launch.window.reveal_by

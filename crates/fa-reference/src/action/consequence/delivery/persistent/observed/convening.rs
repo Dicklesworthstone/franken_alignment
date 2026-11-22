@@ -17,12 +17,35 @@ impl FileOversight {
     }
 
     pub(crate) fn convene_round_used(&self, round: u64) -> bool {
-        self.machine.broker.review_round_used(round)
+        self.machine.broker.review_round_used(round) || self.worker_rounds.contains(&round)
+    }
+
+    pub(crate) fn native_convene_round_available(&self, round: u64) -> bool {
+        self.machine.native_learned_convening_supported()
+            && self.worker_rounds.contains(&round)
+            && !self.machine.broker.review_round_used(round)
     }
 
     pub(crate) fn convene_status(
         &self,
         request: u64,
+    ) -> Result<(FileConveneBasis, Option<FileConveneBlockReason>), JournalError> {
+        self.convene_status_for(request, false)
+    }
+
+    /// Eligibility still needs the live native wrapper's sealed offer. A
+    /// retained journal packet or a generic supervisor cannot supply it.
+    pub(crate) fn native_convene_status(
+        &self,
+        request: u64,
+    ) -> Result<(FileConveneBasis, Option<FileConveneBlockReason>), JournalError> {
+        self.convene_status_for(request, true)
+    }
+
+    fn convene_status_for(
+        &self,
+        request: u64,
+        native_learned: bool,
     ) -> Result<(FileConveneBasis, Option<FileConveneBlockReason>), JournalError> {
         use FileConveneBlockReason::*;
         if self.fault.is_some() {
@@ -49,7 +72,12 @@ impl FileOversight {
             recorded_at: state.control.ledger.elapsed,
             deadline: action.spec().deadline,
         };
-        let blocked = if !self.machine.convening_supported() {
+        let supported = if native_learned {
+            self.machine.native_learned_convening_supported()
+        } else {
+            self.machine.convening_supported()
+        };
+        let blocked = if !supported {
             Some(UnsupportedHistory)
         } else if state.stop.is_some() {
             Some(Stopped)
@@ -80,14 +108,39 @@ impl FileOversight {
                     Event::Begin(id, round, ..) if *id == attempt => Some(*round),
                     _ => None,
                 }) != Some(held_round)
-        }) || (self.machine.generated_text_only
-            && self.check_convened_native_text(request).is_err())
+        }) || (native_learned
+            && self.check_convened_native_learned(request, attempt).is_err())
+            || (!native_learned
+                && self.machine.generated_text_only
+                && self.check_convened_native_text(request).is_err())
         {
             Some(StaleReview)
         } else {
             None
         };
         Ok((basis, blocked))
+    }
+
+    fn check_convened_native_learned(
+        &self,
+        request: u64,
+        attempt: u64,
+    ) -> Result<(), JournalError> {
+        if self.source_interrupted
+            || !self.clock_ready()
+            || self.machine.learned_paused()
+            || self.machine.pending_learned_step().is_some()
+            || self.machine.pending_learned_reset().is_some()
+        {
+            return Err(Error::Incomplete.into());
+        }
+        let original = self.machine.checked_learned_sidecar(attempt)?;
+        if original.input_revision() != self.input_revision(attempt)?
+            || original.round().input().action() != self.request_action(request)?
+        {
+            return Err(Error::Stale.into());
+        }
+        Ok(())
     }
 
     pub(crate) fn convene_opened(

@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-22: continue held learned reviews with original native reservations
+
+- Retain a successful learned native Hold and its fixed unused helper roster;
+  explicitly consume only the next preprovisioned round and original window.
+- Preserve actor output, sidecar disclosure, cumulative helper reservation/polls
+  and completed history; reopening performs no model quantum or resampling.
+- Bind operator admission to weak custody of the live retained evaluator and
+  exact held predecessor; refuse generic learned review fallback.
+- Preserve original topology/policy acquisition, Stop and cancellation, with no
+  budget renewal, failed-slot retry or reuse of human approval.
+- Add eight public integration regression functions and the retained-review
+  contract. Source review is complete; syntax, build and runtime qualification
+  remain pending after execution-workspace loss.
+
 ## 2026-11-22: expose held native review through live operators
 
 - Admit the existing finite convening profile for single native services and

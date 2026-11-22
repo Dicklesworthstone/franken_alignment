@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: retain provisioned learned reviewers across an explicit held continuation
+
+The original native-model learned sidecar sequence now retains an acknowledged
+Hold and its unused preprovisioned reviewers. An independently selected finite
+convening grant may request only the next original round and fixed window. The
+same sequence retains cumulative native reservation, poll spending, disclosure
+packet, earlier work records and completed congress history. Reopening evaluates
+no model quantum, generates no actor token, replaces no source and grants no
+effect key. Existing automatic residual refinement keeps its separate original
+contract.
+
+The live native wrapper advertises an exact held-predecessor offer with weak
+custody. Only that offer can use the otherwise reserved worker round. Next,
+admission and ticket consumption recheck the actual original source and held
+cut. Idle polling preserves the exact closed publication job without source,
+clock or automatic retry. Cancellation, handoff, stale input and loss of the
+wrapper withdraw the offer; generic file review explicitly refuses learned
+sidecar ownership. Original topology custody, when selected, refreshes before
+policy capture. Fresh evidence cannot rebase the retained packet. A consumed
+failure retires unused reviewers without refund or relaunch.
+
+Eight public regression functions exercise actual fixture actor/native helper
+models, exact output and packet preservation, cumulative native cost and polls,
+fresh human approval/rejection, source loss or changed input, wrong round/owner,
+stale predecessor, Stop/cancellation/handoff, repeated Hold and finite grants,
+and fixed-window expiry. Independent source review corrected grant-selection
+timing and the original terminal idle branch that otherwise discarded the held
+publication job. No journal or Tower wire format, dependency or qualification
+claim changed. Process-helper and predictive continuation remain unsupported.
+
+The execution workspace disconnected after partial file edits and before
+formatting or compilation. Exact final source and regression contents were
+preserved and independently reviewed through GitHub blobs. The required RCH
+runner was absent during preflight; no syntax, typecheck, Clippy, runtime or
+full-gate pass is claimed for this increment. Existing execution/source-admission
+gates remain open. Contract: `docs/LEARNED_HELD_REVIEW.md`.
+
 ## 2026-11-22: connect explicit held native review to live operators
 
 Single native publication services and resident Message/Finish sequences now

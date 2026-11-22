@@ -20,4 +20,14 @@ impl Machine {
     pub(in super::super) fn convening_requires_topology(&self) -> bool {
         self.mediation.is_some()
     }
+
+    /// A retained native evaluator must separately offer its exact unused
+    /// provisioned round. This predicate alone never enables generic review.
+    pub(in super::super) fn native_learned_convening_supported(&self) -> bool {
+        self.decoder.is_none()
+            && self.learned.is_some()
+            && self.broker.learned_sidecar_required()
+            && self.consistency.is_none()
+            && self.learned_consistency.is_none()
+    }
 }

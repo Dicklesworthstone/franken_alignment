@@ -1,5 +1,7 @@
 //! Fixed native-model rosters through original durable residual refinement.
 use super::*;
+use crate::action::ActionState;
+use crate::action::consequence::Consequence;
 use crate::action::consequence::oversight::sidecar::MAX_SIDECAR_REFINEMENT_ROUNDS;
 
 /// Provision every fresh original native owner before the first round. No
@@ -34,6 +36,8 @@ impl NativeSequenceRecord {
 /// A richer packet must receive fresh original probes AND native-model judgment.
 /// Only the original witnessed finish decides whether another residual is bought.
 /// Native owners are never reset/reused or replaced after their answer is known.
+/// An applied Hold may retain the next already provisioned owner for an explicit
+/// supervisor request; it never creates a roster, window or work allowance.
 ///
 /// ```compile_fail,E0599
 /// use fa_reference::action::consequence::delivery::persistent::observed::helpers::learned::native::sequence::FileNativeSidecarSequence;
@@ -235,6 +239,106 @@ impl FileNativeSidecarSequence {
         &self.input
     }
 
+    /// The next original reservation, not permission to start it. A held round
+    /// cannot choose another model, skip a slot or extend its fixed window.
+    pub(in super::super::super::super) fn held_successor_round(
+        &self,
+    ) -> Option<LearnedWorkerRound> {
+        if self.status != NativeReviewStatus::Finished
+            || self.polls >= self.limits.polls
+            || self.active.is_none()
+            || !matches!(
+                self.history.last(),
+                Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. })
+                    if receipt.policy.control.decision.consequence == Consequence::HoldEffect
+            )
+        {
+            return None;
+        }
+        let next = *self.rounds.get(self.index + 1)?;
+        (self.future.contains_key(&next.round)
+            && self.records.get(&next.round).is_some_and(|record| !record.started))
+        .then_some(next)
+    }
+
+    pub(in super::super::super::super) fn check_held_successor(
+        &self,
+        host: &FileOversight,
+        now: ElapsedTick,
+    ) -> Result<LearnedWorkerRound, JournalError> {
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        let next = self.held_successor_round().ok_or(Error::WrongState)?;
+        let current = self.active.as_ref().ok_or(Error::Incomplete)?;
+        let state = host.inspect();
+        if state.stop.is_some()
+            || state.control.suspended
+            || state.control.ledger.stages.get(&current.sidecar.attempt())
+                != Some(&ActionState::Reviewing)
+        {
+            return Err(Error::WrongState.into());
+        }
+        if now >= next.window.commit_by
+            || state.control.ledger.elapsed != Some(now)
+            || state.control.ledger.epoch != self.input.action().spec().policy_epoch
+        {
+            return Err(Error::Stale.into());
+        }
+        if host.current_learned_sidecar(&current.sidecar)? != &self.input {
+            return Err(Error::Stale.into());
+        }
+        Ok(next)
+    }
+
+    /// Consume the next frozen roster after the driver's one-use convening
+    /// ticket and fresh policy observation. No evaluator quantum runs here.
+    /// All preceding work, unused reservations and history remain cumulative.
+    pub(in super::super::super::super) fn convene_held(
+        &mut self,
+        host: &mut FileOversight,
+        revision: u64,
+        now: ElapsedTick,
+        snapshot: Snapshot,
+    ) -> Result<NativeReviewStatus, JournalError> {
+        if revision != self.revision {
+            return Err(Error::Stale.into());
+        }
+        let next = self.check_held_successor(host, now)?;
+        if !snapshot.complete {
+            return Err(Error::Incomplete.into());
+        }
+        self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
+        self.status = NativeReviewStatus::Failed;
+        self.failure = Some(Error::Incomplete.into());
+        // Keep every remaining model on the stack across the fallible Begin.
+        // An error/unwind cannot restore an earlier usable reservation.
+        let previous = self.active.take().ok_or(Error::Incomplete)?;
+        let mut future = std::mem::take(&mut self.future);
+        let members = future.remove(&next.round).ok_or(Error::Missing)?;
+        let successor = match host.begin_native_sidecar_review_bound(
+            NativeRoundAdmission::Leased(host.revision()),
+            previous.sidecar,
+            next,
+            members,
+            self.limits,
+            snapshot,
+        ) {
+            Ok(successor) => successor,
+            Err(error) => {
+                self.failure = Some(error.clone());
+                return Err(error);
+            }
+        };
+        self.index += 1;
+        self.records.get_mut(&next.round).expect("original successor record").capture(&successor);
+        self.active = Some(successor);
+        self.future = future;
+        self.status = NativeReviewStatus::Running;
+        self.failure = None;
+        Ok(self.status)
+    }
+
     /// One ORIGINAL per-member quantum in the current round. A transition may
     /// durably refine and begin its provisioned successor, but never evaluates a
     /// successor probe/model token in this call. Deadlines and polls never slide.
@@ -325,10 +429,20 @@ impl FileNativeSidecarSequence {
         })();
         match result {
             Ok(done) => {
-                if !done && self.active.is_none() {
+                let held = done
+                    && self.polls < self.limits.polls
+                    && self.rounds.get(self.index + 1).is_some_and(|next| {
+                        now < next.window.commit_by && future.contains_key(&next.round)
+                    })
+                    && matches!(
+                        self.history.last(),
+                        Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. })
+                            if receipt.policy.control.decision.consequence == Consequence::HoldEffect
+                    );
+                if (!done || held) && self.active.is_none() {
                     self.active = active;
                 }
-                if !done {
+                if !done || held {
                     self.future = future;
                 }
                 self.status = if done {
@@ -356,7 +470,7 @@ impl FileNativeSidecarSequence {
         if revision != self.revision {
             return Err(Error::Stale);
         }
-        if self.status != NativeReviewStatus::Running {
+        if self.status != NativeReviewStatus::Running && self.held_successor_round().is_none() {
             return Err(Error::WrongState);
         }
         self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
@@ -365,7 +479,11 @@ impl FileNativeSidecarSequence {
         let active = self.active.take();
         let _future = std::mem::take(&mut self.future);
         if let Some(mut current) = active {
-            current.cancel(current.revision())?;
+            if current.status() == NativeReviewStatus::Running {
+                current.cancel(current.revision())?;
+            } else {
+                current.close();
+            }
             self.records
                 .get_mut(&current.round().round)
                 .expect("fixed record")

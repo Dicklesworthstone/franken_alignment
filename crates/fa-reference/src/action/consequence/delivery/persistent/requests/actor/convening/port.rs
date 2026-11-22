@@ -1,6 +1,7 @@
 use super::super::{FileActorPort, UnknownReason};
 use super::*;
 use crate::action::consequence::oversight::MAX_OBSERVED_ROUNDS;
+use crate::action::consequence::oversight::learned_host::sidecar::workers::LearnedWorkerRound;
 
 impl FileActorSupervisor<FileOversight> {
     /// Select one original, non-renewable ordinary held-review grant. Provision
@@ -30,6 +31,7 @@ impl FileActorSupervisor<FileOversight> {
             queries: Cell::new(queries),
             operations: Cell::new(operations),
             records: RefCell::new(BTreeMap::new()),
+            native_offer: RefCell::new(None),
             scope: owner.host.actor_explanation_scope(),
             issuer: owner.host.journal_tail_identity(),
         });
@@ -68,6 +70,82 @@ impl FileActorSupervisor<FileOversight> {
             return Err(JournalError::Unavailable);
         }
         Ok(true)
+    }
+
+    /// Only the retained native wrapper supplies this weak custody marker.
+    /// The exact held cut and next fixed round are checked before advertising
+    /// an exception to the worker reservation. No work is performed.
+    pub(crate) fn offer_native_convene(
+        &self,
+        request: u64,
+        held_round: u64,
+        next: LearnedWorkerRound,
+        custody: Weak<()>,
+    ) -> Result<(), JournalError> {
+        let owner = self
+            .owner
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let Some(grant) = owner
+            .convening
+            .as_ref()
+            .and_then(|selected| selected.grant.upgrade())
+        else {
+            return Ok(());
+        };
+        if !grant.healthy(&owner.host) || custody.upgrade().is_none() {
+            return Err(JournalError::Unavailable);
+        }
+        let (basis, blocked) = owner.host.native_convene_status(request)?;
+        if blocked.is_some()
+            || basis.held_round != held_round
+            || !owner.host.native_convene_round_available(next.round)
+        {
+            return Err(Error::WrongState.into());
+        }
+        if next.round == 0
+            || next.evidence_root == [0; 32]
+            || basis.recorded_at.is_none_or(|now| now >= next.window.commit_by)
+            || next.window.commit_by >= next.window.reveal_by
+            || next.window.reveal_by > basis.deadline
+        {
+            return Err(Error::InvalidInput.into());
+        }
+        *grant
+            .native_offer
+            .try_borrow_mut()
+            .map_err(|_| JournalError::Unavailable)? = Some(NativeOffer {
+            basis,
+            round: next.round,
+            commit_by: next.window.commit_by,
+            custody,
+        });
+        Ok(())
+    }
+
+    pub(crate) fn clear_native_convene(&self, request: u64) -> Result<(), JournalError> {
+        let owner = self
+            .owner
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let Some(grant) = owner
+            .convening
+            .as_ref()
+            .and_then(|selected| selected.grant.upgrade())
+        else {
+            return Ok(());
+        };
+        let mut offer = grant
+            .native_offer
+            .try_borrow_mut()
+            .map_err(|_| JournalError::Unavailable)?;
+        if offer
+            .as_ref()
+            .is_some_and(|offered| offered.basis.request == request)
+        {
+            *offer = None;
+        }
+        Ok(())
     }
 
     /// Bounded observation-only allocator for EVERY initial or successor helper
@@ -139,6 +217,7 @@ impl FileActorSupervisor<FileOversight> {
             owner: Rc::downgrade(&self.owner),
             grant: Rc::downgrade(&grant),
             input: record.receipt.request,
+            native: record.native.clone(),
             completed: false,
         }))
     }
@@ -176,12 +255,19 @@ impl FileSupervisorConvenePort {
             .try_borrow()
             .map_err(|_| FileConveneError::Unavailable)?;
         grant.queries.set(remaining - 1);
-        let Ok((basis, native_block)) = owner.host.convene_status(request) else {
+        let Ok((basis, native_block, native_offer)) = grant.status(&owner.host, request, round) else {
             return Ok(Knowledge::Unknown {
                 reason: UnknownReason::OutcomeUnknown,
             });
         };
-        let block_reason = block(&owner.host, &grant, &records, round, native_block);
+        let block_reason = block(
+            &owner.host,
+            &grant,
+            &records,
+            round,
+            native_block,
+            native_offer.as_ref(),
+        );
         Ok(Knowledge::Known {
             value: FileConvenePlan {
                 basis,
@@ -221,14 +307,20 @@ impl FileSupervisorConvenePort {
                 basis: input.expected,
             });
         }
-        let (basis, native_block) = owner
-            .host
-            .convene_status(input.request)
+        let (basis, native_block, native_offer) = grant
+            .status(&owner.host, input.request, input.round)
             .map_err(|_| FileConveneError::Unsupported)?;
         if input.expected != basis {
             return Err(FileConveneError::StalePredecessor);
         }
-        if let Some(reason) = block(&owner.host, &grant, &records, input.round, native_block) {
+        if let Some(reason) = block(
+            &owner.host,
+            &grant,
+            &records,
+            input.round,
+            native_block,
+            native_offer.as_ref(),
+        ) {
             return Err(match reason {
                 FileConveneBlockReason::RoundAlreadyUsed => FileConveneError::IdempotencyConflict,
                 FileConveneBlockReason::RoundLimit
@@ -262,6 +354,7 @@ impl FileSupervisorConvenePort {
             Record {
                 receipt: receipt.clone(),
                 taken: false,
+                native: native_offer,
             },
         );
         Ok(Knowledge::Known {
@@ -277,9 +370,12 @@ fn block(
     records: &BTreeMap<u64, Record>,
     round: u64,
     native: Option<FileConveneBlockReason>,
+    native_offer: Option<&NativeOffer>,
 ) -> Option<FileConveneBlockReason> {
     use FileConveneBlockReason::*;
-    if records.contains_key(&round) || host.convene_round_used(round) {
+    if records.contains_key(&round)
+        || (native_offer.is_none() && host.convene_round_used(round))
+    {
         return Some(RoundAlreadyUsed);
     }
     if let Some(reason) = native {

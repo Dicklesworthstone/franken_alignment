@@ -1,4 +1,4 @@
-//! Explicit, finite requests to reopen an ordinary held congress. Queueing is
+//! Explicit, finite requests to reopen an original held congress. Queueing is
 //! not a review, an approval, a new observation or an execution permit.
 mod port;
 
@@ -190,11 +190,37 @@ pub type FileConveneResult = Result<FileConveneObservation, FileConveneError>;
 struct Record {
     receipt: FileConveneReceipt,
     taken: bool,
+    native: Option<NativeOffer>,
 }
+
+/// The retained native evaluator offers its next preprovisioned round.
+/// Copies weakly observe that custody and cannot keep another owner alive.
+#[derive(Clone)]
+struct NativeOffer {
+    basis: FileConveneBasis,
+    round: u64,
+    commit_by: ElapsedTick,
+    custody: Weak<()>,
+}
+impl NativeOffer {
+    fn same(&self, other: &Self) -> bool {
+        self.basis == other.basis
+            && self.round == other.round
+            && self.commit_by == other.commit_by
+            && Weak::ptr_eq(&self.custody, &other.custody)
+    }
+}
+type ConveneStatus = (
+    FileConveneBasis,
+    Option<FileConveneBlockReason>,
+    Option<NativeOffer>,
+);
+
 struct Grant {
     queries: Cell<usize>,
     operations: Cell<usize>,
     records: RefCell<BTreeMap<u64, Record>>,
+    native_offer: RefCell<Option<NativeOffer>>,
     scope: Scope,
     issuer: Weak<()>,
 }
@@ -209,6 +235,46 @@ impl Grant {
         host.storage_failure().is_none()
             && host.actor_explanation_scope() == self.scope
             && Weak::ptr_eq(&self.issuer, &host.journal_tail_identity())
+    }
+
+    fn status(
+        &self,
+        host: &FileOversight,
+        request: u64,
+        round: u64,
+    ) -> Result<ConveneStatus, JournalError> {
+        if !host.learned_sidecar_required() {
+            let (basis, blocked) = host.convene_status(request)?;
+            return Ok((basis, blocked, None));
+        }
+        let (basis, blocked) = host.native_convene_status(request)?;
+        if blocked.is_some() {
+            return Ok((basis, blocked, None));
+        }
+        let offered = self
+            .native_offer
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let Some(offer) = offered
+            .as_ref()
+            .filter(|offer| offer.basis.request == request && offer.round == round)
+        else {
+            return Ok((
+                basis,
+                Some(FileConveneBlockReason::UnsupportedHistory),
+                None,
+            ));
+        };
+        if offer.custody.upgrade().is_none() || offer.basis != basis {
+            return Ok((basis, Some(FileConveneBlockReason::StaleReview), None));
+        }
+        if basis.recorded_at.is_none_or(|now| now >= offer.commit_by) {
+            return Ok((basis, Some(FileConveneBlockReason::DeadlineElapsed), None));
+        }
+        if !host.native_convene_round_available(round) {
+            return Ok((basis, Some(FileConveneBlockReason::RoundAlreadyUsed), None));
+        }
+        Ok((basis, None, Some(offer.clone())))
     }
 }
 
@@ -286,6 +352,7 @@ pub struct FileConveneTicket {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     input: FileConveneRequest,
+    native: Option<NativeOffer>,
     completed: bool,
 }
 impl fmt::Debug for FileConveneTicket {
@@ -311,6 +378,10 @@ impl FileConveneTicket {
         Weak::ptr_eq(&self.owner, &Rc::downgrade(&supervisor.owner))
     }
 
+    pub(crate) fn is_native_learned(&self) -> bool {
+        self.native.is_some()
+    }
+
     pub(crate) fn check(&self, host: &FileOversight) -> Result<(), JournalError> {
         let grant = self.grant.upgrade().ok_or(JournalError::Unavailable)?;
         if self.completed || !grant.healthy(host) || self.owner.upgrade().is_none() {
@@ -327,11 +398,24 @@ impl FileConveneTicket {
         {
             return Err(Error::Binding.into());
         }
-        let (basis, blocked) = host.convene_status(self.request())?;
+        match (&self.native, &record.native) {
+            (None, None) => {}
+            (Some(ticket), Some(record)) if ticket.same(record) => {}
+            _ => return Err(Error::Binding.into()),
+        }
+        let (basis, blocked, native) = grant.status(host, self.request(), self.round())?;
         if basis != self.expected() {
             return Err(Error::Stale.into());
         }
-        if blocked.is_some() || host.convene_round_used(self.round()) {
+        let same_native = match (&self.native, &native) {
+            (None, None) => true,
+            (Some(ticket), Some(current)) => ticket.same(current),
+            _ => false,
+        };
+        if blocked.is_some()
+            || !same_native
+            || (native.is_none() && host.convene_round_used(self.round()))
+        {
             return Err(Error::WrongState.into());
         }
         Ok(())

@@ -32,9 +32,10 @@ applied Reviewing-to-Reviewing `HoldEffect` at the current control cut. The late
 native Begin for that attempt must be that successful held round. A later
 failed review cannot borrow an older Hold. Recorded time must still precede the
 original deadline; this historical check does not replace launch-time clocks.
-Authorized actions, recovered/fenced predecessors, learned or predictive
-numerical histories, caller-text streams and unfinished congresses do not use
-this continuation. Native generated Messages and Finish additionally require the
+Authorized actions, recovered/fenced predecessors, predictive numerical
+histories, caller-text streams and unfinished congresses do not use this generic
+continuation. Learned native evaluators require the separate retained-owner path
+described in [learned held review](LEARNED_HELD_REVIEW.md). Native generated Messages and Finish additionally require the
 exact current source and audience described below.
 An ordinary mediated owner may admit a successor, but its original driver must
 retain the selected topology source before handing off the ticket.
@@ -75,8 +76,10 @@ stream history and effect liabilities remain with the same owner.
 The existing file/process launcher captures fresh complete evidence and starts
 new independent helper commitments. It does not reuse a completed transcript or
 human key. A successful new Continue still enters the original two-key
-publication path. Learned sidecar and predictive review ownership remain outside
-this native continuation contract.
+publication path. A learned native sidecar instead retains its own original
+evaluator sequence and can consume only its next preprovisioned slot; see
+[learned held review](LEARNED_HELD_REVIEW.md). Predictive ownership remains outside
+these continuation contracts.
 
 ## A queued request is not an opened round
 
@@ -126,8 +129,9 @@ congress. Repairing files, recreating a facade or retrying the same request cann
 refund or relaunch it. Successful successor qualification does not reserve work
 for, or replace, the separately required topology check at final publication.
 A later unresolved effect retains its charge until the original endpoint supplies
-a receipt supporting settlement. The unsupported learned, predictive and
-caller-text profiles are independent of this ordinary mediated capability. Target narrowing remains a
+a receipt supporting settlement. Retained learned evaluator ownership and the
+unsupported predictive and caller-text profiles are independent of this ordinary
+mediated capability. Target narrowing remains a
 separate explicit restriction and cannot replace a newly convened review.
 
 Fresh evidence may have the same bytes, for example when independently operated
