@@ -96,6 +96,12 @@ impl SubmitProfile {
         self.original.admit(config)
     }
 
+    /// Keep independently selected input custody distinct from every future
+    /// live listener, even if its file disappears after admission.
+    pub(crate) fn history_anchor_path(&self) -> &Path {
+        &self.original.input
+    }
+
     pub(crate) fn campaign_requirement(&self) -> Option<FileCampaignRequirement> {
         self.expected.as_ref().map(|expected| expected.campaigns)
     }

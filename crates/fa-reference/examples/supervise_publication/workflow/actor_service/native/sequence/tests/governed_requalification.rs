@@ -146,7 +146,8 @@ fn seed_joint(root: &Root) -> JointSeed {
             2,
             2,
         );
-        host.activate_credibility(host.revision(), old.clone(), &config.profile.committee)
+        let revision = host.revision();
+        host.activate_credibility(revision, old.clone(), &config.profile.committee)
             .unwrap();
         host.check_credibility().unwrap();
         assert!(host.held_out_joint_report(old.operation).unwrap().is_some());

@@ -152,8 +152,8 @@ profiles or explicit null rows. The complete selection keeps the same governed
 owner and optional topology; see [scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md).
 The single-request `--precheck-profile` and generated/learned modes remain outside
 these ordinary commands; learned governance uses its separate selection below.
-Governed open uses the separate explicit recovery selection below and does not
-accept this creation-only disclosure schedule. Existing journals are never
+Governed open accepts the disclosure schedule with the separate complete guarded
+recovery selection below. Existing journals are never
 upgraded to campaign governance by an actor or connection.
 
 The complete first canonical image contains the selected publication guard,
@@ -170,7 +170,8 @@ cannot be excused by the governor's policy approval.
 
 ### Select per-request prechecks with governance
 
-Add `--precheck-schedule SCHEDULE` to either ordinary creation command above.
+Add `--precheck-schedule SCHEDULE` to either ordinary creation command above or
+the complete independently guarded recovery command below.
 Each row selects its existing finite disclosure profile or explicit `null`; the
 governor supplies no disclosure authority. Stop runs before operator/governor
 work, disclosure validation and actor intake. Governor Request/Approve journal
@@ -358,6 +359,52 @@ retained requests still observe their recorded outcomes. Selected history and
 source outputs remain independent create-new archives, including on returned
 startup errors. All selected source/checkpoint inputs and outputs are checked
 against the governor socket before recovery begins.
+
+### Schedule prechecks after the original recovery Fence
+
+Both governed open commands also accept `--precheck-schedule SCHEDULE`, including
+the complete mediated selection:
+
+```sh
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE \
+  --tower-generation 42 --requests 7,8 \
+  --guarded GUARDED_SUBMIT_V2_PROFILE \
+  --topology-profile MEDIATED_SUBMIT_V2_PROFILE \
+  --operator-profile OPERATOR_PROFILE --governor-profile GOVERNOR_PROFILE \
+  --precheck-schedule PRECHECK_SCHEDULE
+```
+
+The schedule explicitly selects every key in order. Recorded requests require
+`precheck_profile: null`; only a genuinely new request can select a new finite
+disclosure. A non-null historical row refuses after original reconciliation and
+before any next-source rebind. The existing exporters retain the acknowledged
+Fence/history cut and exact paired source checkpoint on that refusal. This
+restriction also applies to mixed historical/new schedules; a new row does not
+make a selected historical disclosure valid. An entirely historical mediated
+schedule retains its existing prohibition on live governance.
+
+Before replay, admission reserves every future disclosure listener and loaded
+schedule/profile name against all actor/reviewer/Stop/operator/governor endpoints,
+the authority store, history input/output, original and next topology paths,
+source-checkpoint input/output, publication inputs and selected CLI profiles.
+Canonical ancestor comparisons cover absent outputs and parent-symlink aliases.
+Deleting an already loaded profile does not make its name available for a new
+listener or retained archive.
+
+The original recovered driver, fresh governor and human roles, cumulative source
+and effect expenditure, and invocation deadline span the whole schedule. Each
+selected disclosure must match the owner's actual epoch when it starts; Fence,
+source rebind and later policy changes do not rewrite that selection. Native and
+Tower reads share its finite grant. Governor Request/Approve journal changes or
+promotion retire the active disclosure without reissuing it, while later effects
+still require their own source, helper, human and publication checks.
+
+The authored plain and mediated recovered cases include a separate governor
+process, exhausted shared native/Tower reads, real promotion and fresh checked
+or plain publication. Their compilation and execution remain pending; source
+review and pinned Rust syntax parsing do not establish a runtime result. The
+complete schema, null-row behavior and remaining unsupported selections are in
+[scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md#continue-an-independently-guarded-owner).
 
 The original Stop control continues through preparation and first intake. New
 publication still requires current source evidence, helper review, fresh human
@@ -855,7 +902,7 @@ promotion targets execute separately from the example harness.
 Current revision-specific compilation and execution results are recorded in
 `IMPLEMENTATION_STATUS.md`. The complete production executable and test-harness
 metadata are separate checks from linking and executing that large harness. In
-the current implementation workspace, the required Rust/RCH toolchain is
+the current implementation workspace, the required RCH runner is
 unavailable; real listener/client/end-to-end execution of these new compositions
 remains unverified. Source review and syntax checks supply no protocol execution
 evidence.

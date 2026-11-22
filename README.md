@@ -96,6 +96,15 @@ disclosure without renewing its finite query allowance; each later effect still
 needs current source evidence and fresh human approval. Source and regression
 review are complete; RCH execution remains pending.
 
+The same scheduled disclosure selection now follows supported independently
+guarded ordinary recovery, including governed plain/simple-witness and original
+mediated owners. Recorded requests require explicit null rows; new disclosures
+retain current epochs, finite shared queries and fresh source/native/human checks.
+Complete future path custody is admitted before replay, and failures preserve the
+acknowledged history/source pair. See [scheduled recovery](docs/SCHEDULED_ACTOR_PRECHECK.md#continue-an-independently-guarded-owner).
+The complete production example passes scoped type checking; runtime qualification
+remains pending.
+
 [Learned prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md) can require a
 computed identity check against its actual numerical model before prompt work.
 The complete registered passport and independently observed manifest remain

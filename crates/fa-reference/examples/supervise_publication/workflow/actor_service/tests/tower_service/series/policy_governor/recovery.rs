@@ -22,6 +22,9 @@ use fa_reference::witness::{QueryRole, WitnessRequest};
 use std::io::Cursor;
 use std::os::unix::fs::PermissionsExt;
 
+#[path = "recovery/precheck.rs"]
+pub(super) mod precheck;
+
 const RECOVERY_ROOT: &str = "FA_RECOVERED_GOVERNOR_E2E_ROOT";
 const RECOVERY_CHILD: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::recovery::independent_recovered_governor_process";
 const RECOVERY_CAMPAIGN: u64 = 901;
@@ -448,6 +451,17 @@ fn independently_anchored_checked_history_retains_publication_guard_through_fres
 }
 
 fn recovered_pair(checked_mode: bool) {
+    recovered_pair_selected(checked_mode, false);
+}
+
+#[test]
+fn recovered_governed_schedules_share_exhausted_prechecks_and_retire_them_on_real_promotion() {
+    for checked in [false, true] {
+        recovered_pair_selected(checked, true);
+    }
+}
+
+fn recovered_pair_selected(checked_mode: bool, prechecked: bool) {
     let root = Directory::new();
     let mut config = mediated::governed_config(&root);
     evidence(&root, &config);
@@ -464,12 +478,22 @@ fn recovered_pair(checked_mode: bool) {
     let publication = checked_mode
         .then(|| PublicationProfile::decode(checked::profile_document(&root).as_bytes()).unwrap());
     let (recovery, original_anchor) = seed(&root, &mut config, &governor, publication.as_ref());
+    let prechecks = prechecked.then(|| precheck::schedule(&root));
+    let disclosure_sockets = [root.0.join("actors/precheck-7.sock"), root.0.join("actors/precheck-8.sock")];
+    let checks = prechecked.then(|| [
+        precheck::document(&config, 2, b"first", 2),
+        precheck::document(&config, 3, b"second", 2),
+    ]);
+    let queries = prechecked.then(|| [
+        precheck::proposal(&config, 2, b"first", 2),
+        precheck::proposal(&config, 3, b"second", 2),
+    ]);
     // The seed installs generation two at epoch one. Original recovery fences
     // it to epoch two before this independently provisioned fresh worker runs.
     write_complete(&root.0.join("helper-epoch"), b"2");
     let source = root.0.join("evidence.json");
     let source_bytes = fs::read(&source).unwrap();
-    fs::remove_file(&source).unwrap();
+    if !prechecked { fs::remove_file(&source).unwrap(); }
     let first_capture = checked_mode.then(|| checked::capture(&config, 2, 2, b"first"));
     let second_capture = checked_mode.then(|| checked::capture(&config, 3, 3, b"second"));
     let first = super::super::document(&config, 7, 2, "6669727374").replace(
@@ -520,7 +544,11 @@ fn recovered_pair(checked_mode: bool) {
             (1, 7, 2)
         );
         assert_eq!(recovered.payload, b"seed");
-        assert!(!source.exists());
+        if let Some(checks) = &checks {
+            wait(&disclosure_sockets[0]);
+            precheck::passed(&raw_exchange(&mut actor, &checks[0]), "81", "2");
+            precheck::exhausted(&actor_profile, &disclosure_sockets[0], queries.as_ref().unwrap()[0].clone());
+        } else { assert!(!source.exists()); }
         write_complete(&source, &source_bytes);
         if let Some(capture) = first_capture {
             write_complete(&directory.join("original.bin"), &capture);
@@ -537,6 +565,15 @@ fn recovered_pair(checked_mode: bool) {
             ),
             (2, 14, 2)
         );
+        if let Some(checks) = &checks {
+            wait(&disclosure_sockets[1]);
+            assert!(!disclosure_sockets[0].exists());
+            precheck::passed(&raw_exchange(&mut actor, &checks[1]), "82", "2");
+            precheck::exhausted(&actor_profile, &disclosure_sockets[1], queries.as_ref().unwrap()[1].clone());
+        }
+        // The independently selected disclosure's original source bootstrap
+        // precedes the campaign predecessor; its queries do not append events.
+        let before = FileOversight::read_publication(&store, &bootstrap).unwrap();
         fs::remove_file(&source).unwrap();
         // Only the scope and readiness travel out of band. The custodian gets
         // the actual current predecessor from its authenticated Get exchange.
@@ -592,6 +629,10 @@ fn recovered_pair(checked_mode: bool) {
             (2, 14, 3)
         );
         assert!(!source.exists());
+        if let Some(checks) = &checks {
+            precheck::withheld(&raw_exchange(&mut actor, &checks[1]));
+            assert!(!disclosure_sockets[1].exists());
+        }
         assert!(executed(&raw_exchange(&mut actor, &first)));
         write_complete(&source, source_bytes);
         // Only after observing the fresh native promotion does the fixture
@@ -633,6 +674,7 @@ fn recovered_pair(checked_mode: bool) {
         GENERATION,
         &operator,
         &governor,
+        prechecks.as_ref(),
         || ElapsedTick(2000),
     );
     let peer_result = peer.join();

@@ -4,7 +4,7 @@
 use super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, Instant, OwnerStart,
     PeerProfile, Profile, PublicationProfile, RecoveryReserve, check_deployment, debug, governor,
-    operator, plus, series,
+    operator, plus, precheck, series,
 };
 use crate::recover_stop::guarded::{Custody, SubmitProfile};
 use crate::workflow::{
@@ -63,6 +63,7 @@ pub(super) fn serve<F>(
     generation: u64,
     operator: &operator::Settings,
     governor: &governor::Settings,
+    prechecks: Option<&precheck::schedule::Schedule>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -102,6 +103,16 @@ where
     governor.check_host(&config, actor, reviewer, operator, requests)?;
     let custody = profile.admit(&config)?;
     check_destinations(actor, reviewer, operator, governor, requests, &custody)?;
+    if let Some(schedule) = prechecks {
+        let mut paths = vec![profile.history_anchor_path()];
+        paths.extend(custody.output_path());
+        if let Some(publication) = publication {
+            paths.extend(publication.input_paths().iter().map(PathBuf::as_path));
+        }
+        schedule.check_recovery_host(
+            &config, actor, reviewer, requests, Some(operator), Some(governor), &paths,
+        )?;
+    }
 
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
@@ -146,6 +157,7 @@ where
     let revision = owner.revision();
     if let Err(error) = require_settled(&owner, &outcomes)
         .and_then(|_| check_deployment(&config, &owner, publication))
+        .and_then(|_| prechecks.map_or(Ok(()), |schedule| schedule.check_reconciled(&owner)))
     {
         return Err(retain_failure(&custody, &owner, revision, error));
     }
@@ -207,6 +219,7 @@ where
         OwnerStart::Reconciled,
         Some(control),
         Some((governor, fresh_governor)),
+        prechecks,
         deadline,
         time,
         |owner, _, _| guarded::retain(&custody, owner),

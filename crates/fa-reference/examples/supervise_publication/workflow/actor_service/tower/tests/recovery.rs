@@ -2,6 +2,56 @@
 use super::*;
 
 #[test]
+fn guarded_precheck_schedules_keep_complete_plain_or_mediated_governor_selection() {
+    for checked in [false, true] {
+        for governed in [false, true] {
+            for mediated in [false, true] {
+                if !governed && !mediated { continue; }
+                let mut positional = vec![
+                    if checked { "serve-open-checked" } else { "serve-open" },
+                    "config", "actor", "reviewer",
+                ];
+                if checked { positional.push("witness"); }
+                let mut pairs = vec![
+                    [FLAG, "91"], ["--requests", "7,8"],
+                    ["--guarded", "recovery"], ["--precheck-schedule", "schedule"],
+                    ["--operator-profile", "operator"],
+                ];
+                if governed { pairs.push(["--governor-profile", "governor"]); }
+                if mediated { pairs.push(["--topology-profile", "topology"]); }
+                for first in 0..pairs.len() {
+                    let mut args = positional.iter().map(|part| (*part).to_owned()).collect::<Vec<_>>();
+                    for pair in pairs.iter().cycle().skip(first).take(pairs.len()) {
+                        args.extend(pair.iter().map(|part| (*part).to_owned()));
+                    }
+                    let selected = Arguments::parse(&args).unwrap();
+                    assert!(selected.open);
+                    assert_eq!(selected.requests.as_deref(), Some([7, 8].as_slice()));
+                    assert_eq!(selected.precheck_schedule, Some(Path::new("schedule")));
+                    assert_eq!(selected.guarded, Some(Path::new("recovery")));
+                    assert_eq!(selected.publication, checked.then(|| Path::new("witness")));
+                    assert_eq!(selected.governor, governed.then(|| Path::new("governor")));
+                    assert_eq!(selected.topology, mediated.then(|| Path::new("topology")));
+                    for missing in ["--guarded", "--requests"] {
+                        let mut invalid = args.clone();
+                        let index = invalid.iter().position(|part| part == missing).unwrap();
+                        invalid.drain(index..index + 2);
+                        assert!(Arguments::parse(&invalid).is_err());
+                    }
+                    for extra in ["--precheck-schedule", "--precheck-profile"] {
+                        let mut invalid = args.clone();
+                        invalid.extend([extra.into(), "another".into()]);
+                        let expected = Arguments::parse(&invalid).err().unwrap();
+                        assert_eq!(command_with_clock(&invalid, None,
+                            || panic!("invalid recovered schedule reached clock")).unwrap_err(), expected);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn guarded_topology_schedules_keep_all_five_options_in_both_open_modes() {
     for checked in [false, true] {
         let mut positional = vec![

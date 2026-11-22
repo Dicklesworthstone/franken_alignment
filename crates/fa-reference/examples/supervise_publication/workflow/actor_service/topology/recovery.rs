@@ -58,6 +58,7 @@ where
         precheck,
         None,
         None,
+        None,
         time,
     )
 }
@@ -76,6 +77,7 @@ pub(in super::super) fn serve_sequence<F>(
     generation: u64,
     operator: Option<&operator::Settings>,
     requests: &[u64],
+    prechecks: Option<&precheck::schedule::Schedule>,
     time: F,
 ) -> Result<(), String>
 where
@@ -94,6 +96,7 @@ where
         None,
         Some(requests),
         None,
+        prechecks,
         time,
     )
 }
@@ -113,6 +116,7 @@ pub(in super::super) fn serve_sequence_governed<F>(
     operator: &operator::Settings,
     governor: &governor::Settings,
     requests: &[u64],
+    prechecks: Option<&precheck::schedule::Schedule>,
     time: F,
 ) -> Result<(), String>
 where
@@ -120,7 +124,7 @@ where
 {
     serve_selected(
         config, actor, reviewer, publication, credibility, recovery, topology,
-        generation, Some(operator), None, Some(requests), Some(governor), time,
+        generation, Some(operator), None, Some(requests), Some(governor), prechecks, time,
     )
 }
 
@@ -137,6 +141,7 @@ fn serve_selected<F>(
     precheck: Option<&precheck::Settings>,
     requests: Option<&[u64]>,
     governor: Option<&governor::Settings>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -230,6 +235,18 @@ where
         paths.extend(archive.as_ref().map(AcknowledgedOutput::path));
         governor.check_custody_paths(&paths)?;
     }
+    if let Some(schedule) = prechecks {
+        let mut paths = topology.input_paths();
+        paths.push(recovery.history_anchor_path());
+        paths.extend(custody.output_path());
+        paths.extend(archive.as_ref().map(AcknowledgedOutput::path));
+        if let Some(publication) = publication {
+            paths.extend(publication.input_paths().iter().map(PathBuf::as_path));
+        }
+        schedule.check_recovery_host(
+            &config, actor, reviewer, scheduled, operator, governor, &paths,
+        )?;
+    }
     let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
     let deadline = Deadline {
         logical: plus(time(), runtime)?,
@@ -282,6 +299,9 @@ where
             let owner = driver.supervisor().host().map_err(debug)?;
             mediated::require_settled(&owner, &outcomes)?;
             check_deployment(&config, &owner, publication)?;
+            if let Some(schedule) = prechecks {
+                schedule.check_reconciled(&owner)?;
+            }
             if governor.is_some() && roles.oversight.policy_governor.is_none() {
                 return Err("guarded mediated recovery did not return the required fresh governor".into());
             }
@@ -382,6 +402,7 @@ where
             OwnerStart::Reconciled,
             Some(control),
             governor_role,
+            prechecks,
             deadline,
             time,
             retain,

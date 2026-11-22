@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: keep scheduled disclosure through guarded ordinary recovery
+
+Ordinary Tower `serve-open` and simple-witness `serve-open-checked` now carry an
+explicit `--precheck-schedule` through supported independently guarded recovery:
+governed plain/checked owners, or the original mediated source with optional
+independent governance. One recovered driver, its fresh roles, original request
+history, cumulative work and invocation deadline serve the complete finite
+schedule. This connects FA-014, FA-130 and FA-142 without a second owner or an
+unanchored recovery route.
+
+Before replay, admission reserves every future listener and loaded input name
+against all service endpoints, the authority store, original source, history and
+topology custody and selected outputs, including canonical parent aliases and
+removed input files. After original reconciliation, non-null recorded rows
+refuse before fresh source work, retaining the acknowledged history/source pair.
+Null historical rows remain observation-only; an entirely historical ungoverned
+mediated schedule needs no live source, publication capture or credibility
+capsule. New disclosures require the exact current epoch and finite grants.
+
+Regression sources exercise actual plain/checked and mediated recovery, mixed
+historical/new schedules, source-free historical observation, independent
+governor Request/Approve and operator Promote, native/Tower shared exhaustion,
+listener retirement, human rejection, future-epoch refusal after a real effect,
+partial-frame authenticated Stop and canonical custody collisions. Independent
+source review corrected a test's governance-revision sampling race without
+weakening its exact increment assertion. Three obsolete native joint-admission
+calls found by the compiler are also repaired; original activation and producer
+custody negatives remain.
+
+The complete original production example on `73aa02b` plus this source passes
+pinned-nightly metadata/type/borrow checking (exit 0, 8.98 seconds, peak child RSS
+587,048 KiB), after the metadata hash and all 824 actual library dependency hashes
+were verified. Its 28 warning diagnostics remain. The standard LLVM library
+codegen attempt was SIGKILLed; this scoped check performs no linking or execution.
+The complete original test harness also passes metadata/type/borrow checking
+(exit 0, 32.10 seconds, peak child RSS 1,896,460 KiB; six warning diagnostics),
+after repairing a pre-existing mutable-borrow conflict in the native credibility
+fixture without changing its assertions. All original modules remain registered.
+This is still not test execution. The canonical driver refuses source admission
+with 219 unlisted files and 162 digest mismatches before its downstream gates;
+the snapshot was not resealed. Runtime, RCH, Clippy and full qualification remain
+open. Contracts: `docs/SCHEDULED_ACTOR_PRECHECK.md` and
+`docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-21: prepare joint-guarded prompts for containment and continuation
 
 Fresh owned prompt-audit preparation now accepts the existing complete joint

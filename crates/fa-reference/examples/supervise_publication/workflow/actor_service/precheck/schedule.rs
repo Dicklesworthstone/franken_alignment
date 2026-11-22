@@ -10,6 +10,9 @@ use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
 
+#[path = "schedule/recovery.rs"]
+mod recovery;
+
 const SCHEDULE_BYTES: usize = 512 * 1024;
 
 pub(crate) struct Schedule {

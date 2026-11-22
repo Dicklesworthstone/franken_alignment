@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-21: scheduled prechecks through guarded ordinary recovery
+
+- Carry explicit per-request precheck schedules through the original governed
+  plain/simple-witness and mediated recovery paths and recovered driver.
+- Reserve all future disclosure listeners and loaded profile names against
+  original service, source, history, topology and output custody before replay.
+- Require explicit null disclosure rows for recorded requests after reconciliation,
+  retaining acknowledged Fence/source custody on refusal before new source work.
+- Preserve finite shared native/Tower queries, current epochs, independent policy
+  promotion, Stop priority and fresh native/human review without renewing grants.
+- Add real recovered-service, governance, rejection, partial-Stop, stale-epoch and
+  path-alias regression sources; repair three obsolete native joint-admission
+  callers while preserving creation-activation and producer-custody refusals.
+- Fix the existing native credibility fixture's overlapping borrow; the complete
+  original production example and test harness now pass scoped metadata/type
+  checks, with runtime and canonical qualification still open.
+
 ## 2026-11-21: retain joint guards in learned prompt preparation
 
 - Admit the existing joint envelope and computed-identity composition during

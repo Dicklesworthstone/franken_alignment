@@ -734,10 +734,10 @@ fn native_governed_recovery_reserves_capsule_custody_for_direct_and_loaded_selec
 }
 
 #[test]
-fn native_governed_joint_publication_is_recovery_only_and_keeps_producer_custody() {
+fn native_governed_joint_baseline_keeps_producer_custody_and_creation_activation_refusal() {
     let root = Root::new();
     let (config, _, entries) = selected(&root);
-    let (governor, _) = selections(&root, &entries[0].actor);
+    let (governor, chosen) = selections(&root, &entries[0].actor);
     let scope = config.profile.delivery.scope;
     let publication = |producer: &Path| {
         PublicationProfile::decode(format!(
@@ -755,15 +755,19 @@ fn native_governed_joint_publication_is_recovery_only_and_keeps_producer_custody
     };
     let independent = publication(&root.0.join("producer.bin"));
     assert!(independent.requires_joint());
-    governance::check_publication(Some(&governor), Some(&independent), true).unwrap();
+    governance::check_publication(Some(&governor), Some(&independent)).unwrap();
+    governance::check_selection(Some(&governor), Some(&chosen), None, None).unwrap();
+    // The complete original joint baseline is admitted during creation. The
+    // separately selected activation remains an explicit recovery operation.
+    let capsule = root.0.join("qualification.bin");
     let creation =
-        governance::check_publication(Some(&governor), Some(&independent), false).unwrap_err();
-    assert!(creation.contains("during creation"), "{creation}");
+        governance::check_selection(Some(&governor), Some(&chosen), None, Some(&capsule))
+            .unwrap_err();
+    assert!(creation.contains("credibility activation"), "{creation}");
 
     std::os::unix::fs::symlink(&root.0, root.0.join("alias")).unwrap();
     let conflicting = publication(&root.0.join("alias/governor.sock"));
-    let recovery =
-        governance::check_publication(Some(&governor), Some(&conflicting), true).unwrap_err();
+    let recovery = governance::check_publication(Some(&governor), Some(&conflicting)).unwrap_err();
     assert!(recovery.contains("governor socket conflicts"), "{recovery}");
     assert!(!config.store.exists());
     assert!(!governor.socket.exists());

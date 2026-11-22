@@ -2,6 +2,9 @@
 //! across scheduled effects. Synthetic helper votes test enforcement, not quality.
 use super::*;
 
+#[path = "sequence/precheck.rs"]
+mod precheck;
+
 fn scheduled_arguments(root: &Root, checked: bool, requests: &str) -> Vec<String> {
     let mut args = arguments(root, checked, true, false);
     args.extend(["--requests".into(), requests.into()]);

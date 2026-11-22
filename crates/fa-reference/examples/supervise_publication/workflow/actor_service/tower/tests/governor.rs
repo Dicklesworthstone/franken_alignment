@@ -73,7 +73,11 @@ fn governed_creation_keeps_the_complete_explicit_precheck_schedule() {
             let mut recovered = args;
             recovered[0] = if checked { "serve-open-checked" } else { "serve-open" }.into();
             recovered.extend(["--guarded".into(), "recovery".into()]);
-            assert!(Arguments::parse(&recovered).is_err());
+            let parsed = Arguments::parse(&recovered).unwrap();
+            assert!(parsed.open);
+            assert_eq!(parsed.precheck_schedule, Some(Path::new("schedule")));
+            assert_eq!(parsed.guarded, Some(Path::new("recovery")));
+            assert_eq!(parsed.topology, topology.then(|| Path::new("topology")));
         }
     }
 }

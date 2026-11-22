@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology, but never with recovery or --precheck-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -61,6 +61,7 @@ impl<'a> Arguments<'a> {
             positional + 8,
             positional + 10,
             positional + 12,
+            positional + 14,
         ]
         .contains(&args.len())
             || args[1..positional]
@@ -142,7 +143,7 @@ impl<'a> Arguments<'a> {
             }
         }
         if (precheck_schedule.is_some()
-            && (requests.is_none() || open || guarded.is_some()
+            && (requests.is_none() || (open && guarded.is_none())
                 || precheck.is_some()))
             || (requests.is_some() && precheck.is_some())
             || (guarded.is_some() && (!open || (topology.is_none() && governor.is_none())))
@@ -214,6 +215,24 @@ where
     {
         return Err("live policy promotion requires both an independent governor profile and an explicit operator promotion allowance".into());
     }
+    let recovery_prechecks = if selected.open {
+        selected.precheck_schedule.map(|path| {
+            let schedule = super::precheck::schedule::Schedule::read(
+                path, selected.requests.as_deref().expect("precheck schedule checked before reads"),
+            )?;
+            let mut inputs = vec![selected.config, selected.actor, selected.reviewer];
+            inputs.extend(selected.publication);
+            inputs.extend(selected.operator);
+            inputs.extend(selected.governor);
+            inputs.extend(selected.guarded);
+            inputs.extend(selected.topology);
+            inputs.extend(credibility);
+            schedule.check_recovery_inputs(&inputs)?;
+            Ok::<_, String>(schedule)
+        }).transpose()?
+    } else {
+        None
+    };
     if let Some(path) = selected.governor {
         let governor = super::governor::Settings::read(path)?;
         if selected.open {
@@ -236,6 +255,7 @@ where
                     operator.as_ref().expect("independent operator checked before reads"),
                     &governor,
                     selected.requests.as_deref().expect("governor schedule checked before reads"),
+                    recovery_prechecks.as_ref(),
                     time,
                 );
             }
@@ -255,6 +275,7 @@ where
                     .as_ref()
                     .expect("independent operator checked before reads"),
                 &governor,
+                recovery_prechecks.as_ref(),
                 time,
             );
         }
@@ -327,6 +348,7 @@ where
                 selected.generation,
                 operator.as_ref(),
                 requests,
+                recovery_prechecks.as_ref(),
                 time,
             );
         }

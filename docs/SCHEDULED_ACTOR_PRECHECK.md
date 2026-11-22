@@ -1,7 +1,8 @@
 # Precheck disclosure for a finite ordinary Tower schedule
 
-An ordinary Tower creation can explicitly select a separate precheck lifetime
-before each new request in its finite `--requests` schedule:
+An ordinary Tower creation or supported independently guarded recovery can
+explicitly select a separate precheck lifetime before each new request in its
+finite `--requests` schedule. For a new owner:
 
 ```sh
 target/debug/examples/supervise_publication serve-create \
@@ -51,9 +52,83 @@ for the role profiles and separate Request/Approve/Promote exchanges.
 
 The governor does not issue precheck authority. Each row still selects its own
 profile or explicit `null`; all selected query and transport allowances remain
-part of the same finite schedule. This composition applies only to new ordinary
-owners. It does not select governed recovery or change native/learned sequence
-interfaces.
+part of the same finite schedule. Recovery uses the explicit guarded selection
+below. Native and learned sequences retain their own selection interfaces.
+
+## Continue an independently guarded owner
+
+The existing governed plain and simple-witness recovery commands accept the same
+schedule alongside their complete independent recovery selection:
+
+```sh
+target/debug/examples/supervise_publication serve-open \
+  /srv/fa/config.json /srv/fa/actor.json /srv/fa/reviewer.json \
+  --tower-generation 12 --requests 7,8 \
+  --guarded /srv/fa/guarded-submit-v2.json \
+  --operator-profile /srv/fa/operator.json \
+  --governor-profile /srv/fa/governor.json \
+  --precheck-schedule /srv/fa/precheck-schedule.json
+```
+
+This route requires at least two scheduled requests, the operator's independent
+`policy_promotion` selection, and `fa.guarded-submit/2` with the complete current
+policy, exact campaign limits, retained history anchor and recovery floors.
+Checked recovery uses `serve-open-checked` and its original simple-witness
+positional profile. The schedule neither adds a campaign guard to old history
+nor restores an old governor or approval.
+
+An originally mediated owner selects its exact source checkpoint too:
+
+```sh
+target/debug/examples/supervise_publication serve-open \
+  /srv/fa/config.json /srv/fa/actor.json /srv/fa/reviewer.json \
+  --tower-generation 12 --requests 7,8 \
+  --guarded /srv/fa/guarded-submit.json \
+  --topology-profile /srv/fa/mediated-submit-v2.json \
+  --precheck-schedule /srv/fa/precheck-schedule.json
+```
+
+Mediated recovery can independently select the existing operator and governor.
+A governed mediated schedule also requires the exact `/2` campaign expectations,
+at least two request keys and at least one new request. Without governance, a
+mediated schedule may contain only recorded requests. This option does not add
+plain ungoverned guarded recovery or permit an unanchored `serve-open` schedule.
+
+Every recorded request must explicitly select `null`. For example, if request 7
+already has a recorded disposition and request 8 is new:
+
+```json
+{
+  "schema": "fa.actor-precheck-schedule/1",
+  "entries": [
+    {"request": 7, "precheck_profile": null},
+    {"request": 8, "precheck_profile": "/srv/fa/precheck-8.json"}
+  ]
+}
+```
+
+The original guarded cursor verifies history and requirements and reconciles
+once. A non-null recorded row then refuses before opening or rebinding the next
+source, even if other rows are new. The failure path retains the acknowledged
+history anchor and, for mediated recovery, its exact source checkpoint through
+the existing exporters. It never silently ignores that disclosure selection or
+replays the recorded effect. Selected outputs remain independent create-new
+archives.
+
+Null historical rows observe recorded outcomes without a disclosure bootstrap,
+new helper/human review or consequence charge. An entirely historical ungoverned
+mediated schedule needs no live source, publication captures or credibility
+capsule. New rows instead retain the original source rebind and current checks.
+Their selected `expected_policy_epoch` must match the owner when each disclosure
+starts, after the recovery Fence and any intervening source rebind or other
+selected transition. The service never guesses or rewrites that epoch.
+
+The same recovered driver, fresh roles, request history, cumulative source and
+effect accounting, and invocation deadline continue through every row. The
+new invocation's independently selected finite disclosure grants do not recover
+old grants or replenish them after an epoch change. See
+[governed recovery](LIVE_POLICY_GOVERNOR.md#recover-the-governed-owner-with-fresh-independent-custody)
+for the independent role and campaign requirements.
 
 ## Explicit selection for every request
 
@@ -83,8 +158,9 @@ absolute file paths without parent traversal. The schedule is bounded to
 512 KiB; each referenced service profile keeps its existing 16 KiB limit.
 
 An explicit `null` selects no precheck bootstrap, source capture, cache, grant or
-listener for that row. The ordinary original request path still needs its own
-fresh evidence when the actor actually proposes an action.
+listener for that row. A new ordinary request still needs its own fresh evidence
+when the actor proposes an action; a recorded request observes its retained
+disposition.
 
 A selected path contains an existing `fa.actor-precheck-service/1`, `/2` or
 `/3` profile. Versions 1 and 2 disclose exact predicates; version 2 also selects
@@ -92,7 +168,8 @@ a bounded native cache. Version 3 selects full policy disclosure, its explicit
 cache limits and the original complete leakage declaration. The schedule
 neither changes these schemas nor infers a broader disclosure.
 
-For example, a first-row exact-predicate profile can contain:
+For example, a first-row exact-predicate profile for a new epoch-zero owner can
+contain:
 
 ```json
 {
@@ -136,8 +213,9 @@ spends the original actor session's own finite exchange and connection limits.
 Neither transport can replenish native queries or the other's transport work.
 
 All rows and all selected profiles are loaded and validated before the first
-clock observation, source content read, listener or authority store. Profiles
-are retained in memory; later handoffs do not reopen an edited profile file.
+clock observation, live source content read, listener or canonical journal work.
+Recovery checks the complete schedule before its original replay begins.
+Profiles are retained in memory; later handoffs do not reopen an edited file.
 Checked arithmetic admits the total selected allowances across the whole
 schedule:
 
@@ -167,6 +245,15 @@ reserved even if their files are subsequently removed. The original topology
 inputs and checkpoint output retain the same governor custody checks. These
 checks run before the first owner or source bootstrap and include canonical
 ancestor aliases.
+
+Guarded recovery additionally reserves all loaded schedule/profile names and
+future disclosure listeners against the original history-anchor input and new
+output, historical and next topology inputs, source-checkpoint input/output,
+publication-capture inputs, selected CLI profiles, and every scheduled service
+endpoint. These comparisons include absent destinations through their canonical
+existing ancestors. A later profile removed after decoding remains reserved;
+it cannot become an acknowledged output or listener. Refusal precedes replay,
+the Fence and any staging-file cleanup.
 
 Each selected row starts after the preceding request's direct helper children
 are confirmed reaped and the new request's independent Stop transport is
@@ -214,17 +301,21 @@ disclosure being retired when policy governance subsequently changes the owner.
 ## Unsupported selections
 
 `--precheck-schedule` requires `--tower-generation`, `--requests`, and an
-ordinary plain or simple checked creation. It cannot be combined with:
+ordinary plain or simple checked creation or one of the guarded recovery routes
+above. It cannot be combined with:
 
-- `serve-open`, `serve-open-checked` or `--guarded` recovery;
+- an open mode without its independent `--guarded` selection;
+- plain guarded recovery without the independent governor, or mediated recovery
+  without its exact `fa.mediated-submit/2` source checkpoint;
+- a creation mode with `--guarded`;
 - a governor without the independent operator's explicit policy-promotion
   selection, or that promotion selection without its governor;
 - the single-request `--precheck-profile` option;
 - richer checked publication profiles.
 
 Existing native actor commands and learned resident sequence selection keep
-their existing interfaces. Historical requests do not bootstrap a new disclosure
-through this creation-only option.
+their existing interfaces. A recorded request cannot acquire a new disclosure
+through this schedule.
 
 The regression source covers two requests over one original actor connection,
 all three disclosure profiles, alternating native/Tower query exhaustion,
@@ -243,8 +334,18 @@ exhaustion, revoked disclosure paths, no renewal after promotion, a changed
 source, fresh human rejection, a future-epoch row and custody aliases involving
 later listeners or already loaded files.
 
-The governed composition has source review and Rust 2024 syntax parsing only.
-Required RCH compilation and runtime execution remain pending; no configured
-remote compilation worker was available. The authored cases and syntax checks
+Recovery regression sources add checked/plain publications with independent
+human rejection, mixed null-history/new rows, source-free historical receipts,
+non-null recorded-row refusal retaining the Fence/source pair, future-epoch
+refusal, partial-frame Stop, and pre-replay custody aliases. Plain and mediated
+governed cases exercise real independent approval and promotion after sharing
+each selected row's finite grant between native and Tower queries. A
+removed-profile case checks that a loaded later profile cannot become either
+acknowledged recovery output.
+
+The governed creation and guarded recovery compositions have source review and
+Rust 2024 syntax parsing only. Required RCH compilation and runtime execution
+remain pending; no configured remote compilation worker was available. The
+authored cases and syntax checks
 are not a passing-test or deployment claim. Revision-specific evidence belongs
 in `IMPLEMENTATION_STATUS.md`.

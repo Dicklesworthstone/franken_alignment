@@ -80,7 +80,7 @@ fn governed_mediated_recovery_rejects_missing_next_source_and_archive_aliases_be
             saved.last_operation() + 1, output.to_str().unwrap()).as_bytes()).unwrap();
         let error = mediated_recovery::serve_sequence_governed(mediated_config(&root),
             &actor, &reviewer, None, None, &recovery, &topology, GENERATION,
-            &operator, &governor, &[7, 8],
+            &operator, &governor, &[7, 8], None,
             || panic!("aliased recovered governor custody reached time")).unwrap_err();
         assert!(error.contains("source or retained checkpoint custody"), "{error}");
         assert_eq!(fs::read(&canonical).unwrap(), canonical_bytes);
@@ -123,7 +123,7 @@ fn all_historical_governed_mediated_schedules_refuse_without_source_work_and_ret
         let mut calls = 0;
         let error = mediated_recovery::serve_sequence_governed(config, &actor, &reviewer,
             publication.as_ref(), None, &recovery, &topology, GENERATION,
-            &operator, &governor, &[7, 8], || {
+            &operator, &governor, &[7, 8], None, || {
                 calls += 1;
                 assert!(!governor.socket.exists(), "historical schedule activated a governor");
                 ElapsedTick(1001)

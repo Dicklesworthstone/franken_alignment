@@ -721,6 +721,7 @@ where
         owner_start,
         early_control,
         None,
+        None,
         deadline,
         time,
         retain,
@@ -743,6 +744,7 @@ pub(super) fn serve_ready_driver_with_governor<F, R>(
     owner_start: OwnerStart,
     early_control: Option<super::super::control::Control>,
     governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     deadline: Deadline,
     time: F,
     retain: R,
@@ -754,7 +756,7 @@ where
     serve_ready_driver_selected(
         config, actor, reviewer_profile, publication, options, tower_generation,
         operator_settings, socket, port, driver, reviewer, topology, owner_start,
-        early_control, governor, None, deadline, time, retain,
+        early_control, governor, prechecks, deadline, time, retain,
     )
 }
 

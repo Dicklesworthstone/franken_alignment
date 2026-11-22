@@ -53,6 +53,17 @@ fn promotion_cannot_bypass_the_original_final_source_check_in_created_or_recover
 }
 
 fn governed_pair(checked: bool, recovered: bool, lose_source: bool) {
+    governed_pair_selected(checked, recovered, lose_source, false);
+}
+
+#[test]
+fn recovered_mediated_governor_preserves_null_history_and_retires_scheduled_precheck_on_promotion() {
+    for checked in [false, true] {
+        governed_pair_selected(checked, true, false, true);
+    }
+}
+
+fn governed_pair_selected(checked: bool, recovered: bool, lose_source: bool, prechecked: bool) {
     let root = Directory::new();
     let (config, recovery, before_source) = if recovered {
         let (config, recovery, saved) = seed(&root, checked, false);
@@ -67,6 +78,10 @@ fn governed_pair(checked: bool, recovered: bool, lose_source: bool) {
     let graph_generation = if recovered { 2 } else { 1 };
     let before_epoch = if recovered { 3 } else { 0 };
     let promoted_epoch = before_epoch + 1;
+    let prechecks = prechecked.then(|| recovery::precheck::schedule_selected(&root, None, before_epoch));
+    let disclosure_socket = root.0.join("actors/precheck-8.sock");
+    let check = prechecked.then(|| recovery::precheck::document(&config, 2, b"second", before_epoch));
+    let query = prechecked.then(|| recovery::precheck::proposal(&config, 2, b"second", before_epoch));
     let topology_path = root.0.join(format!("topology-{graph_generation}.json"));
     let inventory_path = root.0.join(format!("inventory-{graph_generation}.json"));
     let original_topology = fs::read(&topology_path).unwrap();
@@ -142,6 +157,14 @@ fn governed_pair(checked: bool, recovered: bool, lose_source: bool) {
         wait(&next_control);
         let before = FileOversight::read_publication(&store, &profile).unwrap();
         assert_eq!((before.executions, before.control.ledger.charged, before.control.ledger.epoch), (1, 7, before_epoch));
+        if let Some(check) = &check {
+            wait(&disclosure_socket);
+            recovery::precheck::passed(&raw_exchange(&mut actor, check), "82", &before_epoch.to_string());
+            recovery::precheck::exhausted(&actor_peer, &disclosure_socket, query.unwrap());
+            assert!(!directory.join("actors/precheck-7.sock").exists());
+        }
+        // Pin the campaign predecessor after the original disclosure bootstrap.
+        let before = FileOversight::read_publication(&store, &profile).unwrap();
         let evidence_path = directory.join("evidence.json");
         let evidence_bytes = fs::read(&evidence_path).unwrap();
         let inventory_bytes = fs::read(&selected_inventory).unwrap();
@@ -174,6 +197,10 @@ fn governed_pair(checked: bool, recovered: bool, lose_source: bool) {
         assert_eq!(after.control.sequence, approved.control.sequence + 1);
         assert_eq!((after.executions, after.control.ledger.charged, after.control.ledger.epoch), (1, 7, promoted_epoch));
         assert!(!evidence_path.exists() && !selected_inventory.exists());
+        if let Some(check) = &check {
+            recovery::precheck::withheld(&raw_exchange(&mut actor, check));
+            assert!(!disclosure_socket.exists());
+        }
         assert!(executed(&raw_exchange(&mut actor, &first)));
         write_complete(&evidence_path, evidence_bytes);
         write_complete(&selected_inventory, inventory_bytes);
@@ -218,7 +245,7 @@ fn governed_pair(checked: bool, recovered: bool, lose_source: bool) {
     let served = match (&recovery, &continuation) {
         (Some(recovery), Some(topology)) => topology_recovery::serve_sequence_governed(
             config, &actor, &reviewer, publication.as_ref(), None,
-            recovery, topology, GENERATION, &operator, &governor, &[7, 8], &mut time,
+            recovery, topology, GENERATION, &operator, &governor, &[7, 8], prechecks.as_ref(), &mut time,
         ),
         (None, None) => service::serve_tower_governed_with_topology(
             config, &actor, &reviewer, publication.as_ref(), &[7, 8],
