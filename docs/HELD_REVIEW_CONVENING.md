@@ -159,8 +159,13 @@ not gain this capability. Ordinary topology-mediated create services, their
 explicit schedules and guarded recovered services accept it, including the
 existing plain checked witness profile. In a recovered service, only a newly
 admitted request that reaches a fresh Hold after the original recovery fence is
-eligible; an old pre-recovery held predecessor remains stale. Learned/generated
-profiles still reject this selection before startup.
+eligible; an old pre-recovery held predecessor remains stale. Native generated
+single-request services
+and resident Message/Finish sequences accept the same finite grant, including new
+unrecorded work in supported recovered suffixes. Exact native provenance must
+remain current throughout the handoff. Recorded native receipt opens accept only
+observation grants and explicitly refuse convening. Learned and predictive
+services remain outside this capability.
 
 At the exact native request address, send `next` with
 `{"action":"convene_held","round":"8"}`. All Tower integers are canonical
@@ -198,13 +203,21 @@ Select the optional member in the existing independent operator profile:
 }
 ```
 
-The ordinary Linux Tower service retains this original grant across requests
-and reconnects. With it selected, an actual Hold waits within the original
+The ordinary and native generated Linux Tower services retain this original
+grant across requests and reconnects. With it selected, an actual Hold waits within the original
 action/service deadline, servicing the same independent Stop, operator and
 actor endpoints. The fixed helper program/argument/environment recipe and
 checked-publication preparation are retained from before the initial review.
 Every successor still requires a separate explicit operator admission. Without
 this selection, the existing post-Hold cancellation behavior is unchanged.
+
+For native output, the held release retains its exact completed generation,
+cumulative frame and numerical spending while it awaits an operator request.
+No later generation starts during this wait. A successful fresh round still needs
+its own independent human decision and original final-publication checks. Native
+resident sequences share one operation allowance across every Message and Finish;
+neither a later release nor an operator reconnect replenishes it. Governed native
+sequences use the same current-source gate and their original separate governor.
 
 Mediated creation keeps the topology source selected before initial actor
 admission. Each explicit successor spends a fresh check from that same source
@@ -292,3 +305,14 @@ unavailable before formatting, parsing, compilation or runtime verification.
 The prior library compiler memory failure is historical evidence, not a new
 test result. No whole-repository, RCH, production or roadmap qualification is
 claimed.
+
+The native generated extension adds seven public regression functions spanning
+eleven scenario rows, plus five service/admission regression functions and one
+subprocess helper fixture. They exercise same or changed fresh evidence, exact
+Message/Finish output, actual later numerical work invalidating an old Hold,
+independent human rejection, spent failed admission, finite shared allowances,
+resident Message/Message/Finish handoffs, operator revocation and authenticated
+Stop. The fixtures exercise the actual source, socket and helper-process paths;
+their controlled ballots do not establish detector reliability. Source review
+and scoped Rust syntax/format checks are recorded in `IMPLEMENTATION_STATUS.md`;
+RCH compilation, runtime tests and full qualification remain pending.

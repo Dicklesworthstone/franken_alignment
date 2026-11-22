@@ -48,6 +48,15 @@ handoffs. Stop remains first, including when an operator Fence stops the origina
 admission domain. The source and regression cases remain pending required RCH
 compilation and runtime qualification.
 
+[Held native generated releases](docs/HELD_REVIEW_CONVENING.md) can now receive
+an explicitly requested fresh review through that same independent operator.
+Single-request services and resident Message/Finish sequences retain the exact
+original output, numerical spending, audience and deadline. Each successor spends
+the original finite grant and needs fresh helper review and independent human
+approval; it performs no resampling or automatic retry. Source implementation,
+public regressions and service scenarios are present; required RCH compilation
+and runtime qualification remain pending.
+
 [Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)
 now requires an independently retained history anchor and complete current
 policy, guard and recovery-floor requirements. The original recovery Fence

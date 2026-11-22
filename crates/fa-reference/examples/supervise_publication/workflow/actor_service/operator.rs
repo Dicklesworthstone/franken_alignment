@@ -213,6 +213,7 @@ impl Service {
                     || settings.cancellation.is_some()
                     || settings.abandonment.is_some()
                     || settings.narrowing.is_some()
+                    || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
                 {
                     PublicationTower::new_generated_control_operator(mount, port, limits)

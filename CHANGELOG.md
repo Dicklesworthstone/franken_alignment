@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-22: expose held native review through live operators
+
+- Admit the existing finite convening profile for single native services and
+  resident generated Message/Finish sequences, including governed admission.
+- Mount convening-only profiles as generated-control operators; explicitly
+  refuse mutation of recorded native receipts and keep learned selection closed.
+- Reuse the original Stop-aware held loop, fixed helper recipe, one-use ticket
+  and finite owner-wide allowance across release handoffs and reconnects.
+- Add five service/admission regression functions and a helper process fixture
+  covering fresh review/publication, human rejection, exhaustion, source loss,
+  revocation, no-grant behavior and authenticated Stop; update the old admission
+  regression to preserve paired native acceptance and learned refusal.
+- Document the existing operator-profile selection and explicit Next/convene
+  exchange. Scoped syntax/format checks pass; required RCH compilation and
+  runtime qualification remain pending because the runner is unavailable.
+
 ## 2026-11-22: continue held native generated effects without resampling
 
 - Admit an explicitly requested fresh review of an original generated Message

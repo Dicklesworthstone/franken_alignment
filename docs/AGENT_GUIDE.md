@@ -272,10 +272,10 @@ Stream prefixes, forecasts and unknown charges remain owned; mediated publicatio
 still checks its original source before an effect. The checkpoint contract below
 remains separate and deliberately revokes authority at its containment boundary.
 
-#### Implemented ordinary held-review continuation
+#### Implemented ordinary and native held-review continuation
 
 Select the independent operator profile's `convening` capability to retain an
-ordinary held request while awaiting an explicit successor. Send Tower `next`
+ordinary or native generated held request while awaiting an explicit successor. Send Tower `next`
 at its full original request address with `action: "convene_held"` and an unused
 round ID, inspect the complete action, then explicitly submit its `convene`
 document with `tower-operator-exchange`. A Known Pending reply means admission
@@ -294,8 +294,16 @@ separate final-publication check. Missing/changed topology or exhausted source
 work fails the consumed handoff without renewal. In guarded recovery, select
 only a new request that reaches a fresh Hold after the original recovery fence;
 old held predecessors stay stale, and both custody outputs include spent
-successor work. Numerical/generated service selection remains unsupported; see the
-[exact contract](HELD_REVIEW_CONVENING.md).
+successor work.
+
+Native single-request services and resident Message/Finish sequences admit the
+same explicit capability. They recheck the exact original generation, numerical
+predecessor and confirmed audience before admitting and consuming each handoff.
+The frozen output and spent numerical work remain unchanged; requesting another
+review does not resample. Every release needs a fresh independent human decision,
+and the original grant stays finite across releases and reconnects. Recorded
+native receipt opens remain observation-only; learned and predictive services
+do not support this continuation. See the [exact contract](HELD_REVIEW_CONVENING.md).
 
 ### P2. Investigating an incident
 

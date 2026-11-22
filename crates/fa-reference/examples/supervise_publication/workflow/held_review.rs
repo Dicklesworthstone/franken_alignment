@@ -1,4 +1,4 @@
-//! Explicit successor rounds for one original held ordinary request.
+//! Explicit successor rounds for one original ordinary or native generated request.
 //! No actor poll, source change, old receipt or helper result requests a retry.
 
 use super::{

@@ -17,6 +17,9 @@ mod early_tests;
 #[path = "operator/combined_precheck.rs"]
 mod combined_precheck_tests;
 
+#[path = "operator/convening.rs"]
+mod convening_tests;
+
 pub(super) fn selection(
     root: &Root,
     actor: &Profile,

@@ -251,7 +251,7 @@ impl NarrowingSettings {
     }
 }
 
-/// Explicit additional congress rounds for an original ordinary held request.
+/// Explicit additional congress rounds for an ordinary or native generated held request.
 /// This allowance never changes the roster, grants either effect key or extends
 /// the action deadline. Each successor requires a separate operator request.
 #[derive(Clone, Debug)]
@@ -903,7 +903,7 @@ impl Settings {
     /// numerical work admission before clock/source acquisition, owner startup
     /// or listener creation.
     pub(crate) fn check_learned_operator(&self) -> Result<(), String> {
-        self.check_numerical_operator("learned", false)
+        self.check_numerical_operator("learned", false, false)
     }
 
     /// Only the separately selected learned governor composition may delegate
@@ -918,13 +918,13 @@ impl Settings {
                 "governed learned promotion requires an explicit numerical replay budget".into(),
             );
         }
-        self.check_numerical_operator("learned", true)
+        self.check_numerical_operator("learned", true, false)
     }
 
     /// Native decoder histories require the same independent numerical work
     /// reservations. An ordinary allowance cannot silently fund reconstruction.
     pub(crate) fn check_generated_operator(&self) -> Result<(), String> {
-        self.check_numerical_operator("native text", false)
+        self.check_numerical_operator("native text", false, true)
     }
 
     /// Only native resident creation with separately selected governor custody
@@ -939,10 +939,15 @@ impl Settings {
                 "governed native promotion requires an explicit numerical replay budget".into(),
             );
         }
-        self.check_numerical_operator("native text", true)
+        self.check_numerical_operator("native text", true, true)
     }
 
-    fn check_numerical_operator(&self, profile: &str, governed: bool) -> Result<(), String> {
+    fn check_numerical_operator(
+        &self,
+        profile: &str,
+        governed: bool,
+        supports_convening: bool,
+    ) -> Result<(), String> {
         self.validate()?;
         if self.policy_promotion.is_some() && !governed {
             return Err(
@@ -950,9 +955,13 @@ impl Settings {
                     .into(),
             );
         }
-        if self.convening.is_some() {
+        // Native generated releases reuse their completed original Message or
+        // Finish in the ordinary process-review loop. The grant buys another
+        // review, never numerical replay or a new sample. Learned sidecars keep
+        // their separate unsupported lifecycle and cannot select this route.
+        if self.convening.is_some() && !supports_convening {
             return Err(
-                "held-review convening supports only original ordinary publication runs".into(),
+                "held-review convening supports only original ordinary and native generated publication runs".into(),
             );
         }
         if self.narrowing.as_ref()

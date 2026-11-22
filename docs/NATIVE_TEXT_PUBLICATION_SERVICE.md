@@ -241,6 +241,35 @@ path opens no Stop/reviewer listener, starts no new generation or helpers and ne
 turns a failed receipt output into a new Stop. Its sidecar can only observe the
 original history while the original bounded actor receipt exchange completes.
 
+### Explicit continuation after Hold
+
+The independent operator profile may select the existing finite capability:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+An actual held native Message or Finish then waits within the original deadline
+while the same Stop and operator endpoints remain active. At the full original
+request address, ask Tower `next` for `{"action":"convene_held","round":"8"}`
+using an unused round ID. Inspect the returned complete action and explicitly
+submit its `convene` document with `tower-operator-exchange`. Pending means the
+original grant admitted a one-use handoff; it does not mean a round opened.
+
+The original driver rechecks current generated provenance, waits for old helper
+children to be reaped, captures fresh complete evidence and launches the same
+fixed helper recipe. It retains the exact generated output, numerical spending,
+audience and deadline. It performs no new inference or sampling. A fresh Continue
+still needs independent human approval and the original publication checks.
+Source failure spends the admitted operation without automatic retry. Omitting
+the capability preserves the existing post-Hold cancellation behavior. Recorded
+receipt opens explicitly refuse this mutation grant. See the
+[held-review contract](HELD_REVIEW_CONVENING.md) for admission and failure states.
+
 ## Explicit recovery
 
 ```sh

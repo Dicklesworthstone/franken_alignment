@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: connect explicit held native review to live operators
+
+Single native publication services and resident Message/Finish sequences now
+accept the original finite `convening` selection in their independent operator
+profile. A convening-only grant selects the restricted generated-control mount;
+it needs no unrelated mutation grant. Ordinary and governed native admission
+share the same current-source checks. Learned and governed-learned selection
+still refuses this capability. Recorded native receipt recovery explicitly
+rejects convening alongside the other mutation grants before mounting a listener.
+
+Both native service forms already use the original held-review loop. It retains
+the exact completed generation, cumulative frame, fixed helper recipe, original
+deadline and independent Stop path. The operator explicitly requests each fresh
+round; the driver waits for old helper children to be reaped, rechecks the sealed
+predecessor, captures fresh complete evidence and launches once. No new inference,
+sampling or next generation occurs during the held wait. A fresh Continue still
+requires its own human key and final publication checks. Resident releases and
+reconnects share the same finite custodian and spent allowances. A recovered
+owner may use this capability for new unrecorded work after its original Fence;
+it cannot revive an old Hold or mutate a recorded receipt.
+
+Five new service/admission regression functions and one subprocess helper fixture
+cover a convening-only mount, native/learned/recorded admission, a resident
+Message/Message/Finish sequence, independent Finish rejection, original frozen
+text and numerical work, cumulative operation exhaustion across reconnects,
+no-grant cancellation, source-loss failure, operator revocation and authenticated
+Stop while held. The existing closed/bounded profile regression now admits native
+selection while preserving learned and malformed-selection refusal. Controlled
+helper ballots are fixtures, not evidence about detector quality. Governed
+composition is source-reviewed; no combined governance/convening execution result
+is claimed.
+
+Independent source review is complete. All seven changed Rust files passed
+syntax parsing and formatting of changed ranges with rustfmt 1.10.0-nightly
+(9085017724, 2026-08-30), and `git diff --check` passed. Both required attempts
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --example supervise_publication`
+and
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 run --locked -p xtask -- check`
+exited 127 before compilation because `rch` is unavailable. No compiler, Clippy,
+runtime, full-format or qualification pass is claimed. Execution and existing
+source-admission gates remain open. Usage is documented in
+`docs/HELD_REVIEW_CONVENING.md`, `docs/NATIVE_TEXT_PUBLICATION_SERVICE.md`,
+`docs/RESIDENT_NATIVE_PUBLICATION.md` and `docs/AGENT_GUIDE.md`.
+
 ## 2026-11-22: retain generated output across an explicit successor review
 
 The original finite convening capability now admits a source-only native

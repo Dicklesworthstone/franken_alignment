@@ -155,6 +155,7 @@ impl Selection {
             || self.settings.abandonment.is_some()
             || self.settings.fence.is_some()
             || self.settings.narrowing.is_some()
+            || self.settings.convening.is_some()
             || self.settings.policy_promotion.is_some()
         {
             return Err("recorded native receipt recovery accepts only observation operator grants".into());

@@ -556,6 +556,19 @@ Operator access never submits an actor's source reference or supplies either
 publication approval. Transport failure retires the sidecar without creating a
 replacement service or granting new authority.
 
+The profile may also select bounded `convening` authority for an original held
+Message or Finish. The same `next` / explicit `convene` exchange used by
+[native single-request services](NATIVE_TEXT_PUBLICATION_SERVICE.md#explicit-continuation-after-hold)
+requests one fresh review of that exact generated release. No later generation
+starts while it is held. Its output, numerical spending, confirmed audience and
+original deadline remain fixed; fresh helper review still needs an independent
+human key before publication. The one original query/operation allowance spans
+the entire sequence, including reconnects and later releases. An exhausted grant
+does not mint another one. The same selection is available to governed sequences
+and new unrecorded suffix work after recovery, with the original governor and
+recovery checks. It cannot revive an old held predecessor or mutate a recorded
+receipt. Omitting it preserves the original post-Hold cancellation behavior.
+
 A Fence accepted before actor intake or during predecessor retirement retains
 that selected entry's one unused reply interval. The same operator can finish
 its response or answer an already queued exact retry before retirement. This
