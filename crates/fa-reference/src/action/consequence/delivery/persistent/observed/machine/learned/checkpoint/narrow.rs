@@ -37,7 +37,12 @@ impl Machine {
         request: &FileLearnedStreamNarrowRequest) -> Result<(), Error>
     {
         request.validate()?;
-        if !self.learned_contract().is_some_and(|recipe| recipe.requires_owned_forecast_stream_restart_audit()) {
+        let recipe = self.learned_contract().ok_or(Error::Incomplete)?;
+        let ordinary = recipe.required_pre_output_forecast().is_none()
+            && recipe.required_owned_pre_output_forecast().is_none()
+            && !self.broker.action_consistency_required();
+        if recipe.text_stream_profile().is_none()
+            || (!ordinary && !recipe.requires_owned_forecast_stream_restart_audit()) {
             return Err(Error::Binding);
         }
         if self.learned_stream_narrow_retry(request)?.is_some() { return Err(Error::Duplicate); }

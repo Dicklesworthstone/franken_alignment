@@ -76,6 +76,20 @@ impl FileLearnedStreamControlHistory {
 }
 
 impl FileLearnedRecovery {
+    // Sealed ordinary-mediated admission must preserve the original absence of
+    // a predictor. A different wrapper cannot infer absence from unavailable
+    // observations or borrow the owned predictor's restart contract.
+    pub(in super::super::super::super) fn check_plain_stream_control_recipe(&self)
+        -> Result<(), JournalError>
+    {
+        if self.expected.text_stream_profile().is_none()
+            || self.expected.required_pre_output_forecast().is_some()
+            || self.expected.required_owned_pre_output_forecast().is_some() {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
     // Sealed predictive-mediated selectors use the independently bound recipe
     // before event zero. This is admission only, never a replay/Ready shortcut.
     pub(in super::super::super::super) fn check_owned_stream_control_recipe(&self)
@@ -93,7 +107,6 @@ impl FileLearnedRecovery {
         -> Result<(Self, FileLearnedStreamControlReceipt, usize), JournalError>
     {
         self.check_stream_control_profile()?;
-        if !self.expected.requires_owned_forecast_stream_restart_audit() { return Err(Error::Binding.into()); }
         expected.validate()?;
         if let Some((receipt, witness)) = self.machine.learned_stream_narrow_retry(expected)? {
             check_stream_narrow_retry_event(&self.events, expected, &witness)?;
@@ -197,8 +210,8 @@ impl FileLearnedRecovery {
     fn check_stream_control_profile(&self) -> Result<(), JournalError> {
         let machine = self.verified_guarded_machine()?;
         // Plain wrappers require absent mediation. The separately sealed
-        // predictive-mediated wrapper qualifies exact paired source custody
-        // before and after this preparation. Neither can bypass its full guard.
+        // mediated wrappers qualify exact paired source custody before and
+        // after this preparation. Neither can bypass its full guard.
         // Legacy/raw/optional predictors still cannot erase statistical work.
         if self.expected.text_stream_profile().is_none()
             || (machine.broker.action_consistency_required()

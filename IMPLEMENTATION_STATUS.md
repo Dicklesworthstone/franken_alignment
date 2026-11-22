@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: original native narrowing for ordinary learned prompts
+
+The original checkpoint-bound NarrowAuthority path now accepts an ordinary
+learned stream whose admitted generation has no predictor, alongside the existing
+explicit owned prompt-audit contract. The ordinary guarded recovery cursor
+exposes the same consuming finalizer and immutable acknowledgment. Complete
+independent guards are rechecked before and after private preparation; no live
+owner, role, recovery Fence or new event encoding is introduced.
+
+The original broker and numerical machine still require the complete prompt
+with zero sampling attempts, exact current checkpoint/cache/actor/audience and
+the independent journal/control/authority predecessor. Narrowing retains spent
+numerical work, policy and incident history, and charged or Unknown effects.
+An exact retry returns the original consequence without another restriction,
+event or refund. Omitting a required predictor cannot select the ordinary path.
+
+Native regression sources cover the new permitted path and its boundary
+refusals. Source review is the available verification: the development workspace
+became unavailable before edits, and the connector was used to stage the exact
+sources. RCH was already absent. No Rust build, syntax/format tool, Clippy or
+runtime test was executed for this increment; no qualification or roadmap gate
+is closed. Operator and paired topology integration remain separate work.
+Contract: `docs/ORDINARY_LEARNED_STREAM_CONTAINMENT.md`.
+
 ## 2026-11-21: prepare ordinary learned prompts with exact retained custody
 
 The existing `--prepare-stream-checkpoint` command now admits ordinary learned

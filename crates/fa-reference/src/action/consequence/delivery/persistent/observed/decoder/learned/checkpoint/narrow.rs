@@ -19,9 +19,10 @@ pub struct FileLearnedStreamNarrowControl {
     pub retained_targets: Vec<ResolvedTarget>,
 }
 
-/// Exact original capture and journal/control predecessor. Only the explicit
-/// owned prompt-audit stream profile admits this request. Retained targets may
-/// name independently selected versions of the SAME publication endpoint.
+/// Exact original capture and journal/control predecessor for an ordinary
+/// no-predictor stream or the explicit owned prompt-audit profile. Both require
+/// the complete unsampled prompt. Retained targets may name independently
+/// selected versions of the SAME publication endpoint.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileLearnedStreamNarrowRequest {
     revision: u64,

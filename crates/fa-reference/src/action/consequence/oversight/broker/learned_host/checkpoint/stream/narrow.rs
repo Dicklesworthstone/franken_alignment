@@ -22,15 +22,21 @@ impl OversightBroker {
     pub(crate) fn check_hosted_learned_stream_narrow(&self, request: &HostedLearnedStreamNarrowRequest)
         -> Result<(), Error>
     {
-        if !self.owned_learned_forecast_restart_audit_required() || !self.learned_text_stream_required() {
+        if !self.learned_text_stream_required()
+            || (self.action_consistency_required()
+                && !self.owned_learned_forecast_restart_audit_required()) {
             return Err(Error::Binding);
         }
-        self.check_owned_learned_forecast_restart()?;
+        // An ordinary stream has no statistical process to restore. Installed
+        // raw, optional or legacy predictors still require their original
+        // custody and cannot use this path to discard pending evidence or work.
+        self.check_learned_stream_forecast_reset()?;
         if self.inspect().suspended || self.stop_receipt().is_some() { return Err(Error::WrongState); }
         if self.started_rounds.contains(&request.binding.round) { return Err(Error::Duplicate); }
-        let state = self.consistency.as_ref().ok_or(Error::Incomplete)?;
-        if self.delivery.controller().policy().generation() != state.config.model.policy_generation() {
-            return Err(Error::Stale);
+        if let Some(state) = &self.consistency {
+            if self.delivery.controller().policy().generation() != state.config.model.policy_generation() {
+                return Err(Error::Stale);
+            }
         }
         let host = self.learned_host.as_ref().ok_or(Error::Incomplete)?;
         if !Rc::ptr_eq(&request.checkpoint.inner.issuer, &host.recovery.issuer) { return Err(Error::Binding); }

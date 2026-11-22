@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: narrow ordinary learned prompts through original guarded recovery
+
+- Admit genuine no-predictor streams to checkpoint-bound native prompt narrowing,
+  retaining the existing owned prompt-audit predictor contract.
+- Require the exact complete unsampled prompt, current checkpoint and predecessor,
+  original target ceiling, confirmed audience and full independent recovery guards.
+- Preserve numerical spending, policy, incident history and charged effects;
+  return only an acknowledged observation, with zero-event exact retries.
+- Add native permitted and causal-negative regression sources. Required RCH
+  compilation, runtime tests, formatting, Clippy and full qualification remain
+  pending after the development workspace became unavailable.
+
 ## 2026-11-21: prepare ordinary learned prompts without a predictor
 
 - Admit ordinary nonpredictive streams to the existing unsampled prompt
