@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: retain exact predictive evidence through native held successors
+
+Native learned review now admits an originally required raw-residual or owned-K/V
+pre-output predictor to its retained fixed-slot and prepaid reserved successor
+paths. Configuration admission compares the exact declared and installed
+predictor, source mode and underlying consistency configuration. Genuine
+ordinary absence remains supported; optional, undeclared or mismatched lanes
+cannot borrow either profile.
+
+The original broker settled-observation law is reused at held status, offer and
+ticket checks, before source acquisition, and immediately before the successor
+Begin after source/clock callbacks. The same attempt must retain its observation
+with no pending forecast/request binding, lost coverage, crossed evidence,
+changed actor revision, authority epoch or policy generation. An earlier Message
+observation cannot qualify a separately forecast Finish. No new prediction,
+likelihood sample, evaluator, numerical work allowance or publication role is
+created. Original sidecar, source/topology, finite native reservations and polls,
+independent human approval and final publication gates remain in force.
+
+Four internal boundary regressions and eight public lifecycle regression
+functions accompany the implementation. They use actual raw/owned forecasts,
+actor generation and native model judgments to exercise Message and Finish,
+both continuation modes, fresh human approval/rejection, exact observation/work
+preservation, settled-observation reuse after pending TTL, genuine crossed
+evidence, stale tickets, source/clock failures, finite reserves and final-Begin
+coverage loss. Private configuration-mismatch cases check structural admission
+only and never manufacture a journal history.
+
+Independent source reviews found no concrete blocker. All eight Rust files in
+this native increment passed scoped syntax parsing; new modules are formatted
+and existing formatting is restricted to changed ranges. The two public native
+test files also pass rustfmt --check. The required RCH native test command and
+canonical xtask check were attempted and both exited 127 because rch is absent.
+No compilation, type/borrow checking, runtime tests, Clippy or full-format gate
+passed. Source-admission and execution qualification remain open; no bead or
+roadmap gate is closed and no manifest is resealed.
+
+Contract: `docs/PREDICTIVE_LEARNED_HELD_REVIEW.md`. The actual operator admission
+and command-level regression integration are recorded separately.
+
 ## 2026-11-22: expose prepaid learned successors through live services
 
 Single live learned actors and resident Message/Finish sequences now use the

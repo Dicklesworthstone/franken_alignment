@@ -108,12 +108,16 @@ it returns the terminal review history. The generic file/socket review launcher
 explicitly refuses learned sidecar custody, including a ticket originating from
 a valid native offer.
 
-Supported core owners have the compulsory source-bound learned sidecar and no
-raw or owned forecast/consistency contract. Plain and cumulative text owners
-share the same original packet law; selected topology mediation keeps its
-separate source obligation. Process-helper sequences and predictive owners
-remain outside this retained-native continuation. They are not silently
-converted to native model reviewers.
+Supported core owners retain the compulsory source-bound learned sidecar and
+actual native evaluators. Ordinary absence or an exactly configured required raw
+or owned pre-output predictor can select continuation; predictive attempts must
+retain their own current settled observation. The
+[predictive continuation contract](PREDICTIVE_LEARNED_HELD_REVIEW.md) rechecks
+that original evidence before acquisition and before Begin, without another
+forecast, likelihood sample or work allowance. Plain and cumulative text owners
+share the original packet law; selected topology mediation keeps its separate
+source obligation. Process-helper sequences cannot use this retained-native
+continuation or substitute native model reviewers after a result.
 
 ## Select continuation in a live service
 

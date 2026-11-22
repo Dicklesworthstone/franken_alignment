@@ -1198,9 +1198,13 @@
     {
       "mechanism": "Calibrated sequential/statistical evidence",
       "serves": [
+        "FI-A09",
+        "FI-A12",
         "FI-A13"
       ],
       "plan_sections": [
+        "§9.8",
+        "§12.7",
         "§13",
         "§13.2",
         "§13.3",

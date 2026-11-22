@@ -7,6 +7,9 @@ use std::collections::VecDeque;
 
 mod reserved;
 
+#[cfg(test)]
+mod predictive_tests;
+
 /// Provision every fresh original native owner before the first round. No
 /// evaluator, query, salt, round, window or resource ceiling can be replaced.
 pub type NativeSequenceRosters = BTreeMap<u64, BTreeMap<String, NativeReviewMember>>;
@@ -325,6 +328,10 @@ impl FileNativeSidecarSequence {
         }
         let next = self.held_successor_round().ok_or(Error::WrongState)?;
         let current = self.active.as_ref().ok_or(Error::Incomplete)?;
+        // The same check runs before ticket/source work and again after all
+        // source/clock callbacks, immediately before the original Begin.
+        host.machine
+            .check_native_learned_convening(current.sidecar.attempt())?;
         let state = host.inspect();
         if state.stop.is_some()
             || state.control.suspended

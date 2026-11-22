@@ -11,8 +11,6 @@ pub(super) fn supported(host: &FileOversight) -> bool {
             config.requires_sidecar()
                 && config.required_policy_source().is_some()
                 && config.text_stream_profile().is_some()
-                && config.required_pre_output_forecast().is_none()
-                && config.required_owned_pre_output_forecast().is_none()
         })
 }
 
@@ -51,6 +49,8 @@ impl FileNativeSidecarSequence {
             return Err(Error::WrongState.into());
         }
         let previous = self.active.as_ref().ok_or(Error::Incomplete)?;
+        host.machine
+            .check_native_learned_convening(previous.sidecar.attempt())?;
         if previous.sidecar.attempt() != expected.attempt
             || previous.sidecar.input_revision() != expected.input_revision
             || self.round().round != expected.held_round
@@ -150,6 +150,10 @@ impl FileNativeSidecarSequence {
             return Err(Error::Stale.into());
         }
         self.check_reserved_stream(host)?;
+        // Source acquisition and both host-clock callbacks have completed.
+        // A lost, pending or stale forecast cannot open this paid successor.
+        host.machine
+            .check_native_learned_convening(selected.sidecar.attempt())?;
         self.rounds.try_reserve(1).map_err(|_| Error::Limit)?;
         let active = match host.begin_native_sidecar_review(
             host.revision(),

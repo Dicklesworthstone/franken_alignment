@@ -1,6 +1,6 @@
-# Prepaid successor reviews for ordinary learned output
+# Prepaid successor reviews for learned output
 
-An ordinary one-round learned review can reserve additional native helper
+A one-round learned review can reserve additional native helper
 cohorts before its first Begin. If its original Message or Finish receives an
 applied Hold, an independent operator may explicitly request a fresh review
 from that reserve. The original output, learned sidecar, actor work and human
@@ -18,8 +18,12 @@ existing fixed slot or silently reconfigure a progressive review.
 
 `FileSupervisedDriver::start_native_learned_sequence_with_convening` accepts
 the original launch and a finite list of additional native rosters. This
-mode requires one initial scheduled round and an ordinary nonpredictive
-source-only learned stream. Every reserved evaluator, probe query and salt is
+mode requires one initial scheduled round and a source-only learned stream.
+Ordinary streams and exact originally required raw or owned pre-output
+predictors use the same native reservation; the
+[predictive contract](PREDICTIVE_LEARNED_HELD_REVIEW.md) additionally requires
+its own current settled observation at successor boundaries. Every reserved
+evaluator, probe query and salt is
 constructed and checked before the first Begin. No post-Hold method accepts
 replacement models, helper packets or new resource limits.
 
@@ -74,8 +78,10 @@ or start an automatic retry.
 Only a new original Continue can return the publication job to Ready. Its
 effect still needs a fresh independent human key and every original source,
 identity, credential, joint-review and final-publication check. Stop and actor
-cancellation remain available while the request is held. Process-helper and
-predictive learned recipes remain outside both supported native modes.
+cancellation remain available while the request is held. Process-helper
+recipes remain outside both supported native modes. A configured predictive
+owner retains its original observation, coverage and lifetime evidence; a
+successor cannot replace them or consume another likelihood sample.
 
 ## Select the reserve in a live learned service
 

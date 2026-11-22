@@ -99,7 +99,7 @@ Not every mechanism is a literal essay idea. These additions exist to make an es
 | Authority graph compilation and cut checking | §§15.2/15.6, §18.6 | Control external to the actor covering every route (FI-A02) |
 | Progressive ATP evidence frontiers | §7.8, §§10.10–10.11, §18.6, §20 H10 | Activation channel (FI-A05), cheap checkpointing (FI-I13) |
 | Observation-plan algebra and cost accounting | §§14.1–14.10 | FI-A13, FI-A17 |
-| Calibrated sequential/statistical evidence | §13; §§13.2–13.5 ([methods predate the essays](RELATED_WORK.md)) | Engineering choice serving FI-A13's false-alarm and credibility requirement; these statistical methods are not proposals of the founding architecture |
+| Calibrated sequential/statistical evidence | §9.8, §12.7, §13; §§13.2–13.5 ([methods predate the essays](RELATED_WORK.md)) | Engineering choice serving FI-A12's pre-action surprise, FI-A13's false-alarm requirement and FI-A09's typed continuation; an explicit successor review retains the original lifetime observation and cannot manufacture another sample or renew its budget |
 | Incremental oversight with supports and retractions | §15.8, §18.6 | FI-A02, FI-A17 |
 | Evidence-view commitments | §17.7 | Reporter's hard evidence (FI-A06), verifiable votes (FI-A14) |
 | Structural sharing and lawful trace quotient | §§11.7–11.8, §16.7, §18.6 | FI-I13, FI-I15 |

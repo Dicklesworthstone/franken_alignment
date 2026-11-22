@@ -500,7 +500,10 @@ impl OversightBroker {
         Ok(())
     }
 
-    pub(super) fn check_consistency(&self, attempt: u64) -> Result<(), Error> {
+    // Retained native review uses the same settled-observation law before a
+    // successor offer or Begin. This read cannot forecast, consume another
+    // sample or renew the original coverage, policy or numerical lifetime.
+    pub(crate) fn check_consistency(&self, attempt: u64) -> Result<(), Error> {
         let Some(state) = &self.consistency else {
             return Ok(());
         };

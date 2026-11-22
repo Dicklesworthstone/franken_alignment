@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-22: continue predictive learned Holds with original settled evidence
+
+- Admit exact originally required raw-residual and owned-K/V pre-output
+  prediction to the retained native fixed and prepaid successor modes.
+- Recheck the original settled observation before offers/acquisition and again
+  before Begin, preserving coverage, actor/policy/authority and exact attempt.
+- Preserve the original output, packet, prediction spending, likelihood sample,
+  native reservations and separate human publication requirement.
+- Add four internal and eight public native regression functions, including
+  actual Message/Finish publication, human rejection and causal refusals.
+- Scoped Rust syntax/format checks and independent source review completed.
+  Required native tests and canonical qualification could not start through
+  RCH (exit 127); compiler and runtime qualification remain pending.
+
 ## 2026-11-22: use prepaid learned successors in live actor services
 
 - Select one-round native reserves through the existing independent operator

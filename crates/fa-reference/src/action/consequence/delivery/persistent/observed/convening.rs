@@ -134,6 +134,7 @@ impl FileOversight {
         {
             return Err(Error::Incomplete.into());
         }
+        self.machine.check_native_learned_convening(attempt)?;
         let original = self.machine.checked_learned_sidecar(attempt)?;
         if original.input_revision() != self.input_revision(attempt)?
             || original.round().input().action() != self.request_action(request)?
