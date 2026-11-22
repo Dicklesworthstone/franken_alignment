@@ -80,7 +80,9 @@ impl FileOversight {
                     Event::Begin(id, round, ..) if *id == attempt => Some(*round),
                     _ => None,
                 }) != Some(held_round)
-        }) {
+        }) || (self.machine.generated_text_only
+            && self.check_convened_native_text(request).is_err())
+        {
             Some(StaleReview)
         } else {
             None

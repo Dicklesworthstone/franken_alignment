@@ -11,6 +11,85 @@ use crate::action::consequence::delivery::persistent::requests::FileRequestDispo
 use crate::action::consequence::delivery::stream::ReleaseFrame;
 
 impl FileOversight {
+    /// A successor review can reconsider only the exact completed native effect
+    /// still waiting at its original numerical and receipt-confirmed audience
+    /// cut. It never rebuilds a proposal from caller text or reruns generation.
+    pub(in super::super::super) fn check_convened_native_text(
+        &self,
+        request: u64,
+    ) -> Result<(), JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !self.generated_text_stream_required()?
+            || self.machine.decoder_contract().is_none()
+            || self.machine.decoder_paused()
+            || self.pending_decoder_generation()?.is_some()
+        {
+            return Err(Error::Incomplete.into());
+        }
+        let state = self.stream_snapshot()?;
+        if state.pending.is_some() || state.confirmed != state.published {
+            return Err(Error::Incomplete.into());
+        }
+        if state.confirmed.finished() {
+            return Err(Error::WrongState.into());
+        }
+        let action = self.request_action(request)?;
+        let frame = ReleaseFrame::decode(&action.spec().payload)?;
+        if frame.profile() != state.confirmed.profile()
+            || !frame
+                .prior_messages()
+                .iter()
+                .copied()
+                .eq(state.confirmed.messages())
+            || action.spec().target != Some(state.confirmed_target)
+            || state.confirmed_target != state.publication.target
+        {
+            return Err(Error::Stale.into());
+        }
+        let current = if frame.message().is_some() {
+            let source = self.decoder_text_message_request(request)?;
+            self.machine.current_decoder_text_message_spec(source)?
+        } else {
+            // Finish discloses no new text, but still belongs to the latest
+            // confirmed native Message and its unchanged numerical predecessor.
+            // A generic or empty Finish cannot invent that source linkage.
+            let previous = self
+                .events
+                .iter()
+                .rev()
+                .find_map(|event| match event {
+                    super::Event::TextMessage(source, _)
+                        if matches!(
+                            self.request_status(source.request),
+                            Ok(status)
+                                if matches!(
+                                    status.disposition,
+                                    FileRequestDisposition::Admitted {
+                                        stage: ActionState::Confirmed,
+                                        ..
+                                    }
+                                )
+                        ) =>
+                    {
+                        Some(source.request)
+                    }
+                    _ => None,
+                })
+                .ok_or(Error::Incomplete)?;
+            self.decoder_text_finish_request(previous, request)?;
+            confirmed_cut(self, previous)?;
+            self.machine
+                .broker
+                .stream_finish_spec(action.spec().deadline)?
+        };
+        if &current != action.spec() {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
     /// Prepare a NEW native generation after the last receipt-confirmed message.
     /// The raw prompt is additional input to the retained numerical context; no
     /// chat template, reset, model replacement, output replay or seed is inferred.

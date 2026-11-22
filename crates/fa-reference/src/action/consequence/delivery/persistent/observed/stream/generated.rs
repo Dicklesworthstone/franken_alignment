@@ -144,6 +144,18 @@ impl Machine {
             Err(Error::Missing) => {}
             Err(error) => return Err(error),
         }
+        self.current_decoder_text_message_spec(request)
+    }
+
+    /// Recheck the original source against today's numerical and audience cut.
+    /// Held-review continuation uses this only to compare with the already
+    /// frozen action. Fresh intake retains its separate duplicate-request check.
+    /// This inspects the original receipt; it performs no inference or sampling.
+    pub(in super::super) fn current_decoder_text_message_spec(
+        &self,
+        request: &FileTextMessageRequest,
+    ) -> Result<ActionSpec, Error> {
+        request.check()?;
         if !self.clock_ready || self.decoder_paused() {
             return Err(Error::Incomplete);
         }

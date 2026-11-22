@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22: continue held native generated effects without resampling
+
+- Admit an explicitly requested fresh review of an original generated Message
+  or Finish through the existing finite supervisor grant and one-use ticket.
+- Recheck exact native generation, numerical predecessor and confirmed audience
+  before source/clock work; reuse the original Message and Finish binding laws.
+- Preserve frozen output, spent work, original deadlines, current authority and
+  independent human approval without changing the journal or public wire format.
+- Add seven public regression functions spanning eleven success/failure rows,
+  including real subsequent numerical work invalidating an old held source.
+- Keep learned/predictive and caller-text continuation outside this contract;
+  required RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-22: ordinary containment custody and continuation regressions
 
 - Preserve the concurrently landed ordinary Capture/Narrow/BeginReset workflow

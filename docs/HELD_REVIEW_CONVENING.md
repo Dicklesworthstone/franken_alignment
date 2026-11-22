@@ -1,7 +1,8 @@
-# Explicit continuation of an ordinary held review
+# Explicit continuation of a held publication review
 
 This connects the plan's named-evidence `HoldEffect` recovery (§9.8) to the
-original ordinary file supervisor. A successful Hold leaves its original action
+original file supervisor, including source-only native generated output. A
+successful Hold leaves its original action
 in Reviewing. The driver still retires the completed job and never starts another
 congress by itself. A separately selected, finite supervisor capability can
 request one explicit fresh round for that same held action. Queue admission is
@@ -25,14 +26,16 @@ last applied held round, journal revision, control sequence, authority epoch,
 input revision, recorded elapsed tick and unchanged action deadline. The chosen
 successor round is globally unused in the original broker and grant.
 
-Eligibility requires an ordinary non-generated owner, no active review
+Eligibility requires a supported original owner, no active review
 session, an unsuspended and unstopped Reviewing action, and an actually
 applied Reviewing-to-Reviewing `HoldEffect` at the current control cut. The latest
 native Begin for that attempt must be that successful held round. A later
 failed review cannot borrow an older Hold. Recorded time must still precede the
 original deadline; this historical check does not replace launch-time clocks.
-Authorized actions, recovered/fenced predecessors, learned/generated or other
-numerical/stream histories and unfinished congresses do not use this continuation.
+Authorized actions, recovered/fenced predecessors, learned or predictive
+numerical histories, caller-text streams and unfinished congresses do not use
+this continuation. Native generated Messages and Finish additionally require the
+exact current source and audience described below.
 An ordinary mediated owner may admit a successor, but its original driver must
 retain the selected topology source before handing off the ticket.
 
@@ -43,6 +46,37 @@ or journal. A repeated identical request observes the original operation;
 another predecessor or request using its round ID is an idempotency conflict.
 Rejected admission does not spend an operation. An admitted operation is never
 refunded, including source failure, launch failure or abandonment.
+
+## Retain the original native generated effect
+
+A native decoder with the source-only generated-stream contract may receive a
+successor review for its original Message or explicit Finish. The owner must
+still hold the completed numerical generation, with no pending generation,
+unresolved stream publication or newer audience prefix. Merely attaching a
+decoder to an ordinary request does not establish generated provenance.
+
+For a Message, eligibility rebuilds its complete action specification from the
+original generation receipt and tokenizer, current numerical predecessor and
+unchanged receipt-confirmed audience, then compares it with the frozen action.
+This reuses the original source-only builder without its fresh-intake duplicate
+check. Fresh intake still rejects duplicate request IDs. For Finish, eligibility
+rechecks the latest confirmed native Message, its executed receipt and numerical
+predecessor, the historical Finish intent, and the current cumulative frame.
+Neither check runs inference, samples a token, reads an external source or grants
+effect authority.
+
+These checks run when offering and admitting the successor and again when its
+one-use ticket is consumed. Intervening numerical work, a changed confirmed
+audience, a paused owner or stale provenance cannot turn an old Hold into a fresh
+review. The new round retains the exact original payload, target, policy epoch,
+deadline and cumulative resource charge. Previously spent numerical work,
+stream history and effect liabilities remain with the same owner.
+
+The existing file/process launcher captures fresh complete evidence and starts
+new independent helper commitments. It does not reuse a completed transcript or
+human key. A successful new Continue still enters the original two-key
+publication path. Learned sidecar and predictive review ownership remain outside
+this native continuation contract.
 
 ## A queued request is not an opened round
 
@@ -92,8 +126,8 @@ congress. Repairing files, recreating a facade or retrying the same request cann
 refund or relaunch it. Successful successor qualification does not reserve work
 for, or replace, the separately required topology check at final publication.
 A later unresolved effect retains its charge until the original endpoint supplies
-a receipt supporting settlement. The numerical and stream exclusions are
-independent of this ordinary mediated capability. Target narrowing remains a
+a receipt supporting settlement. The unsupported learned, predictive and
+caller-text profiles are independent of this ordinary mediated capability. Target narrowing remains a
 separate explicit restriction and cannot replace a newly convened review.
 
 Fresh evidence may have the same bytes, for example when independently operated

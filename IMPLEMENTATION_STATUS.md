@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: retain generated output across an explicit successor review
+
+The original finite convening capability now admits a source-only native
+generated Message or explicit Finish after an applied HoldEffect. The owner
+rechecks its current numerical source and receipt-confirmed audience before
+offering or admitting a successor and again before consuming its one-use ticket.
+Message validation shares the original source-only action builder; Finish uses
+the original confirmed native message, historical intent and cumulative frame.
+The existing fresh-intake duplicate check remains unchanged.
+
+The same file/process review launcher captures fresh complete evidence and
+starts a new independent round for the exact frozen action. No inference,
+sampling, output replacement, grant renewal or automatic retry occurs. Original
+numerical spending, policy epoch, deadline, stream history and effect liabilities
+remain owned. A fresh Continue still requires the independent human key and the
+original final-publication checks. Learned/predictive review ownership, arbitrary
+decoder attachments and caller-text streams remain unsupported by this capability.
+
+Seven public regression functions cover eleven scenario rows: unchanged or
+changed fresh evidence, original Message publication, explicit Finish, independent
+human rejection, source loss with spent failed admission, exact-predecessor
+changes before and after ticket selection, repeated Hold with finite allowance,
+and actual later native generation both before planning and after ticket selection.
+They assert original output, numerical work, audience, source reads and authority
+outcomes. Controlled fixture ballots are not detector-reliability evidence.
+
+Independent source review is complete. All six changed Rust files passed
+syntax/format processing with rustfmt 1.10.0-nightly (9085017724, 2026-08-30),
+and `git diff --check` passed. The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 test --locked -p fa-reference --test generated_file_convene`
+exited 127 before compilation because `rch` is unavailable. No compiler, Clippy,
+runtime or full qualification pass is claimed. Execution and the pre-existing
+source-admission gaps remain open. Contract: `docs/HELD_REVIEW_CONVENING.md`.
+
 ## 2026-11-22: exercise ordinary containment custody and reviewed continuation
 
 Eight complementary regression functions cover the ordinary stream-control
