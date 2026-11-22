@@ -355,9 +355,9 @@ The sequence must contain at least two Messages, with an optional final Finish.
 This selection creates a new nonpredictive learned owner, optionally with the
 original `--topology-profile PATH` selection. Creation refuses continuation and
 recovery selections; the explicit anchored recovery selection below accepts
-them without a creation campaign profile. Forecast and joint credibility
-selections still refuse before model/helper assets or live resources are
-acquired. The closed argv also
+them without a creation campaign profile. Forecast selections still refuse
+before model/helper assets or live resources are acquired. Joint credibility
+remains recovery-only and can select the independent activation described below. The closed argv also
 admits the existing optional checkpoint before generation and new output history
 anchor. A version-two sequence may select its original per-entry precheck
 listeners; those remain observations and cannot create governor authority.
@@ -464,7 +464,8 @@ publication and helper-retirement checkpoints. Native and process helper wrapper
 expose their existing supervisor for this bounded turn; no wrapper or driver is
 reconstructed. Predictive promotion still needs a separately reviewed successor
 predictor binding. Installed joint credibility likewise needs a fresh
-qualification after policy change and is outside this initial live selection.
+qualification after policy change; governed recovery can select its original
+activation as described below. Creation does not qualify a new joint committee.
 
 ## Recover a governed learned sequence
 
@@ -550,6 +551,42 @@ request preflight or listener startup retains that exact acknowledged recovery
 cut. Normal completion and later failures retain the original live owner's final
 acknowledged cut. Neither path reopens the store or retries an effect. Keep the
 old independent anchor until its successor is acknowledged.
+
+### Requalify the original joint committee
+
+An explicitly anchored governed recovery may also select
+`--credibility-activation CAPSULE` with its original held-out joint recipe.
+The complete joint policy must match the journal, alongside every existing
+policy, campaign, source, numerical and recovery requirement. Omission or any
+changed joint field refuses through the original guarded cursor; the governor
+cannot infer a replacement policy from retained history.
+
+The existing activation runs once, before the first recovered release, after
+the original Fence and any selected source rebind. Plain and exactly paired
+mediated recovery use the same native qualification. A fresh capsule must bind
+the current policy and evidence clock; retrying a historical capsule cannot
+resume generation. Its canonical input path is reserved against the governor
+socket before model assets and again before direct service startup. No new
+activation route, temporary history or retrospective evidence is introduced.
+
+Message and Finish retain the resulting qualification without rereading the
+capsule. Each release still requires current source evidence, native helper
+review, a separate human decision and its original final publication checks.
+A subsequent policy promotion withdraws qualification for the prior policy.
+The next boundary that requires qualification refuses through the existing
+failure/Stop handling. The invocation never reapplies its initial capsule, and
+a capsule cannot reopen stopped history. Promotion neither requalifies the
+committee nor refunds numerical, source or effect expenditure.
+
+Authored plain and mediated lifecycle cases cover fresh qualification and
+Message/Finish publication with an independent governor process, the paired
+human rejection, stale capsule refusal before further numerical work, and
+actual policy promotion invalidating qualification. Admission cases check the
+full original policy/campaign/joint pins, same-cursor refusal preserving the
+journal and anchor, matching guarded recovery, and canonical capsule custody.
+These sources have independent review and Rust syntax checks; required RCH
+compilation and runtime qualification remain pending. Full contract:
+[learned joint credibility](LEARNED_JOINT_CREDIBILITY.md).
 
 The recovery adapter and public-owner regression sources have independent
 source review and syntax checks. Rust compilation, authenticated service
@@ -786,6 +823,7 @@ These are scoped Unix reference regressions; source coverage alone does not
 establish execution or full qualification. Kernel credentials
 identify the connecting local process under the trusted host assumptions; they
 do not prove evaluator competence or cryptographic independence. Live recovered
-service execution, predictive learned governor composition, joint credibility
-requalification, policy efficacy and full production/runtime qualification
-remain separate unfinished capabilities.
+service execution, predictive learned governor composition, policy efficacy and
+full production/runtime qualification remain unfinished. Governed learned joint
+requalification is implemented and source-reviewed here; its execution gate
+remains open.

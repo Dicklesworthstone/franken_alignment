@@ -35,7 +35,7 @@ impl Recovery {
     }
 }
 
-const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; explicitly anchored recovery may select a single remaining Message or an explicit --after-message Finish; nonpredictive sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe, and governed topology recovery requires its exact paired v2 source checkpoint";
+const USAGE: &str = "serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]; explicitly anchored recovery may select a single remaining Message or an explicit --after-message Finish; nonpredictive sequences accept --governor-profile PATH with explicit numerical operator promotion allowance; creation requires --campaign-profile and at least two Messages, recovery requires --history-anchor and complete independent policy/campaign expectations in every recipe, and governed topology recovery requires its exact paired v2 source checkpoint; governed recovery may independently activate one credibility capsule under the original held-out joint policy, while policy-bound forecasts and creation activation remain unsupported";
 
 pub(super) struct Entry {
     pub loaded: Loaded,
@@ -63,9 +63,6 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (args, governor_path) = governor::take_option(args)?;
-    if governor_path.is_some() && credibility.is_some() {
-        return Err("live learned governor cannot activate recovery credibility".into());
-    }
     // The operator pair owns the complete live grammar before another option
     // parser can erase an incompatible historical or maintenance selection.
     let (args, operator_path) = operator::take_option(&args)?;
@@ -99,6 +96,12 @@ where
         .as_deref()
         .map(governor::Settings::read)
         .transpose()?;
+    if let (Some(governor), Some(credibility)) = (governor.as_ref(), credibility) {
+        // The independently selected capsule remains an input. A later
+        // governor listener must never acquire its canonical pathname, even
+        // when the file has not yet been provisioned.
+        governor.check_custody_paths(&[credibility])?;
+    }
     let campaign = campaign_path
         .as_deref()
         .map(|path| campaigns::read(&config, path))
@@ -485,9 +488,6 @@ where
         continuing,
     )?;
     if let Some(governor) = selected_governor {
-        if credibility.is_some() {
-            return Err("live learned governor cannot activate recovery credibility".into());
-        }
         governor::check(
             governor,
             selected_operator.expect("paired selection checked above"),
@@ -495,6 +495,7 @@ where
             &entries,
             peers,
             continuing,
+            credibility,
         )?;
     }
     if let Some(selected) = selected_operator {

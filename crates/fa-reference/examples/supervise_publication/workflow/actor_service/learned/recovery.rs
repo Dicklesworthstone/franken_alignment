@@ -114,7 +114,7 @@ pub(super) fn create_governed(config: &Config, loaded: &Loaded)
     Ok(((host, roles.human, None, roles.identity_observer), governor))
 }
 
-/// Keep policy-bound predictors and joint credibility outside live governance.
+/// New governed owners cannot select policy-bound predictors or joint activation.
 /// A mediated owner uses these same first-image campaign guards and its native
 /// topology constructor; no observer or authority is enabled after creation.
 pub(super) fn check_governed_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
@@ -336,7 +336,9 @@ where
 
 /// This selection narrows the already guarded recovery contract. It cannot
 /// discover a campaign inventory from the journal, install one during reopen,
-/// or requalify policy-bound predictors or joint credibility after promotion.
+/// or rebind policy-bound predictors after promotion. An independently selected
+/// capsule may requalify the original joint guard through its existing native
+/// activation; the returned governor itself conveys no such qualification.
 pub(super) fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
     if loaded.recovery_anchor.is_none()
         || loaded.expected_campaigns.is_none()
@@ -346,9 +348,8 @@ pub(super) fn check_governed_recovery(loaded: &Loaded) -> Result<(), String> {
             .generation
             .required_owned_pre_output_forecast()
             .is_some()
-        || loaded.generation.required_held_out_joint().is_some()
     {
-        return Err("governed learned recovery requires an independent history anchor and exact existing campaign limits, without creation, prediction or joint credibility selections".into());
+        return Err("governed learned recovery requires an independent history anchor and exact existing campaign limits, without creation or prediction selections".into());
     }
     if let Some(selected) = loaded.topology.as_ref() {
         let super::topology::Selection::Recover { history, .. } = selected else {

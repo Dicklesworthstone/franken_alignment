@@ -44,6 +44,13 @@ guarded cursor returns fresh custody after its recovery fence, while independent
 Stop remains available throughout replay. See
 [governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence).
 
+That explicit nonpredictive recovery can also retain an original held-out joint
+guard and select one fresh `--credibility-activation CAPSULE`. The complete joint
+policy remains part of every independently supplied generation, alongside the
+full effective-policy and campaign requirements. The original guarded cursor
+returns both roles; the governor grants no qualification or human effect key.
+See [joint governed recovery](LEARNED_JOINT_CREDIBILITY.md#governed-resident-recovery).
+
 This is scoped implementation toward FA-027 and plan sections 8.5, 8.7, 9.3,
 9.11, 11.2 and 16.4. Compilation and execution qualification remain pending.
 The full roadmap packet, including long-horizon and isolated-branch acceptance,
@@ -277,6 +284,18 @@ recovery; fresh resident creation still refuses it before startup. The selected
 native guard checks the actual capped helper weights against the original
 baseline before any successful requalification can admit further work.
 
+With a live governor selected during anchored recovery, the capsule targets the
+actual recovered sequence and authority epoch, including any original topology
+source rebind. It runs once before the first remaining entry's source
+certification and new numerical generation. Later entries reuse the same live
+qualification and check currentness without rereading the capsule. Governor Request/Approve
+cannot replace it, and a policy Promote invalidates qualification for the old
+policy. The next boundary requiring it refuses through the existing failure/Stop
+handling; no later entry implicitly requalifies. Governed learned creation and
+policy-bound raw/owned forecast selections keep their existing refusals. The
+capsule path cannot alias the governor listener, even through a canonical parent
+or when the final file has not yet been provisioned.
+
 The outer [computed-identity envelope](LEARNED_IDENTITY_OPERATOR.md) can require
 a fresh original-model measurement for every entry. All entries retain the same
 complete passport and policy, distinct check IDs, strictly increasing measurement
@@ -430,6 +449,13 @@ human-review paths; fresh human rejection; exhausted original generation; a
 genuinely published but unresolved predecessor; direct unanchored admission;
 and both closed manifest versions. Compiler and runtime qualification of these
 additions remain pending because the execution workspace disconnected.
+
+Authored governed joint-recovery regressions cover plain and mediated
+Message/Finish, one-time activation, separate governor and human decisions,
+historical-capsule refusal, policy-promotion invalidation, complete original
+policy/campaign/joint guards and capsule/listener custody. Independent source
+review and Rust 2024 syntax parsing are complete; RCH compilation and runtime
+execution of this composition remain pending.
 
 Implementation:
 [`learned/sequence.rs`](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs),

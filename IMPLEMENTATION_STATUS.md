@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: compose governed learned recovery with joint requalification
+
+An explicitly anchored nonpredictive learned sequence now retains its original
+held-out joint credibility guard while recovering the independent live governor.
+The selected capsule enters the existing one-time activation before the first
+remaining release, after the original Fence and any original topology source
+rebind. Plain and mediated histories use the same guarded cursor and complete
+independently selected effective policy, campaigns, joint policy and generation.
+The exact paired v2 source checkpoint remains mandatory for mediated recovery.
+No reducer, evaluator, journal schema, guard inventory or authority is replaced.
+This serves FA-026, FA-105 and FA-130.
+
+The command reserves the capsule's canonical path against the governor listener
+before numerical/helper assets; direct service admission repeats the check before
+time or startup. The source and every effect still require their original current
+evidence, native helper review and fresh independent human approval. Activation
+runs only once: later Message/Finish entries check retained qualification without
+rereading the capsule. Policy promotion invalidates it; the next requiring boundary
+refuses through existing failure/Stop handling, without automatically applying
+the capsule again or reopening stopped history. Numerical and source work,
+confirmed output and unresolved effect charges remain. Creation activation and
+raw/owned policy-bound forecast governance retain their existing refusals.
+
+New lifecycle regression source uses the real learned fixture and independent
+governor process for plain/mediated qualification and Message/Finish, paired human
+rejection, historical capsule refusal and native promotion withdrawing currentness.
+A separate admission module verifies full effective-policy and campaign equality,
+every original joint field and omission, wrong selections preserving the actual
+canonical/staging/anchor bytes, the matching original recovery finalizer and
+literal/canonical capsule listener collisions before assets or the clock.
+
+Independent production and regression source review is complete. Changed Rust
+passes installed-nightly syntax parsing, the new tests are formatted and whitespace
+checks pass. The required command `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run
+--locked -p xtask -- check` refuses with exit 127 because `rch` is unavailable.
+Compilation, Clippy, test execution and the canonical gate remain unexecuted;
+no tracker or execution qualification gate is closed. Earlier execution results
+elsewhere in these contracts do not qualify this added composition. Contracts:
+`docs/LEARNED_JOINT_CREDIBILITY.md`, `docs/RESIDENT_LEARNED_PUBLICATION.md`,
+`docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-21: connect governed native creation to its original joint baseline
 
 Resident governed native creation now admits the complete original

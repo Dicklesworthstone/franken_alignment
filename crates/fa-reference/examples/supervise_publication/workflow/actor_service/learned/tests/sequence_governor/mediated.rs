@@ -17,6 +17,9 @@ use std::{io::Cursor, sync::atomic::AtomicU64};
 #[path = "mediated/preflight.rs"]
 mod preflight;
 
+#[path = "mediated/qualification.rs"]
+mod qualification;
+
 const MEDIATED_CHILD_ROOT: &str = "FA_LEARNED_MEDIATED_GOVERNOR_ROOT";
 const MEDIATED_CHILD_EPOCH: &str = "FA_LEARNED_MEDIATED_GOVERNOR_EPOCH";
 const MEDIATED_CHILD_TEST: &str = "workflow::actor_service::learned::tests::resident_sequence::governor::mediated::independent_mediated_governor_process";

@@ -5,7 +5,7 @@ use super::super::{fields, operator, recovery, topology};
 use super::{Config, Entry, LearnedTextRelease, PeerProfile};
 pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileCampaignRequirement;
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{collections::BTreeSet, path::{Path, PathBuf}};
 
 const INVALID: &str = "learned governor requires a new nonpredictive resident sequence with --campaign-profile, or explicit nonpredictive recovery with --history-anchor; both require paired --operator-profile/--tower-generation, and governed topology recovery requires an exact paired v2 source checkpoint";
 
@@ -119,7 +119,14 @@ pub(super) fn check(
     entries: &[Entry],
     peers: &PeerProfile,
     continuing: bool,
+    credibility: Option<&Path>,
 ) -> Result<(), String> {
+    if !continuing && credibility.is_some() {
+        return Err("learned governor credibility activation requires explicit live recovery".into());
+    }
+    if let Some(credibility) = credibility {
+        settings.check_custody_paths(&[credibility])?;
+    }
     if !continuing && entries
             .iter()
             .filter(|entry| entry.release == LearnedTextRelease::Message)
@@ -159,7 +166,7 @@ pub(super) fn check(
                 .generation
                 .required_owned_pre_output_forecast()
                 .is_some()
-            || loaded.generation.required_held_out_joint().is_some()
+            || (!continuing && loaded.generation.required_held_out_joint().is_some())
         {
             return Err(INVALID.into());
         }

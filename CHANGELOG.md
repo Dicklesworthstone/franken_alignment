@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-21: requalify joint credibility during governed learned recovery
+
+- Connect explicit governed plain and mediated learned recovery to the original
+  held-out joint guard and one independently selected credibility capsule.
+- Preserve complete policy/campaign/joint expectations, the original recovery
+  Fence and source checkpoint, separate roles, numerical work and effect charges.
+- Reserve capsule pathname custody before assets and service startup. Fresh
+  creation and policy-bound raw/owned forecasts retain their original refusals.
+- Add independently reviewed real Message/Finish, human rejection, stale capsule,
+  promotion invalidation, exact guard recovery and canonical-custody regressions.
+- Document one-time activation and the existing failure/Stop behavior after a
+  promotion invalidates qualification. Syntax and whitespace checks passed;
+  required RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-21: publish from the governed native joint baseline
 
 - Admit the complete original joint publication profile during resident governed

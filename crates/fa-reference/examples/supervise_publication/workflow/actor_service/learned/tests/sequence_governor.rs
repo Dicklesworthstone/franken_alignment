@@ -10,6 +10,8 @@ mod governed_admission;
 mod recovered;
 #[path = "sequence_governor/mediated.rs"]
 mod mediated;
+#[path = "sequence_governor/qualification_admission.rs"]
+mod qualification_admission;
 
 use super::super::super::operator as learned_operator;
 use super::*;

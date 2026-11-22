@@ -150,7 +150,7 @@ impl GovernedRecipe {
         campaigns: FileCampaignRequirement,
     ) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
-        Self::check_supported(&recipe)?;
+        Self::check_supported(&recipe, false)?;
         if recipe
             .expected_policy
             .as_ref()
@@ -172,16 +172,23 @@ impl GovernedRecipe {
         campaigns: FileCampaignRequirement,
     ) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
-        Self::check_supported(&recipe)?;
+        Self::check_supported(&recipe, true)?;
         if recipe.expected_policy.is_none() || recipe.expected_campaigns != Some(campaigns) {
             return Err("learned governor recovery requires an explicit full effective policy and exact original campaign limits in every recipe".into());
         }
         Ok(Self(recipe))
     }
 
-    fn check_supported(recipe: &Recipe) -> Result<(), String> {
-        if recipe.files.forecast.is_some() || recipe.joint.is_some() || !recipe.continuation {
-            return Err("live learned governor requires nonpredictive finite message continuation without joint credibility activation".into());
+    fn check_supported(recipe: &Recipe, recovering: bool) -> Result<(), String> {
+        // Forecast registrations are immutable and bound to their original
+        // policy generation. A promotion cannot rebind those numerical owners.
+        // Joint qualification instead has an existing explicit native
+        // activation, which recovery may select once for the original owner.
+        if recipe.files.forecast.is_some() || !recipe.continuation {
+            return Err("live learned governor requires nonpredictive finite message continuation".into());
+        }
+        if !recovering && recipe.joint.is_some() {
+            return Err("live learned governor joint credibility requires explicit recovery".into());
         }
         Ok(())
     }

@@ -73,6 +73,14 @@ witness and independent human checks. The new paired regression paths cover
 actual native publication across policy promotion and human rejection; their
 required RCH execution remains pending.
 
+Governed learned recovery can also retain the original joint credibility guard
+and select one fresh capsule for the recovered owner, including exact paired
+mediated recovery. The original Fence, full policy/campaign/joint requirements,
+source work and independent human approvals remain in force. Later policy
+promotion invalidates qualification and follows the original failure/Stop path;
+there is no automatic requalification. See [joint governed recovery](docs/LEARNED_JOINT_CREDIBILITY.md#governed-resident-recovery).
+Source and regression review are complete; RCH execution remains pending.
+
 [Learned prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md) can require a
 computed identity check against its actual numerical model before prompt work.
 The complete registered passport and independently observed manifest remain

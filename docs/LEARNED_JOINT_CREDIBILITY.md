@@ -141,7 +141,63 @@ Receipt-only and terminal recovery do not acquire a new qualification merely
 to settle an existing effect or stop the original owner. Their original
 restricted consumers and evidence requirements remain in force.
 
+## Governed resident recovery
+
+An explicitly recovered, nonpredictive resident sequence can retain its original
+joint guard while serving the independent live policy governor. Select the
+existing governed recovery inputs and a fresh activation capsule:
+
+```text
+supervise_publication serve-learned-generated CONFIG JOINT_REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST \
+  --history-anchor INPUT_ANCHOR --retain-history-anchor NEW_OUTPUT_ANCHOR \
+  --operator-profile OPERATOR_PROFILE --tower-generation 42 \
+  --governor-profile GOVERNOR_PROFILE --credibility-activation CAPSULE
+```
+
+Use `--continue-generation` for an original unsubmitted generation. Every recipe
+must carry the outer `fa.learned-recovery-policy/2` envelope containing the full
+current effective policy and exact original campaign inventory. Its inner joint
+envelope retains every original joint-policy field and both work ceilings.
+Every entry must agree, and the campaign inventory must match the governor
+profile. The original guarded replay checks these complete independent
+requirements before its Fence returns fresh human and governor custody. It
+cannot install a missing campaign or joint guard during recovery.
+
+With topology selected, the original v2 source checkpoint must match the history
+anchor. The capsule must name the actual recovered control sequence and authority
+epoch, including the completed source rebind. Activation runs once, before the
+first remaining entry's fresh source certification and new numerical generation.
+Later Messages and Finish retain that same qualification and check its currentness;
+they do not reread the capsule or recover another owner. Every release still
+requires its own actor ingress, native/process review and independent human key.
+
+Governor Request and Approve operate on retained campaign evidence and supply no
+qualification or effect permission. A subsequent policy Promote invalidates
+qualification for the previous policy. The sequence has no automatic or
+per-entry requalification: the next boundary requiring current qualification
+refuses through the existing failure/Stop handling. The initial capsule is not
+reapplied after a policy change and cannot reopen a stopped history.
+
+The capsule's canonical path cannot be the governor's socket path, including
+aliases through existing parent directories and paths whose final file does not
+yet exist. This custody check precedes model/helper assets, the invocation clock
+and authority-store opening. Raw and owned forecast selections remain outside
+governed recovery because policy promotion cannot rebind their original
+policy-generation registrations. Governed learned creation still refuses joint
+selection and activation; ordinary joint creation retains its baseline contract
+above. See [governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
+for the complete role, campaign and numerical-replay profiles.
+
 ## Verification boundary
+
+The governed resident recovery addition has independent source review and Rust
+2024 syntax parsing; its required RCH compilation and runtime execution remain
+pending. Authored regressions cover plain and mediated Message/Finish recovery,
+separate governor approval and human rejection, historical-capsule refusal,
+policy promotion invalidating qualification, exact original guards and capsule
+pathname custody. The execution results below describe the earlier joint
+integration and do not qualify this added live-governor composition.
 
 All five public `learned_held_out_joint` functions and all fifteen public
 `held_out_joint` functions pass. They exercise native configuration, creation,
