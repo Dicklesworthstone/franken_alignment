@@ -189,6 +189,19 @@ impl Selection {
         } else {
             self.settings.check_learned_operator()?;
         }
+        if self.settings.convening.is_some()
+            && (loaded.process.is_some()
+                || loaded.native.is_none()
+                || loaded.generation.required_pre_output_forecast().is_some()
+                || loaded
+                    .generation
+                    .required_owned_pre_output_forecast()
+                    .is_some())
+        {
+            return Err(
+                "learned held-review convening requires the original nonpredictive native-model sequence".into(),
+            );
+        }
         let extra = precheck
             .map(|settings| settings.socket_path())
             .into_iter()

@@ -388,6 +388,35 @@ charged liability. Earlier confirmed publications remain facts. Failed cleanup,
 source retention, output or a lost acknowledgement cannot trigger an effect
 retry or restore capacity.
 
+### An explicitly selected successor after Hold
+
+A resident sequence may select the operator profile's finite `convening`
+grant when every scheduled recipe uses nonpredictive native model helpers.
+Process-helper and required raw/owned forecast recipes reject this selection
+during admission. The original native review must already reserve another
+round, its evaluators and its fixed window; a one-round recipe has no successor.
+
+After an applied Hold without refinement, the service retains that request's
+original native wrapper while waiting for an authenticated explicit Next/Convene
+handoff. Only the next preprovisioned round can open. The wait keeps the same
+run-wide Stop endpoint, actor cancellation, operator transport counters and
+logical/wall deadlines; it does not spend a native evaluation poll or regenerate
+the actor output. Every later evaluation spends the original cumulative poll
+allowance. Expiry or grant revocation ends the wait, and a consumed source or
+launch failure retires remaining reviewer custody without refund.
+
+A new Continue still requires the independent human decision and original
+guarded publication. The next resident release remains blocked until the
+current request is confirmed Executed and its original cleanup completes.
+Operator grants stay finite across releases. Live recovered suffixes can
+continue newly admitted requests that reach a fresh Hold; historical held
+receipts cannot recreate an evaluator owner.
+
+See [learned held review](LEARNED_HELD_REVIEW.md) for the exact fixed-slot and
+source-binding contract and [live learned operator](LIVE_LEARNED_OPERATOR.md)
+for profile selection. The added service regressions are authored and source
+reviewed; required RCH compilation and runtime qualification remain pending.
+
 ## Retained evidence and results
 
 Topology input and output use the existing

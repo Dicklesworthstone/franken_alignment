@@ -109,6 +109,68 @@ separate source obligation. Process-helper sequences and predictive owners
 remain outside this retained-native continuation. They are not silently
 converted to native model reviewers.
 
+## Select continuation in a live service
+
+The live `create-learned-generated` and `serve-learned-generated` commands use
+the existing independent operator options:
+
+```text
+--operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+Select a positive finite grant in the existing
+`fa.tower-operator-service/1` profile:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+The complete profile still needs its original scope, independently authenticated
+operator identity, supervisor identity, socket and finite transport/runtime
+limits. Select it before native review starts. Structural profile admission does
+not establish learned eligibility: the actual loaded recipe must use native
+model helpers with no raw or owned pre-output forecast. Process helpers and
+predictive recipes reject the selection before clock, source, store or listener
+startup. Every selected entry of a resident sequence must satisfy that admission.
+
+Use a progressive v2-or-later learned recipe with multiple explicitly selected
+`native_review.round_ids`, its matching `sidecar.budget.rounds`, priority ladder
+and sufficient original helper allowance. A v1 single-round recipe cannot
+supply a successor. The complete schedule and every native evaluator are
+provisioned once before the initial review. A selected grant cannot add a round
+or reserve more native work after the result is visible.
+
+At the exact original request address, send Tower `next` with
+`{"action":"convene_held","round":"8"}`, substituting the exact next
+preprovisioned round. Integers in Tower documents are canonical decimal strings.
+Inspect the complete generation-bound action and explicitly submit its returned
+`convene` document through the authenticated operator exchange. The existing
+protocol distinguishes Pending admission from an actually Opened round; it does
+not accept a replacement recipe, packet, verdict or caller clock.
+
+The service retains the same native wrapper while waiting. It pumps the
+original finite operator endpoint, authenticated Stop and actor cancellation,
+without spending a native evaluation poll. The successor's commit and reveal
+windows stay fixed at initial launch; admission must reach the original wrapper
+before that commit deadline. Expiry, revocation or loss of eligibility ends the
+wait without opening another review. Reconnects never slide a window or renew a
+grant. A consumed source/clock/launch failure retires remaining native custody.
+
+The common review loop serves single live requests and resident plain or
+cumulative sequences, including newly selected requests in supported governed
+or recovered suffixes. It does not revive historical held requests. Recorded
+`--resume` and receipt-service grammars independently refuse the live operator
+options. A later Continue still enters the existing fresh human decision and
+guarded publication path.
+
+See [live learned operator selection](LIVE_LEARNED_OPERATOR.md) and
+[resident learned publication](RESIDENT_LEARNED_PUBLICATION.md) for complete
+command, identity and invocation-lifetime requirements.
+
 ## Verification boundary
 
 Eight authored public integration functions use actual fixture learned actor
@@ -117,6 +179,13 @@ output preservation, cumulative reservations/polls/history, repeated no-I/O idle
 polls, fresh human approval and rejection, wrong or foreign round custody,
 source loss and changed input, stale predecessor, Stop/cancellation/handoff,
 finite grant exhaustion and an expired fixed successor window.
+
+Five additional service regression functions cover the retained native wrapper
+through authenticated Next/Convene and fresh human approval, grant absence and
+fixed-window expiry, source loss and cumulative poll exhaustion, independent
+Stop with a partial operator frame, and actual loaded process/predictive
+admission refusal. Existing closed historical command regressions preserve
+receipt observation without live mutation admission.
 
 Synthetic model weights and controlled ballots do not establish detector
 reliability, hostile-process isolation or production qualification. Independent

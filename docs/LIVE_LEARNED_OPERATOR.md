@@ -74,13 +74,15 @@ following identities and paths with the actual deployment's values:
 }
 ```
 
-Omitting or nulling both `resolution` and `fence` retains the original read-only
-observer. A learned service can independently select bounded receipt
-reconciliation or permanent original admission Stop, each with its own
-numerical allowance. A selected control object without that allowance,
-including a programmatically supplied profile, fails before clock/source
-acquisition, authority-store creation or listener setup. A historical
-explanation grant cannot authorize either mutation.
+Omitting all optional control grants retains the original read-only observer.
+A learned service can independently select bounded receipt reconciliation or
+permanent original admission Stop through `resolution` or `fence`, each with
+its own numerical allowance. Either selected control object without that
+allowance, including a programmatically supplied profile, fails before
+clock/source acquisition, authority-store creation or listener setup. A
+historical explanation grant cannot authorize either mutation. Explicit
+`convening` instead uses the retained native reservation described below; it
+never provisions replacement learned reviewers.
 
 The complete scope and selected supervisor identity must match every selected
 actor. Operator identity remains independently configured. Actual Linux UID/GID
@@ -264,6 +266,50 @@ dispatch to the refinement. Applied rounds retain their existing response kind;
 Unknown and refusals do not disclose an unobserved completion kind. See the
 [refinement response](TOWER_REVIEW_EXPLANATION.md#the-historical-refinement-response).
 
+## Continue a held native-model review
+
+A nonpredictive learned recipe with native model helpers may select the existing
+`convening` grant before its original review starts:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+The actual loaded recipe must have no process helpers or required raw/owned
+pre-output forecast. Those incompatible selections fail before startup. A
+progressive recipe must preselect multiple `native_review.round_ids`, matching
+sidecar rounds and enough original helper work; a grant cannot create successor
+capacity in a single-round review.
+
+When the original round ends in an applied Hold without automatic refinement,
+the service retains the original learned packet, generated output, native
+reviewers, completed work and cumulative counters. Address that original request
+with `next`, `action: "convene_held"` and the exact next preprovisioned round.
+Inspect and explicitly submit the returned complete `convene` action. The
+authenticated mutation queues admission only; Opened requires the original
+wrapper's fresh source checks and successful durable Begin.
+
+Only the next original evaluator roster can run. Its windows are fixed before
+the first review, and its poll allowance is cumulative across rounds. The live
+service pumps independent Stop and actor cancellation while awaiting the
+explicit ticket. It generates no actor output, creates no new sidecar, selects
+no replacement model and performs no automatic retry during that wait. A fresh
+Continue still needs an independent human approval and final publication checks.
+
+The same grant remains finite across resident releases and reconnects. This
+also applies to newly admitted requests in supported live recovery; historical
+held receipts have no retained native custody and cannot be reopened. Recorded
+receipt and `--resume` grammars reject these live operator options independently
+of profile validation.
+
+The [learned held-review contract](LEARNED_HELD_REVIEW.md) specifies exact source
+binding, weak custody, fixed-window expiry, failed-slot retirement and the
+current source-only verification boundary.
+
 ## Reconcile an original learned publication
 
 An uncertain learned Message may already have an original endpoint receipt
@@ -366,9 +412,11 @@ reply is lost.
 
 The original learned observer facade permanently restricts dispatch to operator
 observations. The separately selected learned reconciliation facade adds only
-native Next and Resolve under their independent grant. Both keep arbitrary
-`propose` payloads, request `get` tickets, `hold`, `precheck`, `capabilities`
-and other unsupported verbs unavailable even with broader host purpose tags.
+native Next and Resolve under their independent grant. A selected convening
+capability uses the restricted original control-operator mount and its own
+finite Next/Convene authority. These selections keep arbitrary `propose`
+payloads, request `get` tickets, `hold`, `precheck`, `capabilities` and other
+unsupported verbs unavailable even with broader host purpose tags.
 The separate learned actor port remains the selected intake path and continues
 to derive release bytes from its original numerical owner.
 

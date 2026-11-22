@@ -272,7 +272,7 @@ Stream prefixes, forecasts and unknown charges remain owned; mediated publicatio
 still checks its original source before an effect. The checkpoint contract below
 remains separate and deliberately revokes authority at its containment boundary.
 
-#### Implemented ordinary and native held-review continuation
+#### Implemented ordinary, native and learned held-review continuation
 
 Select the independent operator profile's `convening` capability to retain an
 ordinary or native generated held request while awaiting an explicit successor. Send Tower `next`
@@ -302,8 +302,19 @@ predecessor and confirmed audience before admitting and consuming each handoff.
 The frozen output and spent numerical work remain unchanged; requesting another
 review does not resample. Every release needs a fresh independent human decision,
 and the original grant stays finite across releases and reconnects. Recorded
-native receipt opens remain observation-only; learned and predictive services
-do not support this continuation. See the [exact contract](HELD_REVIEW_CONVENING.md).
+native receipt opens remain observation-only. See the
+[ordinary/native contract](HELD_REVIEW_CONVENING.md).
+
+Nonpredictive learned native-model services accept the same explicit operator
+grant under a stricter [retained-evaluator contract](LEARNED_HELD_REVIEW.md).
+Select the grant before review starts and provision the complete native schedule
+in the original progressive recipe. Request the exact next already reserved
+round, rather than an arbitrary unused ID. The same wrapper retains the learned
+packet, generated output, fixed windows, native poll spending and completed
+work. Independent Stop remains live while waiting, and a fresh Continue still
+needs human approval. Source loss or an expired fixed slot cannot trigger new
+models, resampling or automatic retry. Process-helper and predictive learned
+selections remain unsupported; historical learned receipts remain observation-only.
 
 ### P2. Investigating an incident
 

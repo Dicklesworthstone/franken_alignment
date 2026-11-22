@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-22: expose retained learned review continuation through live services
+
+- Admit the finite independent convening profile for actual nonpredictive
+  native-model learned requests and resident sequences; reject process-helper
+  and raw/owned predictive selections before startup.
+- Keep the original native wrapper alive across Hold, authenticated
+  Next/Convene, fixed successor windows, Stop and actor cancellation.
+- Preserve cumulative native polls, evaluator reservations, learned packet,
+  generated output and fresh human publication approval across the handoff.
+- Preserve closed historical receipt admission and finite grants across live
+  resident releases and newly selected recovered work.
+- Add five service regression functions covering authenticated continuation,
+  deadline/grant refusal, source loss, poll exhaustion, partial-frame Stop and
+  loaded-mode admission. Update two existing profile expectations and operator
+  documentation. Independent source review is complete; syntax, compilation and
+  runtime checks remain pending because the execution workspace is unavailable.
+
 ## 2026-11-22: continue held learned reviews with original native reservations
 
 - Retain a successful learned native Hold and its fixed unused helper roster;

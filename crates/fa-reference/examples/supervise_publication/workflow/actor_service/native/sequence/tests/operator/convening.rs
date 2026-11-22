@@ -195,14 +195,14 @@ fn outcome(reply: &Json, expected: &str) {
 }
 
 #[test]
-fn generated_convening_admission_preserves_learned_and_recorded_refusals() {
+fn generated_convening_admission_preserves_recorded_refusals() {
     let root = Root::new();
     let (config, entries, reviewer) = selected(&root, true);
     let selected = chosen(&root, &entries[0].actor, 1);
     selected
         .check(&config, &entries[0].actor, &reviewer)
         .unwrap();
-    assert!(selected.settings.check_learned_operator().is_err());
+    selected.settings.check_learned_operator().unwrap();
     assert!(selected.check_recorded().is_err());
     // The convening selection alone must still choose the native control mount;
     // it is not permitted merely because this fixture also selects Fence.

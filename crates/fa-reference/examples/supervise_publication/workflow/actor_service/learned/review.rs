@@ -226,13 +226,25 @@ where F: FnMut() -> ElapsedTick {
         result => return Reviewed { driver, history: None, process: None,
             stop_requested: false, failure: result.err() },
     }
-    let mut run = match start(driver, config, loaded, deadline, time) {
+    let run = match start(driver, config, loaded, deadline, time) {
         Ok(run) => run, Err((driver, error)) => return Reviewed {
             driver, history: None, process: None, stop_requested: false, failure: Some(error) },
     };
+    run_started(run, config, loaded, reviewer, control, deadline, time,
+        intake, publication, credential, operator)
+}
+
+/// Drive the same original owner from initial startup through every explicitly
+/// selected successor, keeping all native reservations and work in one wrapper.
+pub(super) fn run_started<F>(mut run: FileNativeSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, reviewer: &FileHumanReviewer, control: &mut Control,
+    deadline: &Deadline, time: &mut F, intake: &mut Option<Intake>,
+    publication: Option<&PreparedPublication<'_>>, credential: Option<&FileCredentialPermit>,
+    operator: &mut Option<super::operator::Service>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
     let mut stop_requested = false;
     let result = (|| {
-        for _ in 0..loaded.native_limits.polls {
+        loop {
             deadline.check(time())?;
             // Preserve separate run-wide authenticated stop and request-local
             // actor cancellation. Neither path exposes the private native owner.
@@ -256,7 +268,18 @@ where F: FnMut() -> ElapsedTick {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
-            if run.review().status() != NativeReviewStatus::Running { break; }
+            if run.review().status() != NativeReviewStatus::Running {
+                if continue_held(&mut run, config, control, deadline, time, intake,
+                    operator, &mut stop_requested)? {
+                    continue;
+                }
+                break;
+            }
+            // Waiting for an explicit successor spends no numerical quantum.
+            // The SAME original sequence owns the cumulative poll ceiling.
+            if run.review().polls() >= loaded.native_limits.polls {
+                return Err("original native sidecar review exhausted its finite poll budget".into());
+            }
             let round = run.review().round().round;
             let before = run
                 .review()
@@ -313,6 +336,58 @@ where F: FnMut() -> ElapsedTick {
         }
     }
     Reviewed { driver, history: Some(handoff.review), process: None, stop_requested, failure }
+}
+
+/// Retain the original native owner while an independently admitted operator
+/// selects its next UNUSED roster. Nothing can replace models, input, windows,
+/// numerical allowances or the invocation deadline after seeing the Hold.
+fn continue_held<F>(run: &mut FileNativeSupervisedDriver, config: &mut Config,
+    control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, operator: &mut Option<super::operator::Service>,
+    stop_requested: &mut bool) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    let Some(selected) = run.held_successor_round() else { return Ok(false); };
+    loop {
+        let now = time();
+        deadline.check(now)?;
+        if control.pending_peer()? {
+            *stop_requested = true;
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        super::operator::checkpoint_supervisor(operator, run.supervisor_mut());
+        if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
+            *stop_requested = true;
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        if ingress::observe(intake, run.supervisor_mut())? {
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        // Retirement revokes the ORIGINAL grant. A reconnect cannot renew it,
+        // and the selected slot keeps the window fixed before the first review.
+        if now >= selected.window.commit_by
+            || !run.supervisor().has_live_convening().map_err(debug)?
+            || run.held_successor_round().is_none_or(|current| current.round != selected.round)
+        {
+            return Ok(false);
+        }
+        if let Some(ticket) = run.take_pending_convene().map_err(debug)? {
+            if ticket.round() != selected.round {
+                return Err("learned successor does not match the original reserved round".into());
+            }
+            deadline.check(time())?;
+            // The original wrapper checks current source and topology, consumes
+            // this one ticket and opens its preprovisioned round. It performs no
+            // actor sampling or replacement helper provisioning.
+            run.convene_from_policy_file(&mut config.source, ticket, &mut *time)
+                .result.map_err(debug)?;
+            return Ok(true);
+        }
+        super::super::super::pause(config.timing.poll_ms.clamp(1, 50)
+            .min(selected.window.commit_by.0 - now.0));
+    }
 }
 
 // Polls and review revisions advance even when the protocol cannot. The caller

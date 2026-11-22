@@ -168,8 +168,11 @@ single-request services
 and resident Message/Finish sequences accept the same finite grant, including new
 unrecorded work in supported recovered suffixes. Exact native provenance must
 remain current throughout the handoff. Recorded native receipt opens accept only
-observation grants and explicitly refuse convening. Learned and predictive
-services remain outside this capability.
+observation grants and explicitly refuse convening. Nonpredictive learned
+native-model services use the same operator protocol with a separate
+[retained evaluator contract](LEARNED_HELD_REVIEW.md): only their next
+preprovisioned round and fixed window are eligible. Learned process helpers and
+predictive services remain unsupported.
 
 At the exact native request address, send `next` with
 `{"action":"convene_held","round":"8"}`. All Tower integers are canonical

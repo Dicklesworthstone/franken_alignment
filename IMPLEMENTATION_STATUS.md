@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: drive held learned successors through the original live operator
+
+Live learned actor and resident services now accept the independent finite
+convening grant for actual nonpredictive native-model recipes. The service
+retains the same original native wrapper after an applied Hold and waits for
+the exact next preprovisioned round. It pumps the original authenticated
+operator, run-wide Stop and actor cancellation without spending native
+evaluation polls. Every later quantum uses the original cumulative poll ceiling;
+the original packet, actor output, evaluator roster and fixed windows remain
+unchanged. Expiry, lost eligibility or revocation ends the wait, and a consumed
+source failure retires unused native custody without retry or refund.
+
+The existing original control mount carries Next/Convene. Actual loaded
+process-helper and raw/owned predictive recipes reject the selection before
+startup; schema acceptance alone cannot authorize those modes. Closed recorded
+receipt and --resume command grammars still independently refuse live operator
+options. Newly selected requests in supported resident/governed/recovered
+suffixes share the same live review loop; historical held requests are not
+resurrected. A successful successor Continue still enters the existing fresh
+human approval and guarded publication path.
+
+Five new service regression functions cover authenticated Next/Convene followed
+by fresh human approval, absent grant and fixed-window expiry, source loss and
+cumulative native poll exhaustion, independent Stop during a partial operator
+frame, and actual loaded-mode refusal. Two existing profile tests now distinguish
+structural schema acceptance from that loaded admission. Together with the
+preceding eight public core regressions, thirteen new functions describe the
+feature's original-owner, budget, source and termination boundaries.
+Independent source review corrected a buffered-response wait in the service
+fixture and verified that recorded recovery cannot silently admit convening.
+
+Exact source and test contents were preserved through GitHub blobs while the
+execution workspace was unavailable. Its attempted reconnection failed again
+before local checks; the required RCH runner was absent in earlier preflight.
+No formatting/syntax, compiler, Clippy, runtime or full-gate pass is claimed for
+these learned continuation increments. The required execution qualification
+remains open. No dependency, wire schema, journal format or bead status changed.
+Contracts: `docs/LEARNED_HELD_REVIEW.md`, `docs/LIVE_LEARNED_OPERATOR.md` and
+`docs/RESIDENT_LEARNED_PUBLICATION.md`.
+
 ## 2026-11-22: retain provisioned learned reviewers across an explicit held continuation
 
 The original native-model learned sidecar sequence now retains an acknowledged

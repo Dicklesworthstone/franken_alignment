@@ -57,6 +57,15 @@ approval; it performs no resampling or automatic retry. Source implementation,
 public regressions and service scenarios are present; required RCH compilation
 and runtime qualification remain pending.
 
+[Held learned native-model reviews](docs/LEARNED_HELD_REVIEW.md) also retain their
+original evaluator owner for an explicit operator continuation. Only the next
+already provisioned native round can run, using its original fixed window,
+learned packet, reservation and cumulative poll allowance. Single and resident
+live services preserve the generated output, independent Stop and fresh human
+approval. Process-helper and predictive recipes reject this selection. Core and
+authenticated service regression sources are present; formatting, compilation
+and runtime qualification remain pending after execution-workspace loss.
+
 [Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)
 now requires an independently retained history anchor and complete current
 policy, guard and recovery-floor requirements. The original recovery Fence

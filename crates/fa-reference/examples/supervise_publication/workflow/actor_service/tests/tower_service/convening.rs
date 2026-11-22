@@ -649,7 +649,7 @@ fn held_wait_preserves_independent_stop_and_original_deadline_without_a_successo
 }
 
 #[test]
-fn convening_profile_is_closed_bounded_and_preserves_learned_selection_refusal() {
+fn convening_profile_is_closed_bounded_and_admits_native_and_learned_settings() {
     let root = Directory::new();
     let config = held_config(&root);
     let old = settings_document(&root, &config, 1, 0);
@@ -662,7 +662,7 @@ fn convening_profile_is_closed_bounded_and_preserves_learned_selection_refusal()
     );
     let chosen = Settings::decode(selected_document(&old, &selection).as_bytes()).unwrap();
     chosen.check_generated_operator().unwrap();
-    assert!(chosen.check_learned_operator().is_err());
+    chosen.check_learned_operator().unwrap();
     for invalid in [
         selection.replace(
             &format!("\"queries\":{MAX_CONVENE_QUERIES}"),

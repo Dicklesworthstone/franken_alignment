@@ -4,6 +4,8 @@
 mod admission_explanation;
 #[path = "operator/fence.rs"]
 mod fence;
+#[path = "operator/convening.rs"]
+mod convening;
 #[path = "operator/journal_tail.rs"]
 mod journal_tail;
 #[path = "operator/narrowing.rs"]
