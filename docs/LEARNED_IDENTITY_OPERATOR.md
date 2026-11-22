@@ -96,8 +96,11 @@ incident and containment behavior; there is no manual-frame fallback.
 complete identity envelope for its existing `functional_restart`, owned
 prompt-audit stream recipe. It requires the original passport/policy registration
 and a matching measurement selection; a bare identity requirement or omitted
-selection is refused before owner creation. Held-out joint activation remains
-unsupported in this preparation mode, including identity(joint(legacy)). See
+selection is refused before owner creation. The existing
+`identity(joint(legacy))` composition is supported with the original joint
+baseline and its complete policy/work ceilings. Held-out activation remains
+unsupported during fresh preparation; guard installation does not fabricate
+prior evidence or qualify a new committee. See
 [the preparation command](LEARNED_PROMPT_PREPARATION.md) for its closed grammar,
 checkpoint profile and mandatory new history-anchor output.
 
@@ -230,3 +233,11 @@ been executed in this integration session.** Required RCH is unavailable, and
 this session used no local compilation fallback. New compilation, runtime
 evidence and full qualification remain pending. The earlier thirteen-, 49- and
 25-function results above retain their original scope.
+
+The joint-preparation extension additionally exercises the complete
+`identity(joint(recipe))` selection with publication and credential guards,
+actual prepared-to-published baseline continuation, and fresh identity after
+real containment/reset and joint qualification. Missing or changed current
+manifests refuse before further actor inference even when preparation matched
+and a later joint campaign qualified. These new regression sources also await
+required RCH execution; the nine earlier preparation functions are unchanged.

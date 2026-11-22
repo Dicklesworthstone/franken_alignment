@@ -88,10 +88,11 @@ checkpoint capture, duplicate flags and held-out activation are refused before
 creation.
 
 This bounded preparation path supports the complete original computed identity
-registration and measurement selection. It still refuses held-out joint
-activation and nonzero recovery floors; neither requirement is dropped to obtain
-a simpler owner. Raw predictors, legacy owned predictors and nonpredictive
-streams remain outside this mode.
+registration and measurement selection, and the existing held-out joint policy
+envelope. Canonical `identity(joint(recipe))` composition retains both complete
+guards. It still refuses held-out activation and nonzero recovery floors;
+neither requirement is dropped to obtain a simpler owner. Raw predictors, legacy
+owned predictors and nonpredictive streams remain outside this mode.
 An existing store is never reopened or replaced by preparation, including after
 a previous preparation's report was lost.
 
@@ -124,6 +125,40 @@ checkpoint capture, or through Stop, retained-history export and terminal cleanu
 on failure. Computation does not consume a sampled actor draw, acquire a forecast
 or replace either publication key. Matching eligibility is not effect authority;
 the preparation report retains `"effect_authority":"not_issued"`.
+
+### Retain the joint baseline through containment
+
+Select the existing `fa.learned-joint-publication/1` envelope described in
+[the joint credibility contract](LEARNED_JOINT_CREDIBILITY.md), optionally inside
+the computed-identity envelope. The complete joint policy is installed in the
+original first image and retained in the numerical checkpoint. Both population
+minima, both rate limits, both work ceilings, policy identity and generation
+remain exact independent recovery requirements. Omitting or changing any field
+cannot reopen the prepared history with weaker requirements or consume its
+retained checkpoint and staging evidence.
+
+The selected guard constrains later helper-weight promotion. Preparation uses
+the original baseline committee, consumes no activation capsule, and adds no
+control event merely to make held-out evidence timely. An untouched prepared
+prompt remains at control sequence zero; it cannot provide the prior early-Hold
+history required by the original first activation. Ordinary anchored continuation
+can use that baseline without a capsule while no activation has occurred.
+
+The existing containment workflow can instead narrow the original authority and
+complete its owned prompt reset. A later explicit continuation can select fresh
+qualification at the actual resulting control sequence and authority epoch,
+including any recovered topology-source rebind. The original joint reducer
+compares the actual capped candidate with the baseline on the same sealed cases.
+A candidate that loses complementary vetoes refuses even if its individual
+helper scores qualify. A matching nonregressing campaign must still fit both
+original joint work ceilings. Neither case restores spent work or supplies a
+publication key.
+
+Successful activation is followed by current source certification, a fresh
+computed identity measurement when selected, owned prediction and monitored
+generation, original native review, and independent human approval. Historical
+identity or qualification cannot replace those current checks. Once activation
+has happened, later invalidation cannot fall back to an unqualified baseline.
 
 ### Preserve credential and final-publication requirements
 
@@ -292,3 +327,19 @@ not compile or run the extension because required RCH is unavailable; no local
 compilation fallback was used. Required RCH compilation, runtime execution and
 full qualification remain pending. Earlier identity execution records do not
 qualify this new preparation integration.
+
+Seven further regression functions in `checkpoint_prepare/guarded/joint.rs`
+and `mediated_predictive_stream_reset/joint.rs` cover the joint extension. Actual
+operator commands prepare the guarded baseline and continue it through native
+and authenticated human Approve/Reject paths. Another fixture uses the actual
+preparation, narrowing and reset commands, then drives one original recovered
+owner through bad/good joint qualification, fresh source and identity checks,
+owned prediction, native review and publication. That qualification segment is
+a direct lifecycle integration test, not a full requalification argv/peer test.
+The refusal cases preserve the original journal, numerical work and custody on
+joint regression or insufficient case/member limits, and separately exercise
+every policy field,
+missing current evidence and the sequence-zero activation boundary. These are
+regression sources awaiting required RCH compilation and execution; no earlier
+result qualifies this extension. Independent source review, qualified-nightly
+syntax parsing, new-module formatting and whitespace checks are complete.

@@ -11,6 +11,8 @@ use std::{io::{self, Cursor, Write}, path::{Path, PathBuf}};
 
 #[path = "mediated_predictive_stream_reset/fixture.rs"]
 mod fixture;
+#[path = "mediated_predictive_stream_reset/joint.rs"]
+mod joint;
 use fixture::{Case, Pair, info};
 
 fn checkpoint(path: &Path) -> TopologyCheckpoint {

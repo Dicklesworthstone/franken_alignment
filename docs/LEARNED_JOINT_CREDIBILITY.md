@@ -110,6 +110,15 @@ The selected policy constrains later promotion. It is not an activation capsule
 and does not declare the baseline committee qualified on future campaign data.
 The native baseline remains usable under its original review requirements.
 
+Fresh [unsampled prompt preparation](LEARNED_PROMPT_PREPARATION.md) also accepts
+this complete policy, including canonical `identity(joint(recipe))` composition.
+The checkpoint retains every selected guard with zero sampled draws and no
+effect authority. Preparation still refuses activation: its sequence-zero cut
+cannot invent prior early-Hold evidence. The baseline can continue under the
+original live reviews, or the existing narrowing/reset workflow can precede a
+fresh campaign at its actual resulting cut. Current source, selected identity,
+forecast and both publication keys remain separate requirements afterward.
+
 ## Activation, continuation and recovery
 
 The existing held-out activation owns all evidence checks and weight derivation.

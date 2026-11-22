@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-11-21: retain joint guards in learned prompt preparation
+
+- Admit the existing joint envelope and computed-identity composition during
+  fresh owned prompt-audit preparation through the original guarded constructor.
+- Keep the unsampled baseline distinct from held-out activation and preserve
+  complete joint, identity, publication, credential and recovery requirements.
+- Add real command preparation/continuation with native and independent human
+  review, plus original narrowing/reset followed by direct fresh qualification,
+  source/identity checks, owned prediction and publication.
+- Pair those paths with full-policy mismatch, lost current evidence, original
+  work exhaustion and complementary-veto regression refusals that preserve the
+  actual owner cut and numerical work. Seven new regression functions are present.
+- Independent source review, qualified-nightly syntax parsing, new-module
+  formatting and whitespace checks pass. Required RCH compilation and runtime
+  qualification remain pending. No execution
+  or roadmap gate is closed.
+
 ## 2026-11-21: publish from the governed learned joint baseline
 
 - Admit the existing joint credibility envelope for fresh plain and mediated

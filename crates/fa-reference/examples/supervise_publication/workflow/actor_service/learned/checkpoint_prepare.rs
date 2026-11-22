@@ -148,9 +148,9 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
         || loaded.generation.requires_computed_identity() != registered_identity {
         return Err("prompt preparation requires the complete original identity registration and measurement selection together".into());
     }
-    if loaded.generation.required_held_out_joint().is_some() {
-        return Err("prompt preparation does not support held-out activation selections".into());
-    }
+    // The original first image pins any complete held-out joint policy with the
+    // other generation guards. Preparation retains its baseline; it neither
+    // activates a reducer nor supplies evidence for a later promotion.
     if loaded.recovery_anchor.is_some() || loaded.floor.journal_revision != 0
         || loaded.floor.control_sequence != 0 || loaded.floor.authority_epoch != 0 {
         return Err("prompt preparation creates a fresh history and cannot adopt recovery floors or custody".into());

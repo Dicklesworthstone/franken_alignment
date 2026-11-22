@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: prepare joint-guarded prompts for containment and continuation
+
+Fresh owned prompt-audit preparation now accepts the existing complete joint
+credibility envelope, including canonical computed-identity composition and the
+original publication/credential guards. The original first-image constructor,
+identity-before-prompt ordering, monitored prompt scheduler and checkpoint capture
+remain unchanged. Preparation retains the baseline with zero sampled draws,
+no actor request and no effect authority. The complete joint policy and both work
+ceilings remain exact independent recovery requirements. This connects FA-026,
+FA-105, FA-108 and FA-118 through the existing containment workflow.
+
+Baseline continuation can use fresh identity, owned prediction, native review and
+independent human approval without a fabricated activation. Fresh preparation
+still refuses a capsule before startup, and the untouched sequence-zero checkpoint
+cannot invent early-Hold evidence. Original authority narrowing and owned reset
+can instead precede fresh joint qualification at the actual resulting cut. Joint
+regression or insufficient original case/member work refuses without advancing
+that owner; current source and identity remain mandatory after a good campaign.
+
+Seven new regression functions cover actual operator preparation and anchored
+baseline continuation with authenticated human Approve/Reject, all eight joint
+fields and omission before recovery mutation, current identity failure and the
+creation/sequence-zero activation boundary. The mediated lifecycle starts with
+actual preparation, NarrowAuthority and begin/complete-reset commands, then drives
+one original recovered owner through complementary-veto regression refusal,
+matching qualification, fresh source/identity, owned forecast, native review and
+publication. The qualification segment uses the direct original lifecycle, not
+a full requalification argv/peer test. No control events are fabricated to admit
+the campaign, and no original Congress threshold changes after owner creation.
+
+Independent source review is complete. All six changed Rust files pass
+qualified-nightly syntax parsing; the three new modules are formatted and owned
+whitespace checks pass. Required RCH compilation, Clippy, runtime execution and
+canonical qualification
+remain pending because `rch` is unavailable. Source regressions are not execution
+evidence; no parent acceptance or qualification gate is closed. Contracts:
+`docs/LEARNED_PROMPT_PREPARATION.md`, `docs/LEARNED_IDENTITY_OPERATOR.md`,
+`docs/LEARNED_JOINT_CREDIBILITY.md`.
+
 ## 2026-11-21: publish from the governed learned joint baseline
 
 Fresh nonpredictive governed learned sequences now admit the complete original

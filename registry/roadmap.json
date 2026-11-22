@@ -861,7 +861,11 @@
         "docs/LEARNED_JOINT_CREDIBILITY.md",
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
         "docs/LIVE_POLICY_GOVERNOR.md",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2644,7 +2648,15 @@
         "docs/LEARNED_JOINT_CREDIBILITY.md",
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
         "docs/LIVE_POLICY_GOVERNOR.md",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs",
+        "docs/LEARNED_PROMPT_PREPARATION.md",
+        "docs/LEARNED_IDENTITY_OPERATOR.md"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -2769,7 +2781,12 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs",
         "docs/LEARNED_IDENTITY_OPERATOR.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md"
       ],
       "founding_ideas": [
         "FI-A09",
@@ -3080,7 +3097,13 @@
         "docs/LEARNED_IDENTITY_OPERATOR.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_prepare.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md"
       ],
       "founding_ideas": [
         "FI-A01",

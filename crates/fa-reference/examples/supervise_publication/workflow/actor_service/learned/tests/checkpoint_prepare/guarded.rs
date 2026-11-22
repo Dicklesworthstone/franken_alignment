@@ -25,6 +25,9 @@ use fa_reference::witness::{AdapterDomainInput, DomainClosure, DomainProjection,
 
 const SECRET: &[u8] = b"independently-provisioned-prepared-credential-5837";
 
+#[path = "guarded/joint.rs"]
+mod joint;
+
 fn policy(config: &Config) -> FileCredentialPolicy {
     FileCredentialPolicy {
         family: "publication".into(),

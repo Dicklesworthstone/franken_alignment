@@ -104,6 +104,14 @@ the retained checkpoint remains unsampled with no effect authority. Continuation
 performs a fresh measurement after recovery. Source and regression coverage are
 present; required RCH compilation and runtime qualification remain pending.
 
+That preparation also retains the complete original joint-review guard, including
+computed-identity composition, credential and publication requirements. The
+baseline can continue through fresh native and human review, or follow original
+authority narrowing and prompt reset before fresh joint qualification. Preparation
+still produces zero sampled draws and no effect authority. Added regression
+sources exercise both routes and their current-evidence refusals; required RCH
+execution remains pending.
+
 Resident [history custody](docs/RESIDENT_NATIVE_PUBLICATION.md#independently-retained-history)
 also reserves every selected configuration and manifest input before those
 files are read. Canonical aliases through symlinked directories and future
