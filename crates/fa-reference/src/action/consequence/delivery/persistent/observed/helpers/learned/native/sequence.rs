@@ -3,6 +3,9 @@ use super::*;
 use crate::action::ActionState;
 use crate::action::consequence::Consequence;
 use crate::action::consequence::oversight::sidecar::MAX_SIDECAR_REFINEMENT_ROUNDS;
+use std::collections::VecDeque;
+
+mod reserved;
 
 /// Provision every fresh original native owner before the first round. No
 /// evaluator, query, salt, round, window or resource ceiling can be replaced.
@@ -58,6 +61,9 @@ pub struct FileNativeSidecarSequence {
     input: CommitteeInput,
     records: BTreeMap<u64, NativeSequenceRecord>,
     history: Vec<FileLearnedSidecarFinish>,
+    // Independently provisioned explicit successors, never automatic residual
+    // refinement slots. Every actual owner is frozen before the first Begin.
+    convene_rosters: VecDeque<BTreeMap<String, NativeReviewMember>>,
 }
 impl fmt::Debug for FileNativeSidecarSequence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -96,9 +102,30 @@ impl FileOversight {
         revision: u64,
         sidecar: FileLearnedSidecar,
         rounds: Vec<LearnedWorkerRound>,
+        rosters: NativeSequenceRosters,
+        limits: NativeReviewLimits,
+        snapshot: Snapshot,
+    ) -> Result<FileNativeSidecarSequence, JournalError> {
+        self.begin_native_sidecar_sequence_with_convening(
+            revision,
+            sidecar,
+            rounds,
+            rosters,
+            limits,
+            snapshot,
+            Vec::new(),
+        )
+    }
+
+    pub(in crate::action::consequence::delivery::persistent::observed) fn begin_native_sidecar_sequence_with_convening(
+        &mut self,
+        revision: u64,
+        sidecar: FileLearnedSidecar,
+        rounds: Vec<LearnedWorkerRound>,
         mut rosters: NativeSequenceRosters,
         limits: NativeReviewLimits,
         snapshot: Snapshot,
+        successors: Vec<BTreeMap<String, NativeReviewMember>>,
     ) -> Result<FileNativeSidecarSequence, JournalError> {
         if self.fault.is_some() {
             return Err(JournalError::Unavailable);
@@ -109,10 +136,23 @@ impl FileOversight {
         if rounds.is_empty() || limits.polls == 0 {
             return Err(Error::InvalidInput.into());
         }
-        if rounds.len() > MAX_SIDECAR_REFINEMENT_ROUNDS || limits.polls > MAX_LEARNED_REVIEW_POLLS {
+        let capacity = rounds
+            .len()
+            .checked_add(successors.len())
+            .ok_or(Error::Overflow)?;
+        if capacity > MAX_SIDECAR_REFINEMENT_ROUNDS || limits.polls > MAX_LEARNED_REVIEW_POLLS {
             return Err(Error::Limit.into());
         }
-        let reservation = NativeReviewCost::required_sequence(&rosters)?;
+        if !successors.is_empty() && (rounds.len() != 1 || !reserved::supported(self)
+            || self.events.iter().any(|event|
+                matches!(event, Event::Begin(attempt, ..) if *attempt == sidecar.attempt())))
+        {
+            return Err(Error::Binding.into());
+        }
+        let mut reservation = NativeReviewCost::required_sequence(&rosters)?;
+        for members in &successors {
+            reservation = reservation.add(NativeReviewCost::required(members)?)?;
+        }
         limits.native.admits(reservation)?;
         let original = self.checked_learned_sidecar(&sidecar)?;
         if original.round().work().rounds != 1 {
@@ -168,10 +208,18 @@ impl FileOversight {
                 },
             );
         }
+        for members in &successors {
+            if members.keys().ne(original.round().input().views().keys()) {
+                return Err(Error::Binding.into());
+            }
+            for (name, member) in members {
+                check_member(member, original, name, limits)?;
+            }
+        }
         let input = original.round().input().clone();
         let mut history = Vec::new();
         history
-            .try_reserve_exact(rounds.len())
+            .try_reserve_exact(capacity)
             .map_err(|_| Error::Limit)?;
         let mut leased = self.worker_rounds.clone();
         leased.extend(ids);
@@ -206,6 +254,7 @@ impl FileOversight {
             input,
             records,
             history,
+            convene_rosters: successors.into(),
         })
     }
 }
@@ -237,6 +286,11 @@ impl FileNativeSidecarSequence {
     /// Historical latest input, not proof of current source or either effect key.
     pub fn input(&self) -> &CommitteeInput {
         &self.input
+    }
+
+    /// Retained original unnumbered rosters, not current eligibility or a grant.
+    pub fn pending_convene_rosters(&self) -> usize {
+        self.convene_rosters.len()
     }
 
     /// The next original reservation, not permission to start it. A held round
@@ -379,6 +433,7 @@ impl FileNativeSidecarSequence {
         // numerical/journal calls. Failure cannot leave another usable roster.
         let mut active = self.active.take();
         let mut future = std::mem::take(&mut self.future);
+        let reserved = std::mem::take(&mut self.convene_rosters);
         let result: Result<bool, JournalError> = (|| {
             if self.polls == self.limits.polls {
                 return Err(Error::Limit.into());
@@ -439,11 +494,23 @@ impl FileNativeSidecarSequence {
                         Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. })
                             if receipt.policy.control.decision.consequence == Consequence::HoldEffect
                     );
-                if (!done || held) && self.active.is_none() {
+                let reserved_hold = done
+                    && self.polls < self.limits.polls
+                    && !reserved.is_empty()
+                    && future.is_empty()
+                    && matches!(
+                        self.history.last(),
+                        Some(FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. })
+                            if receipt.policy.control.decision.consequence == Consequence::HoldEffect
+                    );
+                if (!done || held || reserved_hold) && self.active.is_none() {
                     self.active = active;
                 }
                 if !done || held {
                     self.future = future;
+                }
+                if !done || reserved_hold {
+                    self.convene_rosters = reserved;
                 }
                 self.status = if done {
                     NativeReviewStatus::Finished
@@ -470,7 +537,10 @@ impl FileNativeSidecarSequence {
         if revision != self.revision {
             return Err(Error::Stale);
         }
-        if self.status != NativeReviewStatus::Running && self.held_successor_round().is_none() {
+        if self.status != NativeReviewStatus::Running
+            && self.held_successor_round().is_none()
+            && !self.reserved_successor_available()
+        {
             return Err(Error::WrongState);
         }
         self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;
@@ -478,6 +548,7 @@ impl FileNativeSidecarSequence {
         self.failure = Some(Error::Incomplete.into());
         let active = self.active.take();
         let _future = std::mem::take(&mut self.future);
+        let _reserved = std::mem::take(&mut self.convene_rosters);
         if let Some(mut current) = active {
             if current.status() == NativeReviewStatus::Running {
                 current.cancel(current.revision())?;

@@ -219,7 +219,7 @@ impl FileNativeSupervisedDriver {
             // Idle polling reads no source/clock, starts no model quantum and
             // neither selects nor consumes the independent successor request.
             if self.convene_custody.is_some()
-                && self.held_successor_round().is_some()
+                && (self.held_successor_round().is_some() || self.has_reserved_successor())
                 && self.supervisor().has_live_convening()?
             {
                 return Ok(FileNativeDriverEvent::Driver(FileDriverEvent::Idle));
@@ -227,7 +227,9 @@ impl FileNativeSupervisedDriver {
             // A cancelled, stale, revoked or expired held owner cannot leave
             // its provisioned future models available to a later grant.
             self.clear_native_convene_offer()?;
-            if self.review.held_successor_round().is_some() {
+            if self.review.held_successor_round().is_some()
+                || self.review.reserved_successor_available()
+            {
                 self.review.cancel(self.review.revision())?;
             }
             // A caught original numerical unwind may leave a Reviewing job,
@@ -318,6 +320,7 @@ impl Drop for NativeObservation<'_> {
         }
         if self.owner.review.status() == NativeReviewStatus::Running
             || self.owner.review.held_successor_round().is_some()
+            || self.owner.review.reserved_successor_available()
         {
             let _ = self.owner.review.cancel(self.owner.review.revision());
         }

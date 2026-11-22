@@ -10,6 +10,8 @@ use crate::action::consequence::delivery::persistent::requests::actor::FileConve
 use crate::action::consequence::oversight::evidence_source::EvidenceFile;
 use std::rc::Rc;
 
+mod reserved;
+
 impl FileNativeSupervisedDriver {
     /// Observe the next originally provisioned round, while its original packet
     /// and acknowledged Hold remain current. This performs no source or clock
@@ -37,15 +39,23 @@ impl FileNativeSupervisedDriver {
     /// Consume only an independently queued request for this retained native
     /// owner and its next fixed slot. No polling path selects a successor itself.
     pub fn take_pending_convene(&self) -> Result<Option<FileConveneTicket>, JournalError> {
-        let Some(next) = self.held_successor_round() else {
+        let next = self.held_successor_round();
+        let reserved = self.has_reserved_successor();
+        if next.is_none() && !reserved {
             return Ok(None);
-        };
+        }
         if self.convene_custody.is_none() {
             return Ok(None);
         }
         let ticket = self.driver.supervisor.take_convene(self.request)?;
         if ticket.as_ref().is_some_and(|ticket| {
-            !ticket.is_native_learned() || ticket.round() != next.round
+            !ticket.is_native_learned()
+                || match next {
+                    Some(next) => {
+                        ticket.is_reserved_native_learned() || ticket.round() != next.round
+                    }
+                    None => !ticket.is_reserved_native_learned(),
+                }
         }) {
             return Err(Error::Binding.into());
         }
@@ -163,6 +173,7 @@ impl FileNativeSupervisedDriver {
     fn check_native_convene_ticket(&self, ticket: &FileConveneTicket) -> Result<(), JournalError> {
         if !ticket.belongs_to(&self.driver.supervisor)
             || !ticket.is_native_learned()
+            || ticket.is_reserved_native_learned()
             || ticket.request() != self.request
             || self.convene_custody.is_none()
         {
@@ -189,6 +200,13 @@ impl FileNativeSupervisedDriver {
                 next,
                 Rc::downgrade(custody),
             )
+        } else if self.reserved_successor_ready() && self.supervisor().has_live_convening()? {
+            let custody = self.convene_custody.get_or_insert_with(|| Rc::new(()));
+            self.driver.supervisor.offer_reserved_native_convene(
+                self.request,
+                self.review.round().round,
+                Rc::downgrade(custody),
+            )
         } else {
             self.clear_native_convene_offer()
         }
@@ -213,6 +231,7 @@ impl Drop for NativeConveneOperation<'_> {
         }
         if self.owner.review.status() == NativeReviewStatus::Running
             || self.owner.review.held_successor_round().is_some()
+            || self.owner.review.reserved_successor_available()
         {
             let _ = self.owner.review.cancel(self.owner.review.revision());
         }

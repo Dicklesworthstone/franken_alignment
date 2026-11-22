@@ -614,7 +614,11 @@
         "docs/PROCESS_LEARNED_PUBLICATION.md",
         "crates/fa-reference/tests/file_process_learned_driver.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/processes.rs",
-        "IMPLEMENTATION_STATUS.md"
+        "IMPLEMENTATION_STATUS.md",
+        "docs/LEARNED_RESERVED_REVIEW.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
       ],
       "founding_ideas": [
         "FI-A06",
@@ -2592,7 +2596,7 @@
       "id": "FA-104",
       "gate": "G2",
       "title": "Implement typed congress consequence classes",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-019",
         "FA-013"
@@ -2610,7 +2614,12 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "gate",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "docs/LEARNED_RESERVED_REVIEW.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
+      ],
       "founding_ideas": [
         "FI-A02",
         "FI-A09",
@@ -3815,7 +3824,11 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/resolution.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/resolution/tests.rs",
         "crates/fa-reference/src/tower/publication/resolution.rs",
-        "crates/fa-reference/tests/tower_resolution.rs"
+        "crates/fa-reference/tests/tower_resolution.rs",
+        "docs/LEARNED_RESERVED_REVIEW.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
       ],
       "founding_ideas": [
         "FI-A13",

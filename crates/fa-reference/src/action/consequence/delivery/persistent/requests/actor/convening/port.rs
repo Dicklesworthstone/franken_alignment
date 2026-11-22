@@ -119,8 +119,95 @@ impl FileActorSupervisor<FileOversight> {
             round: next.round,
             commit_by: next.window.commit_by,
             custody,
+            mode: NativeOfferMode::Fixed,
         });
         Ok(())
+    }
+
+    /// The same original native custodian may instead offer one separately
+    /// prepaid unnumbered roster. The chosen ID must be fresh; this mode never
+    /// gets the fixed successor's exception for a worker-leased round.
+    pub(crate) fn offer_reserved_native_convene(
+        &self,
+        request: u64,
+        held_round: u64,
+        custody: Weak<()>,
+    ) -> Result<(), JournalError> {
+        let owner = self
+            .owner
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let Some(grant) = owner
+            .convening
+            .as_ref()
+            .and_then(|selected| selected.grant.upgrade())
+        else {
+            return Ok(());
+        };
+        if !grant.healthy(&owner.host) || custody.upgrade().is_none() {
+            return Err(JournalError::Unavailable);
+        }
+        let (basis, blocked) = owner.host.native_convene_status(request)?;
+        if blocked.is_some() || basis.held_round != held_round {
+            return Err(Error::WrongState.into());
+        }
+        *grant
+            .native_offer
+            .try_borrow_mut()
+            .map_err(|_| JournalError::Unavailable)? = Some(NativeOffer {
+            basis,
+            round: 0,
+            commit_by: basis.deadline,
+            custody,
+            mode: NativeOfferMode::Reserved,
+        });
+        Ok(())
+    }
+
+    pub(crate) fn has_reserved_native_convene_offer(
+        &self,
+        request: u64,
+    ) -> Result<bool, JournalError> {
+        let owner = self
+            .owner
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let Some(grant) = owner
+            .convening
+            .as_ref()
+            .and_then(|selected| selected.grant.upgrade())
+        else {
+            return Ok(false);
+        };
+        if !grant.healthy(&owner.host) {
+            return Err(JournalError::Unavailable);
+        }
+        let (basis, blocked) = owner.host.native_convene_status(request)?;
+        if blocked.is_some() {
+            return Ok(false);
+        }
+        let offered = grant
+            .native_offer
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        let current = offered.as_ref().is_some_and(|offer| {
+            offer.mode == NativeOfferMode::Reserved
+                && offer.basis == basis
+                && offer.custody.upgrade().is_some()
+                && basis.recorded_at.is_some_and(|now| now < offer.commit_by)
+        });
+        if !current {
+            return Ok(false);
+        }
+        let records = grant
+            .records
+            .try_borrow()
+            .map_err(|_| JournalError::Unavailable)?;
+        Ok(grant.operations.get() > 0
+            || records.values().any(|record| {
+                record.receipt.request.request == request
+                    && record.receipt.outcome == FileConveneOutcome::Pending
+            }))
     }
 
     pub(crate) fn clear_native_convene(&self, request: u64) -> Result<(), JournalError> {
@@ -374,7 +461,8 @@ fn block(
 ) -> Option<FileConveneBlockReason> {
     use FileConveneBlockReason::*;
     if records.contains_key(&round)
-        || (native_offer.is_none() && host.convene_round_used(round))
+        || (native_offer.is_none_or(|offer| offer.mode != NativeOfferMode::Fixed)
+            && host.convene_round_used(round))
     {
         return Some(RoundAlreadyUsed);
     }

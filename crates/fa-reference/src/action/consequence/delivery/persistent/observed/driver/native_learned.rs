@@ -98,10 +98,29 @@ impl FileSupervisedDriver {
     /// Setup computes no new helper token and issues neither key; historical
     /// numerical replay still belongs to the original journal transactions.
     pub fn start_native_learned_sequence(
+        self,
+        launch: FileNativeDriverLaunch,
+        snapshot: Snapshot,
+        now: ElapsedTick,
+    ) -> Result<FileNativeSupervisedDriver, Box<FileNativeDriverSetupError>> {
+        self.start_native_learned_sequence_with_convening(launch, snapshot, now, Vec::new())
+    }
+
+    /// Reserve explicit successors for a one-round source-only learned stream.
+    /// Every actual model, probe and salt is frozen before the first Begin and
+    /// shares the original total native and poll limits. No reserve is inferred
+    /// from a grant or created after a verdict. Empty reserves keep legacy behavior.
+    pub fn start_native_learned_sequence_with_convening(
         mut self,
         launch: FileNativeDriverLaunch,
         snapshot: Snapshot,
         now: ElapsedTick,
+        successors: Vec<
+            std::collections::BTreeMap<
+                String,
+                super::super::helpers::learned::native::NativeReviewMember,
+            >,
+        >,
     ) -> Result<FileNativeSupervisedDriver, Box<FileNativeDriverSetupError>> {
         let request = launch.request;
         let result = (|| {
@@ -138,13 +157,14 @@ impl FileSupervisedDriver {
             }
             observe(&mut host, now)?;
             let revision = host.revision();
-            let review = host.begin_native_sidecar_sequence(
+            let review = host.begin_native_sidecar_sequence_with_convening(
                 revision,
                 launch.sidecar,
                 launch.rounds,
                 launch.rosters,
                 launch.limits,
                 snapshot,
+                successors,
             )?;
             self.job = Some(Job {
                 issuer: Rc::clone(&host.issuer),
@@ -313,6 +333,7 @@ impl FileNativeSupervisedDriver {
         let cleared = self.clear_native_convene_offer();
         if self.review.status() == NativeReviewStatus::Running
             || self.review.held_successor_round().is_some()
+            || self.review.reserved_successor_available()
         {
             self.review.cancel(expected_revision)?;
         }

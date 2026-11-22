@@ -3,6 +3,8 @@ use super::*;
 use crate::action::consequence::delivery::stream::{ReleaseFrame, StreamProfile};
 use crate::action::consequence::oversight::decoder_monitoring::LearnedDecoderBindingLimits;
 
+mod reserved_convening;
+
 fn configured_stream() -> FileLearnedConfig {
     let (model, tokenizer, source) = recipe();
     FileLearnedConfig::new_text_stream(

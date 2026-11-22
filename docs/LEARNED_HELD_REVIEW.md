@@ -7,6 +7,12 @@ work and sidecar packet remain unchanged. A separately selected operator may
 request the next unused review slot; the request does not supply new models,
 new packet bytes, a verdict, a clock or effect approval.
 
+The fixed-slot contract below remains unchanged. A separate
+[prepaid reserve for one-round reviews](LEARNED_RESERVED_REVIEW.md) freezes
+additional native helper owners before Begin and permits an explicitly selected
+fresh ID/window within the original deadline. Its reserved-mode API cannot
+extend or replace the fixed slots described here.
+
 ## Provision the complete review before it starts
 
 Select the original finite `convene_port(queries, operations)` grant before the

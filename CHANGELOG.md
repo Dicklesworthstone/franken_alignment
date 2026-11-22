@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-22: prepay fresh successors for one-round learned reviews
+
+- Preserve the existing fixed-slot learned continuation and add an explicit
+  reserve of exact native helper owners before the original first review.
+- Keep the same wrapper, weak native offer and one-use operator ticket; a fresh
+  reserved round ID/window stays within original authority and time bounds.
+- Retain aggregate native reservations, polls, history, generated output and
+  independent human approval without resetting or replacing a reviewer.
+- Add original Message/Finish lifecycle and refusal regression sources.
+  Compilation, runtime execution and complete RCH qualification remain pending.
+
 ## 2026-11-22: expose retained learned review continuation through live services
 
 - Admit the finite independent convening profile for actual nonpredictive

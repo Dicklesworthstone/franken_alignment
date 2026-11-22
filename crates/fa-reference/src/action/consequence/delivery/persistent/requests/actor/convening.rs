@@ -195,16 +195,24 @@ struct Record {
 
 /// The retained native evaluator offers its next preprovisioned round.
 /// Copies weakly observe that custody and cannot keep another owner alive.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum NativeOfferMode {
+    Fixed,
+    Reserved,
+}
+
 #[derive(Clone)]
 struct NativeOffer {
     basis: FileConveneBasis,
     round: u64,
     commit_by: ElapsedTick,
     custody: Weak<()>,
+    mode: NativeOfferMode,
 }
 impl NativeOffer {
     fn same(&self, other: &Self) -> bool {
         self.basis == other.basis
+            && self.mode == other.mode
             && self.round == other.round
             && self.commit_by == other.commit_by
             && Weak::ptr_eq(&self.custody, &other.custody)
@@ -255,10 +263,10 @@ impl Grant {
             .native_offer
             .try_borrow()
             .map_err(|_| JournalError::Unavailable)?;
-        let Some(offer) = offered
-            .as_ref()
-            .filter(|offer| offer.basis.request == request && offer.round == round)
-        else {
+        let Some(offer) = offered.as_ref().filter(|offer| {
+            offer.basis.request == request
+                && (offer.mode == NativeOfferMode::Reserved || offer.round == round)
+        }) else {
             return Ok((
                 basis,
                 Some(FileConveneBlockReason::UnsupportedHistory),
@@ -271,10 +279,20 @@ impl Grant {
         if basis.recorded_at.is_none_or(|now| now >= offer.commit_by) {
             return Ok((basis, Some(FileConveneBlockReason::DeadlineElapsed), None));
         }
-        if !host.native_convene_round_available(round) {
+        let available = match offer.mode {
+            NativeOfferMode::Fixed => host.native_convene_round_available(round),
+            NativeOfferMode::Reserved => !host.convene_round_used(round),
+        };
+        if !available {
             return Ok((basis, Some(FileConveneBlockReason::RoundAlreadyUsed), None));
         }
-        Ok((basis, None, Some(offer.clone())))
+        let mut selected = offer.clone();
+        // Only the separately prepaid unnumbered mode binds a fresh requested
+        // ID here. Fixed offers retain their exact original leased round.
+        if selected.mode == NativeOfferMode::Reserved {
+            selected.round = round;
+        }
+        Ok((basis, None, Some(selected)))
     }
 }
 
@@ -382,6 +400,12 @@ impl FileConveneTicket {
         self.native.is_some()
     }
 
+    pub(crate) fn is_reserved_native_learned(&self) -> bool {
+        self.native
+            .as_ref()
+            .is_some_and(|offer| offer.mode == NativeOfferMode::Reserved)
+    }
+
     pub(crate) fn check(&self, host: &FileOversight) -> Result<(), JournalError> {
         let grant = self.grant.upgrade().ok_or(JournalError::Unavailable)?;
         if self.completed || !grant.healthy(host) || self.owner.upgrade().is_none() {
@@ -414,7 +438,10 @@ impl FileConveneTicket {
         };
         if blocked.is_some()
             || !same_native
-            || (native.is_none() && host.convene_round_used(self.round()))
+            || (native
+                .as_ref()
+                .is_none_or(|offer| offer.mode != NativeOfferMode::Fixed)
+                && host.convene_round_used(self.round()))
         {
             return Err(Error::WrongState.into());
         }

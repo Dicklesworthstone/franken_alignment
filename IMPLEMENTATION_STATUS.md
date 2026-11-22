@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: reserve fresh native successors for ordinary learned reviews
+
+The existing fixed-slot learned continuation remains intact. A separate
+one-round native mode now prepays exact additional evaluator, probe and salt
+owners before the first Begin. An explicit later operator request may open a
+fresh round from that reserve within the original action deadline. It keeps
+the same native wrapper, learned packet, generated Message or Finish, numerical
+source, audience and independent human publication requirement.
+
+Both modes use the original weak native offer and one-use ticket mechanism.
+Only the fixed mode can select its exact leased slot; a reserved successor must
+use an unused round ID. Complete predecessor and source checks precede fresh
+topology, policy and clock work. Original aggregate native cost, round capacity,
+polls, history and actor spending remain cumulative. No helper is selected after
+observing a verdict, and no failed or unused reservation is refunded.
+
+This extends the concurrently landed fixed-slot capability rather than
+replacing it. Existing APIs and regression suites remain. New library lifecycle
+and causal-negative regressions accompany the reserved mode. Required RCH
+compilation, runtime tests, Clippy and qualification remain open; no packet is
+closed or source-admission snapshot resealed. Contract:
+`docs/LEARNED_RESERVED_REVIEW.md`.
+
 ## 2026-11-22: drive held learned successors through the original live operator
 
 Live learned actor and resident services now accept the independent finite
