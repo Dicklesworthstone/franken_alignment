@@ -205,7 +205,7 @@ where
 {
     serve_tower_governed_selected(
         config, actor, reviewer_profile, publication, requests, generation,
-        operator_settings, governor_settings, None, time,
+        operator_settings, governor_settings, None, None, time,
     )
 }
 
@@ -228,7 +228,32 @@ where
 {
     serve_tower_governed_selected(
         config, actor, reviewer_profile, publication, requests, generation,
-        operator_settings, governor_settings, Some(topology), time,
+        operator_settings, governor_settings, Some(topology), None, time,
+    )
+}
+
+/// Per-request disclosures use the same original governed owner and finite
+/// schedule. A policy transition retires an active disclosure; it never renews
+/// that row's grant or changes its independently selected expected epoch.
+pub(super) fn serve_tower_governed_prechecked<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    requests: &[u64],
+    generation: u64,
+    operator_settings: &operator::Settings,
+    governor_settings: &governor::Settings,
+    topology: Option<TopologySelection>,
+    prechecks: &precheck::schedule::Schedule,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_tower_governed_selected(
+        config, actor, reviewer_profile, publication, requests, generation,
+        operator_settings, governor_settings, topology, Some(prechecks), time,
     )
 }
 
@@ -242,6 +267,7 @@ fn serve_tower_governed_selected<F>(
     operator_settings: &operator::Settings,
     governor_settings: &governor::Settings,
     topology_selection: Option<TopologySelection>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -282,6 +308,17 @@ where
         operator_settings,
         requests,
     )?;
+    let mut source_paths = vec![config.source.path()];
+    if let Some(publication) = publication {
+        source_paths.extend(publication.input_paths().iter().map(|path| path.as_path()));
+    }
+    governor_settings.check_custody_paths(&source_paths)?;
+    if let Some(schedule) = prechecks {
+        schedule.check_governed_host(
+            &config, actor, reviewer_profile, requests, operator_settings,
+            governor_settings, topology_selection.as_ref(),
+        )?;
+    }
     if let Some(selection) = topology_selection.as_ref() {
         topology::check_destinations(
             &config, requests, actor, reviewer_profile, Some(operator_settings),
@@ -354,7 +391,7 @@ where
         .policy_governor
         .ok_or("guarded bootstrap did not provision the selected governor")?;
     let (port, driver) = host.into_supervised_driver();
-    serve_ready_driver_with_governor(
+    serve_ready_driver_selected(
         config,
         actor,
         reviewer_profile,
@@ -374,6 +411,7 @@ where
         OwnerStart::Ordinary,
         None,
         Some((governor_settings, governor)),
+        prechecks,
         deadline,
         time,
         |host, source, _succeeded| {

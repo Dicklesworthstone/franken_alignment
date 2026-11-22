@@ -146,10 +146,14 @@ independent profiles. Checked creation requires the existing plain publication
 witness profile. Feed, wait, producer, snapshot fallback, whole-domain and joint
 profiles remain explicit refusals; a stronger selected verifier is never reduced
 to plain witness limits. An optional `--topology-profile PATH` retains the
-original mediated owner and source. Precheck and generated/learned modes remain
-outside these ordinary commands; learned governance uses its separate selection
-below. Governed open uses
-the separate explicit recovery selection below. Existing journals are never
+original mediated owner and source. These creation schedules also accept
+`--precheck-schedule SCHEDULE` with independently selected per-request disclosure
+profiles or explicit null rows. The complete selection keeps the same governed
+owner and optional topology; see [scheduled actor prechecks](SCHEDULED_ACTOR_PRECHECK.md).
+The single-request `--precheck-profile` and generated/learned modes remain outside
+these ordinary commands; learned governance uses its separate selection below.
+Governed open uses the separate explicit recovery selection below and does not
+accept this creation-only disclosure schedule. Existing journals are never
 upgraded to campaign governance by an actor or connection.
 
 The complete first canonical image contains the selected publication guard,
@@ -163,6 +167,26 @@ same first image. Policy promotion preserves them: each later effect still binds
 its own original capture and passes final witness validation under its current
 policy epoch. An old human key or a changed required value, absence or range
 cannot be excused by the governor's policy approval.
+
+### Select per-request prechecks with governance
+
+Add `--precheck-schedule SCHEDULE` to either ordinary creation command above.
+Each row selects its existing finite disclosure profile or explicit `null`; the
+governor supplies no disclosure authority. Stop runs before operator/governor
+work, disclosure validation and actor intake. Governor Request/Approve journal
+changes already invalidate an active projection, and promotion cannot renew it.
+The native listener retires and the weak Tower precheck port is removed without
+replenishing queries or replacing the actor session.
+
+Each selected `expected_policy_epoch` must equal the original owner's epoch when
+that row starts. A future-epoch row refuses; no speculative wait or profile
+rewrite occurs. Later actor admission still reacquires current source evidence
+and requires fresh helper and human review. Authored regressions cover actual
+separate governor approval, operator promotion and two original effects,
+including checked publication with topology, plus stale disclosure, changed
+source, human rejection, future epoch and custody failures. Required RCH build
+and runtime execution remain pending; source review and syntax checks are not
+execution evidence.
 
 ### Govern ordinary mediated publication
 
@@ -223,8 +247,12 @@ match the original service and every other selected profile.
 The supervisor-owned socket directory must not be group/other writable. The
 governor socket must be outside the authority store and distinct from the
 actor, operator and every scheduled human/Stop endpoint, including canonical
-ancestor aliases. Existing socket paths are never replaced. Role and pathname
-checks precede clock, source, socket and store work.
+ancestor aliases. With a precheck schedule, the same admission reserves every
+future disclosure listener, the retained schedule/profile filenames, source and
+publication inputs, and original topology/checkpoint paths against that socket.
+Removing an already loaded file does not release its selected custody name.
+Existing socket paths are never replaced. Role and pathname checks precede
+clock, source, socket and store work.
 
 Add this independent optional object to the existing operator profile:
 

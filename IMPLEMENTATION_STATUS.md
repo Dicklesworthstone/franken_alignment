@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: compose scheduled actor disclosure with independent governance
+
+Fresh ordinary Tower `serve-create` and simple-witness `serve-create-checked`
+schedules now accept `--precheck-schedule` alongside the explicitly paired live
+governor and policy-promotion operator, with the existing optional topology.
+The complete selection uses one original guarded owner and its existing finite
+request schedule. No authority, policy evaluator, disclosure implementation or
+source constructor is duplicated. This connects FA-130 and FA-142 functionality.
+
+Every selected disclosure row and retained manifest/profile name is checked
+against the governor's canonical listener before clock, source or owner startup.
+Removed input files still reserve their independently selected names. Future
+listeners, original source, publication inputs and topology/checkpoint custody
+receive the same admission. Literal and existing-parent aliases refuse.
+
+The original loop keeps Stop before operator/governor work, disclosure validity
+and actor intake. Acknowledged owner changes already stale the exact disclosure;
+the native listener and weak Tower port retire without replenishment. The row's
+expected epoch is checked when it starts: future-epoch selections refuse instead
+of waiting for a possible promotion. Current source, original helpers, a fresh
+human key and final witness/topology checks still govern each new effect.
+
+New regression source covers CLI option preservation and original refusals,
+actual separate governor Request/Approve plus operator Promote across two effects,
+checked publication with topology, shared native/Tower disclosure query spending,
+retirement before/after promotion, human rejection, changed source, a later wrong
+epoch and five custody aliases including removed input names. Production and
+regression source have independent review; seven changed Rust files pass syntax
+parsing with the installed nightly, new tests are formatted and whitespace checks
+pass. Required RCH compilation, Clippy, runtime execution and canonical gate remain
+unexecuted because `rch` is unavailable (exit 127). No qualification gate is closed.
+Contracts: `docs/SCHEDULED_ACTOR_PRECHECK.md`, `docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-21: compose governed learned recovery with joint requalification
 
 An explicitly anchored nonpredictive learned sequence now retains its original

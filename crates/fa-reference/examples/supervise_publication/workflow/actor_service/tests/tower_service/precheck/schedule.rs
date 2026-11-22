@@ -409,7 +409,7 @@ fn unsupported_schedule_cli_combinations_refuse_before_opening_any_profile() {
         ("serve-create", vec!["--requests", "7,8", "--precheck-schedule", "/missing/schedule",
             "--precheck-profile", "/missing/precheck"]),
         ("serve-create", vec!["--requests", "7,8", "--precheck-schedule", "/missing/schedule",
-            "--governor-profile", "/missing/governor", "--operator-profile", "/missing/operator"]),
+            "--governor-profile", "/missing/governor"]),
         ("serve-create", vec!["--requests", "7,8", "--precheck-schedule", "/missing/schedule",
             "--guarded", "/missing/recovery"]),
         ("serve-create", vec!["--requests", "7,8", "--precheck-schedule", "/missing/schedule",

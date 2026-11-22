@@ -26,6 +26,35 @@ spent work follow the same owner through every final publication. The witness
 profile must pass the existing `simple_limits` admission; richer producer, feed,
 snapshot, wait and joint profiles remain unsupported in this composition.
 
+## Compose with independent policy governance
+
+A new plain or simple-witness checked owner may also select the existing
+independent governor and operator promotion allowance:
+
+```sh
+target/debug/examples/supervise_publication serve-create \
+  /srv/fa/config.json /srv/fa/actor.json /srv/fa/reviewer.json \
+  --tower-generation 11 --requests 7,8 \
+  --operator-profile /srv/fa/operator.json \
+  --governor-profile /srv/fa/governor.json \
+  --precheck-schedule /srv/fa/precheck-schedule.json
+```
+
+Governed creation requires at least two scheduled requests and the operator's
+explicit `policy_promotion` selection. The governor credentials remain disjoint
+from the actor, operator and human reviewer. The original campaign guard,
+source guard, optional witness guard and terminal reserve are installed in the
+same first canonical image. An optional `--topology-profile` retains the original
+mediated bootstrap, source and checkpoint. See
+[live policy governor](LIVE_POLICY_GOVERNOR.md#start-with-separate-role-custody)
+for the role profiles and separate Request/Approve/Promote exchanges.
+
+The governor does not issue precheck authority. Each row still selects its own
+profile or explicit `null`; all selected query and transport allowances remain
+part of the same finite schedule. This composition applies only to new ordinary
+owners. It does not select governed recovery or change native/learned sequence
+interfaces.
+
 ## Explicit selection for every request
 
 The new schedule is a closed, bounded document:
@@ -131,6 +160,14 @@ topology input and checkpoint output paths. This includes parent symlink aliases
 An existing precheck destination is refused; it is never removed to start a
 service.
 
+When governance is selected, admission also compares the governor socket with
+every future precheck listener, the schedule file, all selected profile files,
+the source path and publication inputs. Loaded schedule/profile names remain
+reserved even if their files are subsequently removed. The original topology
+inputs and checkpoint output retain the same governor custody checks. These
+checks run before the first owner or source bootstrap and include canonical
+ancestor aliases.
+
 Each selected row starts after the preceding request's direct helper children
 are confirmed reaped and the new request's independent Stop transport is
 installed. Stop gets priority before bootstrap and before each precheck turn.
@@ -158,13 +195,30 @@ The next explicitly selected row mounts only its own bounded grant. A null row
 inherits no predecessor facade, and no handoff revives an old socket or restores
 spent queries.
 
+During governed admission, each cooperative turn services Stop first, then the
+independent operator/governor, then the disclosure validity check, then actor
+intake. An acknowledged governor Request or Approve can change the owner
+revision before promotion; that change already retires the active disclosure.
+Policy promotion likewise cannot preserve or renew an earlier projection.
+Neither a reconnect nor a request naming the new epoch creates a replacement
+grant. A later action still passes the original current-policy admission,
+fresh source acquisition, helper review and independent human approval.
+
+Every selected profile's `expected_policy_epoch` must match the original owner
+when that row starts. A later row naming an epoch that has not been reached
+refuses at that check; the service does not wait for a speculative promotion or
+rewrite the selected profile. Earlier acknowledged effects and their charges
+remain in the original journal. This is distinct from a valid current-epoch
+disclosure being retired when policy governance subsequently changes the owner.
+
 ## Unsupported selections
 
 `--precheck-schedule` requires `--tower-generation`, `--requests`, and an
 ordinary plain or simple checked creation. It cannot be combined with:
 
 - `serve-open`, `serve-open-checked` or `--guarded` recovery;
-- `--governor-profile` or an operator policy-promotion selection;
+- a governor without the independent operator's explicit policy-promotion
+  selection, or that promotion selection without its governor;
 - the single-request `--precheck-profile` option;
 - richer checked publication profiles.
 
@@ -180,7 +234,17 @@ admission, aggregate limits, later endpoint aliases and unsupported combinations
 It also covers positive CLI option ordering and the public checked creation CLI
 with two prechecked publications, an independent operator and one cumulative
 topology source/checkpoint.
-This addition has source review only in the authoring environment: its executor
-was disconnected and no remote compilation worker was available. The tests and
-Rust build still require execution through the repository's remote validation
-workflow; the authored cases are not a passing-test or deployment claim.
+
+Governed regression sources add an actual separate governor process, retained
+first-effect review and approval, independent operator promotion, and fresh
+second-effect review. Plain and checked/topology cases preserve their original
+effect and source accounting. Paired cases cover shared native/Tower query
+exhaustion, revoked disclosure paths, no renewal after promotion, a changed
+source, fresh human rejection, a future-epoch row and custody aliases involving
+later listeners or already loaded files.
+
+The governed composition has source review and Rust 2024 syntax parsing only.
+Required RCH compilation and runtime execution remain pending; no configured
+remote compilation worker was available. The authored cases and syntax checks
+are not a passing-test or deployment claim. Revision-specific evidence belongs
+in `IMPLEMENTATION_STATUS.md`.

@@ -81,6 +81,13 @@ promotion invalidates qualification and follows the original failure/Stop path;
 there is no automatic requalification. See [joint governed recovery](docs/LEARNED_JOINT_CREDIBILITY.md#governed-resident-recovery).
 Source and regression review are complete; RCH execution remains pending.
 
+Ordinary Tower creation can combine [scheduled actor prechecks](docs/SCHEDULED_ACTOR_PRECHECK.md)
+with the independent live governor and promotion operator, including the original
+simple-witness and topology selections. Governance changes retire the stale
+disclosure without renewing its finite query allowance; each later effect still
+needs current source evidence and fresh human approval. Source and regression
+review are complete; RCH execution remains pending.
+
 [Learned prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md) can require a
 computed identity check against its actual numerical model before prompt work.
 The complete registered passport and independently observed manifest remain

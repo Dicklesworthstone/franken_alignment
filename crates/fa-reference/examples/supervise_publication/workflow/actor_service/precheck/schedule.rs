@@ -1,7 +1,7 @@
 //! Explicit per-request disclosure custody for one finite ordinary Tower schedule.
 //! All rows and their aggregate allowances are admitted before the first owner.
 //! A null row selects no bootstrap, source capture, cache or disclosure.
-use super::super::{operator, Config, FileSupervisedDriver, PeerProfile, Profile};
+use super::super::{governor, operator, Config, FileSupervisedDriver, PeerProfile, Profile};
 use super::Settings;
 use crate::config::{debug, read_regular};
 use fa_reference::strict_json::{self, Json, Limits};
@@ -14,6 +14,7 @@ const SCHEDULE_BYTES: usize = 512 * 1024;
 
 pub(crate) struct Schedule {
     entries: Vec<(u64, Option<Settings>)>,
+    inputs: Vec<PathBuf>,
 }
 
 impl Schedule {
@@ -21,13 +22,17 @@ impl Schedule {
     /// profile, reuse a previous grant or infer selection from an actor request.
     pub(crate) fn read(path: &Path, requests: &[u64]) -> Result<Self, String> {
         let entries = decode(&read_regular(path, SCHEDULE_BYTES)?, requests)?;
+        // Retain names as well as decoded settings: a file removed after this
+        // read cannot become an independently selected governor listener.
+        let mut inputs = vec![path.to_path_buf()];
+        inputs.extend(entries.iter().filter_map(|(_, path)| path.clone()));
         let entries = entries
             .into_iter()
             .map(|(request, path)| {
                 Ok((request, path.as_deref().map(Settings::read).transpose()?))
             })
             .collect::<Result<Vec<_>, String>>()?;
-        let selected = Self { entries };
+        let selected = Self { entries, inputs };
         selected.check_limits()?;
         Ok(selected)
     }
@@ -41,6 +46,26 @@ impl Schedule {
 
     fn check_limits(&self) -> Result<(), String> {
         Settings::check_schedule(self.entries.iter().filter_map(|(_, row)| row.as_ref()))
+    }
+
+    /// Governance keeps its own role and listener. Admit every future row and
+    /// all retained profile names before creating the original guarded owner.
+    pub(crate) fn check_governed_host(
+        &self,
+        config: &Config,
+        actor: &Profile,
+        reviewer: &PeerProfile,
+        requests: &[u64],
+        operator: &operator::Settings,
+        governor: &governor::Settings,
+        topology: Option<&super::super::super::continuation::creation::topology::Selection>,
+    ) -> Result<(), String> {
+        self.check_host(config, actor, reviewer, requests, Some(operator), topology)?;
+        let paths = self.inputs.iter().map(PathBuf::as_path).chain(
+            self.entries.iter().filter_map(|(_, row)|
+                row.as_ref().map(Settings::socket_path)),
+        ).collect::<Vec<_>>();
+        governor.check_custody_paths(&paths)
     }
 
     /// Reserve every future listener and original input/output identity before

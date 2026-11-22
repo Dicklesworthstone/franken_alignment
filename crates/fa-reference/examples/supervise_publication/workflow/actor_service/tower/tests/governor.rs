@@ -37,6 +37,48 @@ fn explicit_independent_governor_selects_only_a_new_plain_scheduled_tower_owner(
 }
 
 #[test]
+fn governed_creation_keeps_the_complete_explicit_precheck_schedule() {
+    for checked in [false, true] {
+        for topology in [false, true] {
+            let mut args = selected();
+            if checked {
+                args[0] = "serve-create-checked".into();
+                args.insert(4, "witness".into());
+            }
+            args.extend(["--precheck-schedule".into(), "schedule".into()]);
+            if topology {
+                args.extend(["--topology-profile".into(), "topology".into()]);
+            }
+            let positional = if checked { 5 } else { 4 };
+            let mut reversed = args[..positional].to_vec();
+            for pair in args[positional..].chunks_exact(2).rev() {
+                reversed.extend_from_slice(pair);
+            }
+            for args in [&args, &reversed] {
+                let parsed = Arguments::parse(args).unwrap();
+                assert!(!parsed.open);
+                assert_eq!(parsed.precheck_schedule, Some(Path::new("schedule")));
+                assert_eq!(parsed.governor, Some(Path::new("governor")));
+                assert_eq!(parsed.operator, Some(Path::new("operator")));
+                assert_eq!(parsed.publication, checked.then(|| Path::new("witness")));
+                assert_eq!(parsed.topology, topology.then(|| Path::new("topology")));
+                assert_eq!(parsed.requests.as_deref(), Some([7, 8].as_slice()));
+            }
+            for missing in ["--requests", "--operator-profile"] {
+                let mut invalid = args.clone();
+                let index = invalid.iter().position(|value| value == missing).unwrap();
+                invalid.drain(index..index + 2);
+                assert!(Arguments::parse(&invalid).is_err());
+            }
+            let mut recovered = args;
+            recovered[0] = if checked { "serve-open-checked" } else { "serve-open" }.into();
+            recovered.extend(["--guarded".into(), "recovery".into()]);
+            assert!(Arguments::parse(&recovered).is_err());
+        }
+    }
+}
+
+#[test]
 fn governor_selection_cannot_downgrade_recovery_or_actor_only_grammars() {
     let args = selected();
     let mut invalid = Vec::new();

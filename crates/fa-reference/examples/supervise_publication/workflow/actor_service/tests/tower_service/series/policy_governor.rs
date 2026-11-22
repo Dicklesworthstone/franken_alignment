@@ -18,6 +18,8 @@ mod checked;
 mod recovery;
 #[path = "policy_governor/mediated.rs"]
 mod mediated;
+#[path = "policy_governor/precheck.rs"]
+mod precheck;
 
 const CHILD_ROOT: &str = "FA_POLICY_GOVERNOR_E2E_ROOT";
 const CHILD_TEST: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::independent_governor_process";

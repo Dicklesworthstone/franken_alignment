@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-21: combine scheduled actor prechecks with live policy governance
+
+- Admit original per-request precheck schedules for fresh plain/simple-witness
+  Tower publication with an independent governor and promotion operator, including
+  the existing optional topology selection.
+- Run both selected services on the same guarded owner and original service loop.
+  Governance changes retire stale disclosure listeners and Tower ports without
+  renewing grants, spending additional queries or rewriting expected epochs.
+- Retain schedule/profile input names and preflight every future listener against
+  governor custody, source, publication and topology inputs before owner startup.
+- Add real approval/promotion and two-effect regressions, shared transport query
+  budgets, human/source refusals, future-epoch refusal and canonical path aliases.
+- Independent source review, Rust syntax parsing and whitespace checks passed.
+  Required RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-21: requalify joint credibility during governed learned recovery
 
 - Connect explicit governed plain and mediated learned recovery to the original
