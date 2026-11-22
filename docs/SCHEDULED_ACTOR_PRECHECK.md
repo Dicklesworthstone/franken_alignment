@@ -57,6 +57,26 @@ below. Native and learned sequences retain their own selection interfaces.
 
 ## Continue an independently guarded owner
 
+An ordinary plain or simple-witness owner can also recover without a governor
+or topology selection. Select its independent `fa.guarded-submit/1` history and
+floors, the complete original configuration and an explicit finite request
+schedule, which may contain a single request:
+
+```sh
+target/debug/examples/supervise_publication serve-open \
+  /srv/fa/config.json /srv/fa/actor.json /srv/fa/reviewer.json \
+  --tower-generation 12 --requests 7,8 \
+  --guarded /srv/fa/guarded-submit-v1.json \
+  --precheck-schedule /srv/fa/precheck-schedule.json
+```
+
+The [ordinary guarded recovery contract](LIVE_TOWER_RECOVERY.md#ordinary-owners-without-topology-or-a-governor)
+retains the original policy, source and witness requirements, terminal reserve,
+Stop and independent human approval. An optional ordinary operator does not
+obtain policy-promotion authority. Recorded rows must still be explicit nulls,
+and new disclosures must match the actual recovered epoch without changing
+their finite query allowances.
+
 The existing governed plain and simple-witness recovery commands accept the same
 schedule alongside their complete independent recovery selection:
 

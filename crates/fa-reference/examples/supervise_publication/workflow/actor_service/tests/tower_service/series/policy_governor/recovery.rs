@@ -24,6 +24,8 @@ use std::os::unix::fs::PermissionsExt;
 
 #[path = "recovery/precheck.rs"]
 pub(super) mod precheck;
+#[path = "recovery/plain.rs"]
+mod plain;
 
 const RECOVERY_ROOT: &str = "FA_RECOVERED_GOVERNOR_E2E_ROOT";
 const RECOVERY_CHILD: &str = "workflow::actor_service::tests::tower_service::series::policy_governor::recovery::independent_recovered_governor_process";

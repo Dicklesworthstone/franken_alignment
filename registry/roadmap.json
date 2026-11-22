@@ -471,7 +471,9 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/recovery/tests.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/recovery/tests/transport.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/bootstrap/recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/recovery_tests/cooperative.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/recovery_tests/cooperative.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/policy_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/recovery/plain.rs"
       ]
     },
     {
@@ -3960,7 +3962,9 @@
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/precheck.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/precheck_admission.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/schedule.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/precheck/schedule.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/policy_recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/recovery/plain.rs"
       ],
       "founding_ideas": [
         "FI-A13",

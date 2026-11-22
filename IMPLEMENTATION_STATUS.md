@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: recover independently guarded ordinary Tower owners
+
+Plain and simple-witness `serve-open` services can now select the original
+independently anchored guarded recovery without also selecting a topology
+service or policy governor. An explicit finite request schedule, including a
+singleton, binds the resident work. The existing guarded cursor retains the
+complete independently selected policy, source and publication requirements,
+terminal reserve and history floors before its original reconciliation hands
+custody to the existing series owner. No second controller, replay or source
+implementation is introduced.
+
+Optional scheduled prechecks keep their exact post-recovery epochs, finite
+shared query grants and explicit null rows for historical requests. Every new
+effect still needs current source evidence, native review, independent human
+approval and its original final witness. An optional ordinary operator cannot
+acquire a promotion grant without the independent governor. Governed histories
+retain the complete original campaign and governor/operator requirements.
+Stop, unresolved-delivery accounting and acknowledged-history retention use
+their original paths, including startup and intake failures.
+
+Regression sources accompany the implementation and preserve the existing
+governed test modules. Required RCH compilation and runtime qualification remain
+pending because the remote compiler is unavailable. No execution or production
+qualification is claimed and no parent packet is closed. The operator contract
+is `docs/LIVE_TOWER_RECOVERY.md`.
+
 ## 2026-11-22: ordinary containment through paired operator recovery
 
 The ordinary no-predictor profile now connects the complete existing operator

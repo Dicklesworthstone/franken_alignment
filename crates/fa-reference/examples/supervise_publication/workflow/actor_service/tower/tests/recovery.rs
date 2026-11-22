@@ -1,4 +1,4 @@
-//! Explicit paired recovery selection owns its entire grammar before any I/O.
+//! Explicit independent recovery selection owns its entire grammar before I/O.
 use super::*;
 
 #[test]
@@ -6,7 +6,6 @@ fn guarded_precheck_schedules_keep_complete_plain_or_mediated_governor_selection
     for checked in [false, true] {
         for governed in [false, true] {
             for mediated in [false, true] {
-                if !governed && !mediated { continue; }
                 let mut positional = vec![
                     if checked { "serve-open-checked" } else { "serve-open" },
                     "config", "actor", "reviewer",
@@ -47,6 +46,74 @@ fn guarded_precheck_schedules_keep_complete_plain_or_mediated_governor_selection
                     }
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn plain_guarded_recovery_accepts_singletons_and_optional_operator_without_topology() {
+    for checked in [false, true] {
+        for operator in [false, true] {
+            for scheduled in [false, true] {
+                for requests in ["7", "7,8"] {
+                    let mut positional = vec![
+                        if checked { "serve-open-checked" } else { "serve-open" },
+                        "config", "actor", "reviewer",
+                    ];
+                    if checked { positional.push("witness"); }
+                    let mut pairs = vec![
+                        [FLAG, "91"], ["--requests", requests], ["--guarded", "recovery"],
+                    ];
+                    if operator { pairs.push(["--operator-profile", "operator"]); }
+                    if scheduled { pairs.push(["--precheck-schedule", "schedule"]); }
+                    for first in 0..pairs.len() {
+                        let mut args: Vec<_> = positional.iter().map(|part| (*part).to_owned()).collect();
+                        for pair in pairs.iter().cycle().skip(first).take(pairs.len()) {
+                            args.extend(pair.iter().map(|part| (*part).to_owned()));
+                        }
+                        let selected = Arguments::parse(&args).unwrap();
+                        assert!(selected.open);
+                        assert_eq!(selected.generation, 91);
+                        assert_eq!(selected.requests, Some(if requests == "7" { vec![7] } else { vec![7, 8] }));
+                        assert_eq!(selected.guarded, Some(Path::new("recovery")));
+                        assert_eq!(selected.publication, checked.then(|| Path::new("witness")));
+                        assert_eq!(selected.operator, operator.then(|| Path::new("operator")));
+                        assert_eq!(selected.precheck_schedule, scheduled.then(|| Path::new("schedule")));
+                        assert!(selected.governor.is_none());
+                        assert!(selected.topology.is_none());
+                        assert!(selected.precheck.is_none());
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn plain_guarded_recovery_refuses_incomplete_or_conflicting_selection_before_reads() {
+    for checked in [false, true] {
+        for (create, suffix) in [
+            (false, vec![FLAG, "91", "--guarded", "recovery"]),
+            (false, vec![FLAG, "91", "--guarded", "recovery", "--precheck-profile", "precheck"]),
+            (false, vec![FLAG, "91", "--guarded", "recovery", "--requests", "7", "--precheck-profile", "precheck"]),
+            (false, vec![FLAG, "91", "--guarded", "recovery", "--requests", "7", "--guarded", "other"]),
+            (false, vec![FLAG, "91", "--requests", "7", "--precheck-schedule", "schedule"]),
+            (false, vec![FLAG, "91", "--guarded", "recovery", "--requests", "7", "--governor-profile", "governor"]),
+            (true, vec![FLAG, "91", "--guarded", "recovery", "--requests", "7"]),
+        ] {
+            let mode = match (create, checked) {
+                (false, false) => "serve-open",
+                (false, true) => "serve-open-checked",
+                (true, false) => "serve-create",
+                (true, true) => "serve-create-checked",
+            };
+            let mut args: Vec<_> = [mode, "unread-config", "unread-actor", "unread-reviewer"]
+                .into_iter().map(str::to_owned).collect();
+            if checked { args.push("unread-witness".into()); }
+            args.extend(suffix.into_iter().map(str::to_owned));
+            let expected = Arguments::parse(&args).err().unwrap();
+            assert_eq!(command_with_clock(&args, None,
+                || panic!("invalid ordinary guarded recovery reached clock")).unwrap_err(), expected);
         }
     }
 }

@@ -1,4 +1,4 @@
-//! Independently anchored ordinary recovery with fresh governor custody.
+//! Independently anchored ordinary recovery with optional fresh governor custody.
 //! The original cursor owns replay, fencing, reconciliation and Stop. No old
 //! approval, service cache, source observation or actor proposal is recreated.
 use super::{
@@ -64,6 +64,54 @@ pub(super) fn serve<F>(
     operator: &operator::Settings,
     governor: &governor::Settings,
     prechecks: Option<&precheck::schedule::Schedule>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config, actor, reviewer, publication, credibility, profile, requests, generation,
+        Some(operator), Some(governor), prechecks, time,
+    )
+}
+
+/// Recover the original ordinary guard inventory without provisioning policy
+/// governance. The independently selected configuration remains the complete
+/// effective policy; no campaign or richer guard may be silently omitted.
+pub(super) fn serve_plain<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    profile: &SubmitProfile,
+    requests: &[u64],
+    generation: u64,
+    operator: Option<&operator::Settings>,
+    prechecks: Option<&precheck::schedule::Schedule>,
+    time: F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_selected(
+        config, actor, reviewer, publication, credibility, profile, requests, generation,
+        operator, None, prechecks, time,
+    )
+}
+
+fn serve_selected<F>(
+    config: Config,
+    actor: &Profile,
+    reviewer: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    credibility: Option<&Path>,
+    profile: &SubmitProfile,
+    requests: &[u64],
+    generation: u64,
+    operator: Option<&operator::Settings>,
+    governor: Option<&governor::Settings>,
+    prechecks: Option<&precheck::schedule::Schedule>,
     mut time: F,
 ) -> Result<(), String>
 where
@@ -74,15 +122,23 @@ where
     let validation = publication
         .map(PublicationProfile::simple_limits)
         .transpose()?;
-    if generation == 0 || requests.len() < 2 {
-        return Err("governed recovery requires a nonzero Tower generation and at least two explicitly scheduled requests".into());
+    let minimum_requests = if governor.is_some() { 2 } else { 1 };
+    if generation == 0 || requests.len() < minimum_requests {
+        return Err("guarded recovery requires a nonzero Tower generation and an explicit request schedule; governance requires at least two requests".into());
     }
-    if profile.campaign_requirement() != Some(governor.campaign_requirement()) {
-        return Err("governed recovery requires fa.guarded-submit/2 with the exact independently selected governor campaign limits".into());
+    if operator.is_some_and(|settings| settings.policy_promotion.is_some()) != governor.is_some() {
+        return Err("live policy promotion requires both an independent governor and an explicit operator promotion allowance".into());
+    }
+    if let Some(governor) = governor {
+        if profile.campaign_requirement() != Some(governor.campaign_requirement()) {
+            return Err("governed recovery requires fa.guarded-submit/2 with the exact independently selected governor campaign limits".into());
+        }
+    } else {
+        profile.require_legacy()?;
     }
     if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN {
         return Err(
-            "governed recovery requires the configured Unix-millisecond clock domain".into(),
+            "guarded recovery requires the configured Unix-millisecond clock domain".into(),
         );
     }
     actor.check_host(&config)?;
@@ -97,10 +153,17 @@ where
             ]
         })
         .collect();
-    endpoints.push(governor.socket.clone());
+    endpoints.extend(governor.map(|settings| settings.socket.clone()));
     let paths: Vec<_> = endpoints.iter().map(|path| path.as_path()).collect();
-    operator.check_host(&config, actor, reviewer, &paths)?;
-    governor.check_host(&config, actor, reviewer, operator, requests)?;
+    if let Some(operator) = operator {
+        operator.check_host(&config, actor, reviewer, &paths)?;
+    }
+    if let Some(governor) = governor {
+        governor.check_host(
+            &config, actor, reviewer,
+            operator.expect("independent promotion operator checked above"), requests,
+        )?;
+    }
     let custody = profile.admit(&config)?;
     check_destinations(actor, reviewer, operator, governor, requests, &custody)?;
     if let Some(schedule) = prechecks {
@@ -110,7 +173,7 @@ where
             paths.extend(publication.input_paths().iter().map(PathBuf::as_path));
         }
         schedule.check_recovery_host(
-            &config, actor, reviewer, requests, Some(operator), Some(governor), &paths,
+            &config, actor, reviewer, requests, operator, governor, &paths,
         )?;
     }
 
@@ -161,14 +224,15 @@ where
     {
         return Err(retain_failure(&custody, &owner, revision, error));
     }
-    let fresh_governor = match roles.policy_governor {
-        Some(role) => role,
-        None => {
+    let live_governor = match (governor, roles.policy_governor) {
+        (Some(settings), Some(role)) => Some((settings, role)),
+        (None, None) => None,
+        _ => {
             return Err(retain_failure(
                 &custody,
                 &owner,
                 revision,
-                "guarded recovery did not return the required fresh governor".into(),
+                "guarded recovery returned a different governor inventory than selected".into(),
             ));
         }
     };
@@ -210,7 +274,7 @@ where
             credibility,
         },
         Some(generation),
-        Some(operator),
+        operator,
         socket,
         port,
         driver,
@@ -218,7 +282,7 @@ where
         None,
         OwnerStart::Reconciled,
         Some(control),
-        Some((governor, fresh_governor)),
+        live_governor,
         prechecks,
         deadline,
         time,
@@ -266,16 +330,18 @@ where
 fn check_destinations(
     actor: &Profile,
     reviewer: &PeerProfile,
-    operator: &operator::Settings,
-    governor: &governor::Settings,
+    operator: Option<&operator::Settings>,
+    governor: Option<&governor::Settings>,
     requests: &[u64],
     custody: &Custody,
 ) -> Result<(), String> {
-    let mut sockets = vec![
-        canonical_destination(&actor.socket)?,
-        canonical_destination(&operator.socket)?,
-        canonical_destination(&governor.socket)?,
-    ];
+    let mut sockets = vec![canonical_destination(&actor.socket)?];
+    if let Some(operator) = operator {
+        sockets.push(canonical_destination(&operator.socket)?);
+    }
+    if let Some(governor) = governor {
+        sockets.push(canonical_destination(&governor.socket)?);
+    }
     for &request in requests {
         sockets.push(canonical_destination(&reviewer.socket(request))?);
         sockets.push(canonical_destination(

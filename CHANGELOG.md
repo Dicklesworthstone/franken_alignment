@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22: independently guarded ordinary Tower recovery
+
+- Resume plain and simple-witness Tower owners through the original guarded
+  replay without requiring topology or policy governance.
+- Keep the independent history anchor, full original policy and guards,
+  terminal reserve, reconciliation, Stop and acknowledged-history retention.
+- Support explicit finite schedules, including a singleton, optional bounded
+  prechecks and an ordinary operator while preserving fresh native/human review.
+- Refuse promotion grants without their independent governor and retain all
+  original governed recovery requirements and regression modules.
+- Add service and command regression coverage; required RCH compilation and
+  runtime qualification remain pending.
+
 ## 2026-11-22: connect ordinary containment to paired operator recovery
 
 - Connect ordinary no-predictor streams to offline capture, authority narrowing,

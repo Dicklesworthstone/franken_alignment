@@ -1,4 +1,47 @@
-# Recover the original topology-enforced Tower service
+# Recover the original guarded Tower service
+
+## Ordinary owners without topology or a governor
+
+An ordinary `serve-open` or `serve-open-checked` deployment can select guarded
+recovery directly, without adding a topology service or policy governor:
+
+```sh
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation 41 --requests 8 --guarded RECOVERY_PROFILE
+supervise_publication serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation 41 --requests 8,9 --guarded RECOVERY_PROFILE --operator-profile OPERATOR_PROFILE
+```
+
+This selection requires an explicit finite `--requests` schedule, which may
+contain one request. Its `fa.guarded-submit/1` profile independently supplies the
+original history anchor and revision/control/authority floors. The complete
+policy and source guard come from the selected original configuration; a checked
+service also retains its exact simple publication-witness requirement. Neither
+an omitted guard nor a different policy can reopen a guarded history. An owner
+with a campaign governor still requires the separate governed recovery contract.
+
+The same original guarded cursor replays the complete journal under the original
+Stop listener and deadline. Its native Fence/Time/Sweep reconciles prior work
+before the original resident request loop resumes. Unknown or dispatched
+liabilities cannot be refunded or silently resent. Selected history retention
+also runs after acknowledged reconciliation when later startup or intake fails.
+
+An optional ordinary operator retains its own finite grant. A policy-promotion
+grant requires the independent governor selection and cannot be used by this
+plain path. Each new effect still needs current source evidence, native helper
+review, independent human approval and any original final witness check.
+
+The finite [precheck schedule](SCHEDULED_ACTOR_PRECHECK.md) can accompany this
+recovery selection. Recorded requests require explicit null disclosure rows;
+new rows must name the actual recovered policy epoch and retain their original
+finite query limits. Recovery does not rewrite epochs or turn a precheck into
+publication authority. The independent Stop remains first during replay and
+live intake, including partial actor frames.
+
+This composition uses the original authority store, guarded finalizer and
+resident owner. It introduces no new journal format or recovery authority.
+Source and regression coverage are present; required RCH compilation and runtime
+qualification remain pending.
+
+## Topology-enforced owners
 
 The Linux `supervise_publication` service can reopen an independently retained
 mediated owner and continue through its original Tower endpoint:
@@ -26,7 +69,8 @@ allowance. The source profile remains exact `fa.mediated-submit/2` custody for
 the same history. A governed schedule must contain at least two request keys
 and at least one new request; an entirely historical schedule uses the ordinary
 source-free receipt service without a governor. Scheduled and live-governor
-recovery do not accept precheck profiles.
+recovery use the explicit per-request `--precheck-schedule` selection rather
+than the single-request `--precheck-profile` option.
 
 ## Independent history and source custody
 
@@ -157,7 +201,8 @@ The original authenticated Stop remains first during replay, source acquisition
 and live intake, including incomplete precheck or actor frames. A pending replay
 Stop follows the sealed admission path described above before any disclosure or
 new source rebind. The optional operator endpoint retains its separate custody.
-`--requests` schedules and live-governor precheck remain unsupported.
+For `--requests` schedules and live-governor recovery, use the separate
+[`--precheck-schedule` contract](SCHEDULED_ACTOR_PRECHECK.md).
 
 ### Schedules and recorded requests
 

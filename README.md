@@ -96,6 +96,15 @@ disclosure without renewing its finite query allowance; each later effect still
 needs current source evidence and fresh human approval. Source and regression
 review are complete; RCH execution remains pending.
 
+Ordinary Tower recovery can select its original independent history anchor,
+complete policy and guards without requiring topology or a policy governor.
+The same guarded replay and reconciliation feed one resident owner with an
+explicit finite request schedule, optional bounded prechecks and optional
+ordinary operator. Current source evidence, fresh native and human review,
+original witness checks and Stop remain mandatory. See
+[ordinary guarded recovery](docs/LIVE_TOWER_RECOVERY.md#ordinary-owners-without-topology-or-a-governor);
+required RCH compilation and runtime qualification remain pending.
+
 The same scheduled disclosure selection now follows supported independently
 guarded ordinary recovery, including governed plain/simple-witness and original
 mediated owners. Recorded requests require explicit null rows; new disclosures

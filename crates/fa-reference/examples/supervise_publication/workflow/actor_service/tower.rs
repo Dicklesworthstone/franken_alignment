@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -146,7 +146,9 @@ impl<'a> Arguments<'a> {
             && (requests.is_none() || (open && guarded.is_none())
                 || precheck.is_some()))
             || (requests.is_some() && precheck.is_some())
-            || (guarded.is_some() && (!open || (topology.is_none() && governor.is_none())))
+            || (guarded.is_some() && !open)
+            || (guarded.is_some() && topology.is_none() && governor.is_none()
+                && (requests.is_none() || precheck.is_some()))
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()
                 && (precheck.is_some()
@@ -331,6 +333,22 @@ where
     }
     if let Some(path) = selected.guarded {
         let recovery = SubmitProfile::read(path)?;
+        if selected.topology.is_none() {
+            return super::policy_recovery::serve_plain(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                credibility,
+                &recovery,
+                selected.requests.as_deref()
+                    .expect("plain guarded request schedule checked before reads"),
+                selected.generation,
+                operator.as_ref(),
+                recovery_prechecks.as_ref(),
+                time,
+            );
+        }
         let topology = RecoveryTopologySelection::read(
             selected
                 .topology

@@ -206,13 +206,19 @@ fn governed_recovery_requires_guarded_operator_and_schedule_in_both_open_modes()
             assert!(selected.topology.is_none());
             assert!(selected.precheck.is_none());
         }
+        // Removing the governor now selects ordinary guarded recovery. The
+        // independently loaded promotion allowance and complete guard history
+        // still reject an actual governed deployment without its governor.
+        let mut ordinary = args.clone();
+        let index = ordinary.iter().position(|value| value == "--governor-profile").unwrap();
+        ordinary.drain(index..index + 2);
+        let selected = Arguments::parse(&ordinary).unwrap();
+        assert!(selected.governor.is_none());
+        assert!(selected.guarded.is_some());
+        assert!(selected.operator.is_some());
+
         let mut invalid = Vec::new();
-        for missing in [
-            "--guarded",
-            "--governor-profile",
-            "--operator-profile",
-            "--requests",
-        ] {
+        for missing in ["--guarded", "--operator-profile", "--requests"] {
             let mut changed = args.clone();
             let index = changed.iter().position(|value| value == missing).unwrap();
             changed.drain(index..index + 2);
