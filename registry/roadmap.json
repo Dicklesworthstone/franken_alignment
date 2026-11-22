@@ -786,7 +786,18 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/precheck.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/joint_creation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/mediated.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "docs/LIVE_POLICY_GOVERNOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
       ]
     },
     {
@@ -840,7 +851,17 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs",
         "docs/LEARNED_IDENTITY_OPERATOR.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/identity_lifecycle.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/joint_creation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/mediated.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "docs/LIVE_POLICY_GOVERNOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2612,7 +2633,18 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/qualification.rs",
         "docs/LEARNED_OPERATOR_PUBLICATION.md",
         "docs/RESIDENT_NATIVE_PUBLICATION.md",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/joint_creation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/mediated.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "docs/LIVE_POLICY_GOVERNOR.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3472,7 +3504,16 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/requirements.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/governor/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_recovery.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_requalification.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recipe.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/joint_creation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/mediated.rs",
+        "docs/LEARNED_JOINT_CREDIBILITY.md",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
       ],
       "founding_ideas": [
         "FI-A14",

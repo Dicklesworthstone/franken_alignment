@@ -129,7 +129,7 @@ fn block_asset(root: &Root) -> (PathBuf, Vec<u8>, String) {
 }
 
 #[test]
-fn governed_joint_recovery_admits_its_capsule_selection_but_not_creation_or_forecast_rebinding() {
+fn governed_joint_recovery_admits_its_capsule_but_not_creation_activation_or_forecast_rebinding() {
     let root = Root::new();
     let selected = Selection::new(&root);
     let governor = live_governor::Settings::read(&root.0.join("governor.json")).unwrap();
@@ -145,19 +145,27 @@ fn governed_joint_recovery_admits_its_capsule_selection_but_not_creation_or_fore
         selected.unchanged(&root);
     }
 
-    // Admission of an original recovered guard cannot enable it in a new live
-    // governor. This decision precedes every asset, including the blocked one.
+    // The complete guard can now select the original creation baseline. That
+    // admission is separate from activating a capsule, which remains recovery
+    // only and must refuse before the same blocked asset or existing history.
     for path in &selected.paths[1..] {
-        assert!(recipe::GovernedRecipe::read_recovery(path, campaign).is_ok());
-        let error = match recipe::GovernedRecipe::read(path, &selected.config, campaign) {
-            Ok(_) => panic!("joint recovery recipe admitted as a new governor"),
-            Err(error) => error,
-        };
-        assert!(
-            error.contains("joint credibility requires explicit recovery"),
-            "{error}"
-        );
+        let recovered = recipe::GovernedRecipe::read_recovery(path, campaign).unwrap();
+        let baseline = recipe::GovernedRecipe::read(path, &selected.config, campaign).unwrap();
+        assert!(baseline.joint_policy().is_some());
+        assert_eq!(baseline.joint_policy(), recovered.joint_policy());
     }
+    let mut creation = selected.args.clone();
+    for flag in ["--after-message", "--history-anchor"] {
+        let at = creation.iter().position(|arg| arg == flag).unwrap();
+        creation.drain(at..at + 2);
+    }
+    creation.extend(["--campaign-profile".into(),
+        root.0.join("campaigns.json").display().to_string()]);
+    let error = resident::command_with_clock(&creation, Some(&capsule),
+        || panic!("creation activation reached the clock")).unwrap_err();
+    assert!(error.contains("credibility activation requires explicit live recovery"), "{error}");
+    assert_ne!(error, asset_error);
+    selected.unchanged(&root);
 
     for owned in [false, true] {
         // Put the predictor in the LATER recipe: every recipe must be checked

@@ -12,6 +12,8 @@ mod recovered;
 mod mediated;
 #[path = "sequence_governor/qualification_admission.rs"]
 mod qualification_admission;
+#[path = "sequence_governor/joint_creation.rs"]
+mod joint_creation;
 
 use super::super::super::operator as learned_operator;
 use super::*;
@@ -338,9 +340,18 @@ fn learned_promotion_never_substitutes_for_the_second_human_decision() {
 }
 
 fn governed_sequence(decision: ReviewDecision) {
+    governed_sequence_selected(decision, false);
+}
+
+fn governed_sequence_selected(decision: ReviewDecision, joint: bool) {
     let root = Root::new();
-    let (config, paths, entries) = selected(&root, None, None);
+    let (config, paths, mut entries) = selected(&root, None, None);
+    if joint {
+        joint_creation::install(&config, &paths, &mut entries);
+    }
     let mut reader = Reader::new(&root, &paths[0]);
+    let original_joint = reader.loaded.generation.required_held_out_joint();
+    assert_eq!(original_joint.is_some(), joint);
     let mut peers = Peers::new(&root, &config, &entries);
     let mut child = GovernorChild::start(&root);
     let (governor_path, operator_path, _) = selections(&root, &entries[0].actor, child.0.id());
@@ -525,6 +536,10 @@ fn governed_sequence(decision: ReviewDecision) {
         "promotion must not regenerate a ready Message or replenish generation work"
     );
     assert_eq!(host.current_policy().unwrap(), &policy());
+    assert_eq!(host.held_out_joint_policy().unwrap(), original_joint);
+    // This baseline never claimed held-out qualification. Promotion and the
+    // later recovery Fence must not manufacture one or change its joint guard.
+    host.check_credibility().unwrap();
     quiescent(&root);
 }
 

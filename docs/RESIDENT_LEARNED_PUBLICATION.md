@@ -24,6 +24,13 @@ service retains those allowances across every message and helper handoff. See
 [live learned governance](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
 for complete profiles, mode exclusions and the stable post-generation cut.
 
+Every entry may also select the complete original joint credibility envelope.
+Its policy and both work ceilings must agree across the decoded documents before
+model/helper assets are loaded. The original first image installs the guard and
+retains its baseline committee across independent policy promotion; it does not
+activate held-out qualification. Fresh creation still refuses an activation
+capsule. See [joint governed creation](LEARNED_JOINT_CREDIBILITY.md#governed-resident-creation).
+
 This selection composes with the original `--topology-profile` creation and
 recovery paths. The same constructor or guarded cursor returns both original
 governor and source-observer custody. A mediated recovery requires an exact v2
@@ -291,8 +298,9 @@ certification and new numerical generation. Later entries reuse the same live
 qualification and check currentness without rereading the capsule. Governor Request/Approve
 cannot replace it, and a policy Promote invalidates qualification for the old
 policy. The next boundary requiring it refuses through the existing failure/Stop
-handling; no later entry implicitly requalifies. Governed learned creation and
-policy-bound raw/owned forecast selections keep their existing refusals. The
+handling; no later entry implicitly requalifies. Governed learned creation can
+select the original baseline guard but still refuses activation; policy-bound
+raw/owned forecast selections keep their existing refusals. The
 capsule path cannot alias the governor listener, even through a canonical parent
 or when the final file has not yet been provisioned.
 

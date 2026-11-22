@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-21: publish from the governed learned joint baseline
+
+- Admit the existing joint credibility envelope for fresh plain and mediated
+  governed learned sequences through the original atomic guarded constructor.
+- Compare the full joint policy and its presence across frozen recipe documents
+  before model/helper assets, retaining complete loaded-generation equality.
+- Preserve baseline publication across independent campaign approval and policy
+  promotion, with current source, native review, final witnesses and fresh human
+  decisions for every effect. Creation activation and policy-bound forecast
+  governance retain their original refusals.
+- Add eight substantive regression functions for publication, human/source
+  refusal, full policy equality, direct admission and atomic baseline creation.
+- Independent source review, qualified-nightly Rust syntax parsing and whitespace
+  checks pass. Required RCH compilation and runtime
+  qualification remain pending; no qualification gate is closed.
+
 ## 2026-11-21: combine scheduled actor prechecks with live policy governance
 
 - Admit original per-request precheck schedules for fresh plain/simple-witness

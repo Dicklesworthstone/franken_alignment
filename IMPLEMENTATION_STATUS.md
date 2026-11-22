@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: publish from the governed learned joint baseline
+
+Fresh nonpredictive governed learned sequences now admit the complete original
+joint credibility envelope, including the original topology-mediated selection.
+The existing guarded constructor installs the joint policy, campaign inventory,
+source, numerical generation, stream and terminal reserve in the first canonical
+image. Independent governor and operator custody remains separate from every
+effect's native review and fresh human approval. This connects existing FA-025,
+FA-026, FA-105 and FA-130 functionality without a new controller or journal event.
+
+Every decoded recipe must select the identical full joint policy before any
+model/helper asset is read. The comparison includes all eight policy fields,
+both work ceilings and guard presence. The complete loaded-generation and stream
+comparison still follows. Creation uses the original baseline committee and
+still refuses an activation capsule. Independent campaign Request/Approve and
+operator Promote can preserve that baseline; an actually activated committee
+continues to lose qualification after a policy change. Raw/owned policy-bound
+forecast governance retains its original refusal.
+
+Eight new regression functions cover real fixture Message/Message/Finish across
+independent policy promotion in plain and mediated sequences, paired fresh human
+rejection, final topology-source failure, every joint field before assets with
+an equal-policy control, direct activation/predictor/campaign/generation refusals,
+and atomic original baseline construction. Existing lifecycle assertions remain
+intact, including cumulative numerical work and confirmed effects.
+
+Independent source review found no blocking issue. All eight changed Rust files
+pass qualified-nightly syntax parsing; the new test module is formatted and
+owned-path whitespace checks pass. Required RCH compilation,
+Clippy, runtime execution and the canonical gate remain pending: the fresh
+verification attempt exits 127 because `rch` is unavailable, before compilation.
+No execution or roadmap gate is closed. Contracts:
+`docs/LEARNED_JOINT_CREDIBILITY.md`, `docs/RESIDENT_LEARNED_PUBLICATION.md`,
+`docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-21: compose scheduled actor disclosure with independent governance
 
 Fresh ordinary Tower `serve-create` and simple-witness `serve-create-checked`

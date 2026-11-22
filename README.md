@@ -73,6 +73,14 @@ witness and independent human checks. The new paired regression paths cover
 actual native publication across policy promotion and human rejection; their
 required RCH execution remains pending.
 
+Fresh governed learned sequences now accept that same complete joint-review
+guard with their original baseline committee, including the original topology
+selection. Every recipe must agree on the full guard before model/helper assets
+are loaded. Independent policy promotion preserves the baseline's original
+source, native review, final witness and human-approval requirements. Fresh
+activation remains refused. See [joint governed creation](docs/LEARNED_JOINT_CREDIBILITY.md#governed-resident-creation);
+required RCH compilation and runtime qualification remain pending.
+
 Governed learned recovery can also retain the original joint credibility guard
 and select one fresh capsule for the recovered owner, including exact paired
 mediated recovery. The original Fence, full policy/campaign/joint requirements,

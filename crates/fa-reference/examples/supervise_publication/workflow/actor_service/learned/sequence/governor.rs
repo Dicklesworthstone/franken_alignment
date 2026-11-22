@@ -166,7 +166,6 @@ pub(super) fn check(
                 .generation
                 .required_owned_pre_output_forecast()
                 .is_some()
-            || (!continuing && loaded.generation.required_held_out_joint().is_some())
         {
             return Err(INVALID.into());
         }

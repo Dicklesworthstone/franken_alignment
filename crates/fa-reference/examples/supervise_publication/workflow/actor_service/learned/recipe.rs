@@ -150,7 +150,7 @@ impl GovernedRecipe {
         campaigns: FileCampaignRequirement,
     ) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
-        Self::check_supported(&recipe, false)?;
+        Self::check_supported(&recipe)?;
         if recipe
             .expected_policy
             .as_ref()
@@ -172,25 +172,29 @@ impl GovernedRecipe {
         campaigns: FileCampaignRequirement,
     ) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
-        Self::check_supported(&recipe, true)?;
+        Self::check_supported(&recipe)?;
         if recipe.expected_policy.is_none() || recipe.expected_campaigns != Some(campaigns) {
             return Err("learned governor recovery requires an explicit full effective policy and exact original campaign limits in every recipe".into());
         }
         Ok(Self(recipe))
     }
 
-    fn check_supported(recipe: &Recipe, recovering: bool) -> Result<(), String> {
+    fn check_supported(recipe: &Recipe) -> Result<(), String> {
         // Forecast registrations are immutable and bound to their original
         // policy generation. A promotion cannot rebind those numerical owners.
-        // Joint qualification instead has an existing explicit native
-        // activation, which recovery may select once for the original owner.
+        // A joint guard instead belongs to the original first image. Its
+        // baseline remains usable; only recovery may separately select the
+        // existing native credibility activation.
         if recipe.files.forecast.is_some() || !recipe.continuation {
             return Err("live learned governor requires nonpredictive finite message continuation".into());
         }
-        if !recovering && recipe.joint.is_some() {
-            return Err("live learned governor joint credibility requires explicit recovery".into());
-        }
         Ok(())
+    }
+
+    /// Compare every selected joint field before the first numerical/helper
+    /// asset. Absence is an explicit selection, never a weaker fallback.
+    pub(super) fn joint_policy(&self) -> Option<HeldOutJointPolicy> {
+        self.0.joint
     }
 
     /// Available before numerical assets so a later recipe cannot change the

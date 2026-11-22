@@ -141,6 +141,43 @@ Receipt-only and terminal recovery do not acquire a new qualification merely
 to settle an existing effect or stop the original owner. Their original
 restricted consumers and evidence requirements remain in force.
 
+## Governed resident creation
+
+A fresh nonpredictive learned sequence can select the same joint envelope while
+serving the independent live policy governor. Use the existing creation inputs:
+
+```text
+supervise_publication serve-learned-generated CONFIG JOINT_SEQUENCE REVIEWER_PROFILE \
+  --campaign-profile CAMPAIGN_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41 \
+  --governor-profile GOVERNOR_PROFILE
+```
+
+The sequence still requires at least two Messages and may end with Finish.
+Every entry must select the identical complete joint policy, including its
+identity, generation, both population minima, both rate limits and both work
+ceilings. Mixing a guarded entry with an unguarded entry also refuses. These
+comparisons use the admitted recipe documents before any model/helper asset is
+loaded. The original full loaded-generation and stream comparisons remain in
+force afterward.
+
+The original constructor installs the joint guard in the first canonical image,
+alongside the independently selected campaigns, source, numerical owner, stream
+and terminal reserve. With the existing topology selection it also retains the
+original mediated source and publication guards. The complete selection supplies
+one original owner and separate governor, operator and human-review custody.
+
+This owner starts with its original baseline committee. Installing the guard
+does not constitute held-out activation or invent campaign history. Fresh
+creation still refuses `--credibility-activation`. Independent campaign Request
+and Approve, followed by the separate operator's policy Promote, can continue
+baseline publication under the original native review, current source, selected
+publication witnesses and fresh human approval for every Message and Finish.
+All original numerical, source, campaign and transport allowances remain finite
+and cumulative. Once a later explicit recovery has actually activated held-out
+qualification, its normal policy/currentness invalidation rules apply; that
+owner cannot fall back to the baseline when qualification becomes stale.
+
 ## Governed resident recovery
 
 An explicitly recovered, nonpredictive resident sequence can retain its original
@@ -184,12 +221,21 @@ aliases through existing parent directories and paths whose final file does not
 yet exist. This custody check precedes model/helper assets, the invocation clock
 and authority-store opening. Raw and owned forecast selections remain outside
 governed recovery because policy promotion cannot rebind their original
-policy-generation registrations. Governed learned creation still refuses joint
-selection and activation; ordinary joint creation retains its baseline contract
-above. See [governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
+policy-generation registrations. Governed learned creation retains the baseline
+contract above and still refuses activation. See
+[governed learned recovery](LIVE_POLICY_GOVERNOR.md#recover-a-governed-learned-sequence)
 for the complete role, campaign and numerical-replay profiles.
 
 ## Verification boundary
+
+The governed resident creation addition has independent source review and
+qualified-nightly Rust syntax parsing. Its eight
+new regression functions cover actual fixture Message/Message/Finish across
+independent promotion in plain and mediated owners, paired human rejection,
+final source failure, complete policy equality before assets, direct admission
+boundaries and original atomic baseline construction. Required RCH compilation
+and runtime execution remain pending; these sources do not establish calibrated
+helper reliability or qualify the new live-governor composition.
 
 The governed resident recovery addition has independent source review and Rust
 2024 syntax parsing; its required RCH compilation and runtime execution remain

@@ -384,8 +384,10 @@ This selection creates a new nonpredictive learned owner, optionally with the
 original `--topology-profile PATH` selection. Creation refuses continuation and
 recovery selections; the explicit anchored recovery selection below accepts
 them without a creation campaign profile. Forecast selections still refuse
-before model/helper assets or live resources are acquired. Joint credibility
-remains recovery-only and can select the independent activation described below. The closed argv also
+before model/helper assets or live resources are acquired. The existing joint
+credibility envelope can select the original baseline committee during creation;
+fresh held-out activation remains restricted to explicit recovery as described
+below. The closed argv also
 admits the existing optional checkpoint before generation and new output history
 anchor. A version-two sequence may select its original per-entry precheck
 listeners; those remain observations and cannot create governor authority.
@@ -406,6 +408,23 @@ the governor and the separately issued observer that binds the source. Only
 that acknowledged creation supplies custody to the live service. There is no
 late campaign enable, reopened role getter, replacement numerical owner or
 approval reconstructed from report bytes.
+
+### Retain the original joint baseline
+
+Each recipe may select the existing `fa.learned-joint-publication/1` envelope.
+All entries must agree on the complete joint policy, including both work
+ceilings and whether the guard is present. The decoded documents are compared
+before model/helper assets are loaded; the complete loaded-generation and
+stream equality checks still follow. The constructor installs the selected
+joint guard in its first canonical image, including for topology-mediated
+creation. It does not install a held-out activation or create prior evidence.
+
+The baseline committee remains usable after the independent governor's campaign
+Request/Approve and the operator's separate Promote. Each effect still needs
+fresh native/process review, current source and final publication witnesses,
+and its own independent human decision. A human rejection or changed source
+cannot be overridden by governor approval. See
+[joint governed creation](LEARNED_JOINT_CREDIBILITY.md#governed-resident-creation).
 
 ### Preserve topology through live governance
 
@@ -491,9 +510,10 @@ independent Stop check at generation, actor, helper review, human review,
 publication and helper-retirement checkpoints. Native and process helper wrappers
 expose their existing supervisor for this bounded turn; no wrapper or driver is
 reconstructed. Predictive promotion still needs a separately reviewed successor
-predictor binding. Installed joint credibility likewise needs a fresh
-qualification after policy change; governed recovery can select its original
-activation as described below. Creation does not qualify a new joint committee.
+predictor binding. An actually activated helper-credibility committee likewise
+needs fresh qualification after policy change; governed recovery can select its
+original activation as described below. Installing the joint guard alone
+preserves the original baseline and does not qualify a new joint committee.
 
 ## Recover a governed learned sequence
 

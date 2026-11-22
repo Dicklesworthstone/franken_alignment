@@ -114,7 +114,8 @@ pub(super) fn create_governed(config: &Config, loaded: &Loaded)
     Ok(((host, roles.human, None, roles.identity_observer), governor))
 }
 
-/// New governed owners cannot select policy-bound predictors or joint activation.
+/// New governed owners may install the original joint baseline, but cannot
+/// select policy-bound predictors or activate held-out credibility.
 /// A mediated owner uses these same first-image campaign guards and its native
 /// topology constructor; no observer or authority is enabled after creation.
 pub(super) fn check_governed_creation(config: &Config, loaded: &Loaded) -> Result<(), String> {
@@ -125,9 +126,8 @@ pub(super) fn check_governed_creation(config: &Config, loaded: &Loaded) -> Resul
         || matches!(loaded.topology.as_ref(), Some(super::topology::Selection::Recover { .. }))
         || loaded.generation.required_pre_output_forecast().is_some()
         || loaded.generation.required_owned_pre_output_forecast().is_some()
-        || loaded.generation.required_held_out_joint().is_some()
     {
-        return Err("live learned governor requires a new nonpredictive campaign owner without joint credibility".into());
+        return Err("live learned governor requires a new nonpredictive campaign owner".into());
     }
     Ok(())
 }

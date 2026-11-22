@@ -165,6 +165,11 @@ pub(super) fn load_governed(
     {
         return Err("every governed recovery recipe must select the same complete effective policy".into());
     }
+    if prepared.windows(2).any(|pair| {
+        pair[0].1.joint_policy() != pair[1].1.joint_policy()
+    }) {
+        return Err("sequence recipes disagree on the complete original generation or stream: joint credibility policy differs".into());
+    }
     let requests = prepared
         .iter()
         .map(|(_, _, actor, _)| actor.request)

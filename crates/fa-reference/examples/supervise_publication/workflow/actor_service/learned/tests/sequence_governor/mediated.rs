@@ -182,8 +182,20 @@ fn promoted_mediated_resident_still_requires_the_final_original_source_check() {
 }
 
 fn governed_mediated(recovering: bool, lose_source: bool) {
+    governed_mediated_selected(recovering, lose_source, ReviewDecision::Approve, false);
+}
+
+pub(super) fn governed_joint_creation(decision: ReviewDecision, lose_source: bool) {
+    governed_mediated_selected(false, lose_source, decision, true);
+}
+
+fn governed_mediated_selected(recovering: bool, lose_source: bool,
+    decision: ReviewDecision, joint: bool) {
     let root = Root::new();
-    let (config, paths, entries) = selected_mediated(&root);
+    let (config, paths, mut entries) = selected_mediated(&root);
+    if joint {
+        super::joint_creation::install(&config, &paths, &mut entries);
+    }
     let seed_packet = recovering.then(|| seed(&root, &paths[0]));
     let input_source = recovering.then(|| fs::read(root.0.join("source-1.bin")).unwrap());
     let input_history = recovering.then(|| fs::read(root.0.join("history-1.bin")).unwrap());
@@ -196,6 +208,8 @@ fn governed_mediated(recovering: bool, lose_source: bool) {
         archived(&root, &root.0.join("source-1.bin"), 2, Some(&output))
     } else { root.0.join("create-topology.json") };
     let mut reader = Reader::new(&root, &paths[0]);
+    let original_joint = reader.loaded.generation.required_held_out_joint();
+    assert_eq!(original_joint.is_some(), joint);
     let mut peers = Peers::new(&root, &config, &entries);
     let mut child = GovernorChild(Command::new(std::env::current_exe().unwrap())
         .args(["--exact", MEDIATED_CHILD_TEST, "--nocapture"])
@@ -302,7 +316,7 @@ fn governed_mediated(recovering: bool, lose_source: bool) {
         }
         peers.poll([(!recovering).then_some(Actor::Observe), admitted.then_some(Actor::Observe),
             admitted.then_some(Actor::Observe)], [(!recovering).then_some(ReviewDecision::Approve),
-            approved.then_some(ReviewDecision::Approve), Some(ReviewDecision::Approve)]);
+            approved.then_some(decision), Some(ReviewDecision::Approve)]);
         ElapsedTick(1000)
     });
     operator_peer.join().unwrap();
@@ -339,6 +353,14 @@ fn governed_mediated(recovering: bool, lose_source: bool) {
         assert_eq!((state.executions, state.payload.as_slice()), (1, b"A".as_slice()));
         assert_eq!(saved.work().checks, 4);
         assert!(!saved.available());
+    } else if decision == ReviewDecision::Reject {
+        assert!(result.is_err());
+        assert!(!confirmed(replies[1].as_ref().unwrap()));
+        assert!(replies[2].is_none() && packets[2].is_none());
+        assert_eq!((state.executions, state.payload.as_slice()), (1, b"A".as_slice()));
+        assert_eq!(state.control.ledger.charged, first.action().spec().units);
+        assert_eq!(saved.work().checks, 3);
+        assert!(saved.available());
     } else {
         assert!(result.is_ok(), "{result:?}");
         assert!(replies[start..].iter().all(|reply| confirmed(reply.as_ref().unwrap())));
@@ -379,10 +401,17 @@ fn governed_mediated(recovering: bool, lose_source: bool) {
     let numerical = host.learned_generation_inspection().unwrap().numerical;
     assert_eq!((numerical.position, numerical.sampled_draws), (6, 4));
     assert_eq!(host.current_policy().unwrap(), &policy());
-    if !lose_source {
+    assert_eq!(host.held_out_joint_policy().unwrap(), original_joint);
+    host.check_credibility().unwrap();
+    if !lose_source && decision == ReviewDecision::Approve {
         let stream = host.stream_snapshot().unwrap();
         assert_eq!(stream.confirmed.messages().collect::<Vec<_>>(), ["A", "A"]);
         assert!(stream.confirmed.finished());
+        assert_eq!(stream.confirmed, stream.published);
+    } else if decision == ReviewDecision::Reject {
+        let stream = host.stream_snapshot().unwrap();
+        assert_eq!(stream.confirmed.messages().collect::<Vec<_>>(), ["A"]);
+        assert!(!stream.confirmed.finished());
         assert_eq!(stream.confirmed, stream.published);
     }
     quiescent(&root);
