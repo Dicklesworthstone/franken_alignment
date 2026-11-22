@@ -11,9 +11,11 @@ the original actual-model measurement and installs its still-current result.
 The complete registered stimulus roster must match before prompt inference;
 a passport, manifest or earlier matching result alone cannot satisfy this step.
 
-Ordinary learned streams can prepare and explicitly continue the same prompt
-without installing a forecast predictor. Plain and topology-mediated preparation
-use the same original constructor, monitored prompt and retained checkpoint.
+Ordinary learned streams can prepare, narrow authority, reset and explicitly
+continue the same prompt without installing a forecast predictor. Plain and
+topology-mediated control use the same original constructor, monitored prompt,
+checkpoint and journal. The [ordinary containment workflow](ORDINARY_LEARNED_STREAM_CONTAINMENT.md)
+retains the complete original guards and exact history/source pair at each step.
 
 For an owned prompt-audit predictor, this also supplies a normal operator entry
 point for [predictive stream containment](LEARNED_PREDICTIVE_STREAM_RESET.md): prepare,

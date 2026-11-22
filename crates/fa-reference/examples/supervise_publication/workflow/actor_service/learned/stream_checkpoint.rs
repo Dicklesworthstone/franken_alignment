@@ -83,7 +83,7 @@ where F: FnMut() -> ElapsedTick {
     checked::check_selection(&config, &loaded)?;
     options.admit(&config, &mut loaded, true)?;
     topology::admit(&config, &mut loaded, topology_profile.as_deref(), topology::Mode::Live)?;
-    check_request_selection(&loaded, &request)?;
+    check_selection(&loaded)?;
     deadline.check(time())?;
     run(&config, &loaded, &request, &deadline, &mut time, output)
 }
@@ -104,9 +104,6 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
         return Err("stream checkpoint control requires an independent input history anchor and a new retained output".into());
     }
     if let Some(selected) = loaded.topology.as_ref() {
-        if !loaded.generation.requires_owned_forecast_stream_restart_audit() {
-            return Err("mediated stream control requires the explicit owned prompt-audit reset recipe".into());
-        }
         let topology::Selection::Recover { selection, history } = selected else {
             return Err("topology creation inputs cannot control a historical stream checkpoint".into());
         };
@@ -121,21 +118,11 @@ pub(super) fn check_selection(loaded: &Loaded) -> Result<(), String> {
     Ok(())
 }
 
-pub(super) fn check_request_selection(loaded: &Loaded, request: &Request) -> Result<(), String> {
-    check_selection(loaded)?;
-    if matches!(request, Request::Narrow(_))
-        && (loaded.generation.required_owned_pre_output_forecast().is_none()
-            || !loaded.generation.requires_owned_forecast_stream_restart_audit()) {
-        return Err("stream checkpoint narrowing requires the explicit owned prompt-audit reset recipe".into());
-    }
-    Ok(())
-}
-
 pub(super) fn run<F>(config: &Config, loaded: &Loaded, request: &Request,
     deadline: &Deadline, time: &mut F, output: &mut impl Write) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
     checked::check_selection(config, loaded)?;
-    check_request_selection(loaded, request)?;
+    check_selection(loaded)?;
     let source_output = match loaded.topology.as_ref() {
         Some(topology::Selection::Recover { selection, .. }) => {
             let output = AcknowledgedOutput::admit(config,

@@ -7,6 +7,7 @@ use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileCredentialRegistration, FileGuardSet, FileMediatedRequirements, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, JournalError, Machine,
     MediationEvent, PreparedGuardedBootstrap, storage};
+use super::predictive::{FileMediatedStreamControlRecovery, FileMediatedStreamControlRequest};
 use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::consistency::ConsistencyEvent;
@@ -39,7 +40,9 @@ use std::path::Path;
 /// ```
 #[must_use = "finish the original mediated recovery or drop it without changing storage"]
 pub struct FileMediatedLearnedRecovery {
-    inner: FileLearnedRecovery,
+    // Shared sealed stream control preserves this wrapper while preparing the
+    // native candidate. This custody remains private to the mediation module.
+    pub(super) inner: FileLearnedRecovery,
     expected: FileMediatedRequirements,
     failure: Option<Error>,
 }
@@ -369,6 +372,26 @@ impl FileMediatedLearnedRecovery {
         Ok(super::credential::FileCredentialTopologyRecovery::mediated(self, saved, request))
     }
 
+    /// Seal this original ordinary cursor to one exact stream capture, narrow
+    /// or reset-intent operation and its independently retained source cut.
+    /// All original guards, policy, topology, floors and terminal reserve remain
+    /// required. No predictor, source work, numerical step or live role is added;
+    /// only the selected event can explain a lost paired checkpoint export.
+    pub fn require_stream_control_checkpoint(mut self,
+        saved: &super::super::super::driver::topology::checkpoint::TopologyCheckpoint,
+        request: FileMediatedStreamControlRequest)
+        -> Result<FileMediatedStreamControlRecovery, JournalError>
+    {
+        let progress = self.progress();
+        if progress.replayed_events != 0 || progress.status != FileLearnedRecoveryStatus::Replaying {
+            return Err(Error::WrongState.into());
+        }
+        self.inner.check_plain_stream_control_recipe()?;
+        FileMediatedStreamControlRecovery::prepare(&self.inner, progress,
+            &mut self.expected.topology, &mut self.expected.oversight.minimum, saved, &request)?;
+        Ok(FileMediatedStreamControlRecovery::mediated(self, saved, request))
+    }
+
     /// Seal this unreplayed cursor to the exact stream-reset command already
     /// retained with the source checkpoint. Only its completion and recovery
     /// Fence may explain an unexported successor; no source work is refreshed.
@@ -491,7 +514,7 @@ impl FileMediatedLearnedRecovery {
         Ok(self.progress())
     }
 
-    fn check_ready(&self) -> Result<(), JournalError> {
+    pub(super) fn check_ready(&self) -> Result<(), JournalError> {
         if let Some(error) = self.failure {
             return Err(error.into());
         }

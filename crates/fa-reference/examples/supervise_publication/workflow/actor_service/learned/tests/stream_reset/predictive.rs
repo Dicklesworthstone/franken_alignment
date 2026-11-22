@@ -338,7 +338,10 @@ fn owned_prompt_narrowing_requires_exact_custody_and_closed_independent_request_
     fs::write(&plain_path, plain).unwrap();
     let mut command = prepared.command.clone(); command[2] = plain_path.display().to_string();
     let error = stream_checkpoint::command(&command, None, || ElapsedTick(1000), &mut Vec::new()).unwrap_err();
-    assert!(error.contains("narrowing requires the explicit owned prompt-audit"), "{error}");
+    // Ordinary recipes have their own supported containment path, but cannot
+    // downgrade the predictor contract encoded in this original history.
+    assert!(error.contains("native stream checkpoint control is unconfirmed"), "{error}");
+    assert!(!Path::new(&command[8]).exists());
     assert_eq!(fs::read(prepared.config.store.join("delivery.bin")).unwrap(), canonical);
     stream_checkpoint::command(&prepared.command, None, || ElapsedTick(1000), &mut Vec::new()).unwrap();
 }

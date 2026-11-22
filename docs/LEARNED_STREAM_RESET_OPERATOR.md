@@ -84,8 +84,9 @@ For an intentional fresh pause before any prediction or draw, use
 and the owned prompt-audit recipe both require an explicit zero-draw selection
 for preparation. It retains the captured anchor and any exact topology pair,
 then exits with a maintenance result. The live option above continues into the
-original review/publication cycle. These live capture and preparation paths do
-not widen the separate offline mediated control contract below.
+original review/publication cycle. The same ordinary no-predictor generation can also use the offline
+capture, prompt narrowing and reset workflow below, retaining its complete
+independent guards and exact paired custody.
 
 ### Capture an existing quiet prefix or initiate reset
 
@@ -165,17 +166,22 @@ same request and old anchor, then choose a new export path to recover a lost
 acknowledgment without duplicating capture or initiation.
 
 These modes reject raw or legacy predictive selections and all live-service,
-credibility or other maintenance combinations. A topology-backed history
-requires the explicit owned prompt-audit recipe and a `--topology-profile`
-`fa.mediated-submit/2` selection with exact input custody and new paired outputs.
-Its offline finalizer permits only an unchanged source/history cut or its own
-single matching selected event after that cut; unrelated later work cannot be
-covered by stale source accounting. Both archive attempts and the report retain
-the native acknowledgment even if one output fails. The explicit owned
-prompt-audit profile also admits `--narrow-stream-checkpoint` with an independent
-exact request; its original `NarrowAuthority` consequence supplies a later
-control frontier without changing policy or predictor generations. See the
-[predictive lifecycle and request schema](LEARNED_PREDICTIVE_STREAM_RESET.md).
+credibility or other maintenance combinations. Both ordinary no-predictor streams
+and the explicit owned prompt-audit recipe support topology-backed control. Each
+requires a `--topology-profile` `fa.mediated-submit/2` selection with exact input
+custody and new paired outputs. Its offline finalizer permits only an unchanged
+source/history cut or its own single matching selected event after that cut;
+unrelated later work cannot be covered by stale source accounting. Both archive
+attempts and the report retain the native acknowledgment even if one output fails.
+
+Both supported recipes admit `--narrow-stream-checkpoint` at the complete
+unsampled prompt with an independent exact request. The original
+`NarrowAuthority` consequence supplies a later control frontier without changing
+policy, numerical state, incident count or any selected predictor generation.
+It withdraws the accepted topology cut while preserving source expenditure and
+last operation. The [ordinary containment workflow](ORDINARY_LEARNED_STREAM_CONTAINMENT.md)
+and [predictive lifecycle](LEARNED_PREDICTIVE_STREAM_RESET.md) use the same
+`fa.learned-stream-narrow/1` request and acknowledgment schemas.
 Reset **completion** supports both exact nonpredictive and owned prompt-audit
 topology custody as described below.
 

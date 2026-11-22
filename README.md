@@ -122,6 +122,15 @@ The same paired custody supports ordinary mediated live checkpoint capture;
 preparation always requires zero sampled draws. See
 [ordinary prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md).
 
+Ordinary learned streams can also follow that preparation through checkpoint-bound
+authority narrowing, reset initiation and completion, then fresh reviewed
+continuation. Topology-backed control retains the exact independent history/source
+pair and original source spending through each selected operation; narrowing
+withdraws the old cut. No forecast is invented or removed from the original
+generation. See [ordinary containment](docs/ORDINARY_LEARNED_STREAM_CONTAINMENT.md).
+Native and actual-command regression sources accompany this integration;
+required build and runtime qualification remain pending.
+
 That preparation also retains the complete original joint-review guard, including
 computed-identity composition, credential and publication requirements. The
 baseline can continue through fresh native and human review, or follow original

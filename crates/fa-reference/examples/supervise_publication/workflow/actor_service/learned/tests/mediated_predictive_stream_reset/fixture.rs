@@ -25,10 +25,20 @@ pub(super) struct Pair { pub history: PathBuf, pub source: PathBuf }
 
 impl Case {
     pub fn new(root: &Root) -> Self {
+        Self::selected(root, true)
+    }
+
+    pub fn ordinary(root: &Root) -> Self {
+        Self::selected(root, false)
+    }
+
+    fn selected(root: &Root, predictive: bool) -> Self {
         let config_path = super::super::functional_creation::config_file(root, "functional_restart");
         let config = Config::read_learned_generation(&config_path).unwrap();
         let recipe = super::super::continuation::write(root);
-        super::super::forecast::install_restart(root, &recipe, 60_000);
+        if predictive {
+            super::super::forecast::install_restart(root, &recipe, 60_000);
+        }
         evidence(root, &config, 1, true, false);
         for name in ["initial.json", "live-1.json"] {
             fs::write(root.0.join(name), graph(1, false)).unwrap();
@@ -79,6 +89,17 @@ impl Case {
             loaded.generation.required_owned_pre_output_forecast().unwrap()).unwrap()
     }
 
+    pub fn publication(&self) -> fa_reference::action::consequence::delivery::persistent::FileDeliverySnapshot {
+        let loaded = recipe::load(&self.recipe, &self.config, false).unwrap();
+        if loaded.generation.required_owned_pre_output_forecast().is_some() {
+            self.view().publication
+        } else {
+            assert!(loaded.generation.required_pre_output_forecast().is_none());
+            FileOversight::read_publication_with_learned_generation(&self.config.store,
+                &self.config.profile, &loaded.generation).unwrap()
+        }
+    }
+
     pub fn disk(&self) -> Vec<u8> { fs::read(self.config.store.join("delivery.bin")).unwrap() }
 
     pub fn profile(&self, input: &Pair, output: &Pair, label: &str, next: Option<(u64, bool)>) -> PathBuf {
@@ -115,7 +136,7 @@ impl Case {
     }
 
     pub fn narrow(&self, info: FileLearnedCheckpointInfo) -> PathBuf {
-        let state = self.view().publication;
+        let state = self.publication();
         let saved = format!(r#"{{"checkpoint":"{}","actor_revision":"{}","authority_epoch":"{}",
             "control_sequence":"{}","stream":"{}","position":"{}","sampled_draws":"{}"}}"#,
             info.checkpoint, info.actor_revision, info.authority_epoch, info.control_sequence,
@@ -129,7 +150,7 @@ impl Case {
     }
 
     pub fn reset(&self, info: FileLearnedCheckpointInfo, first: u64) -> PathBuf {
-        let control = control_json(&self.view().publication, info.actor_revision, 900, 8);
+        let control = control_json(&self.publication(), info.actor_revision, 900, 8);
         let path = self.root.join("reset.json");
         fs::write(&path, format!(r#"{{"schema":"fa.learned-stream-reset-recovery/1",
             "checkpoint":"{}","first_incident_sequence":"{first}","control":{control},

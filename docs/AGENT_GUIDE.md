@@ -331,21 +331,23 @@ source checkpoint, without loading later helper weights or issuing effect
 permission. Explicit continuation resumes the original numerical history and
 requires current source evidence, native review and a fresh human decision. See
 [the preparation contract](LEARNED_PROMPT_PREPARATION.md) for complete command
-inputs, paired custody and the separate limits on offline containment.
+inputs and paired custody.
 
-**Implemented predictive-stream containment mapping.** The trusted supervisor
-can select the original owned prompt-audit recipe and use
+**Implemented learned-stream containment mapping.** The trusted supervisor
+can select an ordinary no-predictor stream or the original owned prompt-audit
+recipe and use
 `create-learned-generated --prepare-stream-checkpoint` to retain a complete
 prompt before any prediction or sample. The separately requested
 `--narrow-stream-checkpoint` applies the registered `narrow` consequence to the
 exact retained checkpoint and current predecessor. Its original receipt sequence
 can identify the later incident frontier for `--begin-stream-reset` and
 `--complete-stream-reset`. All commands require their full documented inputs;
-the [predictive stream workflow](LEARNED_PREDICTIVE_STREAM_RESET.md) gives the
-grammar and independently retained request/anchor chain. This containment
-preserves policy, predictor, work, audience and charged liabilities. The
-same [topology-protected workflow](LEARNED_MEDIATED_PREDICTIVE_STREAM_RESET.md)
-retains exact source/history pairs at each step and withdraws the accepted cut
+the [ordinary workflow](ORDINARY_LEARNED_STREAM_CONTAINMENT.md) and
+[predictive workflow](LEARNED_PREDICTIVE_STREAM_RESET.md) give the grammar and
+independently retained request/anchor chain. This containment preserves policy,
+any selected predictor, work, audience and charged liabilities. Both profiles'
+topology-protected workflow retains exact source/history pairs at each step
+and withdraws the accepted cut
 at narrowing; live continuation must freshly certify the current epoch without
 renewing spent source allowances. The
 supervisor's evidence binding does not authenticate a detector; any later

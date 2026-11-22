@@ -31,11 +31,17 @@ predictors, legacy recipes, sampled histories, pending forecasts, lost coverage
 and unreported predictor work remain ineligible. The lifetime likelihood process
 is neither cleared nor rearmed.
 
-Fresh preparation currently refuses computed identity, credentials,
-checked-publication and held-out activation selections. Those stronger contracts
-must have their own pre-output preparation integration; omitting them cannot
-open a history that originally required them. An explicitly selected campaign
+Fresh preparation retains the original computed identity, credential,
+checked-publication and joint-credibility guards described in
+[the preparation contract](LEARNED_PROMPT_PREPARATION.md). Held-out activation
+still requires its separately eligible recovery cut. Omitting a stronger guard
+cannot open a history that originally required it. An explicitly selected campaign
 inventory remains part of native bootstrap and every later recovery guard.
+
+An ordinary stream with no predictor can use the same paired control lifecycle
+without a forecast artifact. See [ordinary learned containment](ORDINARY_LEARNED_STREAM_CONTAINMENT.md).
+The original admitted generation determines predictor absence; a predictive
+history cannot be reopened through that route by deleting its forecast selection.
 
 ## Prepare the original prompt and retain both archives
 

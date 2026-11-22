@@ -13,6 +13,8 @@ use std::{io::{self, Cursor, Write}, path::{Path, PathBuf}};
 mod fixture;
 #[path = "mediated_predictive_stream_reset/joint.rs"]
 mod joint;
+#[path = "mediated_predictive_stream_reset/ordinary.rs"]
+mod ordinary;
 use fixture::{Case, Pair, info};
 
 fn checkpoint(path: &Path) -> TopologyCheckpoint {

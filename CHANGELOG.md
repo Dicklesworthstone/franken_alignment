@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-22: connect ordinary containment to paired operator recovery
+
+- Connect ordinary no-predictor streams to offline capture, authority narrowing,
+  reset initiation and existing completion through the public operator workflow.
+- Retain the actual ordinary or owned-predictive recovery cursor in one sealed
+  paired finalizer; recheck the original guards, source/history pair and monotone
+  floors before and after private native preparation.
+- Preserve source spending, documents and last operation without a next-source
+  refresh. Repair lost custody only for the unchanged cut or exact selected event.
+- Add four paired native and four actual-command regression functions, including
+  complete plain/mediated continuation, fresh native and human Approve/Reject,
+  changed custody, source loss, predecessor refusal and lost-output retries.
+- Keep predictive downgrade refusal and existing event/request encodings.
+  Source review completed; required RCH build and runtime gates remain unrun
+  because the execution environment is unavailable.
+
 ## 2026-11-22: narrow ordinary learned prompts through original guarded recovery
 
 - Admit genuine no-predictor streams to checkpoint-bound native prompt narrowing,

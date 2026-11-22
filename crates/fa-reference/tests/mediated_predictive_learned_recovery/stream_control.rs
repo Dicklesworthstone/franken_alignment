@@ -17,6 +17,9 @@ use fa_reference::perimeter_inventory::topology::LoadedAuthorityTopology;
 mod fixture;
 use fixture::*;
 
+#[path = "stream_control/ordinary.rs"]
+mod ordinary;
+
 #[test]
 fn paired_owned_prompt_containment_reaches_native_human_publication_and_a_bypass_cannot() {
     let mut common_epoch = None;

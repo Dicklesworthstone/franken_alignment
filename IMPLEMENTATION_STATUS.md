@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: ordinary containment through paired operator recovery
+
+The ordinary no-predictor profile now connects the complete existing operator
+lifecycle: prompt preparation, exact capture/retry, checkpoint-bound narrowing,
+reset initiation, existing reset completion and explicitly reviewed continuation.
+Plain control uses the original guarded finalizer. Topology-mediated control
+retains the actual ordinary or owned-predictive cursor inside the shared sealed
+stream-control finalizer, preserving the public result and request types.
+
+The paired selector requires event-zero selection, terminal recovery capacity,
+exact independently retained source/history custody, the original topology and
+monotone control/authority floors. Complete guards are checked before and after
+private native preparation. Finalization returns immutable history and source
+custody, never a live owner or review role. Ordinary admission declares no
+predictor only when that matches the original generation; omitted raw, optional
+or legacy predictive contracts do not qualify.
+
+Offline capture, narrowing and BeginReset preserve the original source
+documents, source spending and last operation, without refreshing next source
+files. Lost-output repair accepts an unchanged retained cut or its one exact
+selected control event; unrelated later work cannot be adopted under stale
+source custody. Narrowing withdraws the accepted cut without changing source
+availability or performing an extra authority-epoch transition. Completion keeps
+the original numerical reset and recovery Fence. Live continuation must earn
+current source certification, native review and the separate human key.
+
+Four paired native regression functions and four actual operator functions were
+added. They exercise full ordinary plain/mediated lifecycle and Approve/Reject
+continuation, real numerical and incident/work counters, unavailable next source
+documents during offline maintenance, fresh-source refusal before publication,
+valid wrong predecessors/audiences, mismatched paired custody, extra suffixes,
+guard changes, storage/export failures and exact retries. The prior predictive
+downgrade negative still refuses the mismatched original encoded generation.
+Seven native narrowing functions are recorded in the previous increment below.
+
+Independent source review checked the wrapper branches, module visibility,
+original guard and predictor law, fixture interfaces and retained-custody rules.
+No Rust build, parser/formatter, Clippy or runtime test was run: the execution
+environment became unavailable and the repository-required RCH runner was
+already absent. These regression sources are not execution evidence. Full
+qualification, existing source-manifest drift and roadmap gates remain open;
+the source manifest and bead records were not rewritten to imply completion.
+Contract and command sequence: `docs/ORDINARY_LEARNED_STREAM_CONTAINMENT.md`.
+
 ## 2026-11-22: original native narrowing for ordinary learned prompts
 
 The original checkpoint-bound NarrowAuthority path now accepts an ordinary
@@ -21,7 +65,7 @@ refusals. Source review is the available verification: the development workspace
 became unavailable before edits, and the connector was used to stage the exact
 sources. RCH was already absent. No Rust build, syntax/format tool, Clippy or
 runtime test was executed for this increment; no qualification or roadmap gate
-is closed. Operator and paired topology integration remain separate work.
+is closed. Operator and paired topology integration are recorded above.
 Contract: `docs/ORDINARY_LEARNED_STREAM_CONTAINMENT.md`.
 
 ## 2026-11-21: prepare ordinary learned prompts with exact retained custody
