@@ -545,11 +545,32 @@ fn refreshed_native_reference_does_not_authorize_a_different_release_or_deadline
 }
 
 fn governed_sequence(decision: ReviewDecision, change: FreshChange) {
+    governed_sequence_profile(decision, change, false);
+}
+
+#[test]
+fn governed_joint_baseline_creates_and_publishes_through_real_policy_promotion() {
+    governed_sequence_profile(ReviewDecision::Approve, FreshChange::Exact, true);
+}
+
+#[test]
+fn governed_joint_baseline_and_policy_approval_cannot_replace_the_next_human_key() {
+    governed_sequence_profile(ReviewDecision::Reject, FreshChange::Exact, true);
+}
+
+fn governed_sequence_profile(decision: ReviewDecision, change: FreshChange, joint: bool) {
     let changed = change != FreshChange::Exact;
     let root = Root::new();
     let (mut config, mut entries, reviewer) = selected(&root, true);
     config.programs = helper_programs(&root);
     let reader = Reader::new(&config, &entries[0]);
+    // The same frozen joint guard constrains later credibility promotion; it
+    // neither fabricates held-out evidence nor changes the baseline committee.
+    // Keep the actual producer alive through every cumulative release.
+    let publication = joint.then(|| checked::joint_publication(&root, &reader));
+    if let Some((profile, _)) = &publication {
+        assert!(profile.requires_joint());
+    }
     let peer_store = config.store.clone();
     let peer_profile = config.profile.clone();
     let barrier = barrier(&root, &mut entries[1]);
@@ -717,7 +738,7 @@ fn governed_sequence(decision: ReviewDecision, change: FreshChange) {
         config,
         entries,
         &reviewer,
-        None,
+        publication.as_ref().map(|(profile, _)| profile),
         (None, Some(&selected_operator)),
         None,
         None,

@@ -65,6 +65,14 @@ suffix. Activation does not approve an effect, and a later policy promotion
 invalidates the previous policy's qualification. Source implementation and
 regression coverage are present; RCH execution qualification remains pending.
 
+Fresh governed native sequences also accept the complete original joint-review
+publication profile with the baseline committee. The guard constrains later
+helper-credibility promotion; it does not fabricate qualification. Fresh
+activation remains refused, while each baseline release retains its source,
+witness and independent human checks. The new paired regression paths cover
+actual native publication across policy promotion and human rejection; their
+required RCH execution remains pending.
+
 [Learned prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md) can require a
 computed identity check against its actual numerical model before prompt work.
 The complete registered passport and independently observed manifest remain

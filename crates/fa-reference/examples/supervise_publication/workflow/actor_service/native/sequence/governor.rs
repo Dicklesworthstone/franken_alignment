@@ -186,17 +186,12 @@ pub(super) fn check_selection(
 pub(super) fn check_publication(
     governor: Option<&Settings>,
     publication: Option<&PublicationProfile>,
-    recovery: bool,
 ) -> Result<(), String> {
     if let (Some(governor), Some(publication)) = (governor, publication) {
-        // The independently selected guarded opener checks the COMPLETE joint
-        // profile before its Fence. Recovery can then requalify this same owner;
-        // creation still cannot install or activate that evidence implicitly.
-        if publication.requires_joint() && !recovery {
-            return Err(
-                "native governance cannot activate a held-out joint profile during creation".into(),
-            );
-        }
+        // The original atomic constructor installs the COMPLETE joint guard
+        // while preserving the baseline committee. A guard is not held-out
+        // qualification: fresh activation remains excluded by take_option and
+        // check_selection, and recovery still requires its exact original guard.
         governor.check_custody_paths(
             &publication
                 .input_paths()

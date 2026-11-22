@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-21: publish from the governed native joint baseline
+
+- Admit the complete original joint publication profile during resident governed
+  creation, preserving atomic source, witness, decoder, reserve and campaign guards.
+- Keep the baseline committee distinct from held-out qualification; fresh
+  credibility activation remains refused under the original evidence clock.
+- Extend the existing real governor/actor/helper/human fixture with joint baseline
+  Message/Message/Finish publication across policy promotion and paired human
+  rejection, retaining every original numerical and liability assertion.
+- Independently source-reviewed; changed Rust passes installed-nightly syntax
+  parsing and whitespace checks. Required RCH compilation, Clippy and runtime
+  qualification remain pending; no qualification gate is closed.
+
 ## 2026-11-21: retain governance budgets across recovery qualification
 
 - Preserve the concurrent governed-recovery implementation and joint publication

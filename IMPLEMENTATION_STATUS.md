@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: connect governed native creation to its original joint baseline
+
+Resident governed native creation now admits the complete original
+`fa.supervised-joint-publication/1` profile. It reaches the existing atomic
+source-bound constructor with the exact joint, witness, source, decoder,
+stream, terminal reserve and campaign guards. No evaluator, policy reducer,
+journal format or ownership implementation changes.
+
+The initial committee remains the original baseline. Installing a joint guard
+does not qualify it on held-out evidence: the guard constrains later credibility
+promotions. Fresh credibility activation remains refused. Independent source
+review verified that legitimate early held-out evidence cannot be admitted at
+the initial authority sequence, so this change neither fabricates prior reviews
+nor weakens that clock boundary.
+
+Two added regression paths reuse the full existing native actor/helper/human
+and independent governor/operator fixture. They exercise actual fixture
+Message/Message/Finish publication across Request/Approve/Promote and the paired
+human rejection after promotion. Original assertions retain fresh policy
+references, numerical position and sampled draws, one-use approvals, charged
+rights and the confirmed prefix. The producer-backed final witness profile
+remains attached throughout. This serves FA-025, FA-026, FA-105 and FA-130.
+
+Independent source and test review is complete. All four changed Rust files
+pass syntax parsing with the installed nightly formatter and whitespace checks.
+The required RCH runner is unavailable (exit 127); compilation, Clippy, runtime
+tests and the canonical gate have not executed for this increment. No Bead or
+qualification gate is closed. Contracts:
+`docs/RESIDENT_NATIVE_PUBLICATION.md`, `docs/LIVE_POLICY_GOVERNOR.md`.
+
 ## 2026-11-21: retain finite governance after recovery qualification
 
 The concurrently landed governed recovery implementation and joint-publication

@@ -78,12 +78,18 @@ native recipe checks all referenced asset paths before reading those assets,
 including explicit physical weight shards. Path checks use the same strict
 decoders and asset budgets as unselected native loading.
 
-This creation selection supports publication profiles without joint activation.
+This creation selection supports the complete original held-out joint
+publication profile with its baseline committee. The atomic joint guard
+constrains later credibility promotion; it does not supply empirical
+qualification or a publication approval. The exact witness and campaign
+requirements remain installed alongside it.
+
 An independently retained output archive alone does not select recovery.
 Governed native recovery requires the complete explicit selection below and
 can independently select one recovery credibility activation. Creation still
-refuses activation; topology selection and single-release commands remain
-unsupported. See the complete
+refuses activation because its initial control history cannot admit the
+required historical evidence. Topology selection and single-release commands
+remain unsupported. See the complete
 [resident native publication contract](RESIDENT_NATIVE_PUBLICATION.md#independent-policy-governance-during-native-creation).
 The source and authored regressions are independently reviewed; required RCH
 compilation and execution remain pending.

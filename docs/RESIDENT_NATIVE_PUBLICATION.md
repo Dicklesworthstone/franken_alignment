@@ -440,9 +440,10 @@ custody path. These checks precede model reads or listener creation. Stale
 capsules, stale first-release disclosure epochs, deadline or Stop after
 activation, and human rejection do not acquire publication authority. An
 acknowledged recovery/activation remains part of the retained failure history.
-Creation still refuses activation and held-out joint profiles requiring it.
-The new composition and regression sources require RCH compilation and runtime
-qualification before execution credit is assigned.
+Creation still refuses credibility activation. It may install the original
+held-out joint guard while using the unchanged baseline committee, as described
+below. The new composition and regression sources require RCH compilation and
+runtime qualification before execution credit is assigned.
 
 The remaining sequence contains 1–16 genuinely new requests and may consist
 only of the final Finish. A Finish preserves its confirmed Message predecessor
@@ -626,9 +627,25 @@ the confirmed stream prefix and unresolved charges. Every next release still
 requires fresh current evidence, original helper review, independent human
 approval and its selected final publication checks.
 
-This creation selection accepts the existing publication profiles that need no
-joint-credibility activation, and optional `--retain-history-anchor NEW_OUTPUT`.
-It refuses `--after-message`, `--history-anchor`, credibility activation, topology
+This creation selection accepts the existing checked publication profiles,
+including the complete `fa.supervised-joint-publication/1` envelope, and optional
+`--retain-history-anchor NEW_OUTPUT`. The original atomic constructor installs
+the exact joint policy with the source, decoder, stream, witness, reserve and
+campaign guards. The unchanged baseline committee can review the first
+Messages; installing the guard does not claim held-out qualification. The guard
+constrains later credibility activation through its original joint reducer.
+
+Fresh credibility activation remains refused. The initial control sequence
+cannot admit the historical evidence required by that operation; creation
+does not manufacture prior reviews or relabel future evidence. A later
+independently recovered suffix can select a fresh capsule under the complete
+recovery contract. Baseline publication and policy promotion still require
+their original independent roles, fresh evidence and final witnesses. The
+paired regression cases use real native Message/Message/Finish publication
+around an independent policy campaign, and require a human rejection to
+preserve only the confirmed prefix.
+
+This creation selection refuses `--after-message`, `--history-anchor`, topology
 selection and single-release commands. Retaining an archive does not select or
 authorize governed native recovery. Select the complete independently supplied
 current policy and campaign contract through the
