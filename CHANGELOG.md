@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: ordinary containment custody and continuation regressions
+
+- Preserve the concurrently landed ordinary Capture/Narrow/BeginReset workflow
+  and add eight complementary native and actual-command regression functions.
+- Cover exact paired retries, lost reporting, guard and incident mismatches,
+  canonical/staging preservation and ordinary versus terminal capacity.
+- Exercise reset across a real policy promotion, retained numerical spending,
+  fresh source/native review and independent human approval or rejection.
+- Preserve existing shared-fixture behavior and all original test modules.
+- Record independent source review separately from unexecuted Rust gates;
+  compilation, runtime, formatting, Clippy and qualification remain open.
+
 ## 2026-11-22: independently guarded ordinary Tower recovery
 
 - Resume plain and simple-witness Tower owners through the original guarded

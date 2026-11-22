@@ -1986,7 +1986,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/stop.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery.rs",
         "artifacts/execution/2026-11-11-mediated-stop-integration-verification.log",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/topology/tests/recovery/precheck.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/ordinary_stream_control.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive/mediated/control.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset/topology/control.rs"
       ]
     },
     {
@@ -2791,7 +2794,10 @@
         "docs/LEARNED_JOINT_CREDIBILITY.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/checkpoint_on_generation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive/mediated.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive/mediated.rs",
+        "crates/fa-reference/tests/mediated_learned_receipts/ordinary_stream_control.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive/mediated/control.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset/topology/control.rs"
       ],
       "founding_ideas": [
         "FI-A09",

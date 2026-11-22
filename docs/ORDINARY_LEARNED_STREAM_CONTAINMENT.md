@@ -128,6 +128,30 @@ selected control event; a different later event cannot be covered by the older
 source archive. Reset completion retains its separate original reset/Fence
 suffix rules. Keep the full pair from each acknowledged step before proceeding.
 
+## Complementary regression coverage
+
+Eight additional regression functions exercise the same production paths through
+independent native and operator fixtures:
+
+- Four native cases in
+  [ordinary_stream_control.rs](../crates/fa-reference/tests/mediated_learned_receipts/ordinary_stream_control.rs)
+  cover paired retries, full guards, unchanged canonical/staging bytes, ordinary
+  versus terminal capacity, incorrect checkpoint refusal at finalization, and a
+  reset after independent policy promotion followed by fresh two-key publication.
+- Two prepared-prompt command cases in
+  [capture control.rs](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/nonpredictive/mediated/control.rs)
+  cover lost reporting, retention of both archives, exact retries, foreign
+  anchors, wrong positions and interruption at the final Ready boundary.
+- Two reset command cases in
+  [reset control.rs](../crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/stream_reset/topology/control.rs)
+  run BeginReset, exact retry, CompleteReset and explicit continuation, with
+  fresh topology/native review and separate human Approve/Reject outcomes.
+
+The shared reset fixture preserves every existing caller's original initiation
+behavior. These cases are source-reviewed regression specifications; no runtime
+result, detector claim or stronger deployment guarantee follows from their
+presence.
+
 ## Qualification
 
 Native and actual-command positive and negative regression sources accompany

@@ -24,6 +24,8 @@ mod proposal_diagnosis;
 mod fleet_shutdown;
 #[path = "mediated_learned_receipts/stream_reset_recovery.rs"]
 mod stream_reset_recovery;
+#[path = "mediated_learned_receipts/ordinary_stream_control.rs"]
+mod ordinary_stream_control;
 #[path = "mediated_learned_receipts/policy_promotion.rs"]
 mod policy_promotion;
 

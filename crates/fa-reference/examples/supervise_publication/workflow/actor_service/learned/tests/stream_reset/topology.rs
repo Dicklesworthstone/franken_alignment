@@ -10,6 +10,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use std::io::Cursor;
 
+#[path = "topology/control.rs"]
+mod control;
+
 struct SourceCase {
     case: Case,
     profile: PathBuf,
@@ -43,6 +46,10 @@ fn select(case: &mut Case, profile: &Path) {
 }
 
 fn prepared(root: &Root, audit_failure: bool) -> SourceCase {
+    prepared_control(root, audit_failure, true)
+}
+
+fn prepared_control(root: &Root, audit_failure: bool, begin: bool) -> SourceCase {
     let (mut config, recipe, mut loaded) = fixture_topology::selected(root, None, false);
     let original = &config.profile.delivery.actor;
     let mut declared = original.profile();
@@ -102,9 +109,11 @@ fn prepared(root: &Root, audit_failure: bool) -> SourceCase {
             binding: ReviewBinding { round: 900, reducer_generation: 1, evidence_root: [8; 32] },
             retained_targets: vec![current.target],
         }, budget).unwrap();
-        let revision = host.revision();
-        host.begin_learned_stream_reset(revision, &saved, intent.control().clone(),
-            intent.budget(), first).unwrap();
+        if begin {
+            let revision = host.revision();
+            host.begin_learned_stream_reset(revision, &saved, intent.control().clone(),
+                intent.budget(), first).unwrap();
+        }
         loaded.recovery_anchor = Some(host.history_anchor().unwrap());
         loaded.anchor_output = Some(root.0.join("next.anchor"));
         (reset::Request { intent, first_incident_sequence: first }, host.inspect(),

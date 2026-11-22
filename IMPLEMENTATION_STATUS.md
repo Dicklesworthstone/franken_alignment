@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: exercise ordinary containment custody and reviewed continuation
+
+Eight complementary regression functions cover the ordinary stream-control
+implementation that landed in `0f35a4b` and `421cd75`. The existing broader native
+and operator Capture/Narrow/BeginReset implementation is retained. Four native
+cases check exact old/new source-history pairs, missing live source files,
+independent guard mismatches, unchanged canonical/staging bytes, ordinary versus
+terminal event capacity and an incorrect Narrow checkpoint through full native
+finalization. A promoted-policy scenario continues through original reset
+completion, fresh source qualification, native and independent human review,
+publication and reconciliation without restoring numerical spending.
+
+Four operator cases use actual prepared prompts and BeginReset/CompleteReset
+commands. They retain both archives after a lost report, retry the same original
+operation without new events, interrupt at the final Ready boundary, reject
+foreign anchors and incorrect incidents, and compare independently approved and
+rejected publication after fresh topology and native review. The shared fixture
+keeps every existing caller's original begin-reset behavior.
+
+Independent source review is complete. Whitespace and registration checks do not
+establish executable correctness. RCH remains unavailable, and the restarted
+development environment has no Rust compiler or formatter. Compilation, runtime
+tests, formatting, Clippy and qualification remain open. No packet is closed and
+the source-admission snapshot is not resealed.
+
 ## 2026-11-22: recover independently guarded ordinary Tower owners
 
 Plain and simple-witness `serve-open` services can now select the original

@@ -8,6 +8,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use std::io::Cursor;
 
+#[path = "mediated/control.rs"]
+mod control;
+
 fn selected(root: &Root) -> Case {
     // Reuse the original independently provisioned graph and inventory, then
     // select the ordinary numerical recipe under functional_restart.
