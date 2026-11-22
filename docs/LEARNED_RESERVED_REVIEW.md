@@ -77,12 +77,64 @@ identity, credential, joint-review and final-publication check. Stop and actor
 cancellation remain available while the request is held. Process-helper and
 predictive learned recipes remain outside both supported native modes.
 
+## Select the reserve in a live learned service
+
+Single learned actor services and resident Message/Finish sequences select the
+existing finite `convening` object in their independently authenticated
+`fa.tower-operator-service/1` profile:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+The complete profile still supplies the original scope, independent operator
+and supervisor identities, socket and finite transport limits. The actual
+loaded recipe must use nonpredictive native model helpers. Process helpers and
+required raw or owned pre-output forecasts fail admission before startup.
+
+For a recipe with one scheduled native round, startup reserves the largest
+complete cohort count that fits the grant's remaining operations, original
+native work limits and 32-round total bound. An operation allowance alone does
+not fund a successor: a recipe with no spare native budget keeps its accepted
+one-round behavior and exposes no actionable successor. Partially funded grants
+reserve only the fully funded cohorts. Every selected model owner, query and
+salt is constructed before the initial review. Changing a helper file after
+Hold cannot replace those reviewers.
+
+After an applied Hold without automatic refinement, address the same request
+with Tower `next`, `action: "convene_held"` and a fresh unused round ID. Inspect
+the complete returned action, then explicitly submit its `convene` document
+through `tower-operator-exchange`. Tower integers are canonical decimal strings.
+Pending admission is distinct from a successfully Opened native round.
+
+The service retains the same wrapper and computes a fresh window using its
+original configured review durations and current trusted clock. The complete
+window must fit before the original invocation deadline. Waiting pumps the
+original operator, run-wide Stop and actor cancellation, without a native
+evaluation poll. Later evaluation consumes the original cumulative poll
+allowance. Source failure, expiry or loss of eligibility ends continuation;
+there is no automatic retry or renewal of reviewer capacity.
+
+A progressive recipe with several scheduled rounds keeps its existing
+[fixed-slot path](LEARNED_HELD_REVIEW.md), including its exact next round ID and
+window. Both modes require a fresh independent human decision after Continue.
+In resident sequences the operation grant stays finite across releases and
+reconnects; the next release still waits for confirmed publication and original
+cleanup. Historical receipt replay cannot recreate retained native custody.
+
 ## Verification boundary
 
 Regression sources use real source-only learned Message/Finish generation,
 original native evaluators and the existing independent publication keys.
 They exercise successful continuation together with exhausted reservations,
 stale or withdrawn input, foreign custody, bad source, invalid windows and
-human rejection. Their fixture models test protocol behavior, not detector
-accuracy. Source inspection and syntax parsing are separate from required
-RCH compilation, runtime execution, Clippy and full qualification.
+human rejection. Separate service regressions exercise the actual command,
+independent approval and rejection, immutable preprovisioned helpers, zero and
+partial funding, repeated Hold, source loss, Stop and deadline expiry. Their
+fixture models test protocol behavior, not detector accuracy. Source inspection
+and syntax parsing are separate from required RCH compilation, runtime
+execution, Clippy and full qualification.

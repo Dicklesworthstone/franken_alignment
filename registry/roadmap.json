@@ -618,7 +618,11 @@
         "docs/LEARNED_RESERVED_REVIEW.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
       ],
       "founding_ideas": [
         "FI-A06",
@@ -2618,7 +2622,11 @@
         "docs/LEARNED_RESERVED_REVIEW.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
       ],
       "founding_ideas": [
         "FI-A02",
@@ -3828,7 +3836,11 @@
         "docs/LEARNED_RESERVED_REVIEW.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/driver/native_learned.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/helpers/learned/native/sequence.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/decoder/learned/config/policy_source/tests/driving/stream/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
       ],
       "founding_ideas": [
         "FI-A13",

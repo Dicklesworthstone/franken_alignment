@@ -307,14 +307,25 @@ native receipt opens remain observation-only. See the
 
 Nonpredictive learned native-model services accept the same explicit operator
 grant under a stricter [retained-evaluator contract](LEARNED_HELD_REVIEW.md).
-Select the grant before review starts and provision the complete native schedule
-in the original progressive recipe. Request the exact next already reserved
-round, rather than an arbitrary unused ID. The same wrapper retains the learned
-packet, generated output, fixed windows, native poll spending and completed
-work. Independent Stop remains live while waiting, and a fresh Continue still
-needs human approval. Source loss or an expired fixed slot cannot trigger new
-models, resampling or automatic retry. Process-helper and predictive learned
-selections remain unsupported; historical learned receipts remain observation-only.
+Select the grant before review starts. A progressive recipe provisions its
+complete native schedule and must request the exact next reserved round with
+its original fixed window.
+
+A [one-round recipe](LEARNED_RESERVED_REVIEW.md) can instead preprovision extra
+native helper rosters before its initial Begin. The service chooses the largest
+fully funded count within the original native limits, the grant's remaining
+operations and 32 total initial-plus-reserved rounds. The grant supplies no new
+native budget; a selection with zero funded successors remains accepted without
+an actionable continuation. For this mode, request a fresh unused round ID
+through Next and explicitly submit its returned Convene action. The host chooses that successor's
+window within the original deadline; it cannot extend the invocation.
+
+Both paths retain the same wrapper, learned packet, generated output, cumulative
+native polls and completed work. Independent Stop remains live while waiting,
+and a fresh Continue still needs human approval. Source loss or expiry cannot
+trigger replacement models, resampling or automatic retry. Process-helper and
+predictive learned selections remain unsupported; historical learned receipts
+remain observation-only.
 
 ### P2. Investigating an incident
 

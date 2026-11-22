@@ -58,13 +58,19 @@ public regressions and service scenarios are present; required RCH compilation
 and runtime qualification remain pending.
 
 [Held learned native-model reviews](docs/LEARNED_HELD_REVIEW.md) also retain their
-original evaluator owner for an explicit operator continuation. Only the next
-already provisioned native round can run, using its original fixed window,
-learned packet, reservation and cumulative poll allowance. Single and resident
-live services preserve the generated output, independent Stop and fresh human
-approval. Process-helper and predictive recipes reject this selection. Core and
-authenticated service regression sources are present; formatting, compilation
-and runtime qualification remain pending after execution-workspace loss.
+original evaluator owner for an explicit operator continuation. Progressive
+recipes use the next already provisioned round and its original fixed window.
+[One-round recipes](docs/LEARNED_RESERVED_REVIEW.md) can instead preprovision
+additional helper rosters before their first review. The service reserves the
+largest fully funded count within the remaining operator operations, original
+native work limits and 32 total initial-plus-reserved rounds. A selection with
+zero funded successors remains accepted without an actionable continuation.
+An explicit fresh unused round ID then receives a host-selected window within
+the original deadline. Both modes retain the same wrapper, learned packet,
+generated output, reservation and cumulative polls, with independent Stop and
+fresh human approval. Process-helper and predictive recipes reject this
+selection. Core and authenticated service regression sources are present;
+required RCH compilation and runtime qualification remain pending.
 
 [Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)
 now requires an independently retained history anchor and complete current

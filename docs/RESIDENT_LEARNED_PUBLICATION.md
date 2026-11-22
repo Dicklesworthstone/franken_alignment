@@ -393,12 +393,25 @@ retry or restore capacity.
 A resident sequence may select the operator profile's finite `convening`
 grant when every scheduled recipe uses nonpredictive native model helpers.
 Process-helper and required raw/owned forecast recipes reject this selection
-during admission. The original native review must already reserve another
-round, its evaluators and its fixed window; a one-round recipe has no successor.
+during admission. Progressive recipes retain their original fixed-slot path:
+the native review already reserves each successor's round ID, evaluators and
+window before the first review.
+
+A one-round recipe can instead preprovision additional complete helper rosters
+before its initial Begin. The service reserves the largest fully funded count
+within that recipe's original native work limits, the shared grant's remaining
+operations and 32 total initial-plus-reserved rounds. A selection with zero
+funded successors remains accepted without an actionable continuation. This
+grant cannot create native work allowance, and later releases cannot renew its
+spent operations.
 
 After an applied Hold without refinement, the service retains that request's
 original native wrapper while waiting for an authenticated explicit Next/Convene
-handoff. Only the next preprovisioned round can open. The wait keeps the same
+handoff. A progressive recipe opens only its exact next preprovisioned round
+within its original fixed window. A one-round recipe with a funded reserve
+accepts an explicit fresh unused round ID and receives a host-selected window
+within the original action deadline. Both consume the next evaluator roster
+that was already fixed before the initial Begin. The wait keeps the same
 run-wide Stop endpoint, actor cancellation, operator transport counters and
 logical/wall deadlines; it does not spend a native evaluation poll or regenerate
 the actor output. Every later evaluation spends the original cumulative poll
@@ -413,7 +426,8 @@ continue newly admitted requests that reach a fresh Hold; historical held
 receipts cannot recreate an evaluator owner.
 
 See [learned held review](LEARNED_HELD_REVIEW.md) for the exact fixed-slot and
-source-binding contract and [live learned operator](LIVE_LEARNED_OPERATOR.md)
+source-binding contract, [one-round reserves](LEARNED_RESERVED_REVIEW.md) for the
+separately prepaid alternative, and [live learned operator](LIVE_LEARNED_OPERATOR.md)
 for profile selection. The added service regressions are authored and source
 reviewed; required RCH compilation and runtime qualification remain pending.
 

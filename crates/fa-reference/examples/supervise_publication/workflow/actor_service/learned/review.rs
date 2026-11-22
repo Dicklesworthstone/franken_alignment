@@ -20,6 +20,8 @@ use fa_reference::action::consequence::oversight::{
 };
 use std::collections::BTreeSet;
 
+mod reserved_convening;
+
 pub(super) struct Reviewed {
     pub driver: FileSupervisedDriver,
     pub history: Option<FileNativeSidecarSequence>,
@@ -28,12 +30,46 @@ pub(super) struct Reviewed {
     pub failure: Option<String>,
 }
 
+/// A grant is an operation ceiling, never a new native-work budget. Preserve
+/// legacy one-round admission when none of its optional successors are funded;
+/// progressive recipes keep their original fixed round schedule unchanged.
+pub(super) fn reserved_successors(loaded: &Loaded, operations: usize) -> usize {
+    if loaded.rounds.len() != 1 {
+        return 0;
+    }
+    let Some(native) = loaded.native.as_ref() else {
+        return 0;
+    };
+    let ceiling = operations.min(
+        fa_reference::action::consequence::oversight::sidecar::MAX_SIDECAR_REFINEMENT_ROUNDS - 1,
+    );
+    (1..=ceiling)
+        .rev()
+        .find(|count| native.check_limits(&loaded.native_limits, count + 1).is_ok())
+        .unwrap_or(0)
+}
+
+#[cfg(test)]
 pub(super) fn start<F>(
+    driver: FileSupervisedDriver,
+    config: &mut Config,
+    loaded: &Loaded,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<FileNativeSupervisedDriver, (FileSupervisedDriver, String)>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    start_with_successors(driver, config, loaded, deadline, time, 0)
+}
+
+fn start_with_successors<F>(
     mut driver: FileSupervisedDriver,
     config: &mut Config,
     loaded: &Loaded,
     deadline: &Deadline,
     time: &mut F,
+    successors: usize,
 ) -> Result<FileNativeSupervisedDriver, (FileSupervisedDriver, String)>
 where
     F: FnMut() -> ElapsedTick,
@@ -100,8 +136,13 @@ where
             .native
             .as_ref()
             .ok_or("no independently admitted native model roster")?;
-        let mut rosters = std::collections::BTreeMap::new();
-        for round in &rounds {
+        let total = rounds.len().checked_add(successors)
+            .ok_or("learned successor roster reservation overflow")?;
+        if total > fa_reference::action::consequence::oversight::sidecar::MAX_SIDECAR_REFINEMENT_ROUNDS {
+            return Err("learned successor roster inventory exceeds the original round bound".into());
+        }
+        native.check_limits(&loaded.native_limits, total)?;
+        let make_members = || {
             let mut members = std::collections::BTreeMap::new();
             for (name, view) in input.views() {
                 let mut queries = Vec::new();
@@ -131,8 +172,17 @@ where
                     },
                 );
             }
-            rosters.insert(round.round, members);
+            Ok::<_, String>(members)
+        };
+        let mut rosters = std::collections::BTreeMap::new();
+        for round in &rounds {
+            rosters.insert(round.round, make_members()?);
         }
+        // Every original helper owner is constructed before the first ballot.
+        // A later Hold may select only one of these already paid, fixed owners;
+        // no response-dependent recipe, model, probe or replacement is loaded.
+        let successors = (0..successors).map(|_| make_members())
+            .collect::<Result<Vec<_>, _>>()?;
         let launch = FileNativeDriverLaunch {
             journal_revision: host.revision(),
             request: loaded.request,
@@ -141,15 +191,18 @@ where
             rosters,
             limits: loaded.native_limits,
         };
-        Ok((launch, capture.snapshot().clone(), now))
+        Ok((launch, successors, capture.snapshot().clone(), now))
     })();
-    let (launch, snapshot, now) = match prepared {
+    let (launch, successors, snapshot, now) = match prepared {
         Ok(value) => value,
         Err(error) => return Err((driver, error)),
     };
-    driver
-        .start_native_learned_sequence(launch, snapshot, now)
-        .map_err(|error| {
+    let started = if successors.is_empty() {
+        driver.start_native_learned_sequence(launch, snapshot, now)
+    } else {
+        driver.start_native_learned_sequence_with_convening(launch, snapshot, now, successors)
+    };
+    started.map_err(|error| {
             let error = *error;
             (error.driver, debug(error.error))
         })
@@ -226,7 +279,10 @@ where F: FnMut() -> ElapsedTick {
         result => return Reviewed { driver, history: None, process: None,
             stop_requested: false, failure: result.err() },
     }
-    let run = match start(driver, config, loaded, deadline, time) {
+    let remaining = operator.as_ref()
+        .map_or(0, super::operator::Service::remaining_convene_operations);
+    let successors = reserved_successors(loaded, remaining);
+    let run = match start_with_successors(driver, config, loaded, deadline, time, successors) {
         Ok(run) => run, Err((driver, error)) => return Reviewed {
             driver, history: None, process: None, stop_requested: false, failure: Some(error) },
     };
@@ -270,7 +326,9 @@ where F: FnMut() -> ElapsedTick {
             }
             if run.review().status() != NativeReviewStatus::Running {
                 if continue_held(&mut run, config, control, deadline, time, intake,
-                    operator, &mut stop_requested)? {
+                    operator, &mut stop_requested)?
+                    || reserved_convening::continue_held(&mut run, config, control, deadline,
+                        time, intake, operator, &mut stop_requested)? {
                     continue;
                 }
                 break;

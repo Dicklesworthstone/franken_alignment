@@ -169,6 +169,16 @@ impl Service {
         )
     }
 
+    /// Reserve at most the original custodian's remaining successor allowance.
+    /// Reconnects and later releases observe this same spent grant; they cannot
+    /// provision a new operation budget by starting another numerical review.
+    pub(super) fn remaining_convene_operations(&self) -> usize {
+        self.active
+            .as_ref()
+            .and_then(|active| active.convening.as_ref())
+            .map_or(0, FileSupervisorConveneGrant::remaining_operations)
+    }
+
     /// The original native-text owner uses the same finite operator grants.
     /// Its branded actor port cannot become arbitrary-payload Tower intake.
     pub(super) fn start_generated(

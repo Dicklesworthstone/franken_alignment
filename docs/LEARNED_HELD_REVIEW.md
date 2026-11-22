@@ -143,10 +143,14 @@ model helpers with no raw or owned pre-output forecast. Process helpers and
 predictive recipes reject the selection before clock, source, store or listener
 startup. Every selected entry of a resident sequence must satisfy that admission.
 
-Use a progressive v2-or-later learned recipe with multiple explicitly selected
+For this fixed-slot mode, use a progressive v2-or-later learned recipe with
+multiple explicitly selected
 `native_review.round_ids`, its matching `sidecar.budget.rounds`, priority ladder
 and sufficient original helper allowance. A v1 single-round recipe cannot
-supply a successor. The complete schedule and every native evaluator are
+supply a fixed-slot successor. It can separately select the
+[prepaid reserve mode](LEARNED_RESERVED_REVIEW.md#select-the-reserve-in-a-live-learned-service)
+when its original numerical budget funds additional native cohorts. The
+complete fixed schedule and every native evaluator are
 provisioned once before the initial review. A selected grant cannot add a round
 or reserve more native work after the result is visible.
 

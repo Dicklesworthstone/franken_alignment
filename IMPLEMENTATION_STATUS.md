@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: expose prepaid learned successors through live services
+
+Single live learned actors and resident Message/Finish sequences now use the
+one-round reserved mode through their existing independent operator profile.
+Startup constructs the largest complete native cohort reserve funded by the
+original work budget, remaining grant operations and total round bound. A grant
+without spare native work preserves accepted but nonactionable one-round
+behavior. Progressive recipes retain their original fixed IDs and windows.
+
+An authenticated explicit successor selects an unused ID. The same retained
+wrapper receives a fresh host-computed window within the original invocation
+deadline and opens only after current source and predecessor checks. Original
+Stop, actor cancellation, cumulative work and polls, resident release ordering
+and independent human approval remain on the path. Helper files are not
+reloaded after a result, and repeated Hold cannot renew native capacity.
+
+Four new service regression functions complement the ten library regressions;
+the incoming fixed-slot tests remain unchanged. Independent source review
+covered all sixteen changed Rust files, and each passed qualified formatter
+parsing with scoped whitespace checks. The verifier attempted both targeted
+test commands and `cargo run --locked -p xtask -- check` through the required
+RCH path against these frozen bytes. All three stopped before compilation with
+exit 127 because `rch` was unavailable. This establishes no compiler, runtime,
+Clippy or full-gate success. Feature work and associated packets remain in
+progress, with no source-admission snapshot reseal. See
+`docs/LEARNED_RESERVED_REVIEW.md` for selection and the retained-owner contract.
+
 ## 2026-11-22: reserve fresh native successors for ordinary learned reviews
 
 The existing fixed-slot learned continuation remains intact. A separate

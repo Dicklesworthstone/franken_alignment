@@ -280,25 +280,39 @@ A nonpredictive learned recipe with native model helpers may select the existing
 ```
 
 The actual loaded recipe must have no process helpers or required raw/owned
-pre-output forecast. Those incompatible selections fail before startup. A
-progressive recipe must preselect multiple `native_review.round_ids`, matching
-sidecar rounds and enough original helper work; a grant cannot create successor
-capacity in a single-round review.
+pre-output forecast. Those incompatible selections fail before startup.
+Successor capacity is provisioned before the first review in one of two modes:
+
+- A progressive recipe preselects multiple `native_review.round_ids`, matching
+  sidecar rounds and enough original helper work. Its existing fixed-slot path
+  retains every original round ID and window.
+- A one-round recipe may reserve additional complete native helper rosters from
+  its original native work allowance. The service chooses the largest fully
+  funded count no greater than the original grant's remaining operations, with
+  at most 32 initial-plus-reserved rounds. It constructs all those evaluators
+  before the initial Begin. A grant supplies no numerical budget: a selection
+  with zero funded successors remains accepted without an actionable
+  continuation.
 
 When the original round ends in an applied Hold without automatic refinement,
 the service retains the original learned packet, generated output, native
 reviewers, completed work and cumulative counters. Address that original request
-with `next`, `action: "convene_held"` and the exact next preprovisioned round.
+with `next` and `action: "convene_held"`. For a progressive recipe, select the
+exact next preprovisioned round. For a one-round recipe with a funded reserve,
+select a fresh unused round ID; the host chooses its commit/reveal window from
+the original service timing within the original action deadline.
 Inspect and explicitly submit the returned complete `convene` action. The
 authenticated mutation queues admission only; Opened requires the original
 wrapper's fresh source checks and successful durable Begin.
 
-Only the next original evaluator roster can run. Its windows are fixed before
-the first review, and its poll allowance is cumulative across rounds. The live
-service pumps independent Stop and actor cancellation while awaiting the
-explicit ticket. It generates no actor output, creates no new sidecar, selects
-no replacement model and performs no automatic retry during that wait. A fresh
-Continue still needs an independent human approval and final publication checks.
+Only the next original evaluator roster can run. Progressive windows remain
+fixed before the first review; a reserved one-round successor cannot extend the
+original invocation deadline. Both modes keep the same native wrapper and
+cumulative poll allowance. The live service pumps independent Stop and actor
+cancellation while awaiting the explicit ticket. It generates no actor output,
+creates no new sidecar, selects no replacement model and performs no automatic
+retry during that wait. A fresh Continue still needs an independent human
+approval and final publication checks.
 
 The same grant remains finite across resident releases and reconnects. This
 also applies to newly admitted requests in supported live recovery; historical
@@ -308,7 +322,10 @@ of profile validation.
 
 The [learned held-review contract](LEARNED_HELD_REVIEW.md) specifies exact source
 binding, weak custody, fixed-window expiry, failed-slot retirement and the
-current source-only verification boundary.
+current source-only verification boundary. The alternative
+[one-round reserve contract](LEARNED_RESERVED_REVIEW.md) specifies prepaid
+evaluator custody, fresh round selection, bounded host windows and reserve
+exhaustion under those same publication and termination requirements.
 
 ## Reconcile an original learned publication
 

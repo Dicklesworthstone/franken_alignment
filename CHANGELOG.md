@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-22: use prepaid learned successors in live actor services
+
+- Select one-round native reserves through the existing independent operator
+  profile, up to its remaining operations, original native work and round bound.
+- Preserve accepted one-round behavior when no additional work is funded;
+  progressive recipes keep their existing fixed-slot continuation.
+- Retain the original wrapper across an explicit fresh-ID successor, compute
+  its review window within the original deadline and keep Stop, cancellation,
+  source checks and independent human approval on the live service path.
+- Add four service regression functions for the real command, human decisions,
+  immutable helper owners, finite funding, repeated Hold and interruption.
+  All sixteen changed Rust files passed parsing and scoped whitespace checks.
+  Three required RCH checks could not start because `rch` is unavailable;
+  compiler, runtime and complete qualification remain open.
+
 ## 2026-11-22: prepay fresh successors for one-round learned reviews
 
 - Preserve the existing fixed-slot learned continuation and add an explicit
