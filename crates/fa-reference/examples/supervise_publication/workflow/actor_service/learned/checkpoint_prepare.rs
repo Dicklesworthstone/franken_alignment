@@ -137,11 +137,12 @@ pub(super) fn check_selection(config: &Config, loaded: &Loaded, selected: Select
     checked::check_selection(config, loaded)?;
     recipe::check_creation(config, loaded)?;
     super::credential::check_creation(loaded)?;
-    selected.check(config, loaded)?;
-    if loaded.generation.required_owned_pre_output_forecast().is_none()
-        || !loaded.generation.requires_owned_forecast_stream_restart_audit()
-        || loaded.generation.text_stream_profile().is_none() {
-        return Err("prompt preparation requires the original owned prompt-audit stream recipe".into());
+    // A nonpredictive stream prepares its original prompt without installing a
+    // predictor. Selected predictors still require the explicit owned audit
+    // contract, and every preparation remains unsampled.
+    selected.check_preparation(config, loaded)?;
+    if loaded.generation.text_stream_profile().is_none() {
+        return Err("prompt preparation requires the original learned text stream".into());
     }
     let registered_identity = loaded.generation.required_computed_identity_registration().is_some();
     if loaded.identity.is_some() != registered_identity

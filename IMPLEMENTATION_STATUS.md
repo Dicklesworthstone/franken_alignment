@@ -1,5 +1,54 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-21: prepare ordinary learned prompts with exact retained custody
+
+The existing `--prepare-stream-checkpoint` command now admits ordinary learned
+streams with no forecast predictor, including original topology mediation. It
+uses the same functional-restart constructor, monitored prompt scheduler and
+native stream capture as the existing owned prompt-audit preparation. A separate
+preparation admission requires zero sampled draws before time or owner creation;
+it never installs a predictor or removes a selected prediction requirement.
+Raw predictors and owned predictors without the explicit audit/reset contract
+remain refused.
+
+Preparation retains the actual numerical prompt, original work and complete
+joint, identity, credential and publication guards. It loads no later helper
+execution weights and issues no actor request or effect authority. Explicit
+continuation resumes that same prompt and requires the original current source,
+native review and fresh human decision. Mediated preparation retains the exact
+source/history pair and original source expenditure; it cannot recreate missing
+custody from an unrelated or mutable source.
+
+The shared live checkpoint selection also admits ordinary mediated capture with
+new paired outputs and, on recovery, the exact original v2 input pair. The
+separate offline mediated narrowing/reset workflow retains its existing owned
+prompt-audit requirement. This connects the existing FA-108 restart/checkpoint
+capability without a new journal event, forecast implementation or controller.
+
+Eight new regression functions exercise actual plain and fully guarded ordinary
+preparation without helper weights, exact zero-event capture reacquisition,
+retained campaign inventory, native/human Approve/Reject continuation, nonzero
+preparation and unsupported predictor refusals with permitted twins, fresh policy
+source loss, paired mediated continuation, source loss after the actual rebind,
+new-output custody and live ordinary mediated capture. Original owned-predictor
+fixtures retain their previous constructor behavior. Independent source/fixture
+review corrected the historical topology inspection profile to omit a live output
+selection; no assertion or original test registration was removed.
+
+All six Rust files pass pinned-nightly syntax parsing; the two new modules are
+formatted and scoped whitespace checks pass. The complete original production
+example passes metadata/type/borrow checking (exit 0, 7.08 seconds, peak child RSS
+587,028 KiB; 28 warnings). The complete original test harness also passes this
+check (exit 0, 31.09 seconds, peak child RSS 1,901,752 KiB; six warnings). Both use
+the emitted library metadata only after its SHA-256 and all 824 actual dependency
+input hashes match the frozen source. These checks do not link or execute tests.
+The standard LLVM library codegen attempt remains SIGKILLed; RCH is unavailable.
+The fresh canonical driver refuses source admission with 221 unlisted files and
+163 digest mismatches before downstream gates. The snapshot is not resealed, and
+runtime, Clippy and full qualification remain open. Contracts:
+`docs/LEARNED_PROMPT_PREPARATION.md`, `docs/LEARNED_STREAM_RESET_OPERATOR.md` and
+`docs/AGENT_GUIDE.md`.
+
 ## 2026-11-21: keep scheduled disclosure through guarded ordinary recovery
 
 Ordinary Tower `serve-open` and simple-witness `serve-open-checked` now carry an

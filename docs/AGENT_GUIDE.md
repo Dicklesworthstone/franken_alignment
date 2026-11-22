@@ -322,6 +322,17 @@ defines the context schema, file and work bounds, error coordinates and pending
 execution status. This profile is separate from the prospective signed-receipt
 step above and does not make the Tower's `verify` verb available.
 
+**Implemented ordinary prompt preparation.** A trusted supervisor can select
+`create-learned-generated --prepare-stream-checkpoint` for an ordinary learned
+stream with no forecast predictor, or for the existing owned prompt-audit recipe.
+The exact `functional_restart` selection and zero-draw boundary are mandatory.
+Preparation retains an independent history anchor and, when mediated, its exact
+source checkpoint, without loading later helper weights or issuing effect
+permission. Explicit continuation resumes the original numerical history and
+requires current source evidence, native review and a fresh human decision. See
+[the preparation contract](LEARNED_PROMPT_PREPARATION.md) for complete command
+inputs, paired custody and the separate limits on offline containment.
+
 **Implemented predictive-stream containment mapping.** The trusted supervisor
 can select the original owned prompt-audit recipe and use
 `create-learned-generated --prepare-stream-checkpoint` to retain a complete

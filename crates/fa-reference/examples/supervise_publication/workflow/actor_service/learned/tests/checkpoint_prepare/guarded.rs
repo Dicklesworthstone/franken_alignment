@@ -27,6 +27,8 @@ const SECRET: &[u8] = b"independently-provisioned-prepared-credential-5837";
 
 #[path = "guarded/joint.rs"]
 mod joint;
+#[path = "guarded/nonpredictive.rs"]
+mod nonpredictive;
 
 fn policy(config: &Config) -> FileCredentialPolicy {
     FileCredentialPolicy {

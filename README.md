@@ -113,6 +113,15 @@ the retained checkpoint remains unsampled with no effect authority. Continuation
 performs a fresh measurement after recovery. Source and regression coverage are
 present; required RCH compilation and runtime qualification remain pending.
 
+Preparation now also accepts ordinary learned streams with no forecast
+predictor, including the original topology-backed stream. It captures the exact
+unsampled prompt with independent history/source custody and returns before
+helper execution or publication. Explicit continuation retains the same prompt
+work and needs current source evidence, native review and fresh human approval.
+The same paired custody supports ordinary mediated live checkpoint capture;
+preparation always requires zero sampled draws. See
+[ordinary prompt preparation](docs/LEARNED_PROMPT_PREPARATION.md).
+
 That preparation also retains the complete original joint-review guard, including
 computed-identity composition, credential and publication requirements. The
 baseline can continue through fresh native and human review, or follow original

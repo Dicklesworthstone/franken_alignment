@@ -26,10 +26,13 @@ struct Case {
 }
 impl Case {
     fn new(root: &Root, campaign: bool) -> Self {
+        Self::selected(root, campaign, true)
+    }
+    fn selected(root: &Root, campaign: bool, predictor: bool) -> Self {
         let config_path = super::functional_creation::config_file(root, "functional_restart");
         let config = Config::read_learned_generation(&config_path).unwrap();
         let recipe = super::continuation::write(root);
-        super::forecast::install_restart(root, &recipe, 60_000);
+        if predictor { super::forecast::install_restart(root, &recipe, 60_000); }
         evidence(root, &config, 1, true, false);
         let selection = root.0.join("prepare-checkpoint.json");
         fs::write(&selection, document(2, 0)).unwrap();

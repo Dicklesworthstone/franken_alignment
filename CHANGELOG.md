@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-21: prepare ordinary learned prompts without a predictor
+
+- Admit ordinary nonpredictive streams to the existing unsampled prompt
+  preparation command, including their original topology-mediated owner.
+- Require zero sampled draws before preparation creates an owner; retain the
+  existing explicit owned prompt-audit path and unsupported predictor refusals.
+- Preserve original joint, identity, credential and final-publication guards,
+  numerical/source allowances and exact independent history/topology custody.
+- Admit ordinary mediated live checkpoint capture with the same paired outputs;
+  leave the separate offline mediated control contract unchanged.
+- Add eight actual-command regression functions with Approve/Reject, source-loss,
+  exact custody and unsupported-selection twins. Complete original production and
+  test-harness metadata/type checks pass; runtime qualification remains open.
+
 ## 2026-11-21: scheduled prechecks through guarded ordinary recovery
 
 - Carry explicit per-request precheck schedules through the original governed

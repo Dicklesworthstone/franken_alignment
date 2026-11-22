@@ -59,12 +59,13 @@ option performs no reset, grants no publication key, and leaves all monitor,
 native congress and independent human review requirements in force.
 
 This live selection requires an explicit `functional_restart` configuration and
-a plain nonpredictive stream or the explicit owned prompt-audit recipe. The
-owned profile requires the complete original prompt and zero cumulative sampling.
+a nonpredictive stream or the explicit owned prompt-audit recipe, with optional
+original topology mediation. The owned profile requires the complete original
+prompt and zero cumulative sampling.
 It composes with fresh campaign provisioning, actor/precheck service and existing
 anchor options; a resident sequence captures only its first selected Message.
 It cannot be used for Finish or historical maintenance. Mediated capture requires
-the explicit owned prompt-audit recipe and new paired history/topology outputs;
+new paired history/topology outputs for either supported predictor selection;
 recovery additionally requires an exact v2 input pair. The topology creation
 profile must therefore use `fa.mediated-create/2`, or the recovery profile
 `fa.mediated-submit/2`, with an explicit `retain_checkpoint` destination distinct
@@ -79,9 +80,12 @@ still apply their original Stop/drain behavior; this option does not implement
 automatic incident reset or make a terminally stopped owner resettable.
 
 For an intentional fresh pause before any prediction or draw, use
-[`--prepare-stream-checkpoint`](LEARNED_PROMPT_PREPARATION.md). It retains the
-captured anchor and exits with a maintenance result, while the live option above
-continues into the original review/publication cycle.
+[`--prepare-stream-checkpoint`](LEARNED_PROMPT_PREPARATION.md). Ordinary streams
+and the owned prompt-audit recipe both require an explicit zero-draw selection
+for preparation. It retains the captured anchor and any exact topology pair,
+then exits with a maintenance result. The live option above continues into the
+original review/publication cycle. These live capture and preparation paths do
+not widen the separate offline mediated control contract below.
 
 ### Capture an existing quiet prefix or initiate reset
 

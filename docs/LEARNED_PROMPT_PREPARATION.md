@@ -11,8 +11,12 @@ the original actual-model measurement and installs its still-current result.
 The complete registered stimulus roster must match before prompt inference;
 a passport, manifest or earlier matching result alone cannot satisfy this step.
 
-This supplies a normal operator entry point for
-[owned predictive stream containment](LEARNED_PREDICTIVE_STREAM_RESET.md): prepare,
+Ordinary learned streams can prepare and explicitly continue the same prompt
+without installing a forecast predictor. Plain and topology-mediated preparation
+use the same original constructor, monitored prompt and retained checkpoint.
+
+For an owned prompt-audit predictor, this also supplies a normal operator entry
+point for [predictive stream containment](LEARNED_PREDICTIVE_STREAM_RESET.md): prepare,
 narrow the original authority, begin the original reset, complete it, then resume
 through fresh prediction and ordinary native and human review. An operator can
 also explicitly continue a prepared prompt without selecting a reset. Preparation
@@ -30,11 +34,14 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE \
 
 The command is fresh creation only. `CONFIG` must explicitly declare
 `functional_restart`; an audit-only configuration is insufficient and no stronger
-restart grade is inferred. `LEARNED_RECIPE` must select the original owned
-K/V stream predictor and `fa.learned-forecast/2` with
-`"reset":"owned_prompt_audit"`. The numerical recipe, tokenizer, prompt, fitted
-codec, monitor, predictor, stream limits, policy-source contract and terminal
-reserve are installed through their existing native constructors.
+restart grade is inferred. `LEARNED_RECIPE` selects either an ordinary stream
+with no predictor, or the original owned K/V stream predictor with
+`fa.learned-forecast/2` and `"reset":"owned_prompt_audit"`. Raw predictors and
+owned predictors without that explicit reset contract remain unsupported.
+The numerical recipe, tokenizer, prompt, fitted codec, monitor, optional
+predictor, stream limits, policy-source contract and terminal reserve are
+installed through their existing native constructors. Preparation never adds a
+predictor or changes the selected numerical contract.
 
 The checkpoint profile reuses the closed `fa.learned-generation-checkpoint/1`
 schema:
@@ -51,8 +58,9 @@ schema:
 All coordinates are canonical unsigned decimal strings. Checkpoint ID and
 position must be nonzero. The position must equal the complete original prompt
 under its selected tokenizer; it is not a character or byte count. The example
-describes a two-token prompt. The owned prompt-audit recipe requires zero draws.
-A wrong position refuses at the first actual output boundary before acquiring
+describes a two-token prompt. Preparation always requires zero expected sampled
+draws, including for ordinary streams; a nonzero selection refuses before owner
+creation or clock observation. A wrong position refuses at the first actual output boundary before acquiring
 any forecast or sampling intent. The command does not continue until a later
 position happens to match.
 
@@ -91,8 +99,9 @@ This bounded preparation path supports the complete original computed identity
 registration and measurement selection, and the existing held-out joint policy
 envelope. Canonical `identity(joint(recipe))` composition retains both complete
 guards. It still refuses held-out activation and nonzero recovery floors;
-neither requirement is dropped to obtain a simpler owner. Raw predictors, legacy
-owned predictors and nonpredictive streams remain outside this mode.
+neither requirement is dropped to obtain a simpler owner. Raw predictors and legacy
+owned predictors remain outside this mode. Ordinary nonpredictive streams use
+their unchanged no-predictor contract, including when topology is selected.
 An existing store is never reopened or replaced by preparation, including after
 a previous preparation's report was lost.
 
@@ -112,7 +121,7 @@ manifest path. A bare requirement without its registration, or an unmatched
 registration/measurement selection, refuses before creating an owner.
 
 The original guarded constructor supplies the unique identity observer together
-with the human and predictor roles. After qualification and any topology
+with the human role and, when selected, the predictor role. After qualification and any topology
 certification, preparation reads the independently observed manifest and drives
 the original cooperative `FileComputedIdentityRun` against this owner's actual
 model. It accepts no caller-supplied anchor frames or matching verdict. Manifest
@@ -225,8 +234,9 @@ supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PR
 ```
 
 That separate live command performs its original recovery Fence, fresh source
-and clock observations, explicit numerical resume, fresh forecast, monitored
-sampling, native helper review and independent human approval. It retains spent
+and clock observations, explicit numerical resume, a fresh forecast when the
+original recipe requires it, monitored sampling, native helper review and
+independent human approval. It retains spent
 prompt work and cannot reuse preparation as a publication approval. When
 campaigns were installed, the recipe in this command must carry their exact
 independent recovery expectation.
@@ -240,6 +250,10 @@ spent work is reset to make another check succeed.
 When topology was installed, continuation also selects the matching v2 source
 checkpoint, fresh topology profile and new paired outputs; the plain command
 above is insufficient to recover that guarded history.
+Ordinary mediated preparation and continuation retain these exact paired inputs
+and current source checks. The separate offline mediated narrowing/reset workflow
+still requires its documented owned prompt-audit predictor; preparing an ordinary
+checkpoint does not silently admit that broader control composition.
 
 ## Failure and lost acknowledgment
 
@@ -343,3 +357,21 @@ missing current evidence and the sequence-zero activation boundary. These are
 regression sources awaiting required RCH compilation and execution; no earlier
 result qualifies this extension. Independent source review, qualified-nightly
 syntax parsing, new-module formatting and whitespace checks are complete.
+
+### Ordinary-stream preparation extension (2026-11-21)
+
+Eight new functions in `checkpoint_prepare/guarded/nonpredictive.rs` and its
+`mediated.rs` child cover the ordinary and fully guarded routes, exact retained
+prompt work, source/history pairs, native and fresh human review, current-source
+loss, campaign mismatches, unsupported predictors, unsampled admission and the
+live mediated capture option. The existing owned-predictor fixture constructor
+and all its original assertions remain unchanged.
+
+Independent source/fixture review and pinned syntax/format checks are complete.
+The complete production example and original test harness pass scoped pinned
+metadata/type/borrow checks after the emitted library metadata and all 824 actual
+library input hashes were verified. These checks do not link or execute the
+regressions. Required runtime, RCH, Clippy and full qualification remain pending;
+the canonical driver still refuses the unreconciled source snapshot before its
+downstream gates. Historical verification statements above describe their earlier
+increments and are not replaced by this scoped evidence.

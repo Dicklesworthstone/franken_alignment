@@ -93,9 +93,6 @@ impl Selection {
             return Err("live checkpoint selection requires no predictor or the explicit owned prompt-audit reset recipe".into());
         }
         if let Some(selected) = loaded.topology.as_ref() {
-            if !loaded.generation.requires_owned_forecast_stream_restart_audit() {
-                return Err("mediated live checkpoint selection requires the explicit owned prompt-audit reset recipe".into());
-            }
             let output = match selected {
                 topology::Selection::Create(selection) => selection.acknowledged_output(),
                 topology::Selection::Recover { selection, history } => {
@@ -117,6 +114,17 @@ impl Selection {
         if loaded.generation.requires_owned_forecast_stream_restart_audit()
             && self.sampled_draws != 0 {
             return Err("owned prompt-audit checkpoint selection requires zero sampled draws".into());
+        }
+        Ok(())
+    }
+
+    /// Fresh preparation stops at the complete prompt, before sampling. The
+    /// ordinary capture API also serves later live boundaries, so this tighter
+    /// selection belongs to preparation and never changes a selected predictor.
+    pub(super) fn check_preparation(&self, config: &Config, loaded: &Loaded) -> Result<(), String> {
+        self.check(config, loaded)?;
+        if self.sampled_draws != 0 {
+            return Err("prompt checkpoint preparation requires zero sampled draws".into());
         }
         Ok(())
     }
