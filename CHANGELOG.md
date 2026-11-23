@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: repair risk-theater frontier and support accounting
+
+- Replace unchecked tuple updates with atomic, bounded complete-frontier
+  batches, exact support identity and checked multiplicity/score arithmetic.
+- Require the requested closed sequence on reads and explicit positive
+  thresholds for all six families; refuse incomplete or stale projections.
+- Reconstruct history independently in the batch oracle and compare complete
+  weighted support, including lost retractions below finding thresholds.
+- Add fourteen public regression functions. The local implementation passed
+  scoped syntax/format checks before workspace loss; recovered patches remain
+  source-reviewed and execution-unqualified. Required RCH was unavailable.
+
 ## 2026-11-22: connect governance accounting to authenticated operators
 
 - Select one finite `governance_ledger` disclosure grant in ordinary, learned

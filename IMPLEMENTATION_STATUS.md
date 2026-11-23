@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: preserve exact risk-theater support at complete frontiers
+
+The FA-125 reference detector now applies bounded, consecutive closed-frontier
+batches atomically, retains exact weighted support, checks arithmetic and
+requires an explicit current sequence on every read. Mismatched retractions
+cannot erase support while leaving its score behind. Configuration includes
+positive thresholds for all six families; malformed input, overflow and resource
+exhaustion refuse without altering the preceding complete snapshot.
+
+The batch oracle independently reconstructs the original history by key and
+checks every earlier boundary. Comparison includes all scores and weighted
+supports, so a lost zero-score retraction is visible even without an alarm.
+Fourteen public regression functions were added and the existing caller was
+migrated to exact retraction semantics. The original local implementation passed
+independent source review and scoped Rust syntax/format and whitespace checks.
+The workspace then became unavailable; the recovered patches were source
+reviewed but need final formatting and execution qualification. Remote-only RCH
+tests and the canonical gate could not start because the runner was absent.
+
+FA-125 is in progress. The earlier detector bead closure is unsupported by the
+full acceptance contract; a local CLI reopening was not captured before the
+workspace outage and is not represented as a completed tracker update here.
+Native query predicates, journal ingestion, governed thresholds, durable
+incidents and access enforcement remain unmet acceptance. See
+[the checked reference contract](docs/RISK_THEATER_REFERENCE.md).
+
 ## 2026-11-22: expose governance accounting on the original live operator path
 
 The existing `fa.tower-operator-service/1` profile accepts an explicit finite

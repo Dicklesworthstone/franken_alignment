@@ -713,14 +713,77 @@ pub struct ControlPlaneDelta {
     pub frontier_seq: u64,
     pub family: RiskTheaterFamily,
     pub key: String,
-    /// `+1` for insertion/increment, `-1` for retraction/deletion.
+    /// A nonzero signed Z-set weight. Retractions must name the exact live tuple
+    /// and cannot make its retained multiplicity negative.
     pub multiplicity: i64,
+    /// The nonnegative metric VALUE of the tuple, not a replacement value on
+    /// deletion. A change is an exact `-old, +new` pair.
     pub metric_delta: i64,
     pub support_address: Address,
 }
 
-/// Governance incident opened when a risk-theater standing query crosses its threshold (`iew.4`).
-/// Marked [`NotActorVisible`]; the detector has no policy write path.
+/// A complete ordered input boundary for the bounded reference detector.
+///
+/// Sequences start at one and are contiguous, including empty boundaries. All
+/// tuples in a boundary carry its sequence; multiple changes at that sequence
+/// are allowed. `closed` is an assertion by the independent input owner, not a
+/// completeness proof manufactured by this reference projection. Native journal
+/// ingestion and authenticated closure remain separate integration obligations.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ControlPlaneFrontier {
+    pub frontier_seq: u64,
+    pub closed: bool,
+    pub deltas: Vec<ControlPlaneDelta>,
+}
+
+pub const MAX_RISK_THEATER_SUPPORTS: usize = 512;
+pub const MAX_RISK_THEATER_FRONTIER_DELTAS: usize = 256;
+pub const MAX_RISK_THEATER_COMPONENT_BYTES: usize = 256;
+pub const MAX_RISK_THEATER_HISTORY_FRONTIERS: usize = 1024;
+pub const MAX_RISK_THEATER_HISTORY_DELTAS: usize = 4096;
+
+/// Refusal is distinct from a complete, empty finding set. Every failed update
+/// leaves the preceding closed snapshot intact, including its exact sequence.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RiskTheaterError {
+    IncompleteThresholds,
+    NonpositiveThreshold,
+    UnclosedFrontier,
+    NoClosedFrontier,
+    UnexpectedFrontier { expected: u64, actual: u64 },
+    DeltaFrontierMismatch,
+    MissingHistoryFrontier,
+    FrontierExhausted,
+    FrontierDeltaLimit,
+    HistoryLimit,
+    SupportLimit,
+    InvalidKey,
+    InvalidSupportAddress,
+    ZeroMultiplicity,
+    NegativeMetric,
+    MissingRetractionSupport,
+    TupleMismatch,
+    NegativeMultiplicity,
+    MultiplicityOverflow,
+    ScoreOverflow,
+    OracleMismatch,
+}
+
+/// Exact retained support, including weights below the finding threshold.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RiskTheaterSupport {
+    pub family: RiskTheaterFamily,
+    pub key: String,
+    pub multiplicity: i64,
+    pub metric_value: i64,
+    pub support_address: Address,
+}
+
+impl NotActorVisible for RiskTheaterSupport {}
+
+/// Support-backed threshold crossing for a separate governance incident consumer
+/// (`iew.4`). Marked [`NotActorVisible`]; this value neither opens a native incident
+/// nor supplies a policy write path.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RiskTheaterFinding {
     pub family: RiskTheaterFamily,
@@ -731,51 +794,230 @@ pub struct RiskTheaterFinding {
 
 impl NotActorVisible for RiskTheaterFinding {}
 
-/// Incremental risk-theater standing-query evaluator (`iew.3`, `iew.4`).
+/// Complete bounded projection at one explicitly closed input frontier.
+///
+/// Thresholds are immutable configuration of this reference evaluator; this
+/// type does not claim that their source has native governance authority. Scores
+/// and supports for ALL six families are retained even when no finding opens.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RiskTheaterSnapshot {
+    pub frontier_seq: u64,
+    pub thresholds: BTreeMap<RiskTheaterFamily, i64>,
+    pub scores: BTreeMap<RiskTheaterFamily, i64>,
+    pub supports: Vec<RiskTheaterSupport>,
+    pub findings: Vec<RiskTheaterFinding>,
+}
+
+impl NotActorVisible for RiskTheaterSnapshot {}
+
+fn validate_risk_theater_thresholds(
+    thresholds: &BTreeMap<RiskTheaterFamily, i64>,
+) -> Result<(), RiskTheaterError> {
+    if RiskTheaterFamily::ALL
+        .iter()
+        .any(|family| !thresholds.contains_key(family))
+    {
+        return Err(RiskTheaterError::IncompleteThresholds);
+    }
+    if thresholds.values().any(|threshold| *threshold <= 0) {
+        return Err(RiskTheaterError::NonpositiveThreshold);
+    }
+    Ok(())
+}
+
+fn validate_risk_theater_delta(delta: &ControlPlaneDelta) -> Result<(), RiskTheaterError> {
+    if delta.key.is_empty() || delta.key.len() > MAX_RISK_THEATER_COMPONENT_BYTES {
+        return Err(RiskTheaterError::InvalidKey);
+    }
+    let address = &delta.support_address;
+    // Address has public fields. Revalidate without formatting or cloning an
+    // unbounded string; an otherwise valid, oversized address is also refused.
+    let valid_component = |value: &str| {
+        !value.is_empty()
+            && value.len() <= MAX_RISK_THEATER_COMPONENT_BYTES
+            && value
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"-_.".contains(&byte))
+    };
+    if !valid_component(&address.tenant) || !valid_component(&address.id) {
+        return Err(RiskTheaterError::InvalidSupportAddress);
+    }
+    if delta.multiplicity == 0 {
+        return Err(RiskTheaterError::ZeroMultiplicity);
+    }
+    if delta.metric_delta < 0 {
+        return Err(RiskTheaterError::NegativeMetric);
+    }
+    Ok(())
+}
+
+/// Incremental risk-theater score/support kernel (`iew.3`, `iew.4`).
+///
+/// Updates commit atomically at consecutive closed frontiers. This is a bounded
+/// reference projection, not the six native ledger query definitions, a journal
+/// completeness verifier, an incident writer, or an actor authorization filter.
+/// The previous unbounded tuple-at-a-time API is deliberately replaced: it could
+/// publish partial results, overflow, and remove a support with the wrong value.
 #[derive(Clone, Debug)]
 pub struct RiskTheaterDetector {
     thresholds: BTreeMap<RiskTheaterFamily, i64>,
     scores: BTreeMap<RiskTheaterFamily, i64>,
-    active_supports: BTreeMap<(RiskTheaterFamily, String), (i64, Address)>,
+    active_supports: BTreeMap<(RiskTheaterFamily, String), RiskTheaterSupport>,
+    closed_frontier: u64,
 }
 
 impl RiskTheaterDetector {
-    pub fn new(thresholds: BTreeMap<RiskTheaterFamily, i64>) -> Self {
-        Self {
+    pub fn new(thresholds: BTreeMap<RiskTheaterFamily, i64>) -> Result<Self, RiskTheaterError> {
+        validate_risk_theater_thresholds(&thresholds)?;
+        Ok(Self {
             thresholds,
-            scores: BTreeMap::new(),
+            scores: RiskTheaterFamily::ALL
+                .into_iter()
+                .map(|family| (family, 0))
+                .collect(),
             active_supports: BTreeMap::new(),
-        }
+            closed_frontier: 0,
+        })
     }
 
-    pub fn apply_delta(&mut self, delta: &ControlPlaneDelta) {
-        let family_score = self.scores.entry(delta.family).or_insert(0);
-        *family_score += delta.multiplicity * delta.metric_delta;
-
-        let entry = self
-            .active_supports
-            .entry((delta.family, delta.key.clone()))
-            .or_insert((0, delta.support_address.clone()));
-        entry.0 += delta.multiplicity;
-        if entry.0 <= 0 {
-            self.active_supports
-                .remove(&(delta.family, delta.key.clone()));
-        }
+    pub fn closed_frontier(&self) -> Option<u64> {
+        (self.closed_frontier != 0).then_some(self.closed_frontier)
     }
 
-    pub fn evaluate_findings(&self) -> Vec<RiskTheaterFinding> {
-        let mut out = Vec::new();
+    /// Apply the complete next boundary or retain the whole previous snapshot.
+    ///
+    /// Individual tuple multiplicities and contributions must fit i64; family
+    /// scores must fit i64 at closure. The staging map is bounded by the previous
+    /// support limit plus the input batch limit, permitting insert/delete pairs
+    /// without imposing a spurious intermediate support-capacity restriction.
+    pub fn apply_frontier(
+        &mut self,
+        frontier: &ControlPlaneFrontier,
+    ) -> Result<RiskTheaterSnapshot, RiskTheaterError> {
+        if !frontier.closed {
+            return Err(RiskTheaterError::UnclosedFrontier);
+        }
+        let expected = self
+            .closed_frontier
+            .checked_add(1)
+            .ok_or(RiskTheaterError::FrontierExhausted)?;
+        if frontier.frontier_seq != expected {
+            return Err(RiskTheaterError::UnexpectedFrontier {
+                expected,
+                actual: frontier.frontier_seq,
+            });
+        }
+        if frontier.deltas.len() > MAX_RISK_THEATER_FRONTIER_DELTAS {
+            return Err(RiskTheaterError::FrontierDeltaLimit);
+        }
+        for delta in &frontier.deltas {
+            if delta.frontier_seq != frontier.frontier_seq {
+                return Err(RiskTheaterError::DeltaFrontierMismatch);
+            }
+            validate_risk_theater_delta(delta)?;
+        }
+
+        let mut supports = self.active_supports.clone();
+        let mut scores: BTreeMap<_, _> = self
+            .scores
+            .iter()
+            .map(|(family, score)| (*family, i128::from(*score)))
+            .collect();
+        for delta in &frontier.deltas {
+            let key = (delta.family, delta.key.clone());
+            let old = supports.get(&key);
+            if let Some(old) = old {
+                if old.metric_value != delta.metric_delta
+                    || old.support_address != delta.support_address
+                {
+                    return Err(RiskTheaterError::TupleMismatch);
+                }
+            } else if delta.multiplicity < 0 {
+                return Err(RiskTheaterError::MissingRetractionSupport);
+            }
+            let previous_weight = old.map_or(0, |support| support.multiplicity);
+            let next_weight = previous_weight
+                .checked_add(delta.multiplicity)
+                .ok_or(RiskTheaterError::MultiplicityOverflow)?;
+            if next_weight < 0 {
+                return Err(RiskTheaterError::NegativeMultiplicity);
+            }
+            let previous_contribution = previous_weight
+                .checked_mul(delta.metric_delta)
+                .ok_or(RiskTheaterError::ScoreOverflow)?;
+            let next_contribution = next_weight
+                .checked_mul(delta.metric_delta)
+                .ok_or(RiskTheaterError::ScoreOverflow)?;
+            let score = scores.get_mut(&delta.family).expect("complete family map");
+            *score = score
+                .checked_add(i128::from(next_contribution) - i128::from(previous_contribution))
+                .ok_or(RiskTheaterError::ScoreOverflow)?;
+            if next_weight == 0 {
+                supports.remove(&key);
+            } else {
+                supports.insert(
+                    key,
+                    RiskTheaterSupport {
+                        family: delta.family,
+                        key: delta.key.clone(),
+                        multiplicity: next_weight,
+                        metric_value: delta.metric_delta,
+                        support_address: delta.support_address.clone(),
+                    },
+                );
+            }
+        }
+        if supports.len() > MAX_RISK_THEATER_SUPPORTS {
+            return Err(RiskTheaterError::SupportLimit);
+        }
+        let scores = scores
+            .into_iter()
+            .map(|(family, score)| {
+                i64::try_from(score)
+                    .map(|score| (family, score))
+                    .map_err(|_| RiskTheaterError::ScoreOverflow)
+            })
+            .collect::<Result<_, _>>()?;
+        let candidate = Self {
+            thresholds: self.thresholds.clone(),
+            scores,
+            active_supports: supports,
+            closed_frontier: frontier.frontier_seq,
+        };
+        let snapshot = candidate.snapshot(frontier.frontier_seq)?;
+        *self = candidate;
+        Ok(snapshot)
+    }
+
+    /// An explicit requested sequence prevents an old empty result from being
+    /// mistaken for a successful query at a rejected or incomplete new frontier.
+    pub fn snapshot(
+        &self,
+        expected_closed_frontier: u64,
+    ) -> Result<RiskTheaterSnapshot, RiskTheaterError> {
+        if self.closed_frontier == 0 {
+            return Err(RiskTheaterError::NoClosedFrontier);
+        }
+        if self.closed_frontier != expected_closed_frontier {
+            return Err(RiskTheaterError::UnexpectedFrontier {
+                expected: self.closed_frontier,
+                actual: expected_closed_frontier,
+            });
+        }
+        let mut findings = Vec::new();
         for family in RiskTheaterFamily::ALL {
-            let score = self.scores.get(&family).copied().unwrap_or(0);
-            let threshold = self.thresholds.get(&family).copied().unwrap_or(i64::MAX);
+            let score = self.scores[&family];
+            let threshold = self.thresholds[&family];
             if score >= threshold {
                 let support_addresses = self
                     .active_supports
-                    .iter()
-                    .filter(|((f, _), (mult, _))| *f == family && *mult > 0)
-                    .map(|(_, (_, addr))| addr.clone())
+                    .values()
+                    .filter(|support| support.family == family)
+                    .map(|support| support.support_address.clone())
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
                     .collect();
-                out.push(RiskTheaterFinding {
+                findings.push(RiskTheaterFinding {
                     family,
                     current_score: score,
                     threshold,
@@ -783,21 +1025,188 @@ impl RiskTheaterDetector {
                 });
             }
         }
-        out
+        Ok(RiskTheaterSnapshot {
+            frontier_seq: self.closed_frontier,
+            thresholds: self.thresholds.clone(),
+            scores: self.scores.clone(),
+            supports: self.active_supports.values().cloned().collect(),
+            findings,
+        })
+    }
+
+    pub fn evaluate_findings(
+        &self,
+        expected_closed_frontier: u64,
+    ) -> Result<Vec<RiskTheaterFinding>, RiskTheaterError> {
+        self.snapshot(expected_closed_frontier)
+            .map(|snapshot| snapshot.findings)
+    }
+
+    /// Compare against a separately supplied complete history, including scores
+    /// and below-threshold supports. A lost retraction cannot hide merely because
+    /// neither projection currently crosses a threshold. This cannot detect a
+    /// fact omitted from BOTH inputs or authenticate their independent origin.
+    pub fn verify_against_history(
+        &self,
+        history: &[ControlPlaneFrontier],
+    ) -> Result<RiskTheaterSnapshot, RiskTheaterError> {
+        let snapshot = self.snapshot(self.closed_frontier)?;
+        let oracle =
+            recompute_risk_theater_batch_oracle(&self.thresholds, history, self.closed_frontier)?;
+        if snapshot != oracle {
+            return Err(RiskTheaterError::OracleMismatch);
+        }
+        Ok(snapshot)
     }
 }
 
-/// Batch oracle recomputing risk-theater findings from scratch over `deltas[..=up_to_frontier]` (`iew.3`).
+/// Independent batch oracle over an explicitly closed history prefix (`iew.3`).
+///
+/// Unlike the incremental score-delta algorithm, this groups source tuples by
+/// key, reconstructs each key's live value from the beginning at EVERY closed
+/// frontier, and sums the resulting relation from scratch. No detector method or
+/// incremental reducer is called. It checks every intermediate closed boundary,
+/// so later deletion cannot hide an earlier overflow or support-limit violation.
+///
+/// The requested prefix must contain sequences 1 through `up_to_frontier`;
+/// later suffixes are irrelevant to that historical result. At most 1024
+/// frontiers and 4096 deltas are examined (at most their product in reconstruction
+/// visits), independently of the incremental detector's bounded retained state.
 pub fn recompute_risk_theater_batch_oracle(
     thresholds: &BTreeMap<RiskTheaterFamily, i64>,
-    deltas: &[ControlPlaneDelta],
+    history: &[ControlPlaneFrontier],
     up_to_frontier: u64,
-) -> Vec<RiskTheaterFinding> {
-    let mut batch = RiskTheaterDetector::new(thresholds.clone());
-    for d in deltas.iter().filter(|d| d.frontier_seq <= up_to_frontier) {
-        batch.apply_delta(d);
+) -> Result<RiskTheaterSnapshot, RiskTheaterError> {
+    validate_risk_theater_thresholds(thresholds)?;
+    if up_to_frontier == 0 {
+        return Err(RiskTheaterError::NoClosedFrontier);
     }
-    batch.evaluate_findings()
+    if up_to_frontier > MAX_RISK_THEATER_HISTORY_FRONTIERS as u64 {
+        return Err(RiskTheaterError::HistoryLimit);
+    }
+    let prefix = history
+        .get(..up_to_frontier as usize)
+        .ok_or(RiskTheaterError::MissingHistoryFrontier)?;
+    let mut total_deltas = 0usize;
+    let mut by_key: BTreeMap<(RiskTheaterFamily, &str), Vec<&ControlPlaneDelta>> = BTreeMap::new();
+    for (index, frontier) in prefix.iter().enumerate() {
+        let expected = index as u64 + 1;
+        if frontier.frontier_seq != expected {
+            return Err(RiskTheaterError::UnexpectedFrontier {
+                expected,
+                actual: frontier.frontier_seq,
+            });
+        }
+        if !frontier.closed {
+            return Err(RiskTheaterError::UnclosedFrontier);
+        }
+        if frontier.deltas.len() > MAX_RISK_THEATER_FRONTIER_DELTAS {
+            return Err(RiskTheaterError::FrontierDeltaLimit);
+        }
+        total_deltas = total_deltas
+            .checked_add(frontier.deltas.len())
+            .ok_or(RiskTheaterError::HistoryLimit)?;
+        if total_deltas > MAX_RISK_THEATER_HISTORY_DELTAS {
+            return Err(RiskTheaterError::HistoryLimit);
+        }
+        for delta in &frontier.deltas {
+            if delta.frontier_seq != frontier.frontier_seq {
+                return Err(RiskTheaterError::DeltaFrontierMismatch);
+            }
+            validate_risk_theater_delta(delta)?;
+            by_key
+                .entry((delta.family, delta.key.as_str()))
+                .or_default()
+                .push(delta);
+        }
+    }
+
+    let mut result = None;
+    for frontier in prefix {
+        let mut supports = Vec::new();
+        let mut sums: BTreeMap<_, i128> = thresholds.keys().map(|family| (*family, 0)).collect();
+        for ((family, key), changes) in &by_key {
+            let mut count = 0i128;
+            let mut live: Option<&ControlPlaneDelta> = None;
+            for change in changes {
+                if change.frontier_seq > frontier.frontier_seq {
+                    break;
+                }
+                if let Some(tuple) = live {
+                    if tuple.metric_delta != change.metric_delta
+                        || tuple.support_address != change.support_address
+                    {
+                        return Err(RiskTheaterError::TupleMismatch);
+                    }
+                } else if change.multiplicity < 0 {
+                    return Err(RiskTheaterError::MissingRetractionSupport);
+                }
+                count = count
+                    .checked_add(i128::from(change.multiplicity))
+                    .ok_or(RiskTheaterError::MultiplicityOverflow)?;
+                if count < 0 {
+                    return Err(RiskTheaterError::NegativeMultiplicity);
+                }
+                if count > i128::from(i64::MAX) {
+                    return Err(RiskTheaterError::MultiplicityOverflow);
+                }
+                let contribution = count
+                    .checked_mul(i128::from(change.metric_delta))
+                    .ok_or(RiskTheaterError::ScoreOverflow)?;
+                if contribution > i128::from(i64::MAX) {
+                    return Err(RiskTheaterError::ScoreOverflow);
+                }
+                live = if count == 0 { None } else { Some(*change) };
+            }
+            if let Some(tuple) = live {
+                if supports.len() == MAX_RISK_THEATER_SUPPORTS {
+                    return Err(RiskTheaterError::SupportLimit);
+                }
+                let contribution = count
+                    .checked_mul(i128::from(tuple.metric_delta))
+                    .ok_or(RiskTheaterError::ScoreOverflow)?;
+                let sum = sums.get_mut(family).expect("complete family map");
+                *sum = sum
+                    .checked_add(contribution)
+                    .ok_or(RiskTheaterError::ScoreOverflow)?;
+                supports.push(RiskTheaterSupport {
+                    family: *family,
+                    key: (*key).to_owned(),
+                    multiplicity: count as i64,
+                    metric_value: tuple.metric_delta,
+                    support_address: tuple.support_address.clone(),
+                });
+            }
+        }
+        let mut scores = BTreeMap::new();
+        let mut findings = Vec::new();
+        for (family, threshold) in thresholds {
+            let score = i64::try_from(sums[family]).map_err(|_| RiskTheaterError::ScoreOverflow)?;
+            scores.insert(*family, score);
+            if score >= *threshold {
+                let mut addresses = BTreeSet::new();
+                for support in &supports {
+                    if support.family == *family {
+                        addresses.insert(support.support_address.clone());
+                    }
+                }
+                findings.push(RiskTheaterFinding {
+                    family: *family,
+                    current_score: score,
+                    threshold: *threshold,
+                    support_addresses: addresses.into_iter().collect(),
+                });
+            }
+        }
+        result = Some(RiskTheaterSnapshot {
+            frontier_seq: frontier.frontier_seq,
+            thresholds: thresholds.clone(),
+            scores,
+            supports,
+            findings,
+        });
+    }
+    result.ok_or(RiskTheaterError::NoClosedFrontier)
 }
 
 // ============================================================================
@@ -1076,9 +1485,12 @@ mod tests {
 
     #[test]
     fn risk_theater_batch_oracle_equality_and_attack_capsule_isolation() {
-        let mut thresholds = BTreeMap::new();
-        thresholds.insert(RiskTheaterFamily::ConsequenceDrift, 10);
-        let mut detector = RiskTheaterDetector::new(thresholds.clone());
+        let thresholds = RiskTheaterFamily::ALL
+            .into_iter()
+            .map(|family| (family, 10))
+            .collect::<BTreeMap<_, _>>();
+        let mut detector =
+            RiskTheaterDetector::new(thresholds.clone()).expect("complete thresholds");
         let addr = Address::new("org", Noun::Finding, "rt-1", Some(1)).expect("addr");
 
         let deltas = vec![
@@ -1095,24 +1507,35 @@ mod tests {
                 family: RiskTheaterFamily::ConsequenceDrift,
                 key: "k1".to_owned(),
                 multiplicity: -1,
-                metric_delta: 5,
+                metric_delta: 12,
                 support_address: addr,
             },
         ];
 
-        detector.apply_delta(&deltas[0]);
+        let history = deltas
+            .into_iter()
+            .map(|delta| ControlPlaneFrontier {
+                frontier_seq: delta.frontier_seq,
+                closed: true,
+                deltas: vec![delta],
+            })
+            .collect::<Vec<_>>();
+        let first = detector.apply_frontier(&history[0]).expect("insert");
         assert_eq!(
-            detector.evaluate_findings(),
-            recompute_risk_theater_batch_oracle(&thresholds, &deltas, 1)
+            first,
+            recompute_risk_theater_batch_oracle(&thresholds, &history, 1).expect("batch insert")
         );
-        assert_eq!(detector.evaluate_findings().len(), 1);
+        assert_eq!(detector.evaluate_findings(1).expect("closed").len(), 1);
 
-        detector.apply_delta(&deltas[1]);
+        let second = detector
+            .apply_frontier(&history[1])
+            .expect("exact retraction");
         assert_eq!(
-            detector.evaluate_findings(),
-            recompute_risk_theater_batch_oracle(&thresholds, &deltas, 2)
+            second,
+            recompute_risk_theater_batch_oracle(&thresholds, &history, 2)
+                .expect("batch retraction")
         );
-        assert!(detector.evaluate_findings().is_empty());
+        assert!(detector.evaluate_findings(2).expect("closed").is_empty());
 
         // Attack capsule import/export under ExperimentCx.
         let root = RootCx::new_nucleus(1, 1, 1);

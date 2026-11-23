@@ -3362,7 +3362,7 @@
       "id": "FA-125",
       "gate": "G5",
       "title": "Risk-theater detector: standing queries over the control plane",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-078",
         "FA-105",
@@ -3380,7 +3380,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "governance",
-      "result_artifacts": [],
+      "result_artifacts": [
+        "crates/fa-reference/src/governance_assurance.rs",
+        "crates/fa-reference/tests/risk_theater.rs",
+        "docs/RISK_THEATER_REFERENCE.md"
+      ],
       "founding_ideas": [
         "FI-A18",
         "FI-A13"
