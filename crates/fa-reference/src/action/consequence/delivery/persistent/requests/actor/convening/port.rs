@@ -179,6 +179,24 @@ impl FileActorSupervisor<FileOversight> {
         &self,
         request: u64,
     ) -> Result<bool, JournalError> {
+        self.has_native_convene_offer(request, None)
+    }
+
+    pub(crate) fn has_fixed_native_convene_offer(
+        &self,
+        request: u64,
+        round: u64,
+    ) -> Result<bool, JournalError> {
+        self.has_native_convene_offer(request, Some(round))
+    }
+
+    /// A spent grant remains eligible only for its already admitted operation.
+    /// Fixed offers additionally bind that pending receipt to the exact slot.
+    fn has_native_convene_offer(
+        &self,
+        request: u64,
+        fixed_round: Option<u64>,
+    ) -> Result<bool, JournalError> {
         let owner = self
             .owner
             .try_borrow()
@@ -202,7 +220,11 @@ impl FileActorSupervisor<FileOversight> {
             .try_borrow()
             .map_err(|_| JournalError::Unavailable)?;
         let current = offered.as_ref().is_some_and(|offer| {
-            offer.mode == NativeOfferMode::Reserved
+            let matches_slot = match fixed_round {
+                Some(round) => offer.mode == NativeOfferMode::Fixed && offer.round == round,
+                None => offer.mode == NativeOfferMode::Reserved,
+            };
+            matches_slot
                 && offer.basis == basis
                 && offer.custody.upgrade().is_some()
                 && basis.recorded_at.is_some_and(|now| now < offer.commit_by)
@@ -214,6 +236,15 @@ impl FileActorSupervisor<FileOversight> {
             .records
             .try_borrow()
             .map_err(|_| JournalError::Unavailable)?;
+        if let Some(round) = fixed_round {
+            return Ok(match records.get(&round) {
+                Some(record) => {
+                    record.receipt.request.request == request
+                        && record.receipt.outcome == FileConveneOutcome::Pending
+                }
+                None => grant.operations.get() > 0,
+            });
+        }
         Ok(grant.operations.get() > 0
             || records.values().any(|record| {
                 record.receipt.request.request == request

@@ -64,6 +64,8 @@ receipt or generic file driver cannot recreate it after recovery.
 The retained wrapper exposes:
 
 - `held_successor_round()`: inspect the next eligible fixed slot without work.
+- `has_fixed_successor()`: check whether that exact slot can still accept an
+  independently funded operation or already has its original Pending ticket.
 - `take_pending_convene()`: take an independently admitted one-use ticket for
   that exact slot; return no ticket when the retained review is ineligible.
 - `convene_from_policy_file(source, ticket, clock)`: reacquire the original
@@ -176,6 +178,13 @@ before that commit deadline. Expiry, revocation or loss of eligibility ends the
 wait without opening another review. Reconnects never slide a window or renew a
 grant. A consumed source/clock/launch failure retires remaining native custody.
 
+An exhausted operation grant with no exact Pending ticket ends this wait
+immediately. Its last already admitted ticket remains executable even after
+the operation balance reaches zero and custody has been taken. An abandoned,
+failed or opened fixed slot cannot be offered again, including when another
+operation remains. These observations acquire no source or clock and perform
+no model work; they neither refund nor renew the original allowance.
+
 The common review loop serves single live requests and resident plain or
 cumulative sequences, including newly selected requests in supported governed
 or recovered suffixes. It does not revive historical held requests. Recorded
@@ -189,23 +198,26 @@ command, identity and invocation-lifetime requirements.
 
 ## Verification boundary
 
-Eight authored public integration functions use actual fixture learned actor
+Nine authored public integration functions use actual fixture learned actor
 generation and preloaded native helper models. They cover exact packet and
 output preservation, cumulative reservations/polls/history, repeated no-I/O idle
 polls, fresh human approval and rejection, wrong or foreign round custody,
 source loss and changed input, stale predecessor, Stop/cancellation/handoff,
 finite grant exhaustion and an expired fixed successor window.
 
-Five additional service regression functions cover the retained native wrapper
+Six additional service regression functions cover the retained native wrapper
 through authenticated Next/Convene and fresh human approval, grant absence and
 fixed-window expiry, source loss and cumulative poll exhaustion, independent
 Stop with a partial operator frame, and actual loaded process/predictive
-admission refusal. Existing closed historical command regressions preserve
+admission refusal. Paired native and service cases distinguish an accepted
+final operation from an abandoned one: the first still opens exactly once,
+while the second ends the wait without another source read or model poll.
+Existing closed historical command regressions preserve
 receipt observation without live mutation admission.
 
 Synthetic model weights and controlled ballots do not establish detector
 reliability, hostile-process isolation or production qualification. Independent
-source review covers the exact implementation and tests. The execution workspace
-became unavailable before formatting, compilation or runtime tests; the required
-RCH runner was absent during preflight. No new syntax, compiler, Clippy, runtime
-or full-gate pass is claimed.
+source review covers the exact implementation and tests. The fixed-wait changes
+and regressions passed scoped syntax parsing and whitespace checks. Required
+RCH commands cannot start because the runner is absent; no compiler, Clippy,
+runtime or full-gate pass is claimed.

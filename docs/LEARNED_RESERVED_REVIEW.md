@@ -58,6 +58,12 @@ Neither installing a schedule nor dropping its grant permits a replacement
 convening allowance. A recovered owner must separately select its remaining
 future schedule; it cannot reuse a round already recorded in its journal.
 
+The resident learned service makes this reservation automatically for every
+selected entry before starting its operator endpoint. A fresh held-review ID
+therefore cannot occupy a later Message or Finish review's fixed ID, including
+an owned-forecast sequence. Refusing that collision spends no operation or
+prepaid roster. A permitted fresh ID leaves later schedules unchanged.
+
 ## Keep one original live review and one offer
 
 The same `FileNativeSupervisedDriver` stays alive across the Hold. It retains
@@ -155,6 +161,13 @@ window. Both modes require a fresh independent human decision after Continue.
 In resident sequences the operation grant stays finite across releases and
 reconnects; the next release still waits for confirmed publication and original
 cleanup. Historical receipt replay cannot recreate retained native custody.
+
+The resident regression sources force an actual initial Hold, attempt every
+fixed ID belonging to later releases through the authenticated operator, then
+open a permitted fresh round. They require the exact later Message/Message/Finish
+sequence, original numerical work and independent human decisions; the
+owned-forecast variant retains all three original forecasts. A paired Stop
+case requires no publication and no later release after the fresh review.
 
 ## Verification boundary
 

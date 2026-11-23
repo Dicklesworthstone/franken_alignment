@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: retain future resident identities and bound fixed-slot waits
+
+The resident learned service now reserves every selected request's complete
+fixed review schedule in its original supervisor before starting the operator
+endpoint. An explicit fresh held-review round cannot steal a later Message or
+Finish review's ID; refusal spends no operation or prepaid native roster and
+never renames the later schedule. The common launch guards cover both native
+and process helpers, including selected remaining requests after recovery.
+
+Fixed-slot continuation now checks whether its original grant can admit that
+exact slot or already owns its Pending ticket. Exhaustion without such a ticket
+ends waiting immediately. The last accepted ticket survives a zero balance
+and taking custody; abandonment or settlement cannot revive a fixed slot even
+with spare operations. The check reads no source or clock, performs no model
+work and changes no operation accounting or reserved-roster semantics.
+
+Four new regression functions cover actual authenticated resident collision
+attempts followed by exact Message/Message/Finish publication, the same path
+with original owned forecasts, independent Stop after a permitted fresh round,
+and paired native/service final-ticket versus abandonment behavior. Independent
+source review, scoped syntax parsing and whitespace checks passed. Required
+RCH native/example checks cannot start because the runner is unavailable;
+runtime behavior and canonical qualification remain unverified, with beads and
+packet gates open. See [resident reservations](docs/LEARNED_RESERVED_REVIEW.md)
+and [fixed-slot continuation](docs/LEARNED_HELD_REVIEW.md).
+
 ## 2026-11-22: observe original governance accounting through Tower
 
 A separately retained finite supervisor grant now exposes the original native

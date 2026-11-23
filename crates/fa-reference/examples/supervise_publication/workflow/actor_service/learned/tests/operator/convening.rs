@@ -325,6 +325,77 @@ fn original_learned_service_does_not_retry_without_live_grant_or_after_fixed_win
 }
 
 #[test]
+fn original_fixed_wait_ends_when_spent_but_executes_an_already_accepted_last_operation() {
+    for abandoned in [false, true] {
+        let root = Root::new();
+        let mut f = held(&root, 4096, true);
+        // The actual authenticated operator admits its only operation before
+        // the native wrapper resumes. No test-only grant or receipt is used.
+        let operator = queue(&f.selected, None);
+        let request = finish_client(f.service.as_mut().unwrap(), operator);
+        assert_eq!(f.service.as_ref().unwrap().remaining_convene_operations(), 0);
+        assert!(f.run.has_fixed_successor());
+        if abandoned {
+            drop(f.run.take_pending_convene().unwrap().unwrap());
+            assert!(f.run.held_successor_round().is_some());
+            assert!(!f.run.has_fixed_successor());
+        }
+        let numerical = f.run.supervisor().host().unwrap().learned_generation_inspection().unwrap().numerical;
+        let revision = f.run.supervisor().host().unwrap().revision();
+        let polls = f.run.review().polls();
+        let reservation = f.run.review().reservation();
+        let reads = f.config.source.status().read_attempts;
+        let mut calls = 0;
+        let reviewed = review::run_started(f.run, &mut f.config, &f.loaded, &f.reviewer,
+            &mut f.control, &f.deadline, &mut || {
+                calls += 1;
+                if abandoned {
+                    assert_eq!(calls, 1, "an exhausted grant without pending work must not enter a fixed-window wait");
+                }
+                f.now
+            }, &mut None, None, None, &mut f.service);
+        assert!(reviewed.failure.is_none(), "{:?}", reviewed.failure);
+        assert!(!reviewed.stop_requested && reviewed.process.is_none());
+        let history = reviewed.history.unwrap();
+        assert_eq!(history.reservation(), reservation);
+        assert_eq!(history.history().len(), if abandoned { 1 } else { 2 });
+        assert_eq!(history.records()[&SECOND].started, !abandoned);
+        let mut driver = reviewed.driver;
+        let host = driver.supervisor().host().unwrap();
+        assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+        assert_eq!((host.inspect().executions, host.inspect().control.ledger.charged), (0, 0));
+        if abandoned {
+            assert_eq!(calls, 1);
+            assert_eq!(history.polls(), polls);
+            assert_eq!(f.config.source.status().read_attempts, reads);
+            assert_eq!(host.revision(), revision);
+        } else {
+            assert!(history.polls() > polls);
+            assert!(f.config.source.status().read_attempts > reads);
+            assert!(matches!(&history.history()[1],
+                FileLearnedSidecarFinish::Applied { receipt: Ok(receipt), .. }
+                if receipt.policy.control.decision.consequence == Consequence::Continue));
+            assert_eq!(driver.phase(), FileDriverPhase::AwaitingDispatch { request: 1 });
+        }
+        drop(host);
+        let revision = driver.supervisor().host().unwrap().revision();
+        let reads = f.config.source.status().read_attempts;
+        let replay = exchange_serviced(f.service.as_mut().unwrap(), &f.selected, &request);
+        assert_eq!(field(value(&replay, "convene"), &["outcome"]).as_str(),
+            Some(if abandoned { "abandoned" } else { "opened" }));
+        assert_eq!(exchange_serviced(f.service.as_mut().unwrap(), &f.selected, &request), replay);
+        assert_eq!(f.service.as_ref().unwrap().remaining_convene_operations(), 0);
+        assert_eq!(driver.supervisor().host().unwrap().revision(), revision);
+        assert_eq!(f.config.source.status().read_attempts, reads);
+        cancel_unspent(&mut driver, 1).unwrap();
+        assert!(!executed(&mut f.wire, 1));
+        f.service.as_mut().unwrap().retire();
+        drop(f.control);
+        assert_eq!(cleanup(driver, f.config.timing.cleanup_ms, f.config.timing.poll_ms), 0);
+    }
+}
+
+#[test]
 fn learned_held_source_loss_and_original_poll_limit_never_replenish_review_work() {
     for remove_source in [false, true] {
         let root = Root::new();

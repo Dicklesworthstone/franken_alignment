@@ -622,7 +622,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_operator/round_schedule.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/convening.rs",
+        "crates/fa-reference/tests/learned_file_convene.rs"
       ],
       "founding_ideas": [
         "FI-A06",
@@ -2626,7 +2630,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_operator/round_schedule.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/convening.rs",
+        "crates/fa-reference/tests/learned_file_convene.rs"
       ],
       "founding_ideas": [
         "FI-A02",
@@ -3852,7 +3860,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/review/reserved_convening.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/reserved_convening.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_operator/round_schedule.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/operator/convening.rs",
+        "crates/fa-reference/tests/learned_file_convene.rs"
       ],
       "founding_ideas": [
         "FI-A13",

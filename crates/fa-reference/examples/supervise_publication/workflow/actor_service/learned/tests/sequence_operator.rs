@@ -21,6 +21,9 @@ use std::{
 
 const GENERATION: u64 = 41;
 
+#[path = "sequence_operator/round_schedule.rs"]
+mod round_schedule;
+
 fn selection(root: &Root, actor: &Profile) -> (PathBuf, live_operator::Selection) {
     let scope = actor.scope;
     let identity = actor.supervisor;

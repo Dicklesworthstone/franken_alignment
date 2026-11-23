@@ -36,6 +36,21 @@ impl FileNativeSupervisedDriver {
         self.review.check_held_successor(&host, basis.recorded_at?).ok()
     }
 
+    /// Current eligibility to wait for the next fixed native slot. A live
+    /// grant with no remaining operations can continue only its already queued
+    /// exact successor. This observes no source/clock and spends no model work.
+    pub fn has_fixed_successor(&self) -> bool {
+        let Some(next) = self.held_successor_round() else {
+            return false;
+        };
+        self.convene_custody.is_some()
+            && self
+                .supervisor()
+                .has_fixed_native_convene_offer(self.request, next.round)
+                .ok()
+                == Some(true)
+    }
+
     /// Consume only an independently queued request for this retained native
     /// owner and its next fixed slot. No polling path selects a successor itself.
     pub fn take_pending_convene(&self) -> Result<Option<FileConveneTicket>, JournalError> {

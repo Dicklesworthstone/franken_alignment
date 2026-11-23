@@ -616,6 +616,13 @@ where
             .map_err(debug)?;
         let mut driver = FileSupervisedDriver::new(supervisor);
         topology::attach(&mut driver, source)?;
+        // Own every later fixed round before exposing the operator. An explicit
+        // held successor may choose a fresh ID, never consume a future entry's
+        // already selected native/process schedule or force it to be renamed.
+        let review_rounds: Vec<_> = entries.iter().flat_map(|entry| {
+            entry.loaded.rounds.iter().map(|round| (entry.loaded.request, *round))
+        }).collect();
+        driver.supervisor().reserve_review_rounds(&review_rounds).map_err(debug)?;
         let mut operator = selected_operator
             .map(|selected| {
                 if selected_governor.is_some() {

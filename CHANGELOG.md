@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: protect resident review schedules and finish exhausted waits
+
+- Reserve every selected resident request's exact native/process review IDs
+  before the original operator endpoint can convene a fresh held review.
+- Stop fixed-slot waits when no operation can proceed, while preserving an
+  already accepted final ticket after operation exhaustion and custody transfer.
+- Add authenticated resident Message/Message/Finish and owned-forecast
+  collision regressions with independent human decisions and a paired Stop case;
+  add native and live-service final-operation versus abandonment regressions.
+- Independent source review, scoped syntax and whitespace checks passed.
+  Required RCH execution remains unavailable; qualification stays open.
+
 ## 2026-11-22: expose original governance ledgers through native Tower
 
 - Add a separately granted, finite, weak and revocable operator read of actual

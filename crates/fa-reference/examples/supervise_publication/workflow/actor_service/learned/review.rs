@@ -405,6 +405,7 @@ fn continue_held<F>(run: &mut FileNativeSupervisedDriver, config: &mut Config,
     stop_requested: &mut bool) -> Result<bool, String>
 where F: FnMut() -> ElapsedTick {
     let Some(selected) = run.held_successor_round() else { return Ok(false); };
+    if !run.has_fixed_successor() { return Ok(false); }
     loop {
         let now = time();
         deadline.check(now)?;
@@ -423,10 +424,11 @@ where F: FnMut() -> ElapsedTick {
             run.cancel(run.review().revision()).map_err(debug)?;
             return Ok(false);
         }
-        // Retirement revokes the ORIGINAL grant. A reconnect cannot renew it,
-        // and the selected slot keeps the window fixed before the first review.
+        // Retirement revokes the ORIGINAL grant. Exhaustion with no pending
+        // ticket ends the wait; an already accepted last operation survives.
+        // The selected slot keeps the window fixed before the first review.
         if now >= selected.window.commit_by
-            || !run.supervisor().has_live_convening().map_err(debug)?
+            || !run.has_fixed_successor()
             || run.held_successor_round().is_none_or(|current| current.round != selected.round)
         {
             return Ok(false);

@@ -92,6 +92,7 @@ fn native_hold_reuses_the_original_learned_packet_and_publishes_only_after_both_
     assert_eq!(before.reservation.evaluations, 2);
     assert!(!case.run.review().records()[&NEXT_ROUND].started);
     let next = case.run.held_successor_round().unwrap();
+    assert!(case.run.has_fixed_successor());
     assert_eq!(next.round, NEXT_ROUND);
     assert_eq!(next.window.commit_by, ElapsedTick(30));
     assert_eq!(next.window.reveal_by, ElapsedTick(35));
@@ -117,6 +118,7 @@ fn native_hold_reuses_the_original_learned_packet_and_publishes_only_after_both_
     assert_eq!(pending.outcome(), FileConveneOutcome::Pending);
     assert_eq!(receipt(&port.clone(), selected), pending);
     assert_eq!(grant.remaining_operations(), 0);
+    assert!(case.run.has_fixed_successor(), "the accepted last operation remains eligible");
     assert_eq!(case.image(), image);
     case.convene();
     let opened = receipt(&port, selected);
@@ -378,6 +380,7 @@ fn another_native_hold_preserves_the_last_unused_roster_and_the_spent_grant() {
     assert!(!case.run.review().records()[&(NEXT_ROUND + 1)].started);
     assert_eq!(grant.remaining_operations(), 0);
     blocked(&port, NEXT_ROUND + 1);
+    assert!(!case.run.has_fixed_successor(), "a retained slot cannot refill the spent grant");
     let image = case.image();
     let reads = case.source.status();
     let progress = case.run.progress();
@@ -390,6 +393,54 @@ fn another_native_hold_preserves_the_last_unused_roster_and_the_spent_grant() {
     assert_eq!(case.run.progress(), progress);
     assert_eq!(case.source.status(), reads);
     assert_eq!(case.image(), image);
+}
+
+#[test]
+fn fixed_successor_wait_distinguishes_taken_pending_and_abandoned_last_operation() {
+    for (operations, abandoned) in [(1, false), (1, true), (2, true)] {
+        let (mut case, port, grant) = Case::held_with_grant(4, operations);
+        let selected = command(&port, NEXT_ROUND);
+        let image = case.image();
+        let reads = case.source.status();
+        let progress = case.run.progress();
+        receipt(&port, selected);
+        assert_eq!(grant.remaining_operations(), operations - 1);
+        assert!(case.run.has_fixed_successor());
+        let ticket = case.run.take_pending_convene().unwrap().unwrap();
+        assert!(case.run.take_pending_convene().unwrap().is_none());
+        assert!(case.run.has_fixed_successor(), "taking custody does not lose the queued operation");
+        assert_eq!(case.run.progress(), progress);
+        assert_eq!(case.source.status(), reads);
+        assert_eq!(case.image(), image);
+        if abandoned {
+            drop(ticket);
+            assert!(case.run.held_successor_round().is_some());
+            assert!(!case.run.has_fixed_successor());
+            assert_eq!(receipt(&port, selected).outcome(), FileConveneOutcome::Abandoned);
+            assert_eq!(case.run.progress(), progress);
+            assert_eq!(case.source.status(), reads);
+            assert_eq!(case.image(), image);
+        } else {
+            case.run.convene_from_policy_file(&mut case.source, ticket, || ElapsedTick(1))
+                .result.unwrap();
+            case.complete(Consequence::Continue);
+            assert_eq!(receipt(&port, selected).outcome(), FileConveneOutcome::Opened);
+            assert_eq!(case.run.review().history().len(), 2);
+            assert!(case.run.review().records()[&NEXT_ROUND].started);
+            assert!(!case.run.has_fixed_successor());
+        }
+        let settled = receipt(&port, selected);
+        let progress = case.run.progress();
+        let reads = case.source.status();
+        let image = case.image();
+        assert_eq!(receipt(&port, selected), settled);
+        assert!(case.run.take_pending_convene().unwrap().is_none());
+        assert_eq!(grant.remaining_operations(), operations - 1);
+        assert_eq!(case.run.progress(), progress);
+        assert_eq!(case.source.status(), reads);
+        assert_eq!(case.image(), image);
+        assert_eq!(case.run.supervisor().host().unwrap().inspect().executions, 0);
+    }
 }
 
 #[test]
