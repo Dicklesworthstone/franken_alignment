@@ -1,5 +1,24 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: bind evaluator reads and preflight work to original custody
+
+The original native independent evaluator now exposes an immutable case accessor
+and an explicit owner check. Both reject foreign issuers, including a replacement
+or recovered owner with identical numeric scope, and refuse storage-faulted
+state. Reading a recorded case does not write Time, labels, journal events or
+authority. Missing, pending and unapplied reviews cannot become case evidence.
+
+The shared offline/live assessment adapter now checks that same custody before
+case lookup or a benign label's Time event. Previously the final native label
+check could reject a foreign evaluator only after Time had already been recorded.
+The new preflight prevents that partial mutation without changing lawful labels,
+native case identity, retry rules or accounting.
+
+Five public native regressions and one shared-adapter regression pair permitted
+original-custody work with foreign, recovered, missing and storage-fault cases.
+Source review completed; compilation, runtime tests, Clippy and the canonical
+RCH gate remain pending. No Bead or deployment qualification is closed.
+
 ## 2026-11-22: cover held process continuation across resident releases
 
 A further resident regression uses native Message, held process Message and

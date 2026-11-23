@@ -807,3 +807,50 @@ fn live_client_verifies_supervisor_before_disclosing_assessment_bytes() {
     assert!(error.contains("unverified supervisor"));
     assert!(reader.join().unwrap().is_empty());
 }
+
+#[test]
+fn foreign_evaluator_refuses_shared_assessment_before_timestamping_another_owner() {
+    let mut original = Fixture::new();
+    let mut replacement = Fixture::new();
+    original.review(1);
+    replacement.review(1);
+    assert_eq!(original.actor.scope, replacement.actor.scope);
+    let request = original.request(1);
+    let before = replacement.image();
+    let revision = replacement
+        .driver
+        .supervisor()
+        .host()
+        .unwrap()
+        .revision();
+    {
+        let mut host = replacement.driver.supervisor_mut().host_mut().unwrap();
+        assert!(
+            request
+                .assessment
+                .apply(
+                    &mut host,
+                    original.evaluator.as_ref().unwrap(),
+                    &mut || Ok(()),
+                    &mut || panic!("foreign evaluator acquired the original Time clock"),
+                )
+                .is_err()
+        );
+        assert_eq!(host.revision(), revision);
+        assert!(host.evaluation_history(101).unwrap().is_empty());
+    }
+    assert_eq!(replacement.image(), before);
+    let expected = original.image();
+    assert!(
+        request
+            .assessment
+            .apply(
+                &mut original.driver.supervisor_mut().host_mut().unwrap(),
+                original.evaluator.as_ref().unwrap(),
+                &mut || Ok(()),
+                &mut || Ok(ElapsedTick(20)),
+            )
+            .unwrap()
+    );
+    assert_ne!(original.image(), expected);
+}

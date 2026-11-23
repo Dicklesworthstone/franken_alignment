@@ -91,6 +91,19 @@ The command is registered as an L8 mutation adapter. Generic actor/operator
 Tower requests for `evaluator-assess` remain unsupported: the label path requires
 the separate authenticated endpoint and its original noncloneable evaluator.
 
+## Original native evaluator custody
+
+Native callers can use `FileIndependentEvaluator::evaluation_case(&host, round)`
+to obtain the original applied case through the separately retained evaluator
+role. The accessor and `check_owner(&host)` check the private original issuer
+and healthy storage before disclosure. Equal numeric scope or case IDs cannot
+transfer custody; recovery does not restore an old role. The read does not
+observe Time, label a case or change the journal.
+
+The shared assessment adapter performs the same check before case lookup or a
+benign assessment's Time event. A foreign role therefore cannot partially
+timestamp a replacement owner before the final native label guard refuses it.
+
 ## Lifetime, Stop and custody
 
 One evaluator service spans the whole finite request schedule. Reconnecting or

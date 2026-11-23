@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-23: check original evaluator custody before native work
+
+- Add immutable original-case discovery and a native evaluator owner check.
+- Reject foreign or recovered custody and storage faults before case disclosure.
+- Check the shared assessment adapter before Time, preventing a refused foreign
+  label from timestamping another owner's journal.
+- Add five native regressions and one direct shared-adapter regression with
+  original-owner positive controls. Source reviewed; RCH execution remains pending.
+
 ## 2026-11-22: cover held process review in a resident sequence
 
 - Add a real native/process/native Message/Message/Finish regression with an

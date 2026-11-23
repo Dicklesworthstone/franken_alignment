@@ -73,6 +73,32 @@ pub(super) enum CredibilityEvent {
 }
 
 impl FileIndependentEvaluator {
+    /// Check this role's original owner before disclosing evidence or starting
+    /// assessment work. Numeric scope equality cannot replace live custody,
+    /// and recovery never restores an old evaluator role.
+    pub fn check_owner(&self, host: &FileOversight) -> Result<(), JournalError> {
+        if host.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
+    /// Read one original applied case through this owner's separately held
+    /// evaluator role. Matching numeric scope or round IDs do not transfer
+    /// custody between owners, including after recovery. The ticket is only
+    /// descriptive evidence; this read changes no journal, clock or authority.
+    pub fn evaluation_case(
+        &self,
+        host: &FileOversight,
+        round: u64,
+    ) -> Result<FileEvaluationTicket, JournalError> {
+        self.check_owner(host)?;
+        host.evaluation_ticket(round)
+    }
+
     /// Exact repeats return false without another journal record. A censored
     /// label can resolve once through the original evaluator; final labels and
     /// origin identities cannot be overwritten. No consensus becomes truth.

@@ -89,6 +89,9 @@ impl AssessmentRequest {
         clock: &mut impl FnMut() -> Result<ElapsedTick, String>,
     ) -> Result<bool, String> {
         checkpoint()?;
+        // A foreign role must refuse before even a benign label's Time event.
+        // Numeric scope/case equality does not establish original owner custody.
+        evaluator.check_owner(host).map_err(debug)?;
         let ticket = host.evaluation_ticket(self.round).map_err(debug)?;
         let case = ticket.case();
         if case.attempt != self.attempt
