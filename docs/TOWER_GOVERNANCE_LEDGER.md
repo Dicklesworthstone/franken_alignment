@@ -44,7 +44,7 @@ The exact run mount accepts the existing six-field Tower request:
   "operation_id": "governance-observation-1",
   "address": "fa://1/run/3@41",
   "verb": "ledger",
-  "arguments": {},
+  "arguments": null,
   "idempotency_key": null
 }
 ```
@@ -103,6 +103,47 @@ query when the complete response does not fit. A separately chosen larger
 `PublicationLimits` allowance can accommodate a larger original inventory; it
 cannot replenish the original grant or enlarge native ledger limits.
 
+## Read through an authenticated operator service
+
+Select the optional `governance_ledger` object in the existing public
+`fa.tower-operator-service/1` profile:
+
+```json
+"governance_ledger": {
+  "queries": 32,
+  "disclosure": "recorded_governance_accounting"
+}
+```
+
+The object accepts exactly those two fields. Queries must be an integer from
+1 through 1,024 and the disclosure must match exactly. Omission or null leaves
+the capability disabled. A ledger-only profile can set the original inspection
+and admission-explanation query counts to zero; it needs no numerical replay
+allowance. The original service installs and retains this separate custodian
+for ordinary, learned and resident owners. Reconnects and resident handoffs
+share its remaining queries; retirement revokes the original grant.
+
+Save the complete request above as `ledger.json`, then explicitly submit it:
+
+```text
+supervise_publication tower-operator-exchange OPERATOR_PROFILE ledger.json
+```
+
+The existing client authenticates the supervisor's kernel credentials and
+checks the complete configured audience before printing the result. It
+validates the closed schema, registration, exact nested basis, decimal widths,
+member and origin bounds, protocol thresholds, ordered qualification failures,
+incident counts and full `u128` cost arithmetic. Failure comparisons use the
+original zero-denominator semantics and `u128` fraction products. An erased
+failure or internally inconsistent report stops the client before output or
+another supplied request. This validates consistency of the declared native
+report; it does not independently verify labels or establish calibration.
+
+Each explicitly supplied request is another native query, even if its operation
+label repeats. The client never caches an earlier observation, follows an
+action, retries a failed response or obtains another grant on its own. Absent,
+Unknown, Withheld, exhaustion and refusal remain distinct non-authority states.
+
 ## Verification boundary
 
 Native and Tower regression sources perform actual reference reviews and
@@ -112,6 +153,14 @@ permitted publication requiring the original independent keys. Causal cases
 cover actor/foreign scope, owner replacement, grant revocation, conflicting
 borrows, exhausted queries, poisoned storage, recovery, sealed-provenance edits
 and a complete response exceeding its byte allowance.
+
+Ten additional service/client regression functions exercise the real
+authenticated Unix path, the original finite grant across repeated requests,
+unread missing-source fixtures, preservation of actor admission, exact wide
+costs, absent versus installed-empty accounting, actual pending/censored and
+threshold-satisfying reports, and causal response mutations. Invalid scope,
+schema, numeric, cost or failure-list edits must emit nothing and send no later
+document. These fixtures use actual native reviews and independent assessments.
 
 Scoped syntax/format checks and independent source review are separate from
 compilation and execution. Required RCH native tests and canonical qualification

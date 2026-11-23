@@ -6,6 +6,8 @@ mod abandonment;
 mod cancellation;
 #[path = "tests/fence.rs"]
 mod fence;
+#[path = "tests/governance_ledger.rs"]
+mod governance_ledger;
 #[path = "tests/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "tests/journal_tail.rs"]

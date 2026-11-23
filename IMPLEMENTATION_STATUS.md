@@ -1,5 +1,35 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: expose governance accounting on the original live operator path
+
+The existing `fa.tower-operator-service/1` profile accepts an explicit finite
+`governance_ledger` selection with recorded-governance-accounting disclosure.
+Omission or null preserves compatibility; a ledger-only profile is valid and
+requires no numerical replay grant. The common ordinary/learned/resident
+service retains one native custodian across reconnects and owner handoffs,
+reports its remaining queries on retirement and revokes it with the endpoint.
+
+The authenticated `tower-operator-exchange` path now validates the complete
+Ledger response before output or another explicitly supplied document. It
+checks full configured scope, registration, identical acknowledged subsystem
+bases, absent/known/unknown/withheld/refusal states, canonical u64/u128 values,
+origin/member bounds, protocol fractions, original ordered qualification
+failures and Andon cost/incident arithmetic. A failure list cannot be silently
+erased. Fraction comparisons preserve native empty-denominator behavior and
+use u128 products. These checks establish internal consistency of the declared
+report, not independent evaluator truth or deployment qualification.
+
+Ten service/client regression functions use actual native reviews and
+independent assessments through authenticated Unix traffic. They cover wide
+costs, empty/pending/censored/threshold-satisfying accounting, shared finite
+queries, original actor admission and an unread missing source, revocation and
+causal wire tampering. Invalid reports emit nothing and prevent the next
+supplied request. Independent source review corrected an admission-snapshot
+fixture and the omitted-failure validation gap. Scoped syntax/format and
+whitespace checks passed; required RCH example and canonical-gate attempts
+cannot start because the runner is absent. Compilation, runtime and packet
+qualification remain open. See [the complete ledger contract](docs/TOWER_GOVERNANCE_LEDGER.md).
+
 ## 2026-11-22: retain future resident identities and bound fixed-slot waits
 
 The resident learned service now reserves every selected request's complete

@@ -5,7 +5,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
     MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
     MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES, MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
-    MAX_FENCE_REPLAY_EVENTS, MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES,
+    MAX_FENCE_REPLAY_EVENTS, MAX_GOVERNANCE_LEDGER_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES,
     MAX_JOURNAL_TAIL_PAGE_EVENTS, MAX_JOURNAL_TAIL_QUERIES, MAX_NARROW_OPERATIONS,
     MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_POLICY_PROMOTION_QUERIES,
     MAX_POLICY_PROMOTION_REPLAY_EVENTS, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
@@ -47,6 +47,7 @@ pub(crate) struct Settings {
     pub(crate) explanation_numerical_replay_events: Option<usize>,
     pub(crate) explanation_disclosure: String,
     pub(crate) journal_tail: Option<JournalTailSettings>,
+    pub(crate) governance_ledger: Option<GovernanceLedgerSettings>,
     pub(crate) request_history: Option<RequestHistorySettings>,
     pub(crate) hold_diagnosis: Option<HoldDiagnosisSettings>,
     pub(crate) resolution: Option<ResolutionSettings>,
@@ -58,6 +59,37 @@ pub(crate) struct Settings {
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
     pub(crate) policy_promotion: Option<PolicyPromotionSettings>,
+}
+
+/// Explicit disclosure of acknowledged governance accounting. This selection
+/// grants no evaluation role, weight change, helper input or publication key.
+#[derive(Clone, Debug)]
+pub(crate) struct GovernanceLedgerSettings {
+    pub(crate) queries: usize,
+    pub(crate) disclosure: String,
+}
+
+impl GovernanceLedgerSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            disclosure: fields.text("disclosure")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_GOVERNANCE_LEDGER_QUERIES
+            || self.disclosure != "recorded_governance_accounting"
+        {
+            return Err("governance ledger requires explicit recorded-governance-accounting disclosure and bounded queries".into());
+        }
+        Ok(())
+    }
 }
 
 /// One independently approved campaign, delegated once during this service.
@@ -714,6 +746,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(JournalTailSettings::decode(value)?),
             },
+            governance_ledger: match fields.optional("governance_ledger") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(GovernanceLedgerSettings::decode(value)?),
+            },
             request_history: match fields.optional("request_history") {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(RequestHistorySettings::decode(value)?),
@@ -817,6 +853,7 @@ impl Settings {
             || (self.inspection_queries == 0
                 && self.explanation_queries == 0
                 && self.journal_tail.is_none()
+                && self.governance_ledger.is_none()
                 && self.request_history.is_none()
                 && self.hold_diagnosis.is_none()
                 && self.resolution.is_none()
@@ -865,6 +902,9 @@ impl Settings {
             selected.validate()?;
         }
         if let Some(selected) = &self.journal_tail {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.governance_ledger {
             selected.validate()?;
         }
         if let Some(selected) = &self.request_history {

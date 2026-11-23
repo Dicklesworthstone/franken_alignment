@@ -57,8 +57,8 @@ operations return ordinary Tower refusals. A caller cannot add grants to JSON.
 
 An explicit `--operator-profile OPERATOR_PROFILE` on an ordinary Tower
 service provisions a separate authenticated endpoint for selected native
-inspection, admission explanation and optional `policy-replay`. The actor
-session keeps its original grants. The operator profile can compose with a
+inspection, admission explanation, optional governance `ledger` reads and
+`policy-replay`. The actor session keeps its original grants. The operator profile can compose with a
 precheck sidecar, a finite request schedule, topology creation or explicit guarded
 topology recovery, with distinct sockets and
 independent budgets. A schedule retains the same operator session, native
@@ -72,6 +72,17 @@ output; every page is validated before its cursor is followed. Add a final
 alongside each captured attempt, with unchanged transport and query limits.
 See the [live operator contract](LIVE_TOWER_OPERATOR.md) for the closed profile,
 disclosure selection, request examples and Stop-first lifetime.
+
+Governance accounting is disabled when the optional `governance_ledger` field
+is absent or null. Selecting it requires 1–1,024 queries and explicit
+`recorded_governance_accounting` disclosure. The existing
+`tower-operator-exchange` client accepts `ledger` at the exact Run mount and
+validates the complete response against the independently loaded operator
+profile. The original query allowance survives reconnects and request handoffs;
+the read acquires no source, clock, evaluator or publication key. See the
+[governance ledger contract](TOWER_GOVERNANCE_LEDGER.md) for the request, original
+accounting basis and bounded disclosure. The imported snapshot Tower does not
+support this live read.
 
 Policy replay is disabled when the optional `policy_replay` profile field is
 absent or null. Enabling it requires explicit `policy_and_case_traces`
@@ -154,7 +165,7 @@ It does not enable actor exact-policy discovery on those restricted mounts or
 provide ordinary actor intake.
 
 The response kind is `operator-capabilities`, with closed schema
-`fa.operator-capabilities/1`. Its Known `configuration` reports exactly fourteen
+`fa.operator-capabilities/1`. Its Known `configuration` reports exactly fifteen
 descriptors for the original supervisor roles, each with registered verbs,
 required purpose, mount-route availability, caller-purpose availability,
 installation status and native grant Knowledge. The
@@ -172,7 +183,7 @@ Omitted limits and current execution eligibility remain explicitly
 `not_observed`; `signed_profile` and `effect_authority` are always false.
 
 Before emitting a complete reply, the client checks the closed schema, exact
-fourteen-role ordering, route/purpose types, role-specific limit names, native
+fifteen-role ordering, route/purpose types, role-specific limit names, native
 Knowledge variants, registration and request correlation. It additionally binds
 every Known native scope to all six fields of the independently loaded operator
 profile: tenant, principal, run, branch, authority and purpose. A response with

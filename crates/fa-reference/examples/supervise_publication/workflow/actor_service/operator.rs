@@ -15,6 +15,7 @@ use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileActorSupervisor, FileGeneratedTextActorPort, FileLearnedTextStreamActorPort,
     FileRequestHistoryDisclosure, FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant,
     FileSupervisorConveneGrant, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
+    FileSupervisorGovernanceLedgerGrant,
     FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant, FileSupervisorPolicyPromotionGrant,
     FileSupervisorPolicyReplayGrant, FileSupervisorRequestHistoryGrant,
@@ -38,6 +39,7 @@ struct Active {
     session: PublicationPeerSession,
     inspection: Option<FileSupervisorInspectionGrant>,
     journal_tail: Option<FileSupervisorJournalTailGrant>,
+    governance_ledger: Option<FileSupervisorGovernanceLedgerGrant>,
     request_history: Option<FileSupervisorRequestHistoryGrant>,
     explanation: Option<FileSupervisorExplanationGrant>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisGrant>,
@@ -305,6 +307,16 @@ impl Service {
         } else {
             None
         };
+        let governance_ledger = if let Some(selected) = &settings.governance_ledger {
+            let (port, custodian) = driver
+                .supervisor()
+                .governance_ledger_port(selected.queries)
+                .map_err(debug)?;
+            tower.set_governance_ledger(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
         let explanation = if settings.explanation_queries != 0 {
             let (port, custodian) = match settings.explanation_numerical_replay_events {
                 Some(events) => driver.supervisor().explanation_port_with_numerical_budget(
@@ -523,6 +535,7 @@ impl Service {
                 session,
                 inspection,
                 journal_tail,
+                governance_ledger,
                 request_history,
                 explanation,
                 hold_diagnosis,
@@ -749,7 +762,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; governance_ledger_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
             self.candidates,
             self.frames,
             active
@@ -760,6 +773,10 @@ impl Service {
                 .journal_tail
                 .as_ref()
                 .map(FileSupervisorJournalTailGrant::remaining_queries),
+            active
+                .governance_ledger
+                .as_ref()
+                .map(FileSupervisorGovernanceLedgerGrant::remaining_queries),
             active
                 .request_history
                 .as_ref()

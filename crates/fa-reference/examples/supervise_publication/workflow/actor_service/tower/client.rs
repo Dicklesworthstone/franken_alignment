@@ -28,6 +28,8 @@ mod cancellation;
 mod convening;
 #[path = "client/fence.rs"]
 mod fence;
+#[path = "client/governance_ledger.rs"]
+mod governance_ledger;
 #[path = "client/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "client/journal_tail.rs"]
@@ -243,6 +245,7 @@ fn exchange_endpoint(
         convening::check_profile(&parsed, &document.request, endpoint.scope)?;
         policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
         operator_capabilities::check_profile(&parsed, &document.request, endpoint.scope)?;
+        governance_ledger::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -460,6 +463,10 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_POLICY_PROMOTION_REPLY_ITEMS
             } else if request.verb == Verb::Related {
                 MAX_REQUEST_HISTORY_REPLY_ITEMS
+            } else if request.verb == Verb::Ledger {
+                // Complete bounded member/window accounting fits the original
+                // response ceiling; no implicit paging or omission is allowed.
+                MAX_REPLY_BYTES / 4
             } else {
                 4096
             },
@@ -513,6 +520,10 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,
+            ) || !governance_ledger::refused_matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
             ) {
                 return Err(invalid());
             }
@@ -531,6 +542,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
             }
         }
         (Some("situation"), Verb::Situation) => {}
+        (Some("governance-ledger"), Verb::Ledger) => {
+            if !governance_ledger::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
         (Some("request-history"), Verb::Related) => {
             if !request_history::matches(result.get("value").ok_or_else(invalid)?, request) {
                 return Err(invalid());

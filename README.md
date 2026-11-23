@@ -274,6 +274,16 @@ reviews. An operator can follow exact Explain requests without manually
 joining the entire journal. Discovery uses separate finite disclosure custody,
 preserves missing and incomplete history, and performs no numerical replay.
 
+The [original governance ledger](docs/TOWER_GOVERNANCE_LEDGER.md) connects
+helper credibility and Andon false-stop accounting to independently authorized
+Tower `ledger` reads and the authenticated operator client. A separate finite
+grant preserves the original owner, protocol thresholds, evidence denominators,
+qualification failures and full `u128` costs across reconnects and resident
+handoffs. The client rejects inconsistent or foreign-scope reports before output
+or another request. Observation supplies no publication authority and does not
+verify label truth or population calibration. Native, Tower and real-socket
+regression sources are authored; RCH execution qualification remains pending.
+
 The [native journal-tail capability](docs/TOWER_JOURNAL_TAIL.md) now connects
 the original live journal to privileged Tower reads. Separately retained finite
 grants expose redacted event metadata through coherent pages pinned to one

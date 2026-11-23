@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22: connect governance accounting to authenticated operators
+
+- Select one finite `governance_ledger` disclosure grant in ordinary, learned
+  and resident operator profiles, preserving it across reconnects and handoffs.
+- Validate full audience, exact acknowledged basis, original protocol and
+  ordered qualification failures, canonical numeric widths and full u128 costs
+  before emitting a Ledger response or sending another explicit document.
+- Add ten real-service/client regression functions covering actual native
+  assessments, absent versus empty ledgers, shared exhaustion, admission/source
+  preservation and causal tampering, including erased qualification failures.
+- Update current operator/peer contracts for the additive capability. Source,
+  scoped syntax and whitespace checks passed; RCH execution remains unavailable.
+
 ## 2026-11-22: protect resident review schedules and finish exhausted waits
 
 - Reserve every selected resident request's exact native/process review IDs

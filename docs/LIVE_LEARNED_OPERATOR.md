@@ -122,6 +122,16 @@ paths are never unlinked to make startup succeed.
 
 ## Read the original live situation
 
+The same original learned or resident owner supports an independently selected
+`governance_ledger` with bounded `queries` and
+`disclosure: "recorded_governance_accounting"`. Send an explicit `ledger`
+document with null arguments at the original run address through
+`tower-operator-exchange`. This observes installed helper credibility and Andon
+accounting without source acquisition, numerical replay, individual labels or
+effect authority. Its one original allowance survives resident handoffs and
+reconnects; uninstalled subsystems remain Absent. See
+[the governance ledger contract](TOWER_GOVERNANCE_LEDGER.md).
+
 The same original learned or resident owner also supports separately selected
 journal metadata. Add `journal_tail` with bounded `queries`, `events_per_page`
 and `disclosure: "redacted_journal_events"` to the public operator profile, then

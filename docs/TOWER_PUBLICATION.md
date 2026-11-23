@@ -1,6 +1,6 @@
 # Durable publication through the Tower
 
-On Unix, `fa_reference::tower::publication::PublicationTower` connects sixteen
+On Unix, `fa_reference::tower::publication::PublicationTower` connects seventeen
 registered operations to an original `FileActorPort<FileOversight>`: `propose`,
 `get`, `precheck`, actor or operator `capabilities`, and separately granted operator `situation`,
 historical admission or separately granted completed-review `explain`, candidate `policy-replay`,
@@ -9,9 +9,9 @@ planning/reconciliation, independently granted undispatched-request cancellation
 or explicit Unknown disposition through `next` and `resolve`, independently
 granted target-ceiling restriction through `next` and `narrow`, explicit
 ordinary held-review admission through `next` and `convene`, separately granted
-original journal `tail`, request-to-review `related`, independently approved
-policy `promote`, and original-domain `fence` through its restricted
-control mount.
+original journal `tail`, request-to-review `related`, recorded governance
+`ledger`, independently approved policy `promote`, and original-domain `fence`
+through its restricted control mount.
 It uses the same `TowerRequest`, verb vocabulary
 and sixteen-field response envelope as the [snapshot Tower](TOWER_REFERENCE.md).
 The original file owner supplies durable intake, exact proposal binding,
@@ -26,6 +26,12 @@ The [request-history contract](TOWER_REQUEST_HISTORY.md) connects an original
 request directly to all of its completed reviews at a bounded acknowledged
 cut. Explicit Explain links preserve the separate replay/disclosure grant and
 distinguish a learned refinement from an attempted consequence application.
+
+The [governance ledger contract](TOWER_GOVERNANCE_LEDGER.md) connects a separate
+finite disclosure grant to the original owner's helper credibility and Andon
+accounting. The read preserves its acknowledged scope and cut, consumes no
+source or model work, and grants no evaluation or publication authority. The
+imported snapshot Tower remains unsupported for this live observation.
 
 ## Mount one actor session
 
@@ -113,13 +119,14 @@ This mode is supported by ordinary, learned and generated observer,
 reconciliation and control mounts. It returns the sealed
 `PublicationResult::OperatorCapabilities` with wire kind
 `operator-capabilities` and schema `fa.operator-capabilities/1`. Its fixed
-fourteen entries describe the mount's original supervisor roles:
+fifteen entries describe the mount's original supervisor roles:
 
 | Capability | Native routes | Required caller purpose |
 |---|---|---|
 | `situation` | `situation` | Operator observation |
 | `journal_tail` | `tail` | Operator observation |
 | `request_history` | `related` | Operator observation |
+| `governance_ledger` | `ledger` | Operator observation |
 | `admission_explanation` | `explain` | Operator observation |
 | `review_explanation` | `explain` | Operator observation |
 | `hold_diagnosis` | `why-held` | Operator observation |
@@ -168,7 +175,7 @@ keys are disclosed. The original operation must establish its own prerequisites.
 
 The response seals the exact query address, operation ID and idempotency label
 alongside the registration; relabeling those fields refuses encoding. The
-fourteen-entry result fits within the existing bounded response machinery and
+fifteen-entry result fits within the existing bounded response machinery and
 never substitutes a grant counter or registration generation for a global
 Tower budget or control sequence. The authenticated client example and full
 native-scope checks are in [the peer contract](TOWER_PEER.md#discover-the-live-operators-selected-grants).
@@ -280,15 +287,16 @@ unsupported.
 
 `PublicationTower::new_learned_observer(mount, learned_port, limits)` mounts the
 original `FileLearnedTextStreamActorPort` for privileged observation. The
-supervisor separately issues and retains the same native inspection, recorded
-hold-diagnosis, explanation or policy-comparison grants used by the ordinary
-facade. A grant from another
-owner is rejected even when every numeric scope field matches.
+supervisor separately issues and retains the same native inspection, governance
+ledger, recorded hold-diagnosis, explanation or policy-comparison grants used by
+the ordinary facade. A grant from another owner is rejected even when every
+numeric scope field matches.
 
 This constructor has a closed, read-only dispatch profile: an authenticated
-operator may request `situation`, `tail`, `related`, recorded-state `why-held`,
-historical `explain` or `policy-replay` under their independently selected native
-grants, and operator `capabilities` with the explicit `operator: true` selector.
+operator may request `situation`, `tail`, `related`, `ledger`, recorded-state
+`why-held`, historical `explain` or `policy-replay` under their independently
+selected native grants, and operator `capabilities` with the explicit
+`operator: true` selector.
 Ordinary `propose`, request `get`, `precheck`, actor exact-policy `capabilities`
 and every other verb are unavailable through this profile, including when a
 host supplies Permit or Experiment tags. Caller
@@ -335,7 +343,7 @@ connect that owner to the same separately granted operator operations:
 
 | Constructor | Available profile |
 |---|---|
-| `new_generated_observer` | Operator capability discovery, original inspection, journal tail, request history, admission/completed-review explanation, hold diagnosis and policy comparison |
+| `new_generated_observer` | Operator capability discovery, original inspection, journal tail, request history, governance accounting, admission/completed-review explanation, hold diagnosis and policy comparison |
 | `new_generated_reconciliation_operator` | The same reads and explicitly granted original receipt reconciliation through `next` / `resolve` |
 | `new_generated_control_operator` | The same operations plus separately granted undispatched cancellation, Unknown abandonment, target narrowing and admission fencing |
 
@@ -900,6 +908,12 @@ configuration and each selected grant's native scope/revision. A Known
 configuration can contain Withheld or Unknown grant observations. Neither the
 configuration nor a surviving grant asserts current operation eligibility;
 the explicit disclosure and authority markers remain part of the closed schema.
+
+The `governance-ledger` body seals the query and original accounting basis. Its
+credibility and Andon sections distinguish absent subsystems from configured
+empty ledgers and retain complete bounded summaries. The
+[governance ledger contract](TOWER_GOVERNANCE_LEDGER.md) defines the disclosure,
+decimal integer encoding and original finite-query lifetime.
 
 The `policy-replay` body preserves its sealed original policy comparison and
 native journal revision, control sequence, policy generation/epoch and recorded

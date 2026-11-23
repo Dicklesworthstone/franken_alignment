@@ -151,6 +151,10 @@ deployment's values:
     "max_reviews": 128,
     "disclosure": "recorded_request_relationships"
   },
+  "governance_ledger": {
+    "queries": 32,
+    "disclosure": "recorded_governance_accounting"
+  },
   "hold_diagnosis": {
     "queries": 32,
     "disclosure": "recorded_publication_state"
@@ -171,7 +175,7 @@ deployment's values:
 ```
 
 The schema is closed: missing required fields, duplicate fields and unknown
-fields fail. `journal_tail`, `request_history`, `hold_diagnosis`, `policy_replay`,
+fields fail. `journal_tail`, `request_history`, `governance_ledger`, `hold_diagnosis`, `policy_replay`,
 `review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`, `policy_promotion`
 and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
@@ -195,7 +199,7 @@ grant and does not enable an otherwise disabled operation.
 
 Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
-explanation, journal Tail, request history, recorded-state diagnosis, completed-review explanation,
+explanation, journal Tail, request history, governance accounting, recorded-state diagnosis, completed-review explanation,
 policy replay, receipt reconciliation, undispatched-request cancellation,
 Unknown disposition, ordinary target restriction, explicit held-review convening or
 original admission fencing must be
@@ -222,6 +226,19 @@ refusal. The same custody survives reconnects and resident handoffs; retirement
 reports its remaining reservations. Plain histories do not spend this numerical
 allowance. Completed-review and receipt-reconciliation work have independent
 grants and cannot fund admission reconstruction.
+
+The optional `governance_ledger` object requires exactly `queries` (1–1,024)
+and `disclosure: "recorded_governance_accounting"`. It enables `ledger` with
+null arguments on the original run address. The report exposes actual helper
+credibility and Andon accounting at one acknowledged owner cut, including
+protocol thresholds, qualification failures and full-width false-stop costs.
+Uninstalled ledgers remain Absent. It performs no source acquisition or
+numerical replay and grants no evaluator or publication authority. The original
+custodian and finite queries survive reconnects and resident handoffs; a
+ledger-only profile may disable the other capabilities. The authenticated
+explicit-document client checks complete scope, basis and report consistency
+before printing or sending the next supplied request. See
+[governance ledger observation](TOWER_GOVERNANCE_LEDGER.md).
 
 The optional `request_history` object requires exactly `queries` (1–1,024),
 `max_history_events` (1–4,096), `max_reviews` (1–2,048) and

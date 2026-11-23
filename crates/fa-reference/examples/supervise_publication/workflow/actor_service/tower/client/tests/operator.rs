@@ -9,6 +9,8 @@ mod capabilities;
 mod convening;
 #[path = "operator/fence.rs"]
 mod fence;
+#[path = "operator/governance_ledger.rs"]
+mod governance_ledger;
 #[path = "operator/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "operator/narrowing.rs"]
