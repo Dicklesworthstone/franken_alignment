@@ -1,9 +1,15 @@
 //! Bounded live actor intake driving the SAME helper/human/publication workflow.
 //! Single or explicitly scheduled requests; no concurrent congress or new authority.
+#[path = "actor_service/andon.rs"]
+mod andon;
+#[path = "../../native_andon/settings.rs"]
+mod andon_settings;
 #[path = "actor_service/client.rs"]
 mod client;
 #[path = "actor_service/durable.rs"]
 mod durable;
+#[path = "actor_service/evaluator.rs"]
+mod evaluator;
 #[path = "actor_service/generated.rs"]
 mod generated;
 #[path = "actor_service/governor.rs"]
@@ -51,7 +57,7 @@ use profile::Profile;
 use std::path::Path;
 
 type Port = FileActorPort<FileOversight>;
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary Tower open services accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with optional --operator-profile OPERATOR_PROFILE; topology-enforced Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE; plain and simple-witness checked scheduled Tower modes also accept --governor-profile GOVERNOR_PROFILE with an independent promotion operator; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE; actor-submit ACTOR_PROFILE SUBMIT_JSON [SUBMIT_JSON ...]; serve-open and serve-open-checked also accept --credibility-activation EVIDENCE_FILE; ordinary native serve modes accept a final --requests 7,8,9 option OR --peers ACTOR_PROFILE [ACTOR_PROFILE ...]; ordinary Tower serve modes accept --tower-generation GENERATION and optional --requests KEYS OR --precheck-profile PRECHECK_PROFILE in either option order after all positionals; ordinary Tower services also accept --operator-profile OPERATOR_PROFILE; Tower create services accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary Tower open services accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with optional --operator-profile OPERATOR_PROFILE; topology-enforced Tower open services accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS and --operator-profile OPERATOR_PROFILE; ordinary single-request native serve modes alternatively accept --precheck-profile PRECHECK_PROFILE; plain and simple-witness checked scheduled Tower modes also accept --governor-profile GOVERNOR_PROFILE with an independent promotion operator; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, but reject governor, topology, standalone prechecks and credibility activation; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
 
 // Own the complete opt-in grammar before a different service can consume an
 // option and silently omit the requested disclosure boundary. No file is read
@@ -153,6 +159,13 @@ pub(crate) fn policy_governor_command(
     governor::client::command(args, output)
 }
 
+pub(crate) fn evaluator_assess_command(
+    args: &[String],
+    output: &mut impl std::io::Write,
+) -> Result<(), String> {
+    evaluator::client::command(args, output)
+}
+
 pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     // Resident and learned services own their complete grammar, including any
     // selected Tower endpoint. Ordinary option parsers cannot consume it.
@@ -165,9 +178,12 @@ pub(crate) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
     // Native text retains its source-only actor wire. Its independently
     // selected Tower operator must not redirect it into ordinary Tower intake.
     if args.iter().any(|arg| arg == "--native-text")
-        && args
-            .iter()
-            .any(|arg| matches!(arg.as_str(), "--operator-profile" | "--tower-generation" | "--precheck-profile"))
+        && args.iter().any(|arg| {
+            matches!(
+                arg.as_str(),
+                "--operator-profile" | "--tower-generation" | "--precheck-profile"
+            )
+        })
     {
         return native::command(args, credibility);
     }
@@ -431,7 +447,9 @@ where
         return Err("topology-supervised live service requires an explicit create mode".into());
     }
     if precheck_settings.is_some() && topology.is_some() && tower_generation.is_none() {
-        return Err("topology precheck requires the explicit single-request Tower creation profile".into());
+        return Err(
+            "topology precheck requires the explicit single-request Tower creation profile".into(),
+        );
     }
     // The native mediated bootstrap currently composes plain witness limits.
     // Feed, waiting, snapshot and joint contracts must never be reduced to those
@@ -491,12 +509,13 @@ where
         let output = super::continuation::checkpoint::AcknowledgedOutput::admit(&config, path)?;
         if let Some(settings) = precheck_settings {
             let socket = settings.socket_path();
-            let parent = std::fs::canonicalize(
-                socket.parent().ok_or("missing precheck socket directory")?,
-            )
-            .map_err(debug)?;
+            let parent =
+                std::fs::canonicalize(socket.parent().ok_or("missing precheck socket directory")?)
+                    .map_err(debug)?;
             let socket = parent.join(
-                socket.file_name().ok_or("missing precheck socket filename")?,
+                socket
+                    .file_name()
+                    .ok_or("missing precheck socket filename")?,
             );
             if output.path() == socket.as_path() {
                 return Err("topology checkpoint and precheck socket must be distinct".into());

@@ -1,5 +1,11 @@
 # Native Andon operator
 
+For evaluation alongside a running ordinary Tower publication service, use the
+[live Andon/evaluator composition](LIVE_ANDON_EVALUATION.md). Its separate
+`evaluator-assess` client reuses the exact native assessment contract and peer
+profile while retaining the original live owner; the offline commands below
+continue to use independent guarded recovery and successor-anchor custody.
+
 The `native_andon` Unix reference example connects operator files to the existing
 `FileOversight` native evaluation/accounting journal. It shares the original
 `supervise_publication` configuration parser and exact-history custody code.

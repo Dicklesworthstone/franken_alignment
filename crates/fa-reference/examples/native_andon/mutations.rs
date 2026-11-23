@@ -1,20 +1,23 @@
 //! Offline assessment/window continuation through the original sealed recovery.
 //! The operator is a trusted evaluator custodian; JSON is NOT a signed label.
+#[path = "assessment.rs"]
+mod assessment;
 #[path = "promotion.rs"]
 mod promotion;
 use super::{Settings, report, settings};
-use crate::config::{Config, debug, hex, read_regular};
+use crate::config::{Config, debug, read_regular};
 use crate::profile::ResumeProfile;
 use fa_reference::action::ElapsedTick;
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    FileOversight, credibility::{FileIndependentEvaluator, FileCredibilityUpdate},
+    FileOversight,
+    credibility::{FileCredibilityUpdate, FileIndependentEvaluator},
     guarded::recovery::FileGuardedRecoveryStatus,
 };
-use fa_reference::action::consequence::oversight::credibility::{Assessment, GroundTruth};
+use fa_reference::action::consequence::oversight::credibility::Assessment;
 use fa_reference::round::review::andon::AndonBudget;
 use fa_reference::strict_json::{self, Json, Limits};
 use settings::{end, number, object, take};
-use std::{collections::BTreeMap, io::Write, path::Path};
+use std::{io::Write, path::Path};
 
 pub(super) enum Mutation {
     Assess {
@@ -34,6 +37,18 @@ impl Mutation {
         Self::decode(mode, &read_regular(path, 8192)?)
     }
     pub(super) fn decode(mode: &str, bytes: &[u8]) -> Result<Self, String> {
+        if mode == "assess" {
+            let request = assessment::AssessmentRequest::decode(bytes)?;
+            return Ok(Self::Assess {
+                round: request.round,
+                attempt: request.attempt,
+                policy: request.policy,
+                congress: request.congress,
+                root: request.root,
+                expected_revision: request.expected_revision,
+                assessment: request.assessment,
+            });
+        }
         let mut fields = object(
             strict_json::parse(
                 bytes,
@@ -53,10 +68,15 @@ impl Mutation {
                     operation: number(&mut fields, "operation")?,
                     expected_control_sequence: number(&mut fields, "expected_control_sequence")?,
                     expected_authority_epoch: number(&mut fields, "expected_authority_epoch")?,
-                    expected_evaluation_revision: number(&mut fields, "expected_evaluation_revision")?,
+                    expected_evaluation_revision: number(
+                        &mut fields,
+                        "expected_evaluation_revision",
+                    )?,
                 };
                 end(fields)?;
-                if request.operation == 0 { return Err("promotion operation must be nonzero".into()); }
+                if request.operation == 0 {
+                    return Err("promotion operation must be nonzero".into());
+                }
                 Ok(Self::Promote(request))
             }
             "register-window" if schema.as_str() == Some("fa.native-andon-window/1") => {
@@ -75,44 +95,15 @@ impl Mutation {
                 ledger.register_window(window).map_err(debug)?;
                 Ok(Self::Window(window))
             }
-            "assess" if schema.as_str() == Some("fa.native-assessment/1") => {
-                let round = number(&mut fields, "round")?;
-                let attempt = number(&mut fields, "attempt")?;
-                let policy = number(&mut fields, "policy_generation")?;
-                let congress = number(&mut fields, "congress_generation")?;
-                let root = digest(&mut fields, "case_evidence_root_hex")?;
-                let expected_revision = number(&mut fields, "expected_evaluation_revision")?;
-                let origin = number(&mut fields, "origin")?;
-                let evidence_id = digest(&mut fields, "evidence_id_hex")?;
-                let truth = match take(&mut fields, "truth")?.as_str() {
-                    Some("benign") => GroundTruth::Benign,
-                    Some("violation") => GroundTruth::Violation,
-                    Some("censored") => GroundTruth::Censored,
-                    _ => return Err("truth must be benign, violation or censored".into()),
-                };
-                end(fields)?;
-                if [round, attempt, policy, congress, origin].contains(&0) {
-                    return Err("assessment case and origin identities must be nonzero".into());
-                }
-                Ok(Self::Assess {
-                    round,
-                    attempt,
-                    policy,
-                    congress,
-                    root,
-                    expected_revision,
-                    assessment: Assessment {
-                        origin,
-                        evidence_id,
-                        truth,
-                    },
-                })
-            }
             _ => Err("wrong native mutation schema or command".into()),
         }
     }
     fn operation(&self) -> &'static str {
-        match self { Self::Assess { .. } => "assess", Self::Window(_) => "register-window", Self::Promote(_) => "promote" }
+        match self {
+            Self::Assess { .. } => "assess",
+            Self::Window(_) => "register-window",
+            Self::Promote(_) => "promote",
+        }
     }
     fn apply(
         &self,
@@ -121,44 +112,34 @@ impl Mutation {
         checkpoint: &mut impl FnMut() -> Result<(), String>,
         clock: &mut impl FnMut() -> Result<ElapsedTick, String>,
     ) -> Result<bool, String> {
-        checkpoint()?;
         match self {
-            Self::Promote(request) => promotion::apply(host, request, checkpoint, clock),
-            Self::Window(window) => host.register_andon_window(host.revision(), *window).map_err(debug),
-            Self::Assess { round, attempt, policy, congress, root, expected_revision, assessment } => {
-                let ticket = host.evaluation_ticket(*round).map_err(debug)?;
-                let case = ticket.case();
-                if case.attempt != *attempt
-                    || case.policy_generation != *policy
-                    || case.congress_generation != *congress
-                    || case.evidence_root != *root
-                {
-                    return Err("assessment does not bind the original applied case".into());
-                }
-                // Original exact retry needs neither a fresh clock nor new label
-                // revision. Still use the original issuer/ticket check below.
-                let repeated =
-                    host.evaluation_history(*round).map_err(debug)?.last() == Some(assessment);
-                if !repeated {
-                    if host.credibility_report().map_err(debug)?.revision != *expected_revision {
-                        return Err("stale expected evaluation revision".into());
-                    }
-                    if assessment.truth == GroundTruth::Benign {
-                        checkpoint()?;
-                        let tick = clock()?;
-                        checkpoint()?;
-                        host.observe_time(host.revision(), tick).map_err(debug)?;
-                        // Time and assessment are separate original journal events.
-                        // An expired budget can leave an acknowledged Time, never a
-                        // fabricated label. The resulting anchor retains that cut.
-                        checkpoint()?;
-                    }
-                }
-                let revision = host.revision();
-                evaluator
-                    .assess(host, revision, &ticket, *assessment)
+            Self::Promote(request) => {
+                checkpoint()?;
+                promotion::apply(host, request, checkpoint, clock)
+            }
+            Self::Window(window) => {
+                checkpoint()?;
+                host.register_andon_window(host.revision(), *window)
                     .map_err(debug)
             }
+            Self::Assess {
+                round,
+                attempt,
+                policy,
+                congress,
+                root,
+                expected_revision,
+                assessment,
+            } => assessment::AssessmentRequest {
+                round: *round,
+                attempt: *attempt,
+                policy: *policy,
+                congress: *congress,
+                root: *root,
+                expected_revision: *expected_revision,
+                assessment: *assessment,
+            }
+            .apply(host, evaluator, checkpoint, clock),
         }
     }
 }
@@ -177,8 +158,9 @@ pub(super) fn run(
     input: &Path,
     mutation: &Mutation,
     checkpoint: &mut impl FnMut() -> Result<(), String>,
-    clock: &mut impl FnMut() -> Result<ElapsedTick, String>, out: &mut impl Write) -> Result<(), String>
-{
+    clock: &mut impl FnMut() -> Result<ElapsedTick, String>,
+    out: &mut impl Write,
+) -> Result<(), String> {
     if matches!(mutation, Mutation::Promote(_)) && settings.joint.is_none() {
         return Err("operator promotion requires an explicit joint native Andon /2 profile".into());
     }
@@ -249,7 +231,9 @@ pub(super) fn run(
         write!(out, "{{\"schema_version\":\"fa.native-andon-mutation-result/1\",\"status\":\"{status}\",\"recovery_fence_revision\":\"{fence_revision}\",\"state\":")
             .map_err(debug)?;
         out.write_all(&state).map_err(debug)?;
-        if let Mutation::Promote(request) = mutation && outcome.is_ok() {
+        if let Mutation::Promote(request) = mutation
+            && outcome.is_ok()
+        {
             promotion::report(&host, request.operation, out)?;
         }
         writeln!(out, "}}").map_err(debug)?;
@@ -269,17 +253,4 @@ pub(super) fn run(
             errors.join("; ")
         ))
     }
-}
-fn digest(fields: &mut BTreeMap<String, Json>, key: &str) -> Result<[u8; 32], String> {
-    let value = take(fields, key)?;
-    let bytes = hex(value
-        .as_str()
-        .ok_or("evidence identity must be lowercase hex")?)?;
-    let digest: [u8; 32] = bytes
-        .try_into()
-        .map_err(|_| "evidence identity must be 32 bytes")?;
-    if digest == [0; 32] {
-        return Err("evidence identity must be nonzero".into());
-    }
-    Ok(digest)
 }

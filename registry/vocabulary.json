@@ -351,6 +351,16 @@
       "note": ""
     },
     {
+      "verb": "evaluator-assess",
+      "layer": "L8",
+      "class": "mutation",
+      "authority": "separately configured kernel-authenticated independent evaluator holding the original native evaluator role",
+      "idempotency": "exact original case and assessment history; expected global evaluation revision for a new label; exact retry adds no clock, event or charge",
+      "cost_class": "bounded native journal transaction and cumulative original transport allowance",
+      "response": "NativeAssessmentAcknowledgment with applied, already_applied, refused or unconfirmed status and exact before/after basis",
+      "note": "Linux supervise_publication evaluator-assess adapter for ordinary live Andon services; separate authenticated endpoint, not a generic Tower mutation route. Preserves native delayed/censored labels, same-origin accounting and calibration incidents. No policy, effect or recovery-anchor authority is granted."
+    },
+    {
       "verb": "policy-replay",
       "layer": "L8",
       "class": "rehearsal",

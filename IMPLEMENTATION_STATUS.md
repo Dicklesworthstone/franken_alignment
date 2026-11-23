@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: assess native cases while the original Tower owner stays live
+
+Ordinary plain and simple-witness checked Tower services can now provision
+native credibility and Andon accounting in the first guarded owner image, or
+recover the same accounted journal with independent floors and successor-anchor
+custody. One original owner spans the finite request schedule. Existing source,
+helper, separate human, final witness, settlement, Stop and cleanup requirements
+remain in force; scheduled prechecks reuse their original reservations.
+
+An explicitly selected independent evaluator endpoint applies the same strict
+native assessment contract as the offline command without reopening the live
+journal. Kernel-authenticated roles remain disjoint. Exact case and evaluation
+predecessors, original delayed/censored and same-origin accounting, wide costs,
+calibration incidents and retry behavior remain native. One bounded cooperative
+service retains its role and cumulative transport/time allowances across request
+handoffs and reconnects. Stop runs first; terminal grace cannot admit labels.
+
+The registered `evaluator-assess` client verifies its supervisor before sending
+label bytes and validates a request-bound live receipt with exact native revision
+arithmetic and unchanged control/authority. Refused, already applied and storage-
+unconfirmed outcomes remain distinct; live receipts claim no recovery Fence or
+independent anchor retention. Generic Tower dispatch refuses this command.
+
+Seventeen new live service/evaluator regression functions cover real publication,
+original later two-key release, known accounting, false-stop incidents and wide
+costs, censored resolution, anchored source-free history, checked final-witness
+failure, pending recovery Stop, exact retry, credential/case/revision refusals,
+finite reconnects, partial frames, lost replies, persistence uncertainty, receipt
+tampering and custody collisions. A separate public registration regression
+checks unsupported generic Tower dispatch without spending or transition. Scoped
+syntax/format and whitespace checks and independent source review completed;
+required RCH compilation/runtime/Clippy and canonical qualification remain pending
+because the runner is absent. FA-105 and the live-composition bead stay in
+progress. See [the executable workflow and boundaries](docs/LIVE_ANDON_EVALUATION.md).
+
 ## 2026-11-22: serve explicitly convened original process successors
 
 The live learned operator now accepts the original fixed process evaluator as
@@ -71,18 +106,13 @@ The batch oracle independently reconstructs the original history by key and
 checks every earlier boundary. Comparison includes all scores and weighted
 supports, so a lost zero-score retraction is visible even without an alarm.
 Fourteen public regression functions were added and the existing caller was
-migrated to exact retraction semantics. The original local implementation passed
-independent source review and scoped Rust syntax/format and whitespace checks.
-The workspace then became unavailable; the recovered patches were source
-reviewed but need final formatting and execution qualification. Remote-only RCH
-tests and the canonical gate could not start because the runner was absent.
-
-FA-125 is in progress. The earlier detector bead closure is unsupported by the
-full acceptance contract; a local CLI reopening was not captured before the
-workspace outage and is not represented as a completed tracker update here.
-Native query predicates, journal ingestion, governed thresholds, durable
-incidents and access enforcement remain unmet acceptance. See
-[the checked reference contract](docs/RISK_THEATER_REFERENCE.md).
+migrated to exact retraction semantics. Independent source review and scoped
+Rust syntax/format and whitespace checks passed. Remote-only RCH tests and the
+canonical gate could not start because the runner is absent; execution remains
+pending. The falsely closed detector bead was reopened and FA-125 remains in
+progress. Native query predicates, journal ingestion, governed thresholds,
+durable incidents and access enforcement are still unmet acceptance, as recorded
+in [the checked reference contract](docs/RISK_THEATER_REFERENCE.md).
 
 ## 2026-11-22: expose governance accounting on the original live operator path
 

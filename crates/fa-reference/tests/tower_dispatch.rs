@@ -4,6 +4,10 @@
 
 use std::collections::BTreeSet;
 
+#[cfg(unix)]
+#[path = "support/file_oversight_actor.rs"]
+mod native_evaluator_fixture;
+
 use fa_reference::action::consequence::{Consequence, Rule};
 use fa_reference::address_resolver::{
     Address, CallerScope, Noun, RelationKind, ResolvedObject, ResolverPlane,
@@ -390,8 +394,8 @@ fn registry_verbs_classes_and_envelope_are_exact_not_a_second_vocabulary() {
         .expect("registered verbs");
     let registered: BTreeSet<_> = verbs.iter().map(|entry| text(entry, "verb")).collect();
     let implemented: BTreeSet<_> = Verb::ALL.iter().map(|verb| verb.as_str()).collect();
-    assert_eq!(verbs.len(), 38);
-    assert_eq!(registered.len(), 38);
+    assert_eq!(verbs.len(), 39);
+    assert_eq!(registered.len(), 39);
     assert_eq!(implemented, registered);
     for entry in verbs {
         let verb: Verb = text(entry, "verb")
@@ -1351,6 +1355,80 @@ fn permitted_sixteen_level_tree_reaches_the_wire_without_a_shallower_accidental_
 }
 
 #[test]
+fn evaluator_registration_does_not_grant_generic_tower_authority() {
+    let verb: Verb = "evaluator-assess".parse().unwrap();
+    assert_eq!(verb, Verb::EvaluatorAssess);
+    assert_eq!(verb.class(), VerbClass::Mutation);
+    assert!(!verb.is_connected());
+    let mut tower = fixture();
+    let before = tower.remaining_read_units();
+    let mut query = request(&tower, verb);
+    query.idempotency_key = Some("independent-evaluator-role-required".to_owned());
+    let response = tower.dispatch(&access(), query);
+    assert_eq!(response.envelope.status, ResponseStatus::Error);
+    assert_eq!(
+        response.envelope.reason_code,
+        Some(ReasonCode::CapabilityUnsupported)
+    );
+    assert_eq!(
+        response.result,
+        Knowledge::unknown(UnknownReason::Unavailable)
+    );
+    assert!(!response.envelope.retry_safe);
+    assert_eq!(tower.remaining_read_units(), before);
+    assert_eq!(tower.journal_control_seq(), CONTROL_SEQ);
+
+    #[cfg(unix)]
+    {
+        use fa_reference::tower::publication::{
+            PublicationLimits, PublicationResult, PublicationTower,
+        };
+        let root = native_evaluator_fixture::Directory::new();
+        let (port, supervisor, _human, _proposal) = native_evaluator_fixture::create(&root);
+        let scope = native_evaluator_fixture::profile().delivery.scope;
+        let mount = Address::new(
+            scope.tenant.to_string(),
+            Noun::Run,
+            scope.run.to_string(),
+            Some(1),
+        )
+        .unwrap();
+        let mut native =
+            PublicationTower::new(mount.clone(), port, PublicationLimits::default()).unwrap();
+        let before = supervisor.host().unwrap().inspect();
+        let original = std::fs::read(root.store().join("delivery.bin")).unwrap();
+        // Neither an actor nor generic operator status supplies the separately
+        // retained original FileIndependentEvaluator role.
+        for operator in [false, true] {
+            let access = TowerAccess::new(
+                CallerScope::full_tenant_access(scope.tenant.to_string()),
+                operator,
+                all_purposes(),
+                10,
+            );
+            let mut query = TowerRequest::new("refused-native-assessment", mount.clone(), verb);
+            query.idempotency_key = Some("independent-evaluator-role-required".to_owned());
+            let response = native.dispatch(&access, query);
+            assert_eq!(response.envelope.status, ResponseStatus::Error);
+            assert_eq!(
+                response.envelope.reason_code,
+                Some(ReasonCode::CapabilityUnsupported)
+            );
+            assert_eq!(
+                response.result,
+                PublicationResult::Refused(Knowledge::unknown(UnknownReason::Unavailable))
+            );
+            assert!(!response.envelope.retry_safe);
+            assert_eq!(supervisor.host().unwrap().inspect(), before);
+            assert_eq!(
+                std::fs::read(root.store().join("delivery.bin")).unwrap(),
+                original
+            );
+        }
+    }
+}
+
+#[test]
 fn every_unconnected_registered_verb_refuses_without_read_charge_or_journal_transition() {
     let mut tower = fixture();
     let before = tower.remaining_read_units();
@@ -1385,7 +1463,7 @@ fn every_unconnected_registered_verb_refuses_without_read_charge_or_journal_tran
         assert!(field(&json, "result").get("value").is_none());
         refused += 1;
     }
-    assert_eq!(refused, 29);
+    assert_eq!(refused, 30);
     let query = request(&tower, Verb::Tail);
     let response = tower.dispatch(&access(), query);
     let (TowerValue::Tail(batch), _) = known(&response.result) else {

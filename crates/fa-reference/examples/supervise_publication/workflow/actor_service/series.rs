@@ -204,8 +204,17 @@ where
     F: FnMut() -> ElapsedTick,
 {
     serve_tower_governed_selected(
-        config, actor, reviewer_profile, publication, requests, generation,
-        operator_settings, governor_settings, None, None, time,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        requests,
+        generation,
+        operator_settings,
+        governor_settings,
+        None,
+        None,
+        time,
     )
 }
 
@@ -227,8 +236,17 @@ where
     F: FnMut() -> ElapsedTick,
 {
     serve_tower_governed_selected(
-        config, actor, reviewer_profile, publication, requests, generation,
-        operator_settings, governor_settings, Some(topology), None, time,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        requests,
+        generation,
+        operator_settings,
+        governor_settings,
+        Some(topology),
+        None,
+        time,
     )
 }
 
@@ -252,8 +270,17 @@ where
     F: FnMut() -> ElapsedTick,
 {
     serve_tower_governed_selected(
-        config, actor, reviewer_profile, publication, requests, generation,
-        operator_settings, governor_settings, topology, Some(prechecks), time,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        requests,
+        generation,
+        operator_settings,
+        governor_settings,
+        topology,
+        Some(prechecks),
+        time,
     )
 }
 
@@ -315,13 +342,22 @@ where
     governor_settings.check_custody_paths(&source_paths)?;
     if let Some(schedule) = prechecks {
         schedule.check_governed_host(
-            &config, actor, reviewer_profile, requests, operator_settings,
-            governor_settings, topology_selection.as_ref(),
+            &config,
+            actor,
+            reviewer_profile,
+            requests,
+            operator_settings,
+            governor_settings,
+            topology_selection.as_ref(),
         )?;
     }
     if let Some(selection) = topology_selection.as_ref() {
         topology::check_destinations(
-            &config, requests, actor, reviewer_profile, Some(operator_settings),
+            &config,
+            requests,
+            actor,
+            reviewer_profile,
+            Some(operator_settings),
             selection.acknowledged_output(),
         )?;
         let mut paths = selection.input_paths().to_vec();
@@ -354,14 +390,19 @@ where
         Some(mut prepared) => {
             let output = prepared.take_output();
             let (host, roles) = FileOversight::create_mediated_guarded_reserved(
-                &config.store, config.profile.clone(), &guards, None,
+                &config.store,
+                config.profile.clone(),
+                &guards,
+                None,
                 FileMediatedBootstrap {
                     topology: prepared.loaded().graph().clone(),
                     reserve: RecoveryReserve::terminal(),
                     publication: publication_limits,
                 },
-                None, None,
-            ).map_err(debug)?;
+                None,
+                None,
+            )
+            .map_err(debug)?;
             let source = prepared.bind(&host, roles.topology_observer)?;
             (host, roles.oversight, Some(source), output)
         }
@@ -382,7 +423,8 @@ where
                     None,
                     RecoveryReserve::terminal(),
                 ),
-            }.map_err(debug)?;
+            }
+            .map_err(debug)?;
             (host, roles, None, None)
         }
     };
@@ -411,11 +453,14 @@ where
         OwnerStart::Ordinary,
         None,
         Some((governor_settings, governor)),
+        None,
         prechecks,
         deadline,
         time,
         |host, source, _succeeded| {
-            output.as_ref().map_or(Ok(()), |output| output.retain(host, source))
+            output
+                .as_ref()
+                .map_or(Ok(()), |output| output.retain(host, source))
         },
     )
 }
@@ -476,16 +521,24 @@ where
     if generation == 0
         || operator_settings.is_some_and(|settings| settings.policy_promotion.is_some())
     {
-        return Err("scheduled prechecks require an ordinary Tower creation without a governor".into());
+        return Err(
+            "scheduled prechecks require an ordinary Tower creation without a governor".into(),
+        );
     }
     // Richer checked profiles must never lose a producer/feed/wait/joint gate.
-    publication.map(PublicationProfile::simple_limits).transpose()?;
+    publication
+        .map(PublicationProfile::simple_limits)
+        .transpose()?;
     serve_ingress(
         config,
         actor,
         reviewer_profile,
         publication,
-        Options { requests, open: false, credibility: None },
+        Options {
+            requests,
+            open: false,
+            credibility: None,
+        },
         Some(generation),
         operator_settings,
         topology,
@@ -528,7 +581,11 @@ where
             return Err("scheduled prechecks require a new ordinary Tower owner".into());
         }
         schedule.check_host(
-            &config, actor, reviewer_profile, requests, operator_settings,
+            &config,
+            actor,
+            reviewer_profile,
+            requests,
+            operator_settings,
             topology_selection.as_ref(),
         )?;
     }
@@ -615,6 +672,7 @@ where
         reviewer,
         topology,
         OwnerStart::Ordinary,
+        None,
         None,
         None,
         prechecks,
@@ -754,9 +812,76 @@ where
     R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
 {
     serve_ready_driver_selected(
-        config, actor, reviewer_profile, publication, options, tower_generation,
-        operator_settings, socket, port, driver, reviewer, topology, owner_start,
-        early_control, governor, prechecks, deadline, time, retain,
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        tower_generation,
+        operator_settings,
+        socket,
+        port,
+        driver,
+        reviewer,
+        topology,
+        owner_start,
+        early_control,
+        governor,
+        None,
+        prechecks,
+        deadline,
+        time,
+        retain,
+    )
+}
+
+/// Native evaluation is held by one separate peer for this owner's entire
+/// lifetime. A new scheduled request cannot recreate its role or allowances.
+pub(super) fn serve_ready_driver_with_evaluator<F, R>(
+    config: Config,
+    actor: &Profile,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    options: Options<'_>,
+    generation: u64,
+    operator_settings: Option<&operator::Settings>,
+    socket: BoundSocket,
+    port: Port,
+    driver: FileSupervisedDriver,
+    reviewer: super::super::FileHumanReviewer,
+    owner_start: OwnerStart,
+    early_control: Option<super::super::control::Control>,
+    evaluator: Option<(&evaluator::Settings, fa_reference::action::consequence::delivery::persistent::observed::credibility::FileIndependentEvaluator)>,
+    prechecks: Option<&precheck::schedule::Schedule>,
+    deadline: Deadline,
+    time: F,
+    retain: R,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+    R: FnOnce(&FileOversight, Option<&FileDriverTopology>, bool) -> Result<(), String>,
+{
+    serve_ready_driver_selected(
+        config,
+        actor,
+        reviewer_profile,
+        publication,
+        options,
+        Some(generation),
+        operator_settings,
+        socket,
+        port,
+        driver,
+        reviewer,
+        None,
+        owner_start,
+        early_control,
+        None,
+        evaluator,
+        prechecks,
+        deadline,
+        time,
+        retain,
     )
 }
 
@@ -776,6 +901,7 @@ fn serve_ready_driver_selected<F, R>(
     owner_start: OwnerStart,
     mut early_control: Option<super::super::control::Control>,
     governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
+    evaluator: Option<(&evaluator::Settings, fa_reference::action::consequence::delivery::persistent::observed::credibility::FileIndependentEvaluator)>,
     prechecks: Option<&precheck::schedule::Schedule>,
     deadline: Deadline,
     mut time: F,
@@ -825,6 +951,11 @@ where
                 .ok_or("governor has no independently selected operator")?
                 .attach_governor(service)?;
         }
+        let mut evaluator = evaluator
+            .map(|(settings, role)| {
+                evaluator::Service::start(settings, actor, role, &driver, &deadline)
+            })
+            .transpose()?;
         let mut ingress = tower::SelectedIngress::new(socket, port, actor, tower_generation)?;
         // Copy only immutable, bounded launch recipes per NEW review. Never duplicate
         // a child, socket, captured input, vote, approval or effect capability.
@@ -911,16 +1042,23 @@ where
                         // fallback to unqualified weights. Historical retries skip it.
                         host.check_credibility().map_err(debug)?;
                     }
-                    if let Some(settings) = prechecks.and_then(|schedule| schedule.selected(request)) {
+                    if let Some(settings) =
+                        prechecks.and_then(|schedule| schedule.selected(request))
+                    {
                         // The original preceding request is already reaped. Its
                         // disclosure was retired before review; this row explicitly
                         // selects its own finite grant and one additional source
                         // bootstrap. Stop always gets the first scheduling turn.
-                        let control = early_control.as_mut().expect("selected precheck Stop control");
+                        let control = early_control
+                            .as_mut()
+                            .expect("selected precheck Stop control");
                         if control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)? {
                             return Ok(());
                         }
                         if let Some(service) = &mut operator {
+                            service.checkpoint_driver(&mut driver);
+                        }
+                        if let Some(service) = &mut evaluator {
                             service.checkpoint_driver(&mut driver);
                         }
                         if control.native_stop(&mut driver, &mut time)? {
@@ -929,8 +1067,13 @@ where
                         let mut selected_actor = actor.clone();
                         selected_actor.request = request;
                         sidecar = Some(precheck::Service::start(
-                            settings, &selected_actor, reviewer_profile, &mut config,
-                            &mut driver, &deadline, &mut time,
+                            settings,
+                            &selected_actor,
+                            reviewer_profile,
+                            &mut config,
+                            &mut driver,
+                            &deadline,
+                            &mut time,
                         )?);
                         // Mount this same weak exact-only port once. Both
                         // transports spend the row's original native allowance;
@@ -947,6 +1090,9 @@ where
                             return Ok(());
                         }
                         if let Some(service) = &mut operator {
+                            service.checkpoint_driver(&mut driver);
+                        }
+                        if let Some(service) = &mut evaluator {
                             service.checkpoint_driver(&mut driver);
                         }
                         if early_control
@@ -1027,6 +1173,9 @@ where
                             if let Some(service) = &mut operator {
                                 service.checkpoint_driver(driver);
                             }
+                            if let Some(service) = &mut evaluator {
+                                service.checkpoint_driver(driver);
+                            }
                             frames_seen = frames_seen
                                 .saturating_add(ingress.observe_sequence(driver, &completed)?);
                             let status = driver
@@ -1104,6 +1253,9 @@ where
                     if let Some(service) = &mut operator {
                         service.checkpoint_driver(&mut driver);
                     }
+                    if let Some(service) = &mut evaluator {
+                        service.checkpoint_driver(&mut driver);
+                    }
                     if control.native_stop(&mut driver, &mut time)? {
                         return Ok(());
                     }
@@ -1146,6 +1298,9 @@ where
                 if let Some(service) = &mut operator {
                     service.checkpoint_driver(&mut driver);
                 }
+                if let Some(service) = &mut evaluator {
+                    service.checkpoint_driver(&mut driver);
+                }
                 if let Some(control) = &mut early_control {
                     if control.native_stop(&mut driver, &mut time)? {
                         return Ok(());
@@ -1158,6 +1313,11 @@ where
             }
             Ok(())
         })();
+        if let Some(service) = &mut evaluator {
+            // The original final reply grace may drain an entered response; it
+            // does not open new assessment work after the finite schedule ends.
+            service.finish();
+        }
         // Also revoke on Stop, source/bootstrap errors, timeout or transport
         // failure before original stop/drain and terminal reply grace.
         if let Some(mut service) = sidecar.take() {
@@ -1212,6 +1372,9 @@ where
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
+            if let Some(service) = &mut evaluator {
+                service.checkpoint_driver(&mut driver);
+            }
             if let Some(control) = &mut early_control {
                 if let Err(error) = control.native_stop(&mut driver, &mut time) {
                     failure.get_or_insert(error);
@@ -1229,6 +1392,9 @@ where
             pause(actor.poll_ms);
         }
         if let Some(service) = &mut operator {
+            service.retire();
+        }
+        if let Some(service) = &mut evaluator {
             service.retire();
         }
         ingress.revoke();

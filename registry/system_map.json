@@ -45,6 +45,7 @@
       "verbs": [
         "doctor",
         "ledger",
+        "evaluator-assess",
         "findings",
         "policy-replay",
         "promote",

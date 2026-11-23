@@ -1,0 +1,147 @@
+# Independent evaluation on the original live Tower owner
+
+The Linux `supervise_publication` service can provision native helper credibility
+and Andon accounting in an ordinary publication owner and accept independent
+assessment while that same owner retains the journal lock. An operator can read
+the acknowledged results through the existing [Tower Ledger](TOWER_GOVERNANCE_LEDGER.md).
+The actor still needs original source admission, helper review, independent human
+approval and publication checks for every new effect.
+
+This connects FA-105/049/134, plan §§9.9, 13.4, 17.1, 22.3–22.4 and
+FI-A08/A13/A18. It is a bounded reference composition; execution qualification
+remains pending. It does not make helper or actor judgments into ground truth.
+
+## Create an accounted service
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --andon ANDON_PROFILE \
+  --retain-history-anchor /absolute/independent/new-anchor \
+  --operator-profile OPERATOR_PROFILE \
+  --evaluator-profile EVALUATOR_PROFILE
+```
+
+The original ordinary profiles still define the scope, actor/reviewer identities,
+source, helpers, work limits and independent Stop. Select the operator's finite
+`governance_ledger` grant to read accounting. Operator and evaluator endpoints are
+optional and independently selected; a read grant cannot issue a label.
+
+`ANDON_PROFILE` reuses `fa.native-andon-operator/1` or its explicit joint `/2`
+profile and the [native operator contract](NATIVE_ANDON_OPERATOR.md). The ordinary
+fixture is `crates/fa-reference/fixtures/native_andon_operator.json`. Creation
+requires identical initial/current windows and evaluation revision zero. The
+original evaluated, source-guarded owner and terminal recovery reserve appear in
+its first durable image. No provisional unaccounted owner escapes.
+
+Creation requires a new independent history-anchor output. It may use the actor
+profile's single request or an explicit finite `--requests` schedule. The checked
+variant is `serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE
+WITNESS_PROFILE` with the same flags; only the original simple witness composition
+is supported. An explicit `--precheck-schedule` can accompany `--requests`.
+
+## Assess a completed review while service continues
+
+Run this command as the separately configured evaluator process:
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON
+```
+
+`EVALUATOR_PROFILE` uses the existing `fa.native-evaluator-peer/1` schema. Its
+exact publication scope and deployment/evaluator identity must match the native
+accounting configuration. Its supervisor credentials must match the original
+supervisor. Its evaluator credential policy must be disjoint from the actor,
+reviewer/Stop and operator policies. Different exact PIDs can distinguish
+processes sharing UID/GID; a wildcard PID cannot establish that distinction.
+
+Both ends verify Linux kernel peer credentials before disclosing assessment
+bytes. This identifies local processes; it does not establish institutional
+independence, executable provenance or remote cryptographic attestation. The
+independently owned socket directory, endpoint identity and existing native
+evaluator role remain required.
+
+`ASSESSMENT_JSON` is the same bounded, closed `fa.native-assessment/1` document
+used by the offline evaluator. It names the original round, attempt, policy and
+congress generations, exact case evidence root, expected global evaluation
+revision, independent origin, evidence ID and benign/violation/censored truth.
+Obtain those identities from the independent evaluation of the original applied
+case; the public Ledger deliberately does not expose raw labels or evidence.
+
+The server obtains the ticket from its current native owner and compares the
+whole case identity. A new assessment requires the exact evaluation predecessor.
+A new benign label first records fresh native Time, then applies the original
+accounting law. A later failure does not undo acknowledged Time. Exact native
+retries use the original assessment history and add no new clock event, label,
+false-stop charge or credibility credit. Same-origin deduplication, delayed and
+censored outcomes, wide costs and calibration incidents remain native behavior.
+Budget exhaustion cannot loosen a review requirement or remove a helper.
+
+The client validates the full `fa.live-evaluator-receipt/1` before output. The
+receipt binds the complete request and original before/after journal, evaluation,
+control and authority revisions. Assessment may not change control or authority.
+`applied`, `already_applied`, `refused` and `unconfirmed` are distinct. A healthy
+Time-only predecessor can accompany a refused label; a storage fault cannot be
+reported from stale RAM. A live receipt claims neither a recovery Fence nor a
+retained independent anchor. A lost response does not cause automatic retry.
+
+The command is registered as an L8 mutation adapter. Generic actor/operator
+Tower requests for `evaluator-assess` remain unsupported: the label path requires
+the separate authenticated endpoint and its original noncloneable evaluator.
+
+## Lifetime, Stop and custody
+
+One evaluator service spans the whole finite request schedule. Reconnecting or
+moving to the next request does not issue another role or replenish candidate,
+I/O, byte or time allowances. A complete request requires EOF; a prefix or quiet
+socket cannot attach a label. Malformed and credential-refused candidates spend
+their original allowance. Each nonblocking turn has bounded calls and bytes and
+runs after the original independent Stop checkpoint. The owner deadline remains
+an outer limit. Terminal reply grace can drain an already entered response but
+cannot accept another assessment.
+
+All current and future reviewer/Stop endpoints, actor/operator/evaluator sockets,
+source and witness inputs, profile files, retained archives and authority-store
+paths are checked for collisions before owner work. Precheck schedules retain
+their original input/disclosure reservations. No listener is silently replaced.
+
+## Recover the same accounted owner
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --andon ANDON_PROFILE --guarded RECOVERY_PROFILE \
+  --operator-profile OPERATOR_PROFILE \
+  --evaluator-profile EVALUATOR_PROFILE
+```
+
+Recovery requires an explicit request schedule and the original guarded-submit
+profile with independently retained history, minimum floors and a new
+`retain_history_anchor` destination. Do not use the create-only retention flag.
+The complete native protocol, window inventory, evaluation floor, source guards,
+optional joint policy and checked-publication requirements are replay-checked
+before returning an owner. The original Fence/Time/Sweep reconciliation does not
+resend uncertain effects or refund charges. A pending independent Stop transfers
+the same verified recovery cursor through the existing terminal Stop path before
+an ordinary Fence or fresh evaluator role escapes.
+
+Historical-only schedules can serve exact receipts without source/helper work.
+New requests still require fresh source, helpers and human approval. The checked
+open variant accepts the corresponding simple witness profile. Native/learned
+generated modes, topology, policy governor, standalone `--precheck-profile` and
+credibility-activation capsules require separate compositions and refuse here.
+
+## Verification boundary
+
+Authored regressions cover actual scheduled publication and anchored recovery,
+live native assessments and Ledger observations, original later two-key
+publication, wrong case/audience/revision, exact retry, finite reconnects,
+partial frames, Stop, lost replies, uncertain persistence, receipt tampering,
+source independence and custody collisions. These are test definitions, not
+executed evidence. Scoped syntax/format checks and independent source review
+were performed. Compilation, runtime tests, Clippy and the canonical gate remain
+pending because required remote-only RCH is unavailable. No packet or production
+qualification is closed by this integration.

@@ -26,7 +26,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, but reject governor, topology, standalone prechecks and credibility activation; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -42,6 +42,9 @@ struct Arguments<'a> {
     topology: Option<&'a Path>,
     guarded: Option<&'a Path>,
     governor: Option<&'a Path>,
+    andon: Option<&'a Path>,
+    retain_history: Option<&'a Path>,
+    evaluator: Option<&'a Path>,
 }
 
 impl<'a> Arguments<'a> {
@@ -54,16 +57,9 @@ impl<'a> Arguments<'a> {
             _ => return Err(USAGE.into()),
         };
         let positional = if checked { 5 } else { 4 };
-        if ![
-            positional + 2,
-            positional + 4,
-            positional + 6,
-            positional + 8,
-            positional + 10,
-            positional + 12,
-            positional + 14,
-        ]
-        .contains(&args.len())
+        if args.len() < positional + 2
+            || args.len() > positional + 20
+            || !(args.len() - positional).is_multiple_of(2)
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
@@ -78,6 +74,9 @@ impl<'a> Arguments<'a> {
         let mut topology = None;
         let mut guarded = None;
         let mut governor = None;
+        let mut andon = None;
+        let mut retain_history = None;
+        let mut evaluator = None;
         // Each opt-in owns one complete pair. Operator read custody is separate
         // from admission-time precheck disclosure and cannot widen actor grants.
         for pair in args[positional..].chunks_exact(2) {
@@ -139,15 +138,34 @@ impl<'a> Arguments<'a> {
                     }
                     governor = Some(Path::new(&pair[1]));
                 }
+                "--andon" if andon.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    andon = Some(Path::new(&pair[1]));
+                }
+                "--retain-history-anchor" if retain_history.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    retain_history = Some(Path::new(&pair[1]));
+                }
+                "--evaluator-profile" if evaluator.is_none() => {
+                    if pair[1].is_empty() || pair[1].starts_with("--") {
+                        return Err(USAGE.into());
+                    }
+                    evaluator = Some(Path::new(&pair[1]));
+                }
                 _ => return Err(USAGE.into()),
             }
         }
         if (precheck_schedule.is_some()
-            && (requests.is_none() || (open && guarded.is_none())
-                || precheck.is_some()))
+            && (requests.is_none() || (open && guarded.is_none()) || precheck.is_some()))
             || (requests.is_some() && precheck.is_some())
             || (guarded.is_some() && !open)
-            || (guarded.is_some() && topology.is_none() && governor.is_none()
+            || (guarded.is_some()
+                && topology.is_none()
+                && governor.is_none()
                 && (requests.is_none() || precheck.is_some()))
             || (open && topology.is_some() && guarded.is_none())
             || (governor.is_some()
@@ -157,6 +175,21 @@ impl<'a> Arguments<'a> {
                     || requests.as_ref().is_none_or(|requests| requests.len() < 2)))
         {
             return Err(USAGE.into());
+        }
+        if andon.is_some() {
+            if topology.is_some()
+                || governor.is_some()
+                || precheck.is_some()
+                || (open && (guarded.is_none() || requests.is_none() || retain_history.is_some()))
+                || (!open && retain_history.is_none())
+            {
+                return Err("live Andon requires ordinary plain/simple-witness Tower service, a new --retain-history-anchor on creation or --guarded plus explicit --requests on recovery; topology, governance and single-profile prechecks require separate composition".into());
+            }
+        } else if retain_history.is_some() || evaluator.is_some() {
+            return Err(
+                "live history retention and evaluator custody require an explicit --andon profile"
+                    .into(),
+            );
         }
         let generation = generation.ok_or(USAGE)?;
         Ok(Self {
@@ -173,6 +206,9 @@ impl<'a> Arguments<'a> {
             topology,
             guarded,
             governor,
+            andon,
+            retain_history,
+            evaluator,
         })
     }
 }
@@ -192,6 +228,9 @@ where
     // Own all options before opening files or allowing another service mode to
     // consume an unsupported Tower selection. No transport/profile fallback.
     let selected = Arguments::parse(args)?;
+    if selected.andon.is_some() && credibility.is_some() {
+        return Err("live Andon service does not select a credibility activation capsule".into());
+    }
     if !selected.open && credibility.is_some() {
         return Err("live credibility activation requires an existing journal".into());
     }
@@ -217,21 +256,71 @@ where
     {
         return Err("live policy promotion requires both an independent governor profile and an explicit operator promotion allowance".into());
     }
+    if let Some(path) = selected.andon {
+        let settings = super::andon_settings::Settings::read(path)?;
+        let recovery = selected.guarded.map(SubmitProfile::read).transpose()?;
+        let evaluator = selected
+            .evaluator
+            .map(super::evaluator::Settings::read)
+            .transpose()?;
+        let singleton = [actor.request];
+        let requests = selected.requests.as_deref().unwrap_or(&singleton);
+        let prechecks = selected
+            .precheck_schedule
+            .map(|path| super::precheck::schedule::Schedule::read(path, requests))
+            .transpose()?;
+        let mut inputs = vec![selected.config, selected.actor, selected.reviewer, path];
+        inputs.extend(selected.publication);
+        inputs.extend(selected.operator);
+        inputs.extend(selected.evaluator);
+        inputs.extend(selected.guarded);
+        return super::andon::serve(
+            config,
+            &actor,
+            &reviewer,
+            publication.as_ref(),
+            super::andon::Selection {
+                settings: &settings,
+                mode: match recovery.as_ref() {
+                    Some(profile) => super::andon::Mode::Existing(profile),
+                    None => super::andon::Mode::Create(
+                        selected
+                            .retain_history
+                            .expect("Andon creation custody checked before reads"),
+                    ),
+                },
+                requests,
+                generation: selected.generation,
+                operator: operator.as_ref(),
+                evaluator: evaluator.as_ref(),
+                prechecks: prechecks.as_ref(),
+                inputs: &inputs,
+            },
+            time,
+        );
+    }
     let recovery_prechecks = if selected.open {
-        selected.precheck_schedule.map(|path| {
-            let schedule = super::precheck::schedule::Schedule::read(
-                path, selected.requests.as_deref().expect("precheck schedule checked before reads"),
-            )?;
-            let mut inputs = vec![selected.config, selected.actor, selected.reviewer];
-            inputs.extend(selected.publication);
-            inputs.extend(selected.operator);
-            inputs.extend(selected.governor);
-            inputs.extend(selected.guarded);
-            inputs.extend(selected.topology);
-            inputs.extend(credibility);
-            schedule.check_recovery_inputs(&inputs)?;
-            Ok::<_, String>(schedule)
-        }).transpose()?
+        selected
+            .precheck_schedule
+            .map(|path| {
+                let schedule = super::precheck::schedule::Schedule::read(
+                    path,
+                    selected
+                        .requests
+                        .as_deref()
+                        .expect("precheck schedule checked before reads"),
+                )?;
+                let mut inputs = vec![selected.config, selected.actor, selected.reviewer];
+                inputs.extend(selected.publication);
+                inputs.extend(selected.operator);
+                inputs.extend(selected.governor);
+                inputs.extend(selected.guarded);
+                inputs.extend(selected.topology);
+                inputs.extend(credibility);
+                schedule.check_recovery_inputs(&inputs)?;
+                Ok::<_, String>(schedule)
+            })
+            .transpose()?
     } else {
         None
     };
@@ -254,9 +343,14 @@ where
                     &recovery,
                     &topology,
                     selected.generation,
-                    operator.as_ref().expect("independent operator checked before reads"),
+                    operator
+                        .as_ref()
+                        .expect("independent operator checked before reads"),
                     &governor,
-                    selected.requests.as_deref().expect("governor schedule checked before reads"),
+                    selected
+                        .requests
+                        .as_deref()
+                        .expect("governor schedule checked before reads"),
                     recovery_prechecks.as_ref(),
                     time,
                 );
@@ -288,15 +382,26 @@ where
             inputs.extend(selected.topology);
             inputs.extend(selected.governor);
             governor.check_custody_paths(&inputs)?;
-            let requests = selected.requests.as_deref()
+            let requests = selected
+                .requests
+                .as_deref()
                 .expect("governor schedule checked before reads");
             let schedule = super::precheck::schedule::Schedule::read(path, requests)?;
             let topology = selected.topology.map(TopologySelection::read).transpose()?;
             return super::series::serve_tower_governed_prechecked(
-                config, &actor, &reviewer, publication.as_ref(), requests,
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                requests,
                 selected.generation,
-                operator.as_ref().expect("independent operator checked before reads"),
-                &governor, topology, &schedule, time,
+                operator
+                    .as_ref()
+                    .expect("independent operator checked before reads"),
+                &governor,
+                topology,
+                &schedule,
+                time,
             );
         }
         if let Some(path) = selected.topology {
@@ -306,9 +411,14 @@ where
                 &actor,
                 &reviewer,
                 publication.as_ref(),
-                selected.requests.as_deref().expect("governor schedule checked before reads"),
+                selected
+                    .requests
+                    .as_deref()
+                    .expect("governor schedule checked before reads"),
                 selected.generation,
-                operator.as_ref().expect("independent operator checked before reads"),
+                operator
+                    .as_ref()
+                    .expect("independent operator checked before reads"),
                 &governor,
                 topology,
                 time,
@@ -341,7 +451,9 @@ where
                 publication.as_ref(),
                 credibility,
                 &recovery,
-                selected.requests.as_deref()
+                selected
+                    .requests
+                    .as_deref()
                     .expect("plain guarded request schedule checked before reads"),
                 selected.generation,
                 operator.as_ref(),

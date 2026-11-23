@@ -1,5 +1,12 @@
 # Live operator inspection and control through the original Tower owner
 
+Ordinary plain and simple-witness checked services can now select native
+credibility and Andon accounting with `--andon`, explicit history custody and
+an optional separate `--evaluator-profile`. The [live evaluation workflow](LIVE_ANDON_EVALUATION.md)
+keeps one original owner across the finite request schedule, accepts independent
+assessments during operation and exposes acknowledged accounting through the
+existing finite Ledger grant. An operator read cannot supply a ground-truth label.
+
 On Linux, ordinary Tower publication services can expose a
 separate authenticated operator endpoint. It connects the existing native
 `situation`, historical admission or completed-congress `explain`, recorded

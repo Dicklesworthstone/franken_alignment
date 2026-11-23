@@ -73,11 +73,9 @@ frontiers, exact replacement and multiplicities, address identity, atomic
 refusal, product and sum overflow, missing thresholds, gaps/replay/unclosed
 input, bounds, deduplicated finding addresses, invalid historical prefixes and
 lost retractions below alarm thresholds. These are test definitions; they have
-not been executed for this change. The original local implementation passed
-scoped Rust parsing/format and whitespace checks before the workspace became
-unavailable. The recovered patch received source review; its final formatting
-and execution still need the required gate. Remote-only RCH test and canonical
-gate attempts could not start because the runner was unavailable.
+not been executed for this change. Scoped Rust parsing/format and whitespace
+checks passed. Required remote-only RCH compilation and the canonical gate could
+not start because the runner is unavailable in the development environment.
 
 FA-125 remains in progress. This repair does not implement the six native ledger
 query predicates, authenticated journal ingestion/closure, governed threshold

@@ -566,6 +566,27 @@
       "steps": [
         {
           "step": 1,
+          "verb": "evaluator-assess",
+          "inputs": ["fa://acme/round/original-case", "fa://acme/evidence/independent-label"],
+          "outputs": [
+            {
+              "address": "fa://acme/ledger/helper-alpha",
+              "type": "Knowledge<NativeAssessmentAcknowledgment>"
+            }
+          ],
+          "failure_branches": [
+            {
+              "reason_code": "OutcomeUnknown",
+              "action": "Inspect the original owner after an unconfirmed or lost live receipt; never automatically retry, invent a label, refund a stop or authorize publication."
+            },
+            {
+              "reason_code": "DeniedByPolicy",
+              "action": "Retain original state when evaluator credentials, exact applied case or expected evaluation revision fail."
+            }
+          ]
+        },
+        {
+          "step": 2,
           "verb": "ledger",
           "inputs": ["fa://acme/helper/alpha@2"],
           "outputs": [
@@ -582,7 +603,7 @@
           ]
         },
         {
-          "step": 2,
+          "step": 3,
           "verb": "policy-replay",
           "inputs": ["fa://acme/helper/alpha@2", "fa://acme/policy/roster-candidate"],
           "outputs": [
@@ -599,7 +620,7 @@
           ]
         },
         {
-          "step": 3,
+          "step": 4,
           "verb": "promote",
           "inputs": ["fa://acme/helper/alpha@2", "fa://acme/evidence/evaluator-report-1"],
           "outputs": [
@@ -616,7 +637,7 @@
           ]
         },
         {
-          "step": 4,
+          "step": 5,
           "verb": "rotate",
           "inputs": ["fa://acme/helper/alpha@2", "fa://acme/evidence/evaluator-report-1"],
           "outputs": [
@@ -633,7 +654,7 @@
           ]
         },
         {
-          "step": 5,
+          "step": 6,
           "verb": "findings",
           "inputs": ["fa://acme/ledger/helper-alpha"],
           "outputs": [

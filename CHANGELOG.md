@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: connect independent assessment to live Tower publication
+
+- Provision and independently recover original native credibility/Andon accounting
+  in ordinary plain and checked finite Tower services, with explicit history custody.
+- Retain one separately authenticated evaluator role through request changes and
+  reconnects; apply original case/revision/label laws with cumulative finite work.
+- Add the authenticated `evaluator-assess` client and strict live receipts;
+  preserve Stop priority, uncertain outcomes, native costs and fresh human review.
+- Add seventeen live service/evaluator regression functions plus a public generic-
+  Tower refusal regression. Scoped syntax/format and source review completed;
+  required RCH execution remains unavailable and qualification stays open.
+
 ## 2026-11-22: connect held process continuation to live operators
 
 - Accept exactly one original native or fixed process evaluator for the existing
@@ -39,9 +51,9 @@
   thresholds for all six families; refuse incomplete or stale projections.
 - Reconstruct history independently in the batch oracle and compare complete
   weighted support, including lost retractions below finding thresholds.
-- Add fourteen public regression functions. The local implementation passed
-  scoped syntax/format checks before workspace loss; recovered patches remain
-  source-reviewed and execution-unqualified. Required RCH was unavailable.
+- Add fourteen public regression functions. Source, scoped syntax/format and
+  whitespace checks passed; required RCH execution remains unavailable and
+  the full native detector acceptance remains open.
 
 ## 2026-11-22: connect governance accounting to authenticated operators
 

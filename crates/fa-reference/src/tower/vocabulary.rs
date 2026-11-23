@@ -40,6 +40,7 @@ pub enum Verb {
     Rehearse,
     Doctor,
     Ledger,
+    EvaluatorAssess,
     Findings,
     PolicyReplay,
     Promote,
@@ -50,7 +51,7 @@ pub enum Verb {
 }
 
 impl Verb {
-    pub const ALL: [Self; 38] = [
+    pub const ALL: [Self; 39] = [
         Self::Get,
         Self::Related,
         Self::Capabilities,
@@ -82,6 +83,7 @@ impl Verb {
         Self::Rehearse,
         Self::Doctor,
         Self::Ledger,
+        Self::EvaluatorAssess,
         Self::Findings,
         Self::PolicyReplay,
         Self::Promote,
@@ -124,6 +126,7 @@ impl Verb {
             Self::Rehearse => "rehearse",
             Self::Doctor => "doctor",
             Self::Ledger => "ledger",
+            Self::EvaluatorAssess => "evaluator-assess",
             Self::Findings => "findings",
             Self::PolicyReplay => "policy-replay",
             Self::Promote => "promote",
@@ -170,6 +173,7 @@ impl Verb {
             | Self::StopFleet
             | Self::Resolve
             | Self::Handoff
+            | Self::EvaluatorAssess
             | Self::Promote
             | Self::Rotate
             | Self::Preregister

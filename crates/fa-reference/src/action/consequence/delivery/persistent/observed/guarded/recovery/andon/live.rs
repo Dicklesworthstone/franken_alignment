@@ -37,6 +37,26 @@ impl FileOversight {
 }
 
 impl FileAndonRecovery {
+    /// Preserve independent Stop during evaluated recovery without first
+    /// issuing a fresh evaluator or ordinary recovery Fence. The same complete
+    /// protocol, window, joint and publication requirements are checked before
+    /// transferring the original verified cursor and terminal reserve.
+    #[cfg(target_os = "linux")]
+    pub fn into_recovery_stop(
+        self,
+        operation: u64,
+    ) -> Result<crate::action::consequence::delivery::persistent::observed::reviewer::peer::control::FileRecoveryStop, JournalError>{
+        let Self {
+            inner,
+            expected,
+            protocol,
+        } = self;
+        inner.stop_request_checked(operation, |run| {
+            expected.check_replayed(&run.profile, &run.machine, &run.events, &protocol)
+        })?;
+        inner.into_recovery_stop(operation)
+    }
+
     /// Complete native replay using the ORIGINAL fixed Fence -> Time -> Sweep
     /// transaction and release fresh separately held roles only after its one
     /// canonical acknowledgment. No event is replayed twice and no effect is

@@ -441,6 +441,13 @@ profile limits and the pending execution-verification boundary.
 
 ### P4. A helper needs promotion, demotion or rotation
 
+The implemented ordinary [live Andon service](LIVE_ANDON_EVALUATION.md) can accept
+independent case labels before these governance reads. The separately authenticated
+evaluator runs `supervise_publication evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON`
+against the original live owner. It validates the exact applied case and native
+evaluation predecessor; the operator then reads the separately granted Tower
+Ledger. Neither a read grant nor an assessment permits promotion or publication.
+
 1. `fa ledger fa://…/helper/<generation>` → precision, recall, lead time, caps, andon consumption, all from independent-evaluator labels.
 2. A selection change requires an evaluator report with attack-conditioned metrics (FA-INV-032). `fa promote|rotate <generation> --report <report>`; without the report the transition is refused, and that refusal is itself journaled.
 3. New generations run in shadow first; `fa policy-replay --candidate <roster>` shows what the last N closures would have decided.
