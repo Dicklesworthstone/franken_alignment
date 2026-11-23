@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-23: account for native generated reviews and recover original history
+
+- Compose source-bound generated publication, independent evaluation, optional
+  joint promotion and native Andon accounting in the sole first durable image.
+- Return separately owned human/evaluator roles only after acknowledgment;
+  preserve full source/tokenizer/publication/reserve and two-key requirements.
+- Add sealed anchored generated-source Andon recovery with exact selected
+  contracts/floors, original bounded replay and separate terminal Stop paths.
+- Add 17 regression functions including real generation/publication, independent
+  labels/Andon incidents, storage failures and recovery custody. Source reviewed;
+  RCH execution and qualification remain pending.
+
 ## 2026-11-23: expose original cases to the independent live evaluator
 
 - Add the bounded authenticated `evaluator-case` command on the original service.

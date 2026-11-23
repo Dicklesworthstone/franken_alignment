@@ -14,6 +14,7 @@ use crate::action::consequence::delivery::persistent::observed::{
     source::{FileSourcePolicy, SourceEvent},
 };
 
+pub mod evaluation;
 mod recovery;
 pub use recovery::{
     FileGeneratedSourceRecovery, FileGeneratedSourceRecoveryProgress,

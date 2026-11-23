@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: compose native generated publication with independent accounting
+
+The source-bound native text constructor can now install its complete decoder,
+tokenizer, source, stream/publication and reserve selection together with the
+original independent evaluation protocol, optional joint policy and Andon
+accounting in one first canonical image. Native reducers validate before storage
+creation; only acknowledgment releases separate human/evaluator roles.
+
+A sealed generated-source Andon recovery wrapper retains the original locked
+image and bounded numerical replay. Independent history, complete guard and
+accounting contracts and journal/control/authority/evaluation floors are checked
+before its sole recovery Fence can release fresh roles. Cancellation and native
+terminal Stop remain separate paths; failed or uncertain writes return no role.
+Old evaluator custody cannot cross recovery, while original cases, labels,
+incidents, numerical spending and unresolved liabilities survive.
+
+Seventeen regression functions are authored: five bootstrap functions cover 24
+mode/configuration combinations and original storage failures; eight cover
+bounded anchored recovery, fresh source/resume, floors, cancellation and Stop;
+four public functions perform actual generation, congress, human-key publication,
+independent Hold accounting, foreign custody refusal and censored-label recovery.
+Independent source review completed and corrected one test borrow conflict.
+RCH remains unavailable; compilation, Rust formatting/Clippy and runtime tests
+are unexecuted. Bead `franken_alignment-address-resolver-6w62.6.2` remains in
+progress. See [the native contract](docs/NATIVE_GENERATED_EVALUATION.md).
+
 ## 2026-11-23: discover cases through the original live evaluator
 
 The separately authenticated evaluator can now use `evaluator-case PROFILE ROUND`

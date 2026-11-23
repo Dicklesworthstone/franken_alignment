@@ -26,6 +26,16 @@ pub struct FileEvaluatedOversightRoles {
     pub evaluator: FileIndependentEvaluator,
 }
 impl FileEvaluatedOversightRoles {
+    // Source-bound native construction also publishes the complete guard set
+    // before returning custody. Keep its role assembly inside this existing
+    // factory; this is not a public live-owner role getter.
+    pub(in super::super) fn from_published(
+        host: &FileOversight,
+        human: super::super::FileHumanReviewer,
+    ) -> Self {
+        Self::provision(host, FileOversightRoles::provision(host, human))
+    }
+
     pub(super) fn provision(host: &FileOversight, oversight: FileOversightRoles) -> Self {
         Self {
             oversight,

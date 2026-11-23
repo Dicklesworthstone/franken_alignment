@@ -1,6 +1,7 @@
 //! Atomic guarded bootstrap and anchored native evaluation/Andon recovery.
 //! Every label, pending case, receipt and incident is recomputed by the original
 //! Machine. No scores, label roles or compact accounting seeds are imported.
+pub mod generated;
 pub mod joint;
 
 use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
