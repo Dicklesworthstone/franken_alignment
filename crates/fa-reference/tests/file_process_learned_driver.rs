@@ -7,6 +7,8 @@
 mod model;
 #[path = "file_process_learned_driver/fixture.rs"]
 mod fixture;
+#[path = "file_process_learned_driver/convening.rs"]
+mod convening;
 use fixture::*;
 use fa_reference::{Error, Snapshot};
 use fa_reference::action::{ActionState, ElapsedTick};
@@ -51,7 +53,11 @@ fn process_worker() {
                 observed = true;
             }
             if mode != "wait" && (mode != "gated" || std::path::Path::new("release").exists()) {
-                let verdict = if mode == "abstain" { Verdict::Abstain } else { Verdict::Allow };
+                let verdict = match mode.as_str() {
+                    "abstain" => Verdict::Abstain,
+                    "hold" => Verdict::Hold,
+                    _ => Verdict::Allow,
+                };
                 client.respond(verdict, &[11; 32]).unwrap();
             }
         }

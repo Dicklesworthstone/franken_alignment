@@ -39,7 +39,7 @@ impl FileActorSupervisor<FileOversight> {
             queries: Cell::new(queries),
             operations: Cell::new(operations),
             records: RefCell::new(BTreeMap::new()),
-            native_offer: RefCell::new(None),
+            learned_offer: RefCell::new(None),
             planned: Rc::clone(&planned),
             scope: owner.host.actor_explanation_scope(),
             issuer: owner.host.journal_tail_identity(),
@@ -93,6 +93,30 @@ impl FileActorSupervisor<FileOversight> {
         next: LearnedWorkerRound,
         custody: Weak<()>,
     ) -> Result<(), JournalError> {
+        self.offer_fixed_learned_convene(request, held_round, next, custody, LearnedOfferMode::NativeFixed)
+    }
+
+    /// An original process owner offers only its next fixed executable roster.
+    /// Queueing may overlap direct-child cleanup; taking the ticket and every
+    /// later Begin still require confirmed reaping by that same owner.
+    pub(crate) fn offer_process_convene(
+        &self,
+        request: u64,
+        held_round: u64,
+        next: LearnedWorkerRound,
+        custody: Weak<()>,
+    ) -> Result<(), JournalError> {
+        self.offer_fixed_learned_convene(request, held_round, next, custody, LearnedOfferMode::ProcessFixed)
+    }
+
+    fn offer_fixed_learned_convene(
+        &self,
+        request: u64,
+        held_round: u64,
+        next: LearnedWorkerRound,
+        custody: Weak<()>,
+        mode: LearnedOfferMode,
+    ) -> Result<(), JournalError> {
         let owner = self
             .owner
             .try_borrow()
@@ -107,10 +131,15 @@ impl FileActorSupervisor<FileOversight> {
         if !grant.healthy(&owner.host) || custody.upgrade().is_none() {
             return Err(JournalError::Unavailable);
         }
-        let (basis, blocked) = owner.host.native_convene_status(request)?;
+        let (basis, blocked) = owner.host.learned_convene_status(request)?;
+        let available = match mode {
+            LearnedOfferMode::NativeFixed => owner.host.native_convene_round_available(next.round),
+            LearnedOfferMode::ProcessFixed => !owner.host.convene_round_used(next.round),
+            LearnedOfferMode::NativeReserved => false,
+        };
         if blocked.is_some()
             || basis.held_round != held_round
-            || !owner.host.native_convene_round_available(next.round)
+            || !available
         {
             return Err(Error::WrongState.into());
         }
@@ -123,14 +152,14 @@ impl FileActorSupervisor<FileOversight> {
             return Err(Error::InvalidInput.into());
         }
         *grant
-            .native_offer
+            .learned_offer
             .try_borrow_mut()
-            .map_err(|_| JournalError::Unavailable)? = Some(NativeOffer {
+            .map_err(|_| JournalError::Unavailable)? = Some(LearnedOffer {
             basis,
             round: next.round,
             commit_by: next.window.commit_by,
             custody,
-            mode: NativeOfferMode::Fixed,
+            mode,
         });
         Ok(())
     }
@@ -163,14 +192,14 @@ impl FileActorSupervisor<FileOversight> {
             return Err(Error::WrongState.into());
         }
         *grant
-            .native_offer
+            .learned_offer
             .try_borrow_mut()
-            .map_err(|_| JournalError::Unavailable)? = Some(NativeOffer {
+            .map_err(|_| JournalError::Unavailable)? = Some(LearnedOffer {
             basis,
             round: 0,
             commit_by: basis.deadline,
             custody,
-            mode: NativeOfferMode::Reserved,
+            mode: LearnedOfferMode::NativeReserved,
         });
         Ok(())
     }
@@ -179,7 +208,7 @@ impl FileActorSupervisor<FileOversight> {
         &self,
         request: u64,
     ) -> Result<bool, JournalError> {
-        self.has_native_convene_offer(request, None)
+        self.has_learned_convene_offer(request, None, LearnedOfferMode::NativeReserved)
     }
 
     pub(crate) fn has_fixed_native_convene_offer(
@@ -187,15 +216,24 @@ impl FileActorSupervisor<FileOversight> {
         request: u64,
         round: u64,
     ) -> Result<bool, JournalError> {
-        self.has_native_convene_offer(request, Some(round))
+        self.has_learned_convene_offer(request, Some(round), LearnedOfferMode::NativeFixed)
+    }
+
+    pub(crate) fn has_fixed_process_convene_offer(
+        &self,
+        request: u64,
+        round: u64,
+    ) -> Result<bool, JournalError> {
+        self.has_learned_convene_offer(request, Some(round), LearnedOfferMode::ProcessFixed)
     }
 
     /// A spent grant remains eligible only for its already admitted operation.
     /// Fixed offers additionally bind that pending receipt to the exact slot.
-    fn has_native_convene_offer(
+    fn has_learned_convene_offer(
         &self,
         request: u64,
         fixed_round: Option<u64>,
+        mode: LearnedOfferMode,
     ) -> Result<bool, JournalError> {
         let owner = self
             .owner
@@ -211,18 +249,18 @@ impl FileActorSupervisor<FileOversight> {
         if !grant.healthy(&owner.host) {
             return Err(JournalError::Unavailable);
         }
-        let (basis, blocked) = owner.host.native_convene_status(request)?;
+        let (basis, blocked) = owner.host.learned_convene_status(request)?;
         if blocked.is_some() {
             return Ok(false);
         }
         let offered = grant
-            .native_offer
+            .learned_offer
             .try_borrow()
             .map_err(|_| JournalError::Unavailable)?;
         let current = offered.as_ref().is_some_and(|offer| {
-            let matches_slot = match fixed_round {
-                Some(round) => offer.mode == NativeOfferMode::Fixed && offer.round == round,
-                None => offer.mode == NativeOfferMode::Reserved,
+            let matches_slot = offer.mode == mode && match fixed_round {
+                Some(round) => offer.mode.is_fixed() && offer.round == round,
+                None => offer.mode == LearnedOfferMode::NativeReserved,
             };
             matches_slot
                 && offer.basis == basis
@@ -253,6 +291,14 @@ impl FileActorSupervisor<FileOversight> {
     }
 
     pub(crate) fn clear_native_convene(&self, request: u64) -> Result<(), JournalError> {
+        self.clear_learned_convene(request, true)
+    }
+
+    pub(crate) fn clear_process_convene(&self, request: u64) -> Result<(), JournalError> {
+        self.clear_learned_convene(request, false)
+    }
+
+    fn clear_learned_convene(&self, request: u64, native: bool) -> Result<(), JournalError> {
         let owner = self
             .owner
             .try_borrow()
@@ -265,12 +311,15 @@ impl FileActorSupervisor<FileOversight> {
             return Ok(());
         };
         let mut offer = grant
-            .native_offer
+            .learned_offer
             .try_borrow_mut()
             .map_err(|_| JournalError::Unavailable)?;
         if offer
             .as_ref()
-            .is_some_and(|offered| offered.basis.request == request)
+            .is_some_and(|offered| {
+                offered.basis.request == request
+                    && (offered.mode != LearnedOfferMode::ProcessFixed) == native
+            })
         {
             *offer = None;
         }
@@ -350,7 +399,7 @@ impl FileActorSupervisor<FileOversight> {
             owner: Rc::downgrade(&self.owner),
             grant: Rc::downgrade(&grant),
             input: record.receipt.request,
-            native: record.native.clone(),
+            learned: record.learned.clone(),
             completed: false,
         }))
     }
@@ -388,7 +437,7 @@ impl FileSupervisorConvenePort {
             .try_borrow()
             .map_err(|_| FileConveneError::Unavailable)?;
         grant.queries.set(remaining - 1);
-        let Ok((basis, native_block, native_offer)) = grant.status(&owner.host, request, round) else {
+        let Ok((basis, native_block, learned_offer)) = grant.status(&owner.host, request, round) else {
             return Ok(Knowledge::Unknown {
                 reason: UnknownReason::OutcomeUnknown,
             });
@@ -399,7 +448,7 @@ impl FileSupervisorConvenePort {
             &records,
             round,
             native_block,
-            native_offer.as_ref(),
+            learned_offer.as_ref(),
         );
         Ok(Knowledge::Known {
             value: FileConvenePlan {
@@ -440,7 +489,7 @@ impl FileSupervisorConvenePort {
                 basis: input.expected,
             });
         }
-        let (basis, native_block, native_offer) = grant
+        let (basis, native_block, learned_offer) = grant
             .status(&owner.host, input.request, input.round)
             .map_err(|_| FileConveneError::Unsupported)?;
         if input.expected != basis {
@@ -452,7 +501,7 @@ impl FileSupervisorConvenePort {
             &records,
             input.round,
             native_block,
-            native_offer.as_ref(),
+            learned_offer.as_ref(),
         ) {
             return Err(match reason {
                 FileConveneBlockReason::RoundAlreadyUsed => FileConveneError::IdempotencyConflict,
@@ -487,7 +536,7 @@ impl FileSupervisorConvenePort {
             Record {
                 receipt: receipt.clone(),
                 taken: false,
-                native: native_offer,
+                learned: learned_offer,
             },
         );
         Ok(Knowledge::Known {
@@ -503,18 +552,18 @@ fn block(
     records: &BTreeMap<u64, Record>,
     round: u64,
     native: Option<FileConveneBlockReason>,
-    native_offer: Option<&NativeOffer>,
+    learned_offer: Option<&LearnedOffer>,
 ) -> Option<FileConveneBlockReason> {
     use FileConveneBlockReason::*;
     if grant.planned.get(&round).is_some_and(|request| {
-        native_offer.is_none_or(|offer| {
-            offer.mode != NativeOfferMode::Fixed || offer.basis.request != *request
+        learned_offer.is_none_or(|offer| {
+            !offer.mode.is_fixed() || offer.basis.request != *request
         })
     }) {
         return Some(RoundAlreadyUsed);
     }
     if records.contains_key(&round)
-        || (native_offer.is_none_or(|offer| offer.mode != NativeOfferMode::Fixed)
+        || (learned_offer.is_none_or(|offer| offer.mode != LearnedOfferMode::NativeFixed)
             && host.convene_round_used(round))
     {
         return Some(RoundAlreadyUsed);

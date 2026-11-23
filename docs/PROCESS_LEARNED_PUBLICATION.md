@@ -22,13 +22,19 @@ The launcher's fresh post-launch clock check runs before any request bytes can b
 sent; a late or panicking clock returns the original driver and recoverable
 partial children. Failure does not create a replacement native or manual round.
 
-Every subsequent quantum acquires current policy evidence and trusted time
+Every active review quantum acquires current policy evidence and trusted time
 through the original learned provider. Accepted refinement changes the job to the
-new input revision. Later programs are fixed in advance and launch only after
-the preceding round has produced its witnessed refinement **and every preceding
-direct child has been confirmed reaped**. The complete schedule reserves its
-bounded starts before the first launch. Future unstarted slots remain distinct
-from observed process starts.
+new input revision. Later programs are fixed in advance and launch after either
+witnessed refinement or an independently requested continuation of the exact
+original Hold. Both paths require **every preceding direct child to be confirmed
+reaped**. The complete schedule reserves its bounded starts before the first
+launch. Future unstarted slots remain distinct from observed process starts.
+
+The retained process driver exposes the existing finite convening grant through
+a distinct process ticket. It preserves the frozen sidecar and original windows,
+charges the continuation launch against remaining protocol polls, and requires
+fresh two-key publication after Continue. An ordinary held Idle step performs no
+source or clock I/O. See [the process held-review contract](PROCESS_LEARNED_HELD_REVIEW.md).
 
 A finished permitting review can make the original driver ready for independent
 human approval. It does not publish. The existing automatic permit, human permit,
@@ -142,10 +148,15 @@ cancellation, both publication keys and an original external publication.
 Operator regressions exercise explicit /6 parsing, actual full-input replies,
 human refusal, helper denial/early exit, cleanup and receipt-only recovery.
 
-Tests are authored and source-reviewed. All twelve changed process-driver,
+The original 2026-10-17 tests were authored and source-reviewed. All twelve then-changed process-driver,
 operator and test sources passed nonmutating syntax parsing by rustfmt from the
 qualified nightly-2026-09-08 toolchain; their bytes were unchanged. This is not a
 formatting or type check. Required remote-only RCH execution was unavailable in
 the 2026-10-17 session; its daemon refusal prevented compilation (exit 103), and
 the execution environment later restarted. Compilation, Clippy, runtime tests,
 empirical detector results and production qualification remain open.
+
+The later held-process continuation and its eleven new regression functions are
+source-reviewed only. Its required RCH check cannot start (`rch` absent, exit
+127), and the workspace then became unavailable. No parsing, formatting,
+compilation, Clippy or runtime result is claimed for these later changed bytes.

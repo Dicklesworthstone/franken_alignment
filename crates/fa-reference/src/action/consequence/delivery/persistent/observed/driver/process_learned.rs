@@ -23,12 +23,14 @@ use crate::action::{ActionState, ElapsedTick};
 use crate::{Error, Snapshot};
 use std::{collections::BTreeMap, fmt, rc::Rc};
 
+mod convening;
 mod driving;
 pub use driving::FileProcessDriverEvent;
 
 /// Every original round and executable roster is fixed before the first Begin.
-/// Successors launch only after witnessed refinement and complete predecessor
-/// reaping. The original process limits bound admitted direct-child starts.
+/// Successors launch after witnessed refinement or an independently selected
+/// original held-review ticket, and only after complete predecessor reaping.
+/// The original process limits bound admitted direct-child starts.
 pub struct FileProcessDriverLaunch {
     pub journal_revision: u64,
     pub request: u64,
@@ -77,6 +79,9 @@ pub struct FileProcessSupervisedDriver {
     request: u64,
     input_revision: u64,
     rounds: Vec<LearnedWorkerRound>,
+    // Only this retained process owner keeps its original fixed-slot offer
+    // alive. Ports and one-use tickets retain weak observations of custody.
+    convene_custody: Option<Rc<()>>,
 }
 impl fmt::Debug for FileProcessSupervisedDriver {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -202,6 +207,7 @@ impl FileSupervisedDriver {
                 request,
                 input_revision,
                 rounds,
+                convene_custody: None,
             }),
             Err(error) => Err(Box::new(FileProcessDriverSetupError {
                 error: error.failure,
@@ -254,7 +260,8 @@ impl FileProcessSupervisedDriver {
     /// Withdraw worker I/O and request cleanup without settling the actor's
     /// request or refunding a dispatched/unknown external effect.
     pub fn request_stop_helpers(&mut self) {
-        if unfinished(self.review.status()) {
+        let _ = self.clear_process_convene_offer();
+        if unfinished(self.review.status()) || self.review.has_held_successor_custody() {
             let _ = self.review.cancel(self.review.revision());
         }
         if let Some(job) = &mut self.driver.job
@@ -366,6 +373,7 @@ impl FileProcessSupervisedDriver {
             }
         }
         self.reap_helpers();
+        self.sync_process_convene_offer()?;
         Ok(self.progress())
     }
 
@@ -375,18 +383,27 @@ impl FileProcessSupervisedDriver {
         if expected_revision != self.review.revision() {
             return Err(Error::Stale.into());
         }
-        if unfinished(self.review.status()) {
+        let cleared = self.clear_process_convene_offer();
+        if unfinished(self.review.status()) || self.review.has_held_successor_custody() {
             self.review.cancel(expected_revision)?;
         }
         let result = self.driver.cancel_active().map(|_| ());
         self.reap_helpers();
-        result
+        result.and(cleared)
     }
 
     /// A partial or draining review cannot escape into an ordinary review loop.
     /// Terminal custody is retained even when direct-child cleanup is pending.
     pub fn into_handoff(mut self) -> Result<FileProcessDriverHandoff, Box<Self>> {
         if unfinished(self.review.status()) {
+            return Err(Box::new(self));
+        }
+        // Handoff cannot leave a queued ticket capable of reviving the process
+        // schedule, including after its clock, source or allowance became stale.
+        let _ = self.clear_process_convene_offer();
+        if self.review.has_held_successor_custody()
+            && self.review.cancel(self.review.revision()).is_err()
+        {
             return Err(Box::new(self));
         }
         if let Some(job) = &mut self.driver.job

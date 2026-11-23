@@ -1,4 +1,5 @@
 //! Lazy process launch across witnessed refinement, with a direct-child drain barrier.
+mod convening;
 use super::super::super::Event;
 use super::super::sequence::LearnedSocketRecord;
 use super::*;
@@ -313,7 +314,8 @@ impl FileLearnedProcessReview {
         if !matches!(
             self.status,
             LearnedProcessStatus::Running | LearnedProcessStatus::Draining
-        ) {
+        ) && !self.has_held_successor_custody()
+        {
             return Err(Error::WrongState);
         }
         self.revision = self.revision.checked_add(1).ok_or(Error::Overflow)?;

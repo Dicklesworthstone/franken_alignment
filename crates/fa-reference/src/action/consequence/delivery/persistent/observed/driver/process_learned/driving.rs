@@ -230,6 +230,12 @@ impl FileProcessSupervisedDriver {
         P: EvidenceProvider,
     {
         self.reap_helpers();
+        // An idle quantum cannot discard the exact held job or automatically
+        // launch another process review. Only its independent one-use ticket
+        // can consume the retained fixed roster; handoff/cancel retires it.
+        if self.review.has_held_successor_custody() {
+            return Ok(FileProcessDriverEvent::Driver(FileDriverEvent::Idle));
+        }
         if !unfinished(self.review.status()) {
             if let Some(job) = &mut self.driver.job
                 && job.phase == Phase::Review
@@ -305,7 +311,7 @@ impl FileProcessSupervisedDriver {
     }
 }
 
-fn journal_failure(error: FileProcessFailure) -> JournalError {
+pub(super) fn journal_failure(error: FileProcessFailure) -> JournalError {
     match error {
         FileProcessFailure::Journal(error) => error,
         FileProcessFailure::Transport(WorkerIoError::Protocol(error))
@@ -329,7 +335,8 @@ impl Drop for ProcessObservation<'_> {
         if self.acknowledged {
             return;
         }
-        if unfinished(self.owner.review.status()) {
+        let _ = self.owner.clear_process_convene_offer();
+        if unfinished(self.owner.review.status()) || self.owner.review.has_held_successor_custody() {
             let _ = self.owner.review.cancel(self.owner.review.revision());
         }
         if let Some(job) = &mut self.owner.driver.job

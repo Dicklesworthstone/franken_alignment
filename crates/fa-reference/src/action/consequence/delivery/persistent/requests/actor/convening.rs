@@ -191,26 +191,32 @@ pub type FileConveneResult = Result<FileConveneObservation, FileConveneError>;
 struct Record {
     receipt: FileConveneReceipt,
     taken: bool,
-    native: Option<NativeOffer>,
+    learned: Option<LearnedOffer>,
 }
 
-/// The retained native evaluator offers its next preprovisioned round.
-/// Copies weakly observe that custody and cannot keep another owner alive.
+/// Native evaluators and external-process schedules retain different custody.
+/// A process offer never borrows a native worker lease or its unused evaluators.
 #[derive(Clone, Copy, PartialEq, Eq)]
-enum NativeOfferMode {
-    Fixed,
-    Reserved,
+enum LearnedOfferMode {
+    NativeFixed,
+    NativeReserved,
+    ProcessFixed,
+}
+impl LearnedOfferMode {
+    fn is_fixed(self) -> bool {
+        matches!(self, Self::NativeFixed | Self::ProcessFixed)
+    }
 }
 
 #[derive(Clone)]
-struct NativeOffer {
+struct LearnedOffer {
     basis: FileConveneBasis,
     round: u64,
     commit_by: ElapsedTick,
     custody: Weak<()>,
-    mode: NativeOfferMode,
+    mode: LearnedOfferMode,
 }
-impl NativeOffer {
+impl LearnedOffer {
     fn same(&self, other: &Self) -> bool {
         self.basis == other.basis
             && self.mode == other.mode
@@ -222,14 +228,14 @@ impl NativeOffer {
 type ConveneStatus = (
     FileConveneBasis,
     Option<FileConveneBlockReason>,
-    Option<NativeOffer>,
+    Option<LearnedOffer>,
 );
 
 struct Grant {
     queries: Cell<usize>,
     operations: Cell<usize>,
     records: RefCell<BTreeMap<u64, Record>>,
-    native_offer: RefCell<Option<NativeOffer>>,
+    learned_offer: RefCell<Option<LearnedOffer>>,
     planned: Rc<BTreeMap<u64, u64>>,
     scope: Scope,
     issuer: Weak<()>,
@@ -263,17 +269,17 @@ impl Grant {
             let (basis, blocked) = host.convene_status(request)?;
             return Ok((basis, blocked, None));
         }
-        let (basis, blocked) = host.native_convene_status(request)?;
+        let (basis, blocked) = host.learned_convene_status(request)?;
         if blocked.is_some() {
             return Ok((basis, blocked, None));
         }
         let offered = self
-            .native_offer
+            .learned_offer
             .try_borrow()
             .map_err(|_| JournalError::Unavailable)?;
         let Some(offer) = offered.as_ref().filter(|offer| {
             offer.basis.request == request
-                && (offer.mode == NativeOfferMode::Reserved || offer.round == round)
+                && (offer.mode == LearnedOfferMode::NativeReserved || offer.round == round)
         }) else {
             return Ok((
                 basis,
@@ -288,16 +294,18 @@ impl Grant {
             return Ok((basis, Some(FileConveneBlockReason::DeadlineElapsed), None));
         }
         let available = match offer.mode {
-            NativeOfferMode::Fixed => host.native_convene_round_available(round),
-            NativeOfferMode::Reserved => !host.convene_round_used(round),
+            LearnedOfferMode::NativeFixed => host.native_convene_round_available(round),
+            LearnedOfferMode::NativeReserved | LearnedOfferMode::ProcessFixed => {
+                !host.convene_round_used(round)
+            }
         };
         if !available {
             return Ok((basis, Some(FileConveneBlockReason::RoundAlreadyUsed), None));
         }
         let mut selected = offer.clone();
         // Only the separately prepaid unnumbered mode binds a fresh requested
-        // ID here. Fixed offers retain their exact original leased round.
-        if selected.mode == NativeOfferMode::Reserved {
+        // ID here. Fixed offers retain their exact original scheduled round.
+        if selected.mode == LearnedOfferMode::NativeReserved {
             selected.round = round;
         }
         Ok((basis, None, Some(selected)))
@@ -378,7 +386,7 @@ pub struct FileConveneTicket {
     owner: Weak<OwnerRef<FileOversight>>,
     grant: Weak<Grant>,
     input: FileConveneRequest,
-    native: Option<NativeOffer>,
+    learned: Option<LearnedOffer>,
     completed: bool,
 }
 impl fmt::Debug for FileConveneTicket {
@@ -404,14 +412,24 @@ impl FileConveneTicket {
         Weak::ptr_eq(&self.owner, &Rc::downgrade(&supervisor.owner))
     }
 
+    pub(crate) fn is_learned(&self) -> bool {
+        self.learned.is_some()
+    }
+
     pub(crate) fn is_native_learned(&self) -> bool {
-        self.native.is_some()
+        self.learned.as_ref().is_some_and(|offer| {
+            matches!(offer.mode, LearnedOfferMode::NativeFixed | LearnedOfferMode::NativeReserved)
+        })
+    }
+
+    pub(crate) fn is_process_learned(&self) -> bool {
+        self.learned.as_ref().is_some_and(|offer| offer.mode == LearnedOfferMode::ProcessFixed)
     }
 
     pub(crate) fn is_reserved_native_learned(&self) -> bool {
-        self.native
+        self.learned
             .as_ref()
-            .is_some_and(|offer| offer.mode == NativeOfferMode::Reserved)
+            .is_some_and(|offer| offer.mode == LearnedOfferMode::NativeReserved)
     }
 
     pub(crate) fn check(&self, host: &FileOversight) -> Result<(), JournalError> {
@@ -430,25 +448,25 @@ impl FileConveneTicket {
         {
             return Err(Error::Binding.into());
         }
-        match (&self.native, &record.native) {
+        match (&self.learned, &record.learned) {
             (None, None) => {}
             (Some(ticket), Some(record)) if ticket.same(record) => {}
             _ => return Err(Error::Binding.into()),
         }
-        let (basis, blocked, native) = grant.status(host, self.request(), self.round())?;
+        let (basis, blocked, learned) = grant.status(host, self.request(), self.round())?;
         if basis != self.expected() {
             return Err(Error::Stale.into());
         }
-        let same_native = match (&self.native, &native) {
+        let same_learned = match (&self.learned, &learned) {
             (None, None) => true,
             (Some(ticket), Some(current)) => ticket.same(current),
             _ => false,
         };
         if blocked.is_some()
-            || !same_native
-            || (native
+            || !same_learned
+            || (learned
                 .as_ref()
-                .is_none_or(|offer| offer.mode != NativeOfferMode::Fixed)
+                .is_none_or(|offer| offer.mode != LearnedOfferMode::NativeFixed)
                 && host.convene_round_used(self.round()))
         {
             return Err(Error::WrongState.into());

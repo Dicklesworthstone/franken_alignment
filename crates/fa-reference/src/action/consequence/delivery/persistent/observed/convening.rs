@@ -39,6 +39,16 @@ impl FileOversight {
         &self,
         request: u64,
     ) -> Result<(FileConveneBasis, Option<FileConveneBlockReason>), JournalError> {
+        self.learned_convene_status(request)
+    }
+
+    /// Shared frozen learned-evidence eligibility. Native and process owners
+    /// must separately prove their distinct retained roster custody; this
+    /// observation alone supplies neither a helper implementation nor a ticket.
+    pub(crate) fn learned_convene_status(
+        &self,
+        request: u64,
+    ) -> Result<(FileConveneBasis, Option<FileConveneBlockReason>), JournalError> {
         self.convene_status_for(request, true)
     }
 

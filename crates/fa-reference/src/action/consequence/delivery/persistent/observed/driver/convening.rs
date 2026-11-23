@@ -102,7 +102,7 @@ impl FileSupervisedDriver {
             return Err(Error::Stale.into());
         }
         if self.learned_review.is_some()
-            || ticket.is_native_learned()
+            || ticket.is_learned()
             || self.supervisor.host()?.learned_sidecar_required()
         {
             return Err(Error::Incomplete.into());

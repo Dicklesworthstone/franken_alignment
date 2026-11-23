@@ -1,5 +1,32 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: retain original process helpers for explicitly convened Hold review
+
+The typed process driver can keep a completed Hold and accept an independent
+one-use ticket for its next original fixed executable roster. Process offers
+retain distinct custody from native fixed/reserved evaluators. Exact held
+predecessor, input, settled required forecast, original window and cumulative
+poll checks precede use; every old direct child must be confirmed reaped before
+a ticket can acquire current topology, policy or time.
+
+Continuation spends one original protocol poll, reuses the same sidecar and
+numerical generation, and preserves all earlier starts and records. An idle
+held step performs cleanup without source/clock I/O. A later Hold needs another
+operation; Continue still needs fresh independent human approval and the
+existing publication checks. Failed/abandoned tickets cannot restart the same
+slot. Stop, cancellation and handoff retire unused original process custody.
+
+Four private and seven public driver regression functions are authored for
+real child protocols, fixed-slot selection, packet/spending preservation,
+fresh two-key publication and causal refusal/cleanup paths. They use synthetic
+ballots, not measured detector quality. Independent source review corrected
+abandoned-ticket and semantic-source-change poll expectations. The required
+remote-only RCH check cannot start because `rch` is absent (exit 127), and the
+workspace later became unavailable. Rust parsing, formatting, compilation,
+Clippy and runtime tests remain unexecuted for these bytes. Live-service
+integration is separate; no broader packet or deployment qualification follows.
+See [the process held-review contract](docs/PROCESS_LEARNED_HELD_REVIEW.md).
+
 ## 2026-11-22: preserve exact risk-theater support at complete frontiers
 
 The FA-125 reference detector now applies bounded, consecutive closed-frontier

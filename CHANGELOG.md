@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-22: continue held process reviews through original fixed custody
+
+- Retain a completed process Hold for an independently granted one-use
+  continuation of its next original executable roster and review window.
+- Keep process tickets distinct from native evaluators and generic launchers;
+  require exact held evidence and complete predecessor reaping before source,
+  topology or clock acquisition.
+- Preserve numerical/sidecar input and all cumulative work, charging one original
+  protocol poll for launch. Keep fresh human approval and publication checks.
+- Add four private and seven public regression functions with real child
+  protocols, positive publication and causal refusal/cleanup controls.
+- Independently review source; required RCH check cannot launch (`rch` absent,
+  exit 127), and workspace loss prevents further execution. New tests, parsing,
+  formatting, compilation and Clippy are unexecuted.
+
 ## 2026-11-22: repair risk-theater frontier and support accounting
 
 - Replace unchecked tuple updates with atomic, bounded complete-frontier
