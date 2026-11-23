@@ -14,6 +14,7 @@ pub enum OperatorCapabilityKind {
     Situation,
     JournalTail,
     RequestHistory,
+    GovernanceLedger,
     AdmissionExplanation,
     ReviewExplanation,
     HoldDiagnosis,
@@ -28,10 +29,11 @@ pub enum OperatorCapabilityKind {
 }
 
 impl OperatorCapabilityKind {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Situation,
         Self::JournalTail,
         Self::RequestHistory,
+        Self::GovernanceLedger,
         Self::AdmissionExplanation,
         Self::ReviewExplanation,
         Self::HoldDiagnosis,
@@ -50,6 +52,7 @@ impl OperatorCapabilityKind {
             Self::Situation => "situation",
             Self::JournalTail => "journal_tail",
             Self::RequestHistory => "request_history",
+            Self::GovernanceLedger => "governance_ledger",
             Self::AdmissionExplanation => "admission_explanation",
             Self::ReviewExplanation => "review_explanation",
             Self::HoldDiagnosis => "hold_diagnosis",
@@ -69,6 +72,7 @@ impl OperatorCapabilityKind {
             Self::Situation => &[Verb::Situation],
             Self::JournalTail => &[Verb::Tail],
             Self::RequestHistory => &[Verb::Related],
+            Self::GovernanceLedger => &[Verb::Ledger],
             Self::AdmissionExplanation | Self::ReviewExplanation => &[Verb::Explain],
             Self::HoldDiagnosis => &[Verb::WhyHeld],
             Self::Resolution | Self::Cancellation | Self::Abandonment => {
@@ -101,6 +105,7 @@ impl OperatorCapabilityKind {
             Self::Situation => "supervisor_inspection",
             Self::JournalTail => "supervisor_journal_tail",
             Self::RequestHistory => "supervisor_request_history",
+            Self::GovernanceLedger => "supervisor_governance_ledger",
             Self::AdmissionExplanation => "supervisor_explanation",
             Self::ReviewExplanation => "supervisor_review_explanation",
             Self::HoldDiagnosis => "supervisor_hold_diagnosis",
@@ -166,7 +171,7 @@ pub struct LinkedOperatorCapabilities {
     query_address: Address,
     query_operation_id: String,
     query_idempotency_key: Option<String>,
-    entries: [OperatorCapabilityEntry; 14],
+    entries: [OperatorCapabilityEntry; 15],
 }
 
 impl LinkedOperatorCapabilities {
@@ -182,7 +187,7 @@ impl LinkedOperatorCapabilities {
     pub fn query_idempotency_key(&self) -> Option<&str> {
         self.query_idempotency_key.as_deref()
     }
-    pub fn entries(&self) -> &[OperatorCapabilityEntry; 14] {
+    pub fn entries(&self) -> &[OperatorCapabilityEntry; 15] {
         &self.entries
     }
 }
@@ -210,6 +215,9 @@ impl PublicationTower {
                 .as_ref()
                 .map(|port| port.capability_snapshot()),
             self.request_history
+                .as_ref()
+                .map(|port| port.capability_snapshot()),
+            self.governance_ledger
                 .as_ref()
                 .map(|port| port.capability_snapshot()),
             self.explanation

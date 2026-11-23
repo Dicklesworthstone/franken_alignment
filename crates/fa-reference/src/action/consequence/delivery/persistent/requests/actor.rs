@@ -5,6 +5,13 @@ mod capabilities;
 pub use capabilities::{
     FileOperatorCapabilityBasis, FileOperatorCapabilityBudget, FileOperatorCapabilityObservation,
 };
+mod governance_ledger;
+pub use governance_ledger::{
+    FileAndonLedgerSnapshot, FileCredibilityLedgerSnapshot, FileGovernanceLedgerBasis,
+    FileGovernanceLedgerObservation, FileGovernanceLedgerResult, FileGovernanceLedgerSnapshot,
+    FileSupervisorGovernanceLedgerGrant, FileSupervisorGovernanceLedgerPort,
+    MAX_GOVERNANCE_LEDGER_QUERIES,
+};
 mod explanation;
 pub use explanation::{
     FileAdmissionExplanation, FileExplanationBasis, FileExplanationObservation,

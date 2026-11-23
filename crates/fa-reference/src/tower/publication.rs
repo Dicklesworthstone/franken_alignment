@@ -11,8 +11,10 @@ pub use abandonment::{LinkedAbandonment, LinkedAbandonmentNext};
 mod cancellation;
 mod capabilities;
 mod operator_capabilities;
-pub use operator_capabilities::{LinkedOperatorCapabilities, OperatorCapabilityEntry, OperatorCapabilityKind};
 pub use cancellation::{LinkedCancellation, LinkedCancellationNext};
+pub use operator_capabilities::{
+    LinkedOperatorCapabilities, OperatorCapabilityEntry, OperatorCapabilityKind,
+};
 mod convening;
 pub use convening::{LinkedConvene, LinkedConveneNext};
 mod fence;
@@ -30,6 +32,8 @@ mod inspection;
 pub use inspection::LinkedSituation;
 mod journal_tail;
 pub use journal_tail::LinkedJournalTail;
+mod governance_ledger;
+pub use governance_ledger::LinkedGovernanceLedger;
 mod request_history;
 pub use request_history::LinkedRequestHistory;
 #[cfg(target_os = "linux")]
@@ -50,9 +54,10 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileInspectionCursor, FileInspectionResult, FileJournalTailCursor,
     FileLearnedTextStreamActorPort, FilePolicyReplayCursor, FileSupervisorAbandonmentPort,
     FileSupervisorCancellationPort, FileSupervisorConvenePort, FileSupervisorExplanationPort,
-    FileSupervisorFencePort, FileSupervisorHoldDiagnosisPort, FileSupervisorInspectionPort,
-    FileSupervisorJournalTailPort, FileSupervisorNarrowPort, FileSupervisorPolicyPromotionPort,
-    FileSupervisorPolicyReplayPort, FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
+    FileSupervisorFencePort, FileSupervisorGovernanceLedgerPort, FileSupervisorHoldDiagnosisPort,
+    FileSupervisorInspectionPort, FileSupervisorJournalTailPort, FileSupervisorNarrowPort,
+    FileSupervisorPolicyPromotionPort, FileSupervisorPolicyReplayPort,
+    FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
     FileSupervisorReviewExplanationPort,
     precheck_wire::{PrecheckWireResponse, discovery::PrecheckCapabilitiesResponse},
 };
@@ -68,7 +73,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 16] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 17] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -85,6 +90,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 16] = [
     Verb::Fence,
     Verb::PolicyReplay,
     Verb::Promote,
+    Verb::Ledger,
 ];
 
 /// Smallest native response allowance; also the compatibility default.
@@ -128,6 +134,7 @@ pub enum PublicationResult {
     SituationLinks(LinkedSituation),
     JournalTail(LinkedJournalTail),
     RequestHistory(LinkedRequestHistory),
+    GovernanceLedger(LinkedGovernanceLedger),
     Explanation(FileExplanationResult),
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
@@ -186,6 +193,7 @@ pub struct PublicationTower {
     journal_tail: Option<FileSupervisorJournalTailPort>,
     journal_tail_cursor: Option<FileJournalTailCursor>,
     request_history: Option<FileSupervisorRequestHistoryPort>,
+    governance_ledger: Option<FileSupervisorGovernanceLedgerPort>,
     explanation: Option<FileSupervisorExplanationPort>,
     hold_diagnosis: Option<FileSupervisorHoldDiagnosisPort>,
     resolution: Option<FileSupervisorResolutionPort>,
@@ -235,6 +243,7 @@ impl PublicationTower {
             inspection_cursor: None,
             journal_tail: None,
             request_history: None,
+            governance_ledger: None,
             journal_tail_cursor: None,
             explanation: None,
             hold_diagnosis: None,
@@ -463,12 +472,14 @@ impl PublicationTower {
                 request.verb,
                 Verb::Situation
                     | Verb::Tail
+                    | Verb::Ledger
                     | Verb::Related
                     | Verb::Explain
                     | Verb::WhyHeld
                     | Verb::PolicyReplay
             ) && !(request.verb == Verb::Capabilities
-                && request.arguments == ReadArguments::OperatorCapabilities) {
+                && request.arguments == ReadArguments::OperatorCapabilities)
+            {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
         }
@@ -480,6 +491,7 @@ impl PublicationTower {
                 request.verb,
                 Verb::Situation
                     | Verb::Tail
+                    | Verb::Ledger
                     | Verb::Related
                     | Verb::Explain
                     | Verb::WhyHeld
@@ -489,10 +501,10 @@ impl PublicationTower {
             ) && !(request.verb == Verb::Capabilities
                 && request.arguments == ReadArguments::OperatorCapabilities)
                 && !(self.control_operator
-                && matches!(
-                    request.verb,
-                    Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote
-                ))
+                    && matches!(
+                        request.verb,
+                        Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote
+                    ))
             {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
@@ -523,6 +535,10 @@ impl PublicationTower {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
             response.envelope.would_change_this = vec![self.mount.clone()];
             return response;
+        }
+
+        if request.verb == Verb::Ledger {
+            return self.dispatch_governance_ledger(access, request);
         }
 
         if request.verb == Verb::Situation {

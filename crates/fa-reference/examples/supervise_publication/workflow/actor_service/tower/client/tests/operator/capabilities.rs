@@ -171,7 +171,7 @@ fn discovery_requires_exact_schema_labels_registration_and_canonical_grant_limit
     let query = request();
     let original = native.dispatch(&query, true);
     let parsed = accepted(&original, &query);
-    assert_eq!(entries(&parsed).len(), 14);
+    assert_eq!(entries(&parsed).len(), 15);
     for (from, to) in [
         ("fa.operator-capabilities/1", "fa.operator-capabilities/2"),
         (

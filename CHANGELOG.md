@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-22: expose original governance ledgers through native Tower
+
+- Add a separately granted, finite, weak and revocable operator read of actual
+  helper credibility and Andon accounting under one acknowledged owner cut.
+- Preserve original protocol thresholds, denominators, missing/censored cases,
+  qualification failures and full u128 false-stop costs without exposing labels
+  or granting effect authority.
+- Connect Ledger to its exact run mount with sealed response provenance,
+  complete output bounds and additive non-spending capability discovery.
+- Add fourteen public native/Tower regression functions and five compile-fail
+  boundary examples. Source/syntax checks passed; required RCH compilation and
+  runtime qualification remain unavailable.
+
 ## 2026-11-22: protect original learned review round identities
 
 - Reserve a complete finite fixed round schedule in its original supervisor

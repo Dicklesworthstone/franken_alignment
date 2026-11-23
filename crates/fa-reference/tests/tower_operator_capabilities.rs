@@ -220,11 +220,13 @@ fn complete_grant_selection_reports_original_finite_limits_without_spending_any(
         )
         .unwrap();
     facade.set_policy_replay(Some(p13)).unwrap();
+    let (p14, g14) = supervisor.governance_ledger_port(3).unwrap();
+    facade.set_governance_ledger(Some(p14)).unwrap();
     let bytes = image(&root);
     let state = supervisor.host().unwrap().inspect();
     for _ in 0..3 {
         let response = discover(&mut facade);
-        assert_eq!(linked(&response).entries().len(), 14);
+        assert_eq!(linked(&response).entries().len(), 15);
         for kind in Kind::ALL {
             if kind == Kind::PolicyPromotion {
                 assert!(!entry(&response, kind).configured());
@@ -272,9 +274,10 @@ fn complete_grant_selection_reports_original_finite_limits_without_spending_any(
             g9.remaining_queries(),
             g10.remaining_queries(),
             g11.remaining_queries(),
-            g13.remaining_queries()
+            g13.remaining_queries(),
+            g14.remaining_queries()
         ],
-        [3; 12]
+        [3; 13]
     );
     assert_eq!(g12.remaining_operations(), 1);
     assert_eq!(g13.remaining_pages(), 8);

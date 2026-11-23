@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: observe original governance accounting through Tower
+
+A separately retained finite supervisor grant now exposes the original native
+helper credibility and Andon ledgers through the registered Tower Ledger verb.
+One immutable acknowledged owner supplies a sealed full-scope/cut observation,
+including original protocol thresholds, independent-origin denominators, pending
+and censored labels, per-member metrics, qualification failures and complete
+false-stop window accounting. Full u128 costs remain exact decimal strings.
+Absent subsystems remain distinct from configured empty ledgers; no raw helper
+input, individual label, publication key or new accounting owner is exposed.
+
+Fourteen new public native/Tower regression functions and five compile-fail
+examples cover original assessed reviews and later two-key publication,
+full-width costs, same-origin accounting, authority/custody/fault boundaries,
+finite shared queries, sealed response provenance and complete output bounds.
+Existing capability discovery includes the separately selected grant without
+spending it; its original client validates the additive inventory. Independent
+source review and scoped syntax/format checks passed. Required RCH compilation
+and runtime checks cannot start because the runner is absent; no acceptance,
+packet, source manifest or production gate is closed. The authenticated live
+service/profile and complete Ledger client integration are recorded separately.
+See [the original governance ledger contract](docs/TOWER_GOVERNANCE_LEDGER.md).
+
 ## 2026-11-22: preserve native learned review round ownership
 
 The original supervisor can now reserve one bounded complete fixed round-to-request

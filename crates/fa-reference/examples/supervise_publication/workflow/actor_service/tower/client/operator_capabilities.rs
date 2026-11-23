@@ -289,7 +289,7 @@ fn read_scope(value: &Json) -> Option<Scope> {
 fn limits(value: &Json, kind: OperatorCapabilityKind) -> Option<()> {
     use OperatorCapabilityKind::*;
     let (required, optional): (&[&str], Option<&str>) = match kind {
-        Situation | HoldDiagnosis => (&["remaining_queries"], None),
+        Situation | HoldDiagnosis | GovernanceLedger => (&["remaining_queries"], None),
         JournalTail => (&["remaining_queries", "events_per_page"], None),
         RequestHistory => (
             &["remaining_queries", "history_event_limit", "review_limit"],

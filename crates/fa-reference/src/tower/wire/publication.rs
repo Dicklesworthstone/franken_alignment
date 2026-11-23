@@ -9,6 +9,7 @@ mod cancellation;
 mod convening;
 mod explanation;
 mod fence;
+mod governance_ledger;
 mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
@@ -102,8 +103,13 @@ impl PublicationResponse {
             }
             PublicationResult::OperatorCapabilities(linked) => (
                 "operator-capabilities",
-                operator_capabilities::encode(linked, &self.envelope.address,
-                    &self.envelope.operation_id, self.envelope.idempotency_key.as_deref(), &encoder)?,
+                operator_capabilities::encode(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
             ),
             PublicationResult::Situation(native) => {
                 ("situation", inspection::encode(native, &encoder)?)
@@ -125,6 +131,16 @@ impl PublicationResponse {
             PublicationResult::RequestHistory(linked) => (
                 "request-history",
                 request_history::encode(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::GovernanceLedger(linked) => (
+                "governance-ledger",
+                governance_ledger::encode(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

@@ -2678,7 +2678,13 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs",
         "docs/LEARNED_PROMPT_PREPARATION.md",
-        "docs/LEARNED_IDENTITY_OPERATOR.md"
+        "docs/LEARNED_IDENTITY_OPERATOR.md",
+        "docs/TOWER_GOVERNANCE_LEDGER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger.rs",
+        "crates/fa-reference/src/tower/publication/governance_ledger.rs",
+        "crates/fa-reference/src/tower/wire/publication/governance_ledger.rs",
+        "crates/fa-reference/tests/file_governance_ledger.rs",
+        "crates/fa-reference/tests/tower_governance_ledger.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3692,7 +3698,13 @@
         "crates/fa-reference/src/tower/wire/publication/operator_capabilities.rs",
         "crates/fa-reference/tests/tower_operator_capabilities.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/operator_capabilities.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/capabilities.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/capabilities.rs",
+        "docs/TOWER_GOVERNANCE_LEDGER.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger.rs",
+        "crates/fa-reference/src/tower/publication/governance_ledger.rs",
+        "crates/fa-reference/src/tower/wire/publication/governance_ledger.rs",
+        "crates/fa-reference/tests/file_governance_ledger.rs",
+        "crates/fa-reference/tests/tower_governance_ledger.rs"
       ],
       "founding_ideas": [
         "FI-A06"
