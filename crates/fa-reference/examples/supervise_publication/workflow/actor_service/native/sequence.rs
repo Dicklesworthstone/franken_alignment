@@ -3,6 +3,8 @@
 //! human review. Only a confirmed Executed predecessor permits another entry.
 #[path = "sequence/anchors.rs"]
 mod anchors;
+#[path = "sequence/andon.rs"]
+mod andon;
 #[path = "sequence/precheck.rs"]
 mod disclosure;
 #[path = "sequence/governor.rs"]
@@ -243,6 +245,48 @@ where
         history,
         governor,
         requirements,
+        None,
+        &mut retention,
+        time,
+        output,
+    );
+    retention.finish(result)
+}
+
+/// Create the original source-backed numerical owner with evaluation and Andon
+/// accounting in its first acknowledged image. The sole evaluator endpoint,
+/// original grants and finite lifetime survive every Message/Finish handoff.
+/// Recovery and policy governance retain their separate admission contracts.
+pub(super) fn run_with_andon<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selected_operator: Option<&operator::Selection>,
+    history: &anchors::Selection,
+    settings: &super::super::andon_settings::Settings,
+    evaluator: &super::super::evaluator::Settings,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut retention = anchors::Retention::new(Some(history));
+    let result = run_retained(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        (None, selected_operator),
+        None,
+        Some(history),
+        None,
+        None,
+        Some(andon::Selection {
+            settings,
+            evaluator,
+        }),
         &mut retention,
         time,
         output,
@@ -260,6 +304,7 @@ fn run_retained<F>(
     history: Option<&anchors::Selection>,
     selected_governor: Option<&governor::Settings>,
     requirements: Option<&FileRecoveryRequirements>,
+    accounting: Option<andon::Selection<'_>>,
     retention: &mut anchors::Retention<'_>,
     mut time: F,
     output: &mut impl Write,
@@ -278,6 +323,33 @@ where
     governor::check_publication(selected_governor, publication)?;
     requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
+    if let Some(accounting) = accounting {
+        if after.is_some()
+            || credibility.is_some()
+            || selected_governor.is_some()
+            || requirements.is_some()
+            || entries.iter().any(|entry| entry.precheck.is_some())
+        {
+            return Err(andon::INVALID.into());
+        }
+        accounting.check_configuration(&config, publication)?;
+        accounting.check_actors(
+            &config,
+            &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
+            reviewer_profile,
+            selected_operator,
+        )?;
+        accounting.check_history(history.ok_or(andon::INVALID)?)?;
+        if let Some(publication) = publication {
+            accounting.check_files(
+                &publication
+                    .input_paths()
+                    .iter()
+                    .map(|path| path.as_path())
+                    .collect::<Vec<_>>(),
+            )?;
+        }
+    }
     governor::check_recovery(
         selected_governor,
         requirements,
@@ -355,7 +427,7 @@ where
     let first_socket = BoundSocket::bind(&first.actor.socket, None)?;
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
-    let (host, reviewer, governor_role) = if let Some(requirements) = requirements {
+    let (host, reviewer, governor_role, evaluator_role) = if let Some(requirements) = requirements {
         let anchor = history
             .and_then(anchors::Selection::input)
             .ok_or("native governed recovery lost its independently selected anchor")?;
@@ -373,7 +445,7 @@ where
         );
         retention.observe_stop(stopped);
         let (host, roles) = opened?;
-        (host, roles.human, roles.policy_governor)
+        (host, roles.human, roles.policy_governor, None)
     } else if after.is_some() {
         let mut stopped = None;
         let opened = bootstrap::open_with_retained_history(
@@ -388,7 +460,7 @@ where
         );
         retention.observe_stop(stopped);
         let (host, reviewer) = opened?;
-        (host, reviewer, None)
+        (host, reviewer, None, None)
     } else if let Some(settings) = selected_governor {
         let (host, reviewer, governor) = bootstrap::prepare_governed(
             &config,
@@ -396,16 +468,23 @@ where
             selected,
             settings.campaign_requirement(),
         )?;
-        (host, reviewer, Some(governor))
+        (host, reviewer, Some(governor), None)
+    } else if let Some(accounting) = accounting {
+        let (host, reviewer, evaluator) =
+            bootstrap::prepare_andon(&config, &first.inputs, selected, accounting.settings)?;
+        (host, reviewer, None, Some(evaluator))
     } else {
         let (host, reviewer) = bootstrap::prepare(&config, &first.inputs, selected, false)?;
-        (host, reviewer, None)
+        (host, reviewer, None, None)
     };
     // No fallible startup admission can discard an acknowledged create/Fence
     // cut. These checks are read-only; a live driver captures its later cut below.
     retention.observe(&host);
     if selected_governor.is_some() != governor_role.is_some() {
         return Err("native governance lost its freshly fenced governor custody".into());
+    }
+    if accounting.is_some() != evaluator_role.is_some() {
+        return Err("native accounting lost its original independent evaluator custody".into());
     }
     if !host.generated_text_stream_required().map_err(debug)?
         || !host.publication_guard_required()
@@ -459,6 +538,22 @@ where
         }
     }
     control.install_operator(operator);
+    if let (Some(accounting), Some(role)) = (accounting, evaluator_role) {
+        let evaluator = match super::super::evaluator::Service::start(
+            accounting.evaluator,
+            &first.actor,
+            role,
+            &driver,
+            &global,
+        ) {
+            Ok(service) => service,
+            Err(error) => {
+                retention.observe_driver(&driver);
+                return Err(error);
+            }
+        };
+        control.install_evaluator(Some(evaluator));
+    }
     // These are bounded executable configurations, not children or review
     // capabilities. A clone for a successor is installed ONLY after the old
     // request's retained child owner confirms complete reaping.
@@ -554,6 +649,27 @@ where
                     &mut time,
                 )
             });
+            let terminal = index + 1 == entries.len() || !matches!(&cycle, Ok(true));
+            let cycle = if terminal && cycle.is_ok() {
+                // A final Hold still needs independent case discovery and a
+                // label. Keep only the original evaluation/receipt opportunity;
+                // no successor generation, helper review or publication starts.
+                evaluate_after_work(
+                    &mut driver,
+                    &mut ingress,
+                    (&mut control, &reviewer, &global),
+                    &mut time,
+                )
+                .and(cycle)
+            } else {
+                cycle
+            };
+            // Intermediate successful Messages retain the same evaluator for
+            // later assessment. Terminal-only reply work cannot admit a new
+            // label, even if a peer already queued a partial frame.
+            if terminal {
+                control.finish_evaluator();
+            }
             // Keep only the preceding actor's bounded reply opportunity.
             // Stop remains ahead of actor traffic, including the handoff gap.
             // An already attempted automatic drain must never be retried by
@@ -583,6 +699,7 @@ where
         }
         Ok(())
     })();
+    control.finish_evaluator();
     let mut failure = work.err().map(|error| {
         stop_after_failure(
             &mut driver,
@@ -594,7 +711,7 @@ where
         )
     });
     if let Some(timing) = pending_operator_reply
-        && control.has_operator()
+        && (control.has_operator() || control.has_evaluator())
     {
         // No actor intake was left alive on this early exit. Retain only the
         // same operator and original Stop for this entry's unused reply window,
@@ -617,6 +734,9 @@ where
     }
     if let Some(mut operator) = control.take_operator() {
         operator.retire();
+    }
+    if let Some(mut evaluator) = control.take_evaluator() {
+        evaluator.retire();
     }
     // Capture only this owner's acknowledged prefix before helper cleanup
     // consumes it. A poisoned owner cannot turn an ambiguous result into export.
@@ -814,8 +934,14 @@ where
     // Take and restore the SAME service; no native grants, transport allowance
     // or wall origin are recreated for another review.
     let mut operator = control.take_operator();
+    let mut evaluator = control.take_evaluator();
     let mut pump = |driver: &mut FileSupervisedDriver| {
         if let Some(service) = &mut operator {
+            service.checkpoint_driver(driver);
+        }
+        if let Some(service) = &mut evaluator {
+            // The shared Stop checkpoint runs before this callback, and the
+            // evaluator itself refuses a newly acknowledged operator Fence.
             service.checkpoint_driver(driver);
         }
         ingress.observe(driver)?;
@@ -851,6 +977,7 @@ where
         &mut *time,
     );
     control.install_operator(operator);
+    control.install_evaluator(evaluator);
     reviewed?;
     confirmed(driver, entry.actor.request)
 }
@@ -998,6 +1125,48 @@ where
     }
 }
 
+/// Preserve a final held case's independent labeling opportunity after forward
+/// work ends. The same evaluator and original Stop/operator services retain
+/// their spent budgets and deadline. Actor failure cannot consume the remaining
+/// evaluator opportunity, and no request workflow is restarted here.
+fn evaluate_after_work<F>(
+    driver: &mut FileSupervisedDriver,
+    ingress: &mut Intake,
+    controls: (&mut Control, &FileHumanReviewer, &Deadline),
+    time: &mut F,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let (control, reviewer, deadline) = controls;
+    let mut actor_failed = false;
+    let mut failure = None;
+    while control.has_live_evaluator() && deadline.check(time()).is_ok() {
+        if driver.supervisor().host().map_or(true, |host| {
+            host.storage_failure().is_some() || host.inspect().stop.is_some()
+        }) {
+            break;
+        }
+        // Control preserves the original Stop -> operator -> native Stop ->
+        // evaluator ordering, including independently granted operator Fence.
+        match control.checkpoint(driver, reviewer, deadline, &mut *time) {
+            Ok(false) => {}
+            Ok(true) => break,
+            Err(error) => {
+                failure.get_or_insert(error);
+                break;
+            }
+        }
+        if !actor_failed && let Err(error) = ingress.observe(driver) {
+            failure.get_or_insert(error);
+            actor_failed = true;
+            ingress.pool.revoke_all();
+        }
+        pause(ingress.profile.poll_ms);
+    }
+    failure.map_or(Ok(()), Err)
+}
+
 fn reply_grace<F>(
     driver: &mut FileSupervisedDriver,
     ingress: &mut Intake,
@@ -1030,7 +1199,7 @@ where
     let started = Instant::now();
     let window = Duration::from_millis(reply_ms);
     let mut stopped = false;
-    let operator_selected = control.has_operator();
+    let operator_selected = control.has_operator() || control.has_evaluator();
     let mut actor_failed = false;
     let mut stop_failed = false;
     let mut failure = None;
@@ -1043,24 +1212,32 @@ where
                     // operator work. Its original bounded reply channel remains
                     // independent of that completed one-use cleanup.
                     control.checkpoint_operator();
+                    control.checkpoint_evaluator(driver);
                 }
                 Ok(false) => {}
                 Err(error) => {
+                    // A failed Stop checkpoint cannot be followed by fresh
+                    // evaluator intake. Only a response already produced under
+                    // an earlier successful checkpoint may drain now.
+                    control.finish_evaluator();
                     if !operator_selected {
                         return Err(error);
                     }
                     failure.get_or_insert(error);
                     stop_failed = true;
                     control.checkpoint_operator();
+                    control.checkpoint_evaluator(driver);
                 }
             }
         } else {
             // Automatic failure cleanup already owns Stop/drain. Do not repeat
             // it merely to deliver the original operator's historical reply.
             control.checkpoint_operator();
+            control.checkpoint_evaluator(driver);
         }
         if !actor_failed && let Some(ingress) = ingress.as_deref_mut() {
             if let Err(error) = ingress.observe(driver) {
+                control.finish_evaluator();
                 if !operator_selected {
                     return Err(error);
                 }

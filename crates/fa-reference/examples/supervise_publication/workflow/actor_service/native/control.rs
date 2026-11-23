@@ -46,6 +46,31 @@ impl Control {
         self.operator.is_some()
     }
 
+    pub(super) fn has_evaluator(&self) -> bool {
+        self.evaluator.is_some()
+    }
+
+    pub(super) fn has_live_evaluator(&self) -> bool {
+        self.evaluator
+            .as_ref()
+            .is_some_and(|service| !service.is_retired())
+    }
+
+    /// Stop accepting labels before terminal-only reply work. The original
+    /// service can drain a previously produced response but cannot use a
+    /// partially received request to mutate the retained final history.
+    pub(super) fn finish_evaluator(&mut self) {
+        if let Some(evaluator) = &mut self.evaluator {
+            evaluator.finish();
+        }
+    }
+
+    pub(super) fn checkpoint_evaluator(&mut self, driver: &mut FileSupervisedDriver) {
+        if let Some(evaluator) = &mut self.evaluator {
+            evaluator.checkpoint_driver(driver);
+        }
+    }
+
     /// Pump the retained original operator session after a Stop/drain attempt.
     /// Its selected grants remain independent; this never retries cleanup or
     /// reissues a grant when actor ingress has failed.
@@ -77,17 +102,21 @@ impl Control {
         F: FnMut() -> ElapsedTick,
     {
         if self.stop.checkpoint(driver, reviewer, deadline, time)? {
+            if let Some(evaluator) = &mut self.evaluator {
+                evaluator.retire();
+            }
             return Ok(true);
         }
         if let Some(operator) = &mut self.operator {
             operator.checkpoint_driver(driver);
         }
         if self.stop.native_stop(driver, time)? {
+            if let Some(evaluator) = &mut self.evaluator {
+                evaluator.retire();
+            }
             return Ok(true);
         }
-        if let Some(evaluator) = &mut self.evaluator {
-            evaluator.checkpoint_driver(driver);
-        }
+        self.checkpoint_evaluator(driver);
         Ok(false)
     }
 

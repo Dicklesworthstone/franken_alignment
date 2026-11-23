@@ -589,6 +589,112 @@ Use the existing `tower-operator-exchange` client with this profile and the exac
 run registration. The complete profile, grant and response contracts are in
 [native Tower publication](TOWER_PUBLICATION.md#operate-an-original-native-generated-text-stream).
 
+## Independent live evaluation and Andon accounting
+
+Fresh resident native creation accepts the paired
+`--andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE` selection, with a
+required new independently retained history-anchor output. The same original
+evaluator observes and assesses applied reviews across the selected Messages
+and optional Finish while the native owner retains its journal lock.
+
+```sh
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/native-final.anchor \
+  --publication-profile WITNESS_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+The publication and paired operator selections in this example are optional.
+Publication accepts the existing simple witness profile. An operator that selects
+the finite `governance_ledger` grant can read acknowledged credibility and Andon
+accounting through Ledger; the evaluator remains a separate role and endpoint.
+The sequence retains the ordinary creation rule of 2 through 16 entries, with
+its own actor submission, fresh helper review and independent human approval
+for every release.
+
+`ANDON_PROFILE` uses `fa.native-andon-operator/1`; the existing example is
+`crates/fa-reference/fixtures/native_andon_operator.json`. Creation requires
+identical initial/current windows and minimum evaluation revision zero. The
+[atomic source-bound constructor](NATIVE_GENERATED_EVALUATION.md)
+installs the exact source policy, decoder, tokenizer, generated stream, terminal
+recovery reserve, selected witnesses, evaluation protocol and Andon accounting
+in one first acknowledged image. It returns the independent evaluator only
+after that acknowledgment. Accounting cannot be attached after a proposal or
+substituted for original publication checks.
+
+`EVALUATOR_PROFILE` uses `fa.native-evaluator-peer/1`. Its complete scope and
+deployment/evaluator audience must match the original accounting configuration.
+Its supervisor credentials must match, and its evaluator credential policy must
+be disjoint from every scheduled actor, the human reviewer/Stop and any selected
+operator. The evaluator socket must remain distinct from all future service
+endpoints, selected configuration/profile files, source and witness inputs,
+recipe/model/tokenizer assets and the retained anchor output, and outside the
+authority store. These checks precede numerical asset loading and live setup;
+recursive recipe assets are checked before their own reads. A later recipe's
+refusal may follow earlier bounded asset reads, but no clock, listener or owner
+has been acquired. The service requires the configured Unix-millisecond clock
+domain used by native assessment.
+
+The separately authenticated evaluator uses the existing commands:
+
+```sh
+supervise_publication evaluator-case EVALUATOR_PROFILE APPLIED_ROUND
+supervise_publication evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON
+```
+
+Use the Known case identity and its exact global evaluation revision to prepare
+the assessment, with independently supplied origin, evidence and truth. A later
+review or assessment can stale that predecessor. Neither command supplies a
+human key or approves publication. The complete wire, custody and retry rules
+are in [independent live evaluation](LIVE_ANDON_EVALUATION.md).
+
+One original listener, evaluator role and finite candidate, I/O and byte allowance
+survive successful Message handoffs and Finish review. A case read and its later
+assessment each spend a candidate; rejected credentials and malformed requests
+also spend the original allowance. Reconnects and later entries cannot replenish
+it. The evaluator lifetime is bounded by its own profile, the first selected
+actor's runtime and the original invocation deadline. Expiry or exhausted
+transport retires that endpoint without renewing it or granting publication
+authority. Independent Stop remains ahead of each bounded evaluator turn.
+
+After forward work finishes, a healthy unstopped owner remains available for
+independent evaluation under the remaining original endpoint and invocation
+budgets. This includes a final helper Hold: the evaluator can discover its actual
+case and supply a benign, violation or censored label even though no successor
+entry may start. A case read and assessment spend two existing candidate slots.
+This phase schedules no numerical work, helper launch, further publication or
+replacement service. Original operator grants and actor receipts remain bounded
+by their existing contracts. Actor receipt transport failure retires that intake
+and retains the error while preserving the evaluator's remaining opportunity.
+Stop, storage failure or a failed original control checkpoint ends new evaluation.
+
+Only after that bounded opportunity ends does terminal reply handling begin.
+Evaluator intake is finished: the role and listener are dropped, partial or
+queued new requests cannot label a case, and only an already produced response
+may drain. A failed Stop checkpoint also ends evaluator intake before fallback
+reply work. The service fully retires the evaluator before capturing the final
+original history anchor, so acknowledged assessment Time and label events are
+included and no evaluator mutation can follow that retained cut. Archive custody
+and export failures retain the [existing history contract](#independently-retained-history).
+
+This selection is creation-only. Recovery (`--after-message`, `--history-anchor`
+or recovery requirements), a policy governor, topology, credibility activation,
+joint publication or joint Andon `/2`, and non-null per-release prechecks require
+separate compositions and are refused. No selected guard is silently removed.
+Single-release native and learned modes keep their separate grammars. A new
+anchor records this original history; it does not authorize recovery of an
+accounted generated owner through an unaccounted opener.
+
+Authored composition regressions cover actual fixture Message/Message/Finish
+generation, a separate evaluator process, original-case observation and labels,
+Ledger accounting, finite candidates across handoffs, a final helper Hold with
+independent false-stop accounting, independent Stop and deadline exits, custody
+aliases and the terminal reply barrier. They establish
+test intent, not executed results or detector quality. Compilation, runtime
+tests, Clippy and the required gate remain unqualified because remote-only RCH
+is unavailable.
+
 ## Independent policy governance during native creation
 
 A new resident sequence can explicitly select `--governor-profile PROFILE`
@@ -700,6 +806,8 @@ capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows. Native governance requires the
 explicit creation or independently guarded recovery governor selection described above.
+Live evaluation and Andon accounting require their paired creation selection and
+new retained anchor; they do not imply recovery, governance or precheck support.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

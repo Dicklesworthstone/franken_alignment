@@ -91,11 +91,21 @@ Stop ends new evaluation. Terminal reply grace then drops evaluator authority
 and permits only an already acknowledged reply to drain. Final retained history
 includes any acknowledged assessments and accounting.
 
-This live selection currently supports single native creation, plain or simple
-checked. Native live open/continuation, resident sequences, learned-generated
-execution, topology, governor and held-out qualification selections need their
-own complete composition and refuse this option. The separately guarded native
-API already supports [anchored accounting recovery](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
+This single-request selection supports native creation, plain or simple checked.
+Native live open/continuation, learned-generated execution, topology, governor
+and held-out qualification selections need their own complete composition and
+refuse this option. The separately guarded native API already supports
+[anchored accounting recovery](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
+
+Fresh [resident native generated sequences](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
+use their separate `serve-native-generated` command with paired `--andon
+ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE` and a required
+`--retain-history-anchor NEW_OUTPUT`. The original evaluator and finite
+allowances persist across Message/Finish handoffs, including a bounded labeling
+opportunity after a final helper Hold. This resident creation path accepts the
+marginal `/1` accounting profile and optional simple witnesses/operator Ledger;
+recovery, joint profiles, governance, topology and selected prechecks remain
+separate. Its compilation and runtime qualification remain pending required RCH.
 
 ## Discover the original case before labeling
 

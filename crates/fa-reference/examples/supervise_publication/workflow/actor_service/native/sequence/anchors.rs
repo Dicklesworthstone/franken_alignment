@@ -148,6 +148,10 @@ impl Options {
 }
 
 impl Selection {
+    pub(super) fn output_path(&self) -> Option<&Path> {
+        self.output.as_deref()
+    }
+
     pub(super) fn input(&self) -> Option<&FileHistoryAnchor> {
         self.input.as_ref().map(|(_, anchor)| anchor)
     }

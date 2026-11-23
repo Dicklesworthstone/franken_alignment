@@ -60,6 +60,8 @@ mod precheck_tests;
 mod qualification_tests;
 #[path = "tests/governor.rs"]
 mod governor_tests;
+#[path = "tests/andon.rs"]
+mod andon_tests;
 
 const REQUESTS: [u64; 3] = [91, 92, 93];
 

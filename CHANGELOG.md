@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-23: evaluate resident native publication with original custody
+
+- Add explicit paired Andon/evaluator selection for fresh resident native
+  generated publication with independently retained final history.
+- Preserve one original evaluator and its finite budgets/deadline across native
+  Message handoffs and Finish, while retaining fresh source/helper/human keys.
+- Keep a final helper Hold discoverable and assessable under remaining original
+  allowances without restarting generation or publication.
+- Preserve original Stop precedence, close label intake after control failure,
+  and retire evaluation before retaining the acknowledged final history.
+- Add six substantive service regressions and two separate-process harnesses,
+  including cumulative limits and actual held-case false-stop accounting.
+  Required RCH compilation and execution remain pending.
+
 ## 2026-11-23: preserve reserve capacity in evaluated native creation
 
 - Reuse the original evaluated generated-source constructor and admit its complete

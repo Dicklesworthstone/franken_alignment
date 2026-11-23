@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: retain live native evaluation through resident publication
+
+Fresh `serve-native-generated` creation now explicitly composes paired Andon
+and independent evaluator profiles with its original generated-source owner.
+Plain and simple checked publication require a new independently retained history
+output. Complete scheduled actor credentials, future sockets, profiles, witnesses,
+recursive numerical assets, clock domain and archive custody are checked before
+creation; unsupported recovery, governor, topology, held-out and precheck
+combinations refuse without a weaker substitute.
+
+One original evaluator service survives Message handoffs and Finish review:
+listener, separate role, candidate/read/assessment allowances, bytes, I/O and
+original lifetime are never recreated. Optional native Ledger queries observe
+the same acknowledged accounting. Each release still needs its original source,
+native generation, helper process review and separate human approval.
+
+After normal terminal work, including an actual helper Hold, a bounded evaluation
+phase preserves case discovery and assessment under the remaining original
+allowances. It cannot admit successor generation, helper review or publication.
+Original Stop precedes operator and evaluator work. A failed Stop checkpoint
+finishes evaluator intake before reply draining; acknowledged Stop retires it.
+Actor transport failure retains the original error while the independent
+evaluator can use its remaining opportunity. Intake ends before terminal-only
+reply grace; final retirement precedes history-anchor capture.
+
+Six substantive service regression functions use actual helper/evaluator process
+and Unix-socket paths. They cover Message/Message/Finish with one cumulative
+candidate budget, original Stop and deadline, admission and grammar refusals,
+queued assessment behind a failed Stop checkpoint, and a final helper Hold whose
+independent Benign label records cost 7 and the selected native incident without
+restarting the confirmed prefix. Two gated subprocess entries provide those
+separate process identities; neither synthetic model outputs nor authored tests
+are empirical detector qualification.
+
+Source review, qualified parsing/format checks on the selected files and
+`git diff --check` are separate from execution. Required RCH compilation,
+runtime tests, Clippy and the canonical gate remain unexecuted because the runner
+is unavailable. Child `franken_alignment-address-resolver-6w62.6.3` and original
+FA-025/026/105/134 acceptance remain in progress; no deployment gate is closed.
+
 ## 2026-11-23: preserve terminal capacity in evaluated native bootstrap
 
 The original evaluated generated-text constructor now admits its complete

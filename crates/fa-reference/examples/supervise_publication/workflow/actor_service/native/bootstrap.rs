@@ -2,9 +2,10 @@
 use super::{Config, FileOversight, FileHumanReviewer, Inputs, PublicationProfile,
     RecoveryReserve, debug};
 use fa_reference::action::consequence::delivery::persistent::observed::stream::generated::checked::source::{
-    GeneratedSourceProfile, GeneratedSourcePublication,
+    GeneratedSourceProfile, GeneratedSourcePublication, evaluation::FileGeneratedEvaluationConfig,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::{
+    credibility::FileIndependentEvaluator,
     governance::campaigns::FilePolicyGovernor, guarded::FileCampaignRequirement,
 };
 
@@ -80,4 +81,32 @@ pub(super) fn prepare_governed(
         campaigns,
     )
     .map_err(debug)
+}
+
+/// Native generation, source provenance, the terminal reserve and independent
+/// accounting are one original first image. No post-proposal enable or second
+/// writer is used to obtain the evaluator role.
+pub(super) fn prepare_andon(
+    config: &Config,
+    inputs: &Inputs,
+    selected: GeneratedSourceProfile,
+    settings: &super::super::andon_settings::Settings,
+) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String> {
+    settings.creation()?;
+    if settings.joint.is_some() {
+        return Err("native live Andon creation requires the marginal evaluation profile".into());
+    }
+    let evaluation = FileGeneratedEvaluationConfig::new(settings.protocol.clone())
+        .with_andon(settings.config.clone())
+        .map_err(debug)?;
+    let (host, roles) = FileOversight::create_generated_text_stream_from_source_evaluated(
+        &config.store,
+        config.profile.clone(),
+        inputs.decoder.clone(),
+        inputs.tokenizer.clone(),
+        selected,
+        evaluation,
+    )
+    .map_err(debug)?;
+    Ok((host, roles.oversight.human, roles.evaluator))
 }

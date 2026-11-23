@@ -815,7 +815,12 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
         "crates/fa-reference/tests/generated_source_andon.rs",
-        "docs/NATIVE_GENERATED_EVALUATION.md"
+        "docs/NATIVE_GENERATED_EVALUATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
+        "docs/LIVE_ANDON_EVALUATION.md"
       ]
     },
     {
@@ -887,7 +892,12 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
         "crates/fa-reference/tests/generated_source_andon.rs",
-        "docs/NATIVE_GENERATED_EVALUATION.md"
+        "docs/NATIVE_GENERATED_EVALUATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
+        "docs/LIVE_ANDON_EVALUATION.md"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2718,7 +2728,13 @@
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
         "crates/fa-reference/tests/generated_source_andon.rs",
-        "docs/NATIVE_GENERATED_EVALUATION.md"
+        "docs/NATIVE_GENERATED_EVALUATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3745,7 +3761,15 @@
         "crates/fa-reference/tests/tower_governance_ledger.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/operator/tests/governance_ledger.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_ledger.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
+        "docs/RESIDENT_NATIVE_PUBLICATION.md",
+        "docs/LIVE_ANDON_EVALUATION.md"
       ],
       "founding_ideas": [
         "FI-A06"

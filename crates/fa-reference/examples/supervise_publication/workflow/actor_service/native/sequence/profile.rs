@@ -4,8 +4,9 @@
 //! tokenizer inputs share the first recipe's retained allocations afterward.
 
 use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
-use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, governor};
+use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, andon, governor};
 use crate::config::read_regular;
+use crate::workflow::actor_service::{andon_settings, evaluator};
 use fa_reference::action::ElapsedTick;
 use fa_reference::strict_json::{self, Json, Limits};
 use std::collections::{BTreeMap, BTreeSet};
@@ -13,7 +14,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries; fresh plain/simple-witness creation also accepts paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor, without recovery/governor/topology/activation/prechecks";
 
 struct Input {
     recipe: PathBuf,
@@ -140,7 +141,8 @@ pub(super) fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (args, governor_path, recovery_path) = governor::take_recovery_options(args, credibility)?;
+    let (args, accounting_paths) = andon::take_options(args, credibility)?;
+    let (args, governor_path, recovery_path) = governor::take_recovery_options(&args, credibility)?;
     let (args, history_options) = anchors::take_options(&args)?;
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
@@ -151,9 +153,28 @@ where
     selected_files.extend(credibility.map(Path::to_path_buf));
     selected_files.extend(governor_path.iter().cloned());
     selected_files.extend(recovery_path.iter().cloned());
+    if let Some(paths) = &accounting_paths {
+        selected_files.extend([paths.settings.clone(), paths.evaluator.clone()]);
+    }
     history_options.check_files(&selected_files)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
+    let accounting_settings = accounting_paths
+        .as_ref()
+        .map(|paths| andon_settings::Settings::read(&paths.settings))
+        .transpose()?;
+    let evaluator_settings = accounting_paths
+        .as_ref()
+        .map(|paths| evaluator::Settings::read(&paths.evaluator))
+        .transpose()?;
+    let accounting = match (accounting_settings.as_ref(), evaluator_settings.as_ref()) {
+        (Some(settings), Some(evaluator)) => Some(andon::Selection {
+            settings,
+            evaluator,
+        }),
+        (None, None) => None,
+        _ => return Err(andon::INVALID.into()),
+    };
     let selected_governor = governor_path
         .as_deref()
         .map(governor::Settings::read)
@@ -183,6 +204,43 @@ where
         .as_deref()
         .map(|path| governor::requirements::Selection::read(path, &config))
         .transpose()?;
+    if let Some(accounting) = accounting {
+        accounting.check_configuration(&config, publication.as_ref())?;
+        let mut files = selected_files
+            .iter()
+            .map(PathBuf::as_path)
+            .collect::<Vec<_>>();
+        files.push(config.source.path());
+        if let Some(publication) = &publication {
+            files.extend(publication.input_paths().iter().map(PathBuf::as_path));
+        }
+        accounting.check_files(&files)?;
+        history_options.check_files(&[accounting.evaluator.socket_path().to_path_buf()])?;
+        let (entries, history) = load_with_complete_services(
+            Path::new(&args[2]),
+            &config,
+            &peers,
+            None,
+            selected_operator.as_ref(),
+            None,
+            Some(history_options),
+            None,
+            None,
+            Some(accounting),
+        )?;
+        return super::run_with_andon(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            selected_operator.as_ref(),
+            history.as_ref().ok_or(andon::INVALID)?,
+            accounting.settings,
+            accounting.evaluator,
+            time,
+            output,
+        );
+    }
     if let Some(governor) = selected_governor.as_ref() {
         governor.check_custody_paths(
             &selected_files
@@ -463,6 +521,40 @@ fn load_with_recovery_services(
     selected_governor: Option<&governor::Settings>,
     recovery_path: Option<&Path>,
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    load_with_complete_services(
+        path,
+        config,
+        peers,
+        after,
+        selected_operator,
+        credibility,
+        history_options,
+        selected_governor,
+        recovery_path,
+        None,
+    )
+}
+
+fn load_with_complete_services(
+    path: &Path,
+    config: &Config,
+    peers: &PeerProfile,
+    after: Option<u64>,
+    selected_operator: Option<&operator::Selection>,
+    credibility: Option<&Path>,
+    history_options: Option<anchors::Options>,
+    selected_governor: Option<&governor::Settings>,
+    recovery_path: Option<&Path>,
+    accounting: Option<andon::Selection<'_>>,
+) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    if accounting.is_some()
+        && (after.is_some()
+            || credibility.is_some()
+            || selected_governor.is_some()
+            || recovery_path.is_some())
+    {
+        return Err(andon::INVALID.into());
+    }
     governor::check_selected(
         selected_governor,
         selected_operator,
@@ -491,6 +583,18 @@ fn load_with_recovery_services(
         Some(_) => decode_selected(&bytes, base, after)?,
         None => decode(&bytes, base)?,
     };
+    if let Some(accounting) = accounting {
+        // Precheck composition requires its own full disclosure lifetime and
+        // identity contract. Refuse it before loading the selected input files.
+        if plan.iter().any(|entry| entry.precheck.is_some()) {
+            return Err(andon::INVALID.into());
+        }
+        let mut paths = vec![path];
+        for entry in &plan {
+            paths.extend([entry.recipe.as_path(), entry.actor.as_path()]);
+        }
+        accounting.check_files(&paths)?;
+    }
     if let Some(governor) = selected_governor {
         let mut paths = vec![path];
         for entry in &plan {
@@ -515,6 +619,14 @@ fn load_with_recovery_services(
         .map(|entry| Profile::read(&entry.actor))
         .collect::<Result<Vec<_>, _>>()?;
     validate_actors(config, &actors.iter().collect::<Vec<_>>(), peers, after)?;
+    if let Some(accounting) = accounting {
+        accounting.check_actors(
+            config,
+            &actors.iter().collect::<Vec<_>>(),
+            peers,
+            selected_operator,
+        )?;
+    }
     if let Some(selected) = selected_operator {
         for actor in &actors {
             selected.check(config, actor, peers)?;
@@ -611,6 +723,9 @@ fn load_with_recovery_services(
             )
         })
         .transpose()?;
+    if let Some(accounting) = accounting {
+        accounting.check_history(history.as_ref().ok_or(andon::INVALID)?)?;
+    }
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
     for ((selected, actor), precheck) in plan.into_iter().zip(actors).zip(prechecks) {
@@ -618,9 +733,14 @@ fn load_with_recovery_services(
             &selected.recipe,
             config.profile.delivery.scope.tenant,
             config.profile.delivery.limits.bytes,
-            |path| match selected_governor {
-                Some(governor) => governor.check_custody_paths(&[path]),
-                None => Ok(()),
+            |path| {
+                if let Some(governor) = selected_governor {
+                    governor.check_custody_paths(&[path])?;
+                }
+                if let Some(accounting) = accounting {
+                    accounting.check_files(&[path])?;
+                }
+                Ok(())
             },
         )?;
         let canonical = inputs.tokenizer.to_bytes().map_err(debug)?;
