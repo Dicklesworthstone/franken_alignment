@@ -16,13 +16,20 @@ Select `FileGeneratedEvaluationConfig` from
 is the independent `EvaluationProtocol`; `with_joint` selects the existing joint
 promotion policy and `with_andon` selects the original accounting configuration.
 The builder accepts each optional selection once. The original native reducers
-validate the complete selection before storage is created.
+validate the selected configuration before storage is created. The original
+journal admission law also checks reserve dimensions and ensures the complete
+bootstrap event count leaves its terminal reserve intact. Canonical encoding
+still checks actual byte usage against the final store identity; byte encoding
+or storage can fail without returning any live role.
 
 `FileOversight::create_generated_text_stream_from_source_evaluated` takes the
 same source, decoder, tokenizer and `GeneratedSourceProfile` as the original
 source-bound constructor, plus this evaluation configuration. It preserves the
-complete plain, checked or held-out publication selection and its explicit
-recovery reserve. No stronger selected guard is replaced with an ordinary mode.
+complete compatible plain or checked publication selection and its explicit
+recovery reserve. Owned-round `JointPromotionPolicy` is an optional additional
+evaluation guard. Held-out joint qualification is a separate, exclusive native
+lane: `GeneratedSourcePublication::Joint` is refused before storage creation.
+No stronger selected guard is replaced with an ordinary mode.
 
 The sole first canonical replacement contains all bootstrap inputs. Only its
 acknowledgment releases the owner and `FileEvaluatedOversightRoles`; an uncertain
@@ -74,16 +81,22 @@ ordinary recovery Fence. A finalization/storage failure returns no live roles.
 
 ## Verification and scope
 
-Seventeen authored regression functions cover 24 bootstrap mode/configuration
-combinations, real generation and two-key publication, applied Hold accounting,
+The authored bootstrap matrix covers 20 compatible mode/configuration
+combinations and separately rejects all four evaluation configurations with a
+held-out joint publication guard. Causal regressions cover malformed reserve
+dimensions, insufficient ordinary event capacity and absent helper model
+generations before storage creation, each with a valid nearby control. Other
+regressions cover real generation and two-key Message/Message/Finish publication,
+applied Hold accounting without resampling or evaluator-issued effect rights,
 equal-case foreign custody, censored-label recovery, pending numerical resume,
 independent floors and inventory mismatches, cancellation at every boundary,
 changed canonical state, all five original Store failure barriers and exact
 terminal Stop retries. Synthetic model/helper choices test native plumbing and
 contracts; they are not evidence of learned detector accuracy.
 
-Independent source review completed. RCH is unavailable in this development
-environment; compilation, formatting, Clippy and runtime execution remain
+Independent source review completed. The changed core files and new public
+regression file pass the qualified rustfmt check. RCH is unavailable in this
+development environment; compilation, Clippy and runtime execution remain
 unverified. The Bead remains in progress. Neither this composition nor the
 existing score kernel completes FA-125's six native risk-theater predicates.
 

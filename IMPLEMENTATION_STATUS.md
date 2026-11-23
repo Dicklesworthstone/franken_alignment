@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: preserve terminal capacity in evaluated native bootstrap
+
+The original evaluated generated-text constructor now admits its complete
+first-image event inventory against the selected terminal recovery reserve before
+creating storage. The check uses the existing capacity law, including minimum
+reserve dimensions and the ordinary event tail; it does not invent a second
+constructor, change a limit or grant a role before the complete replacement is
+acknowledged. Canonical encoding still checks actual bytes with the final store
+identity, and encoding or persistence can fail without returning an owner.
+
+Compatible plain and checked publication modes retain original evaluation and
+optional Andon/owned-round joint contracts. The separate held-out joint lane is
+exclusive with owned-round credibility; its regression expectations now require
+the original Binding refusal before storage instead of an impossible successful
+bootstrap. Focused tests pair malformed reserves, helper/model binding and
+held-out incompatibility with compatible first-image controls.
+
+Additional public regressions exercise actual native generation, a false Hold
+independently labeled Benign with its original Andon charge, fresh helper and
+human approval for later Message/Message/Finish publication, foreign and old
+evaluator custody, and refusal to retrofit or reset accounting. This is a bounded
+FA-025/026/105 increment integrated with the generated evaluation constructor
+already present on main. No journal schema, dependency or production gate changes.
+
+Required RCH compilation, runtime, Clippy and canonical qualification remain
+pending. The prescribed RCH command cannot start because rch is unavailable
+(exit 127); formatting, parsing and independent source review are separate
+evidence. The scoped resident native evaluation work remains in progress.
+
 ## 2026-11-23: evaluate generated cases on the original live native owner
 
 Single-request native plain/simple-checked creation can now explicitly select

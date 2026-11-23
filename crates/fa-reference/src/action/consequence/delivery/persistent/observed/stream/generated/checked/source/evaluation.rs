@@ -8,6 +8,7 @@ use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
     credibility::andon::FileAndonConfig, guarded::evaluation::FileEvaluatedOversightRoles,
 };
+use crate::action::consequence::delivery::persistent::recovery_capacity::{Admission, Class};
 use crate::action::consequence::oversight::{
     credibility::EvaluationProtocol, joint_credibility::JointPromotionPolicy,
 };
@@ -86,6 +87,19 @@ impl Prepared {
         if count > self.profile.delivery.limits.events {
             return Err(Error::Limit.into());
         }
+        if let Some(reserve) = self.events.iter().find_map(|event| match event {
+            Event::Core(super::BaseEvent::ReserveRecovery(reserve)) => Some(*reserve),
+            _ => None,
+        }) {
+            // The original admission law validates reserve dimensions and the
+            // complete event count before storage exists. Canonical encoding
+            // still checks every actual byte against the final store identity.
+            Admission::new(self.profile.delivery.limits).record(
+                Class::Install(reserve),
+                count,
+                0,
+            )?;
+        }
         let event = Event::Credibility(match config.joint {
             Some(policy) => CredibilityEvent::EnableJoint(config.protocol.clone(), policy),
             None => CredibilityEvent::Enable(config.protocol.clone()),
@@ -125,10 +139,15 @@ impl FileOversight {
     /// decoder, tokenizer, source, publication guards, reserve and evaluation.
     /// No source-only or unaccounted intermediate owner can escape.
     ///
-    /// Every input is checked by the original native reducers before creating
-    /// storage. The same sole replacement must acknowledge before the owner,
+    /// Native configuration, protocol, reserve dimensions and event capacity
+    /// are checked before creating storage. Canonical byte encoding/storage can
+    /// still fail. The same sole replacement must acknowledge before the owner,
     /// human reviewer or independent evaluator is returned. A failed or uncertain
     /// initial write returns no role even when its complete image reached disk.
+    ///
+    /// Owned-round joint promotion is compatible with this evaluation protocol.
+    /// Held-out joint qualification is a separate, exclusive native lane:
+    /// `GeneratedSourcePublication::Joint` is rejected, never downgraded.
     ///
     /// This performs no inference, capture, clock read, assessment or promotion.
     /// Native text admission, full-input congress, the separate human key and

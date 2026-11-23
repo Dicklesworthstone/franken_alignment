@@ -811,7 +811,11 @@
         "docs/LEARNED_JOINT_CREDIBILITY.md",
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
         "docs/LIVE_POLICY_GOVERNOR.md",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
+        "crates/fa-reference/tests/generated_source_andon.rs",
+        "docs/NATIVE_GENERATED_EVALUATION.md"
       ]
     },
     {
@@ -879,7 +883,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/checkpoint_prepare/guarded/joint.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/mediated_predictive_stream_reset/joint/campaign.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
+        "crates/fa-reference/tests/generated_source_andon.rs",
+        "docs/NATIVE_GENERATED_EVALUATION.md"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2706,7 +2714,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/andon.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/recovery/andon/live.rs",
-        "docs/LIVE_ANDON_EVALUATION.md"
+        "docs/LIVE_ANDON_EVALUATION.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests.rs",
+        "crates/fa-reference/tests/generated_source_andon.rs",
+        "docs/NATIVE_GENERATED_EVALUATION.md"
       ],
       "founding_ideas": [
         "FI-A08",

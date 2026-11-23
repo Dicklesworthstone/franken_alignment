@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-23: preserve reserve capacity in evaluated native creation
+
+- Reuse the original evaluated generated-source constructor and admit its complete
+  bootstrap against the native terminal reserve before creating storage.
+- Preserve canonical byte encoding and the original single acknowledged image;
+  no evaluator or human role escapes a failed initialization.
+- Correct held-out joint bootstrap expectations to the existing exclusive-lane
+  law, with explicit pre-storage refusal and compatible positive controls.
+- Add generated false-Hold assessment, fresh two-key continuation, foreign/old
+  evaluator and accounting-reset regressions. RCH execution remains unavailable;
+  source/format checks do not close qualification.
+
 ## 2026-11-23: serve independent evaluation for native generated publication
 
 - Add explicit paired Andon/evaluator selection to single native plain and simple
