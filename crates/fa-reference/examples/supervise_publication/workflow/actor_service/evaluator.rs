@@ -71,6 +71,10 @@ pub(super) struct Service {
 }
 
 impl Service {
+    pub(super) fn is_retired(&self) -> bool {
+        self.retired
+    }
+
     pub(super) fn start(
         settings: &Settings,
         actor: &Profile,

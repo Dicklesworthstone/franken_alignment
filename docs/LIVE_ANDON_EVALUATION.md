@@ -5,7 +5,8 @@ and Andon accounting in an ordinary publication owner and accept independent
 assessment while that same owner retains the journal lock. An operator can read
 the acknowledged results through the existing [Tower Ledger](TOWER_GOVERNANCE_LEDGER.md).
 The actor still needs original source admission, helper review, independent human
-approval and publication checks for every new effect.
+approval and publication checks for every new effect. Native generated creation
+also supports the explicit composition below.
 
 This connects FA-105/049/134, plan §§9.9, 13.4, 17.1, 22.3–22.4 and
 FI-A08/A13/A18. It is a bounded reference composition; execution qualification
@@ -40,6 +41,61 @@ profile's single request or an explicit finite `--requests` schedule. The checke
 variant is `serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE
 WITNESS_PROFILE` with the same flags; only the original simple witness composition
 is supported. An explicit `--precheck-schedule` can accompany `--requests`.
+
+## Create an evaluated native generated service
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/new-native-anchor
+```
+
+The checked form adds `WITNESS_PROFILE` after `REVIEWER_PROFILE` and uses
+`serve-create-checked`; the live composition accepts the simple witness profile.
+Both accounting and evaluator profiles are required together, with a new retained
+history output. The existing single-request native actor wire still accepts only
+the original generated-source reference; the service never emits unapproved text
+to stdout. Actor submission and independent human review remain separate steps.
+
+The [atomic native constructor](NATIVE_GENERATED_EVALUATION.md) installs source,
+decoder/tokenizer, stream/publication, terminal reserve, evaluation and optional
+joint/Andon configuration in one first image. The returned evaluator stays with
+the same owner across numerical generation, actor intake, process-helper review
+and publication. The existing `evaluator-case` and `evaluator-assess` commands
+operate on that original owner; the journal is not reopened to label a live case.
+
+Optional `--precheck-profile` and paired `--operator-profile` /
+`--tower-generation` retain their existing native contracts. Evaluator credentials
+must be disjoint from the actor, reviewer/Stop and operator. Audiences, credential
+separation, supported modes and aliases among source/witness inputs, sockets,
+profiles and retained history are checked before clock, numerical or owner work.
+The original reducers validate the complete bootstrap before store creation.
+Select accounting windows covering the
+actual native occurrence times under the configured Unix-millisecond clock.
+
+After the request workflow completes, a healthy unstopped owner remains available
+for evaluation under the **remaining original endpoint and invocation budgets**.
+This gives a final Hold a real opportunity for case discovery and a benign,
+violation or censored label. A case read and one assessment consume two existing
+candidate slots. Exhausting a budget or the original deadline ends this phase;
+it does not restart generation, helpers, a held review or publication.
+
+Independent Stop is serviced first, including after any separately selected
+operator command. Original operator grants may still service their selected
+cancellation, narrowing, reconciliation, Fence and bounded queries; no grant is
+renewed. Actor transport failure retires actor intake while preserving the
+evaluator's remaining opportunity and the recorded error. Storage failure or
+Stop ends new evaluation. Terminal reply grace then drops evaluator authority
+and permits only an already acknowledged reply to drain. Final retained history
+includes any acknowledged assessments and accounting.
+
+This live selection currently supports single native creation, plain or simple
+checked. Native live open/continuation, resident sequences, learned-generated
+execution, topology, governor and held-out qualification selections need their
+own complete composition and refuse this option. The separately guarded native
+API already supports [anchored accounting recovery](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
 
 ## Discover the original case before labeling
 
@@ -197,11 +253,22 @@ an ordinary Fence or fresh evaluator role escapes.
 
 Historical-only schedules can serve exact receipts without source/helper work.
 New requests still require fresh source, helpers and human approval. The checked
-open variant accepts the corresponding simple witness profile. Native/learned
-generated modes, topology, policy governor, standalone `--precheck-profile` and
-credibility-activation capsules require separate compositions and refuse here.
+open variant accepts the corresponding simple witness profile. This ordinary
+recovery command does not select native/learned generated modes, topology, policy
+governor, standalone `--precheck-profile` or credibility-activation capsules.
+Native generated creation uses the separate composition documented above.
 
 ## Verification boundary
+
+The generated composition adds five regression functions and two child-process
+harness entrypoints. A distinct evaluator PID uses the actual case/assessment
+clients after the actor receives its terminal result, with only two original
+candidate slots. The tests cover actual approved/rejected publication, benign
+labeling and Andon exhaustion after a real helper Hold, original Stop against an
+incomplete authenticated frame, and admission refusals before clock/store work.
+The original evidence file is removed before late discovery and labeling. These
+new functions have received independent source review; their compilation,
+formatting and runtime execution remain unverified because RCH is unavailable.
 
 Authored regressions cover actual scheduled publication and anchored recovery,
 live native assessments and Ledger observations, original later two-key

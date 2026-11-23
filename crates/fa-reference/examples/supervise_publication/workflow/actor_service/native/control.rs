@@ -3,6 +3,7 @@
 //! is observed through the original Stop cleanup before any forward work.
 
 use super::super::operator::Service;
+use super::super::evaluator;
 use super::{Config, Deadline, ElapsedTick, FileHumanReviewer, FileSupervisedDriver, PeerProfile};
 use crate::workflow::control::Control as StopControl;
 use fa_reference::action::consequence::delivery::persistent::observed::{
@@ -13,6 +14,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 pub(super) struct Control {
     stop: StopControl,
     operator: Option<Service>,
+    evaluator: Option<evaluator::Service>,
 }
 
 impl Control {
@@ -21,7 +23,7 @@ impl Control {
         operation: u64,
         profile: Option<&PeerProfile>,
     ) -> Result<Self, String> {
-        Ok(Self { stop: StopControl::new(config, operation, profile)?, operator: None })
+        Ok(Self { stop: StopControl::new(config, operation, profile)?, operator: None, evaluator: None })
     }
 
     pub(super) fn install_operator(&mut self, operator: Option<Service>) {
@@ -30,6 +32,14 @@ impl Control {
 
     pub(super) fn take_operator(&mut self) -> Option<Service> {
         self.operator.take()
+    }
+
+    pub(super) fn install_evaluator(&mut self, evaluator: Option<evaluator::Service>) {
+        self.evaluator = evaluator;
+    }
+
+    pub(super) fn take_evaluator(&mut self) -> Option<evaluator::Service> {
+        self.evaluator.take()
     }
 
     pub(super) fn has_operator(&self) -> bool {
@@ -69,11 +79,16 @@ impl Control {
         if self.stop.checkpoint(driver, reviewer, deadline, time)? {
             return Ok(true);
         }
-        let Some(operator) = &mut self.operator else {
-            return Ok(false);
-        };
-        operator.checkpoint_driver(driver);
-        self.stop.native_stop(driver, time)
+        if let Some(operator) = &mut self.operator {
+            operator.checkpoint_driver(driver);
+        }
+        if self.stop.native_stop(driver, time)? {
+            return Ok(true);
+        }
+        if let Some(evaluator) = &mut self.evaluator {
+            evaluator.checkpoint_driver(driver);
+        }
+        Ok(false)
     }
 
     pub(super) fn native_stop<F>(

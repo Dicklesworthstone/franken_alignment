@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: evaluate generated cases on the original live native owner
+
+Single-request native plain/simple-checked creation can now explicitly select
+both Andon accounting and its independent evaluator endpoint, with mandatory
+new history retention. The complete generated-source/evaluation constructor
+precedes original numerical work; one evaluator role and transport service then
+survive generation, actor admission, congress and two-key publication.
+
+After successful workflow completion, the original healthy unstopped owner can
+serve case reads and labels for a final Hold using only the endpoint's remaining
+cumulative candidate/I/O/byte/time budget and the original invocation deadline.
+This phase does not automatically schedule source capture, generation, helpers,
+a successor review or publication. Original optional operator controls retain only their
+selected grants; independent Stop is checked before them and again before the
+evaluator. Actor transport failure retires actor intake without consuming the
+independent evaluator's remaining opportunity. Terminal reply grace drops the
+evaluator role and admits no new request; final history retains acknowledged
+labels and native accounting.
+
+The native actor remains source-reference-only. Evaluator audience/credential
+separation, supported combinations and input/socket/history aliases are checked
+before clock or owner work. Optional exact prechecks and original operators are
+supported; live open, resident, learned-generated, topology, governor and held-out
+qualification combinations remain separate work and explicitly refuse this mode.
+See [the live invocation](docs/LIVE_ANDON_EVALUATION.md#create-an-evaluated-native-generated-service).
+
+Five live regression functions and two subprocess harness entrypoints are
+authored. A distinct evaluator process discovers and labels real original cases
+after terminal actor results; approved/rejected human decisions preserve two-key
+publication, a final helper Hold charges the original Andon budget, and original
+Stop preempts an incomplete evaluator frame. Admission tests cover closed option
+grammar, role/audience mismatches and custody aliases before clocks or storage.
+The successful-label cases retain exactly two evaluator candidates and remove
+the old evidence file before discovery. Source review corrected Stop receipt
+accessors, allowed kernel connection reset on Stop, and preserved the distinction
+between a label receipt and a later retained history cut.
+
+Independent source review found no remaining blocker. The required RCH gate
+cannot start because its runner is absent; compilation, formatting, Clippy and
+runtime qualification remain unexecuted, and the Bead remains in progress.
+
 ## 2026-11-23: compose native generated publication with independent accounting
 
 The source-bound native text constructor can now install its complete decoder,

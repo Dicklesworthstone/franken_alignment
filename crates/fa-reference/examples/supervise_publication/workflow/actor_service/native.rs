@@ -8,6 +8,8 @@ mod bootstrap;
 mod continuation;
 #[path = "native/control.rs"]
 mod control;
+#[path = "native/evaluation.rs"]
+mod evaluation;
 #[path = "native/precheck.rs"]
 mod exact_precheck;
 #[path = "native/finish.rs"]
@@ -41,7 +43,7 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT; single native create/plain-simple-checked services additionally accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with required --retain-history-anchor NEW_OUTPUT";
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
@@ -60,7 +62,11 @@ fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (args, history_options) = anchors::take_options(args)?;
+    let (args, evaluation_options) = evaluation::take_options(args)?;
+    if evaluation_options.is_some() && credibility.is_some() {
+        return Err("native live evaluation cannot silently replace held-out qualification".into());
+    }
+    let (args, history_options) = anchors::take_options(&args)?;
     let (selected_args, precheck_path) = exact_precheck::take_option(&args)?;
     let (selected_args, operator_option) = operator::take_option(&selected_args)?;
     let (args, finishing) = finish::take_option(&selected_args)?;
@@ -106,6 +112,17 @@ where
     } else {
         None
     };
+    let evaluation = evaluation_options.map(evaluation::Options::read).transpose()?;
+    if let Some(evaluation) = &evaluation {
+        evaluation.check(
+            &config, &actor, &reviewer,
+            (operator.as_ref(), precheck.as_ref(), history.as_ref()),
+            (open, publication.as_ref(), credibility),
+        )?;
+        let mut paths: Vec<_> = args[1..option].iter().map(Path::new).collect();
+        paths.push(Path::new(&args[option + 1]));
+        evaluation.check_inputs(&paths)?;
+    }
     let inputs = recipe::load(
         Path::new(&args[option + 1]),
         config.profile.delivery.scope.tenant,
@@ -117,12 +134,15 @@ where
             (None, Some(previous)) => finish::Intent::Continue(previous),
             (None, None) => finish::Intent::Existing,
         };
-        return serve_lifecycle_with_history(
+        return serve_lifecycle_with_evaluation(
             config,
             (&actor, &reviewer),
             inputs,
             (open, publication.as_ref(), credibility, mode),
-            (operator.as_ref(), precheck.as_ref(), history.as_ref()),
+            Services {
+                operator: operator.as_ref(), precheck: precheck.as_ref(),
+                history: history.as_ref(), evaluation: evaluation.as_ref(),
+            },
             time,
             output,
         );
@@ -402,7 +422,33 @@ where
     )
 }
 
+struct Services<'a> {
+    operator: Option<&'a operator::Selection>,
+    precheck: Option<&'a exact_precheck::Selection>,
+    history: Option<&'a anchors::Selection>,
+    evaluation: Option<&'a evaluation::Selection>,
+}
+
 fn serve_lifecycle_with_history<F>(
+    config: Config,
+    peers: (&Profile, &PeerProfile),
+    inputs: Inputs,
+    deployment: (bool, Option<&PublicationProfile>, Option<&Path>, finish::Intent),
+    services: (Option<&operator::Selection>, Option<&exact_precheck::Selection>, Option<&anchors::Selection>),
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    serve_lifecycle_with_evaluation(
+        config, peers, inputs, deployment,
+        Services { operator: services.0, precheck: services.1, history: services.2, evaluation: None },
+        time, output,
+    )
+}
+
+fn serve_lifecycle_with_evaluation<F>(
     mut config: Config,
     peers: (&Profile, &PeerProfile),
     inputs: Inputs,
@@ -412,11 +458,7 @@ fn serve_lifecycle_with_history<F>(
         Option<&Path>,
         finish::Intent,
     ),
-    services: (
-        Option<&operator::Selection>,
-        Option<&exact_precheck::Selection>,
-        Option<&anchors::Selection>,
-    ),
+    services: Services<'_>,
     mut time: F,
     output: &mut impl Write,
 ) -> Result<(), String>
@@ -424,7 +466,10 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (actor, reviewer_profile) = peers;
-    let (operator_selection, precheck_selection, history_selection) = services;
+    let Services {
+        operator: operator_selection, precheck: precheck_selection,
+        history: history_selection, evaluation: evaluation_selection,
+    } = services;
     let (open, publication, credibility, mode) = deployment;
     mode.check(open, actor.request)?;
     check_profiles(&config, actor, reviewer_profile)?;
@@ -437,6 +482,13 @@ where
     }
     if let Some(selected) = history_selection {
         selected.check(&config, &[(actor, precheck_selection)], reviewer_profile, operator_selection, open)?;
+    }
+    if let Some(selected) = evaluation_selection {
+        selected.check(
+            &config, actor, reviewer_profile,
+            (operator_selection, precheck_selection, history_selection),
+            (open, publication, credibility),
+        )?;
     }
     // Source and complete witness/joint policy belong to the same initial image.
     // Recovery checks this selection before cleaning staging or fencing keys.
@@ -466,8 +518,11 @@ where
     } else {
         None
     };
-    let (host, reviewer) = if open {
-        bootstrap::open_with_history(
+    let (host, reviewer, evaluator_role) = if let Some(evaluation) = evaluation_selection {
+        let (host, reviewer, role) = evaluation.create(&config, &inputs, selected)?;
+        (host, reviewer, Some(role))
+    } else if open {
+        let (host, reviewer) = bootstrap::open_with_history(
             &config,
             &inputs,
             selected,
@@ -475,9 +530,11 @@ where
             recovery_control.as_mut(),
             &deadline,
             &mut time,
-        )?
+        )?;
+        (host, reviewer, None)
     } else {
-        bootstrap::prepare(&config, &inputs, selected, false)?
+        let (host, reviewer) = bootstrap::prepare(&config, &inputs, selected, false)?;
+        (host, reviewer, None)
     };
     // Any startup refusal after the original recovery Fence retains that
     // exact acknowledged successor while its owner is still available.
@@ -586,11 +643,26 @@ where
                 )
             })
             .transpose()?;
+        let mut evaluator = match (evaluation_selection, evaluator_role) {
+            (Some(selected), Some(role)) => {
+                if control.as_mut().expect("evaluated creation owns Stop")
+                    .checkpoint(&mut driver, &reviewer, &deadline, &mut time)?
+                {
+                    return Ok(());
+                }
+                Some(super::evaluator::Service::start(
+                    &selected.peer, actor, role, &driver, &deadline,
+                )?)
+            }
+            (None, None) => None,
+            _ => return Err("native evaluator selection and original custody disagree".into()),
+        };
         if let Some(control) = &mut control {
             control.install_operator(operator.take());
+            control.install_evaluator(evaluator.take());
         }
-        // Only an explicitly selected operator retains the existing Stop custody
-        // through reply grace. The unselected path keeps its original lifetime.
+        // A selected operator or evaluator retains existing Stop custody through
+        // its remaining service/reply work. No selection creates another quota.
         let mut operator_stop = None;
         let mut precheck = None;
         let work = (|| {
@@ -736,12 +808,13 @@ where
             if let Some(service) = &mut precheck {
                 service.retire();
             }
+            evaluator = control.as_mut().expect("original live native Stop owner").take_evaluator();
             let (stop_service, selected_operator) = control
                 .take()
                 .expect("original live native Stop owner")
                 .into_parts();
             operator = selected_operator;
-            if operator_selection.is_some() {
+            if operator_selection.is_some() || evaluation_selection.is_some() {
                 operator_stop = Some(stop_service.share());
             }
             let mut pump = |driver: &mut FileSupervisedDriver| {
@@ -749,6 +822,9 @@ where
                 // newly acknowledged operator Fence before further workflow work.
                 if let Some(service) = &mut operator {
                     service.checkpoint();
+                }
+                if let Some(service) = &mut evaluator {
+                    service.checkpoint_driver(driver);
                 }
                 ingress.observe(driver)?;
                 let status = driver
@@ -788,6 +864,7 @@ where
         }
         if let Some(control) = &mut control {
             operator = control.take_operator();
+            evaluator = control.take_evaluator();
         }
         let mut automatic_cleanup_attempted = false;
         let mut failure = work.err().map(|error| {
@@ -809,7 +886,7 @@ where
                 Err(stopping) => format!("{error}; stop/drain: {stopping}"),
             }
         });
-        if automatic_cleanup_attempted && operator_selection.is_some() {
+        if automatic_cleanup_attempted && (operator_selection.is_some() || evaluation_selection.is_some()) {
             // The original failure path already attempted Stop AND its drain.
             // Reply grace must not reinterpret that Stop as an unconsumed operator
             // cleanup and repeat an acknowledged or failed sweep. Only the finite
@@ -817,10 +894,69 @@ where
             drop(control.take());
             drop(operator_stop.take());
         }
-        let grace = Instant::now();
+        // A final Hold still needs a real independent label. Explicit evaluator
+        // selection retains this SAME owner/service after workflow completion,
+        // under its original cumulative quotas and both original deadlines.
+        // No automatic source refresh, inference, helper launch or publication
+        // is scheduled here. Explicit operator commands keep their original
+        // bounded grants; they cannot make this loop restart forward execution.
         let mut actor_transport_failed = false;
+        if failure.is_none() && evaluator.is_some() {
+            loop {
+                if evaluator.as_ref().is_none_or(super::evaluator::Service::is_retired)
+                    || deadline.check(time()).is_err()
+                    || driver.supervisor().host().map_or(true, |host| {
+                        host.storage_failure().is_some() || host.inspect().stop.is_some()
+                    })
+                {
+                    break;
+                }
+                let stopped = if let Some(control) = &mut control {
+                    control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                } else if let Some(control) = &mut operator_stop {
+                    control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                } else {
+                    Err("original evaluated Stop custody is unavailable".into())
+                };
+                match stopped {
+                    Ok(false) => {}
+                    Ok(true) => break,
+                    Err(error) => { failure.get_or_insert(error); break; }
+                }
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
+                let stopped = if let Some(control) = &mut control {
+                    control.native_stop(&mut driver, &mut time)
+                } else if let Some(control) = &mut operator_stop {
+                    control.native_stop(&mut driver, &mut time)
+                } else {
+                    Err("original evaluated Stop custody is unavailable".into())
+                };
+                match stopped {
+                    Ok(false) => {}
+                    Ok(true) => break,
+                    Err(error) => { failure.get_or_insert(error); break; }
+                }
+                evaluator.as_mut().expect("selected original evaluator").checkpoint_driver(&mut driver);
+                if !actor_transport_failed {
+                    if let Err(error) = ingress.observe(&mut driver) {
+                        failure.get_or_insert(error);
+                        actor_transport_failed = true;
+                        ingress.pool.revoke_all();
+                    }
+                }
+                pause(actor.poll_ms);
+            }
+        }
+        // Terminal reply grace cannot begin new evaluation. Only an already
+        // acknowledged response retains its remaining original transport budget.
+        if let Some(service) = &mut evaluator {
+            service.finish();
+        }
+        let grace = Instant::now();
         while grace.elapsed() < Duration::from_millis(actor.reply_ms) {
-            if operator_selection.is_some() {
+            if operator_selection.is_some() || evaluation_selection.is_some() {
                 // Keep independent Stop ahead of operator traffic while this
                 // explicitly selected live endpoint retains terminal reply custody.
                 // Historical receipt-only recovery still has no Stop listener.
@@ -838,7 +974,7 @@ where
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
-            if operator_selection.is_some() {
+            if operator_selection.is_some() || evaluation_selection.is_some() {
                 let stopped = if let Some(control) = &mut control {
                     control.native_stop(&mut driver, &mut time)
                 } else if let Some(control) = &mut operator_stop {
@@ -850,10 +986,13 @@ where
                     failure.get_or_insert(error);
                 }
             }
+            if let Some(service) = &mut evaluator {
+                service.checkpoint_driver(&mut driver);
+            }
             if !actor_transport_failed {
                 if let Err(error) = ingress.observe(&mut driver) {
                     failure.get_or_insert(error);
-                    if operator_selection.is_none() {
+                    if operator_selection.is_none() && evaluation_selection.is_none() {
                         break;
                     }
                     // A broken actor channel cannot consume the independent
@@ -865,6 +1004,9 @@ where
             pause(actor.poll_ms);
         }
         if let Some(service) = &mut operator {
+            service.retire();
+        }
+        if let Some(service) = &mut evaluator {
             service.retire();
         }
         ingress.pool.revoke_all();

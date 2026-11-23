@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-23: serve independent evaluation for native generated publication
+
+- Add explicit paired Andon/evaluator selection to single native plain and simple
+  checked creation, with complete initial configuration and required history custody.
+- Retain one evaluator and cumulative transport/time budget through generation,
+  original helper review, human approval and final Hold accounting.
+- Keep a bounded post-review evaluation phase on the same owner; preserve Stop
+  priority and original selected controls without scheduling another effect.
+- Reject unsupported mode combinations and custody collisions before owner work;
+  retire new evaluator intake before terminal reply grace. Add five live
+  regressions and two subprocess harnesses for actual publication/labeling,
+  final-Hold costs, partial-frame Stop and admission refusals. Source reviewed;
+  required RCH execution and qualification remain pending.
+
 ## 2026-11-23: account for native generated reviews and recover original history
 
 - Compose source-bound generated publication, independent evaluation, optional

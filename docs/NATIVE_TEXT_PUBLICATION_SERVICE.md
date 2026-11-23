@@ -78,6 +78,23 @@ Source-reference output failure stops new-work workflows; it does not send or
 retry the actor request. Receipt-only recovery does not issue Stop on output
 failure, because doing so could affect unrelated later work.
 
+## Independent evaluation and Andon accounting
+
+Single native create modes can select `--andon ANDON_PROFILE` together with
+`--evaluator-profile EVALUATOR_PROFILE` and a required
+`--retain-history-anchor NEW_OUTPUT`. This uses the complete atomic native
+evaluation bootstrap and retains its independent evaluator through generation
+and review. After the request finishes, the original remaining budgets provide
+time to discover and label a final Hold before terminal reply grace. A label
+cannot publish an effect or replace the separate human key.
+
+See [the executable evaluator workflow](LIVE_ANDON_EVALUATION.md#create-an-evaluated-native-generated-service)
+for the exact invocation, disjoint credentials, optional precheck/operator
+composition and lifetime. Live creation supports plain and simple checked
+publication. Live open, resident, learned-generated and stronger publication
+combinations remain explicit separate work; the native API has its own
+[anchored evaluation recovery](NATIVE_GENERATED_EVALUATION.md).
+
 ## Exact policy prechecks before submission
 
 Select one bounded exact-policy disclosure alongside the native recipe:

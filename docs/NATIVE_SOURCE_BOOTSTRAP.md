@@ -70,6 +70,13 @@ is closed and no production qualification is claimed.
 
 ## Native service integration
 
+The [evaluated generated constructor](NATIVE_GENERATED_EVALUATION.md) extends the
+same sole initial replacement with independent evaluation and optional joint
+promotion/Andon accounting. It returns the separately owned evaluator only after
+acknowledgment. Its anchored accounting recovery uses the original source replay
+cursor and complete independently retained guards and floors. The ordinary
+source-only constructors below remain available for their explicit contracts.
+
 All native create/open modes now use this source-backed bootstrap, including
 witness/joint selections, credibility reactivation, multi-message continuation,
 explicit finish and recorded-request receipt delivery. No new CLI flag or recipe

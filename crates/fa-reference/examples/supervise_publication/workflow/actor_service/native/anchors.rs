@@ -141,6 +141,7 @@ fn require_new(path: &Path) -> Result<(), String> {
 
 impl Selection {
     pub(super) fn input(&self) -> Option<&FileHistoryAnchor> { self.input.as_ref() }
+    pub(super) fn output(&self) -> Option<&Path> { self.output.as_deref() }
 
     /// Recheck direct callers and every future sequence endpoint before clocks
     /// or live custody. The imported bytes and selected output are immutable.
