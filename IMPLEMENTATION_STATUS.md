@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: serve explicitly convened original process successors
+
+The live learned operator now accepts the original fixed process evaluator as
+well as the existing native owner. Missing or ambiguous evaluator custody
+refuses before startup. The process service retains the same driver after Hold,
+pumps authenticated operator traffic, independent Stop, actor cancellation and
+child reaping, and takes only an independently queued ticket for the next
+original slot. It checks cumulative protocol polls rather than restarting a
+per-cohort allowance. No grant, no fixed capacity, lost eligibility or the
+original commit cutoff ends the wait without inventing another roster.
+
+Three real-child/socket regression functions cover fresh human approval and
+rejection across plain, raw-predictive and owned-predictive recipes; unchanged
+sidecars and numerical/forecast work; exact duplicate operations and replaced
+external descriptors; missing source, partial-frame Stop, both deadlines and
+no-grant/no-successor cases. The admission case now checks nine actual evaluator
+combinations. Independent review preserved original policy thresholds and
+corrected the synthetic first cohort to yield Hold rather than suspension.
+The public driver source-change regression now distinguishes an unattempted
+missing-source slot from original Begin refusal recorded as NotStarted.
+
+All seventeen changed Rust files passed nonmutating scoped syntax parsing with
+installed rustfmt 1.10.0-nightly (9085017724 2026-08-30), from the dated
+nightly-2026-08-31 toolchain. Source identities and absence of trailing
+whitespace were checked; parsing supplies no formatting or type-check claim.
+The required remote-only dated RCH check still cannot launch because `rch`
+is absent (exit 127), including after workspace recovery. The fourteen new
+regression functions, updated admission matrix, compilation, Clippy and full
+gate remain unexecuted. No bead closure or deployment qualification is claimed.
+See [the live fixed-process contract](docs/PROCESS_LEARNED_HELD_REVIEW.md#select-continuation-in-a-live-service).
+
 ## 2026-11-22: retain original process helpers for explicitly convened Hold review
 
 The typed process driver can keep a completed Hold and accept an independent

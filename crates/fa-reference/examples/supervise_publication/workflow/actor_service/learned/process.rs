@@ -175,37 +175,57 @@ where F: FnMut() -> ElapsedTick {
         result => return Reviewed { driver, history: None, process: None,
             stop_requested: false, failure: result.err() },
     }
-    let mut run = match start(driver, config, loaded, deadline, time) {
+    let run = match start(driver, config, loaded, deadline, time) {
         Ok(run) => run,
         Err((driver, error, process)) => return Reviewed {
             driver, history: None, process, stop_requested: false, failure: Some(error) },
     };
+    run_started(run, config, loaded, reviewer, control, deadline, time,
+        intake, publication, credential, operator)
+}
+
+/// Retain the same admitted subprocess sequence through every explicitly
+/// requested fixed successor, without renewing starts, polls or its lifetime.
+pub(super) fn run_started<F>(mut run: FileProcessSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, reviewer: &FileHumanReviewer, control: &mut Control,
+    deadline: &Deadline, time: &mut F, intake: &mut Option<Intake>,
+    publication: Option<&PreparedPublication<'_>>, credential: Option<&FileCredentialPermit>,
+    operator: &mut Option<super::operator::Service>) -> Reviewed
+where F: FnMut() -> ElapsedTick {
     let mut stop_requested = false;
     let result = (|| {
         let polls = loaded.process.as_ref().ok_or("missing explicit learned process recipe")?.polls;
-        for _ in 0..polls {
+        loop {
             deadline.check(time())?;
             if control.pending_peer()? {
                 stop_requested = true;
-                if active(run.review().status()) { run.cancel(run.review().revision()).map_err(debug)?; }
+                run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
             super::operator::checkpoint_supervisor(operator, run.supervisor_mut());
             if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
                 stop_requested = true;
-                // Retire the original numerical/process owner before handing
-                // its driver to native stop cleanup. Cancel is a journal no-op
-                // for the already cancelled request.
-                if active(run.review().status()) {
-                    run.cancel(run.review().revision()).map_err(debug)?;
-                }
+                // Retire retained held rosters as well as running children
+                // before returning the same driver to original Stop cleanup.
+                run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
             if ingress::observe(intake, run.supervisor_mut())? {
                 run.cancel(run.review().revision()).map_err(debug)?;
                 break;
             }
-            if !active(run.review().status()) { break; }
+            if !active(run.review().status()) {
+                if continue_held(&mut run, config, control, deadline, time, intake,
+                    operator, &mut stop_requested)? {
+                    continue;
+                }
+                break;
+            }
+            // The original sequence accounts every protocol quantum, including
+            // refinement/drain work before an operator-selected successor.
+            if run.review().polls() >= polls {
+                return Err("original learned process review exhausted its finite poll budget".into());
+            }
             match publication {
                 Some(publication) => { publication.step_process_learned_with_credential(&mut run,
                     &mut config.source, time, None, credential)?; }
@@ -232,7 +252,9 @@ where F: FnMut() -> ElapsedTick {
         Ok(())
     })();
     let mut failure = result.err();
-    if active(run.review().status()) {
+    if active(run.review().status()) || failure.is_some() {
+        // Failure while held still owns unused original programs. Cancellation
+        // retires them even when a stale source or grant has withdrawn the offer.
         if let Err(error) = run.cancel(run.review().revision()) {
             failure = Some(format!("{}; original process cancellation: {error:?}",
                 failure.unwrap_or_else(|| "process review did not finish".into())));
@@ -249,4 +271,56 @@ where F: FnMut() -> ElapsedTick {
     }
     Reviewed { driver, history: None, process: Some(ProcessHistory::Review(handoff.review)),
         stop_requested, failure }
+}
+
+/// Waiting keeps the original applied Hold, fixed program roster and window.
+/// Cleanup and operator traffic spend no protocol poll or fresh source work.
+fn continue_held<F>(run: &mut FileProcessSupervisedDriver, config: &mut Config,
+    control: &mut Control, deadline: &Deadline, time: &mut F,
+    intake: &mut Option<Intake>, operator: &mut Option<super::operator::Service>,
+    stop_requested: &mut bool) -> Result<bool, String>
+where F: FnMut() -> ElapsedTick {
+    let Some(selected) = run.held_successor_round() else { return Ok(false); };
+    if !run.has_fixed_successor() { return Ok(false); }
+    loop {
+        let now = time();
+        deadline.check(now)?;
+        if control.pending_peer()? {
+            *stop_requested = true;
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        super::operator::checkpoint_supervisor(operator, run.supervisor_mut());
+        if run.supervisor().host().map_err(debug)?.inspect().stop.is_some() {
+            *stop_requested = true;
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        if ingress::observe(intake, run.supervisor_mut())? {
+            run.cancel(run.review().revision()).map_err(debug)?;
+            return Ok(false);
+        }
+        run.reap_helpers();
+        // Exhaustion without a Pending ticket ends waiting immediately. The
+        // accepted final ticket retains its original grant while children drain.
+        if now >= selected.window.commit_by
+            || !run.has_fixed_successor()
+            || run.held_successor_round().is_none_or(|current| current.round != selected.round)
+        {
+            return Ok(false);
+        }
+        if let Some(ticket) = run.take_pending_convene().map_err(debug)? {
+            if ticket.round() != selected.round {
+                return Err("learned process successor does not match the original reserved round".into());
+            }
+            deadline.check(time())?;
+            // The wrapper withholds this handoff until every original child is
+            // reaped, then rechecks source/topology and the exact predecessor.
+            run.convene_from_policy_file(&mut config.source, ticket, &mut *time)
+                .result.map_err(debug)?;
+            return Ok(true);
+        }
+        super::super::super::pause(config.timing.poll_ms.clamp(1, 50)
+            .min(selected.window.commit_by.0 - now.0));
+    }
 }

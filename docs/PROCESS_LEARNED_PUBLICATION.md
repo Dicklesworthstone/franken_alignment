@@ -156,7 +156,10 @@ the 2026-10-17 session; its daemon refusal prevented compilation (exit 103), and
 the execution environment later restarted. Compilation, Clippy, runtime tests,
 empirical detector results and production qualification remain open.
 
-The later held-process continuation and its eleven new regression functions are
-source-reviewed only. Its required RCH check cannot start (`rch` absent, exit
-127), and the workspace then became unavailable. No parsing, formatting,
-compilation, Clippy or runtime result is claimed for these later changed bytes.
+The later held-process continuation now runs through the original live service,
+using the existing independently selected operator grant. Its fourteen new
+regression functions and updated admission case remain unexecuted. All seventeen
+changed Rust files passed scoped nonmutating syntax parsing with the installed
+nightly-2026-08-31 formatter, plus source-identity and whitespace checks. Required
+RCH compilation cannot start (`rch` absent, exit 127); syntax review supplies no
+formatting, type, runtime or deployment qualification.

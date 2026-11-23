@@ -473,29 +473,50 @@ fn independent_stop_interrupts_a_held_native_sequence_with_partial_operator_inpu
 }
 
 #[test]
-fn learned_convening_admission_requires_actual_original_native_selection() {
-    for mode in ["native", "process", "raw", "owned", "undeclared_native"] {
+fn learned_convening_admission_requires_exactly_one_original_evaluator_owner() {
+    for mode in [
+        "native", "process", "raw", "owned", "process_raw", "process_owned",
+        "undeclared_native", "undeclared_process", "ambiguous",
+    ] {
         let root = Root::new();
         let config = configured(&root);
-        let path = fixture::write(&root, b"allow");
-        if mode == "process" {
-            fs::write(&path, super::super::processes::process_recipe(&root, "allow")).unwrap();
+        let mut path = fixture::write(&root, b"allow");
+        let original_native = if mode == "ambiguous" {
+            recipe::load(&path, &config, true).unwrap().native
+        } else {
+            None
+        };
+        if matches!(mode, "process" | "process_raw" | "process_owned"
+            | "undeclared_process" | "ambiguous")
+        {
+            let predictor = match mode {
+                "process_raw" => Some(false),
+                "process_owned" => Some(true),
+                _ => None,
+            };
+            // A one-round process selection is valid but has no actionable
+            // successor; admission must not invent another program roster.
+            path = super::process_convening::fixed_recipe(&root, predictor, 1);
         } else if mode == "raw" || mode == "owned" {
             super::super::forecast::install(&root, &path, mode == "owned", 60_000);
         }
         let mut loaded = recipe::load(&path, &config, true).unwrap();
         if mode == "undeclared_native" {
             loaded.native = None;
+        } else if mode == "undeclared_process" {
+            loaded.process = None;
+        } else if mode == "ambiguous" {
+            loaded.native = original_native;
         }
         let actor = actor_profile(&root, &config, 1);
         let peers = fixture::peers(&root, &config);
         let selected = chosen(&root, &actor);
         let result = selected.check(&config, &loaded, &actor, &peers, None);
-        // Pinned raw and owned predictors can retain their original native
-        // sequence. Neither process ballots nor a missing native owner can.
+        // Both evaluator families retain exact raw or owned forecast custody.
+        // An absent or ambiguous original evaluator cannot receive this grant.
         assert_eq!(
             result.is_ok(),
-            !matches!(mode, "process" | "undeclared_native"),
+            !matches!(mode, "undeclared_native" | "undeclared_process" | "ambiguous"),
             "{mode}: {result:?}"
         );
         assert!(!config.store.exists());

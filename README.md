@@ -71,8 +71,18 @@ generated output, reservation and cumulative polls, with independent Stop and
 fresh human approval. Exact required raw and owned pre-output predictors retain
 their original settled evidence through this same workflow; see the
 [predictive held-review contract](docs/PREDICTIVE_LEARNED_HELD_REVIEW.md).
-Process-helper recipes reject this selection. Core and authenticated service regression sources are present;
-required RCH compilation and runtime qualification remain pending.
+Core and authenticated service regression sources are present; required RCH
+compilation and runtime qualification remain pending.
+
+[Held process-helper reviews](docs/PROCESS_LEARNED_HELD_REVIEW.md) now support
+the same independently requested continuation through their next original fixed
+executable roster. The service retains the original packet, settled forecast,
+windows, start reservation and cumulative protocol polls. It waits for confirmed
+predecessor reaping before source acquisition or another launch, services Stop
+and actor cancellation while held, and still requires fresh human approval after
+Continue. A single-round process recipe cannot manufacture another cohort.
+The process regressions and all changed Rust sources passed scoped syntax
+parsing; required compilation and runtime qualification remain open.
 
 [Governed native recovery](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-a-governed-native-sequence)
 now requires an independently retained history anchor and complete current

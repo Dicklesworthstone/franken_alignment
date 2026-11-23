@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-22: connect held process continuation to live operators
+
+- Accept exactly one original native or fixed process evaluator for the existing
+  finite operator convening grant, including settled raw and owned prediction.
+- Keep the original process driver, cumulative polls, frozen roster/windows and
+  child cleanup while serving explicit Next/Convene, independent Stop and actor
+  cancellation. Require fresh human approval after the successor's Continue.
+- Add three service regression functions with real subprocesses and Unix
+  traffic, plus nine-way evaluator admission coverage; preserve exact sidecars,
+  numerical/forecast work, original deadlines and descriptor independence.
+- Correct the driver source-change assertion to retain the original NotStarted
+  launch record, and update the process/native/live usage contracts.
+- All seventeen changed Rust files passed scoped nonmutating syntax parsing and
+  source/whitespace checks after workspace recovery. Required RCH remains absent
+  (exit 127); compilation, Clippy, runtime tests and qualification remain open.
+
 ## 2026-11-22: continue held process reviews through original fixed custody
 
 - Retain a completed process Hold for an independently granted one-use

@@ -106,6 +106,65 @@ independent human permit, current policy, exact learned input, any required
 credential and the original publication witness. Convening supplies none of
 those effect authorities.
 
+## Select continuation in a live service
+
+Both `create-learned-generated` and `serve-learned-generated` use the existing
+independent operator options:
+
+```text
+--operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+Select the original positive finite grant in the otherwise complete
+`fa.tower-operator-service/1` profile:
+
+```json
+"convening": {
+  "queries": 32,
+  "operations": 2,
+  "authority": "convene_held_review"
+}
+```
+
+The profile still requires its scope, independently authenticated operator and
+supervisor identities, socket and finite transport/runtime limits. The actual
+loaded recipe must retain exactly one original native or process evaluator;
+an absent or ambiguous owner refuses admission. Ordinary, required raw forecast
+and required owned forecast process recipes retain their original forecast law.
+
+For actionable process continuation, the existing version-6 recipe needs at
+least two explicitly ordered `process_review.rounds`, the existing retained
+`sidecar.priority` ladder and matching `sidecar.budget.rounds`, enough aggregate
+`process_review.starts` for all original members, and remaining original polls.
+The complete schedule must fit the initial action deadline. A selected grant
+alone cannot add a cohort, change an executable or extend a fixed window.
+
+At the original request address, send Tower `next` with
+`{"action":"convene_held","round":"702"}`, substituting the exact next original
+round. Tower integers are canonical decimal strings. Inspect the complete
+generation-bound action and explicitly submit its returned `convene` document.
+Pending acknowledges admission; Opened acknowledges the original durable Begin
+and selected process launch. Neither is a helper verdict or human approval.
+
+The live service keeps the original driver while waiting and pumps independent
+Stop, actor cancellation, bounded operator traffic and child cleanup. A partial
+operator frame cannot block the separate Stop peer. Waiting uses no policy read
+or protocol poll, and the next fixed commit cutoff remains the bound even if
+the request's overall deadline is later. No selected grant, no successor slot,
+revoked custody or an exhausted grant without its exact Pending ticket ends
+waiting. A final accepted ticket survives operation exhaustion while old
+children drain.
+
+Every actual process quantum checks the **cumulative** original poll counter;
+entering another cohort never restarts a per-round loop allowance. The shared
+review route serves original single requests and resident releases, retaining
+the same publication source and credential path. The successor's Continue
+enters the existing fresh independent human decision. Historical receipts and
+receipt-only recovery do not recreate a live held owner.
+
+See [live learned operator selection](LIVE_LEARNED_OPERATOR.md) for complete
+authentication, command and lifetime requirements.
+
 ## Verification boundary
 
 Four private regression functions use real child commit/reveal protocols for
@@ -118,14 +177,29 @@ Stop/cancellation/numerical changes, expiration, repeated independently requeste
 Holds and retirement before generic handoff. Child fixtures provide explicitly
 synthetic ballots; they establish no detector quality.
 
-These tests are authored and independently source-reviewed, **not executed**.
+Three additional service regression functions exercise authenticated Unix
+traffic, real child cohorts and original actor/human owners: the plain/raw/owned
+predictor matrix with fresh human approval and rejection, current source loss,
+Stop with a partial operator frame, overall and fixed-window expiry, and no
+grant or successor capacity. They compare the same sidecar bytes and original
+numerical/prediction work and replace external recipe/predictor descriptors to
+exclude reload-based substitution. The updated admission regression covers nine
+valid, missing and ambiguous original evaluator combinations. Synthetic ballots
+and predictors establish no empirical reliability.
+
+The fourteen new regression functions and updated admission case are authored
+and independently source-reviewed, **not executed**. All seventeen changed
+Rust files passed nonmutating scoped syntax parsing with installed
+`rustfmt 1.10.0-nightly (9085017724 2026-08-30)` from
+`nightly-2026-08-31`; source blob identities and absence of trailing whitespace
+were checked. This is neither a formatting check nor type checking.
+
 The required remote-only command
 `RCH_REQUIRE_REMOTE=1 rch exec -- cargo +nightly-2026-09-08 check --locked --workspace --all-targets`
-could not start because `rch` is absent (exit 127). The workspace subsequently
-became unavailable. No Rust parsing, formatting, compilation, Clippy or runtime
-pass is claimed for this addition. Existing historical execution receipts do
-not qualify these changed bytes; broader verification and deployment remain
-open.
+could not start because `rch` is absent (exit 127), including after the temporary
+workspace outage ended. Compilation, Clippy, runtime tests and the complete
+qualified gate remain unexecuted. Historical receipts do not qualify these
+changed bytes; broader verification and deployment remain open.
 
 See [the process publication contract](PROCESS_LEARNED_PUBLICATION.md) and the
 distinct [retained native review contract](LEARNED_HELD_REVIEW.md).

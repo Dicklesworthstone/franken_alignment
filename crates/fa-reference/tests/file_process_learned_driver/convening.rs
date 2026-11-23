@@ -241,7 +241,8 @@ fn process_successor_rechecks_current_source_and_never_retries_a_failed_launch()
         assert_eq!(receipt(&port, selected).outcome(), FileConveneOutcome::Failed);
         assert_eq!(grant.remaining_operations(), 0);
         assert_eq!(case.run.review().records()[&101], first);
-        assert_eq!(case.run.review().records()[&102].admission, None);
+        assert_eq!(case.run.review().records()[&102].admission,
+            if changed { Some(HelperRoundAdmission::NotStarted) } else { None });
         assert!(!case.root.round(102).join("started").exists());
         // Missing source refuses before launch; a complete changed semantic
         // snapshot spends the original launch poll before Begin refuses it.

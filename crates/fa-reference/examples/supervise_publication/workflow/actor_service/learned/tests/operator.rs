@@ -12,6 +12,8 @@ mod journal_tail;
 mod narrowing;
 #[path = "operator/predictive_convening.rs"]
 mod predictive_convening;
+#[path = "operator/process_convening.rs"]
+mod process_convening;
 #[path = "operator/reserved_convening.rs"]
 mod reserved_convening;
 #[path = "operator/resolution.rs"]

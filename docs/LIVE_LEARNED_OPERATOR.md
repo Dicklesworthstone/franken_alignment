@@ -81,8 +81,8 @@ its own numerical allowance. Either selected control object without that
 allowance, including a programmatically supplied profile, fails before
 clock/source acquisition, authority-store creation or listener setup. A
 historical explanation grant cannot authorize either mutation. Explicit
-`convening` instead uses the retained native reservation described below; it
-never provisions replacement learned reviewers.
+`convening` instead uses retained native evaluators or an original fixed process
+schedule as described below; it never provisions replacement learned reviewers.
 
 The complete scope and selected supervisor identity must match every selected
 actor. Operator identity remains independently configured. Actual Linux UID/GID
@@ -276,10 +276,10 @@ dispatch to the refinement. Applied rounds retain their existing response kind;
 Unknown and refusals do not disclose an unobserved completion kind. See the
 [refinement response](TOWER_REVIEW_EXPLANATION.md#the-historical-refinement-response).
 
-## Continue a held native-model review
+## Continue a held learned review
 
-A learned recipe with native model helpers may select the existing
-`convening` grant before its original review starts:
+A learned recipe retaining exactly one original native or process evaluator
+owner may select the existing `convening` grant before its review starts:
 
 ```json
 "convening": {
@@ -289,57 +289,66 @@ A learned recipe with native model helpers may select the existing
 }
 ```
 
-The actual loaded recipe must retain its original native model helpers;
-process helpers fail admission before startup. Ordinary recipes and exact
-required raw or owned pre-output predictors can use this grant. Predictive
-successors additionally retain their own current settled observation under the
-[original evidence contract](PREDICTIVE_LEARNED_HELD_REVIEW.md), without another
-forecast, likelihood sample or prediction allowance.
-Successor capacity is provisioned before the first review in one of two modes:
+Missing or ambiguous evaluator ownership refuses admission before startup.
+Ordinary recipes and exact required raw or owned pre-output predictors can use
+this grant. Predictive successors retain their own current settled observation
+under the [original evidence contract](PREDICTIVE_LEARNED_HELD_REVIEW.md),
+without another forecast, likelihood sample or prediction allowance.
 
-- A progressive recipe preselects multiple `native_review.round_ids`, matching
-  sidecar rounds and enough original helper work. Its existing fixed-slot path
+Successor capacity is provisioned before the first review:
+
+- A progressive native recipe preselects multiple `native_review.round_ids`,
+  matching sidecar rounds and enough original helper work. Its fixed-slot path
   retains every original round ID and window.
-- A one-round recipe may reserve additional complete native helper rosters from
-  its original native work allowance. The service chooses the largest fully
-  funded count no greater than the original grant's remaining operations, with
-  at most 32 initial-plus-reserved rounds. It constructs all those evaluators
-  before the initial Begin. A grant supplies no numerical budget: a selection
-  with zero funded successors remains accepted without an actionable
-  continuation.
+- A one-round native recipe may reserve additional complete native rosters from
+  its original work allowance. The service chooses the largest fully funded
+  count no greater than remaining grant operations, with at most 32
+  initial-plus-reserved rounds, and constructs those evaluators before Begin.
+  Zero funded successors remain accepted without actionable continuation.
+- A process recipe declares multiple `process_review.rounds`, its existing
+  sidecar priority ladder and matching round budget, and enough original
+  aggregate starts for every member of every cohort. Every executable and
+  window freezes before Begin. A single-round process recipe has no successor;
+  process continuation does not use the native reserve mode.
 
-When the original round ends in an applied Hold without automatic refinement,
-the service retains the original learned packet, generated output, native
-reviewers, completed work and cumulative counters. Address that original request
-with `next` and `action: "convene_held"`. For a progressive recipe, select the
-exact next preprovisioned round. For a one-round recipe with a funded reserve,
-select a fresh unused round ID; the host chooses its commit/reveal window from
-the original service timing within the original action deadline.
-Inspect and explicitly submit the returned complete `convene` action. The
-authenticated mutation queues admission only; Opened requires the original
-wrapper's fresh source checks and successful durable Begin.
+When an original round ends in applied Hold without automatic refinement, the
+service retains the same learned packet, output, helper custody, work and
+cumulative counters. Address that original request with `next` and
+`action: "convene_held"`. For either fixed schedule, select the exact next
+preprovisioned round. For a funded native reserve, select a fresh unused ID;
+the host chooses a window within the original action deadline.
 
-Only the next original evaluator roster can run. Progressive windows remain
-fixed before the first review; a reserved one-round successor cannot extend the
-original invocation deadline. Both modes keep the same native wrapper and
-cumulative poll allowance. The live service pumps independent Stop and actor
-cancellation while awaiting the explicit ticket. It generates no actor output,
-creates no new sidecar, selects no replacement model and performs no automatic
-retry during that wait. A fresh Continue still needs an independent human
-approval and final publication checks.
+Inspect and explicitly submit the returned complete `convene` action.
+Authenticated admission only queues Pending. Opened requires current source
+checks and successful original Begin and launch. A process ticket also waits
+for **confirmed reaping of every predecessor direct child before acquiring
+topology, policy or time**. An unresolved startup or absent child owner cannot
+satisfy that requirement.
 
-The same grant remains finite across resident releases and reconnects. This
-also applies to newly admitted requests in supported live recovery; historical
-held receipts have no retained native custody and cannot be reopened. Recorded
-receipt and `--resume` grammars reject these live operator options independently
-of profile validation.
+Only the next original roster can run. Fixed windows remain unchanged and a
+reserved native successor cannot extend the invocation deadline. The service
+keeps the same wrapper and cumulative allowance; a process continuation launch
+spends one original protocol poll. It pumps independent Stop and actor
+cancellation while waiting, without creating output, sidecars, replacement
+models, executable rosters or automatic retries. A fresh Continue still requires
+independent human approval and final publication checks.
 
-The [learned held-review contract](LEARNED_HELD_REVIEW.md) specifies exact source
-binding, weak custody, fixed-window expiry, failed-slot retirement and the
-current source-only verification boundary. The alternative
-[one-round reserve contract](LEARNED_RESERVED_REVIEW.md) specifies prepaid
-evaluator custody, fresh round selection, bounded host windows and reserve
-exhaustion under those same publication and termination requirements.
+The grant remains finite across resident releases and reconnects. Its final
+already accepted Pending operation can finish after the operation balance
+reaches zero; an abandoned, failed or opened fixed slot cannot be selected
+again. A wait ends when the fixed window expires, eligibility is lost or no
+operation can proceed. No original allowance or unknown effect is refunded.
+
+This also applies to newly admitted requests in supported live recovery.
+Historical held receipts have no retained helper custody and cannot reopen a
+review. Recorded receipt and `--resume` grammars independently reject these live
+operator options.
+
+See the [native held-review contract](LEARNED_HELD_REVIEW.md),
+[one-round native reserve contract](LEARNED_RESERVED_REVIEW.md) and
+[fixed process held-review contract](PROCESS_LEARNED_HELD_REVIEW.md) for exact
+source binding, weak custody, windows, failed-slot retirement and verification
+boundaries.
 
 ## Reconcile an original learned publication
 

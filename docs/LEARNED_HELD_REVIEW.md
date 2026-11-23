@@ -119,7 +119,10 @@ that original evidence before acquisition and before Begin, without another
 forecast, likelihood sample or work allowance. Plain and cumulative text owners
 share the original packet law; selected topology mediation keeps its separate
 source obligation. Process-helper sequences cannot use this retained-native
-continuation or substitute native model reviewers after a result.
+continuation or substitute native model reviewers after a result. Their distinct
+[fixed process continuation](PROCESS_LEARNED_HELD_REVIEW.md) retains original
+executable custody and requires complete predecessor reaping before another
+launch.
 
 ## Select continuation in a live service
 
@@ -143,13 +146,15 @@ Select a positive finite grant in the existing
 
 The complete profile still needs its original scope, independently authenticated
 operator identity, supervisor identity, socket and finite transport/runtime
-limits. Select it before native review starts. Structural profile admission does
-not establish learned eligibility: the actual loaded recipe must use native
-model helpers. Ordinary recipes and exact required raw or owned pre-output
-predictors share that admission; the original native owner additionally checks
-its own current settled evidence before a predictive offer or successor Begin.
-Process helpers reject the selection before clock, source, store or listener
-startup. Every selected entry of a resident sequence must satisfy that admission.
+limits. Select it before review starts. Structural profile admission does not
+establish learned eligibility: the native path described here requires the
+actual original native model helpers. The service also accepts the distinct
+[original fixed process path](PROCESS_LEARNED_HELD_REVIEW.md#select-continuation-in-a-live-service);
+missing or ambiguous evaluator ownership refuses before clock, source, store or
+listener startup. Ordinary recipes and exact required raw or owned pre-output
+predictors share admission; each retained learned owner checks its own current
+settled evidence before a predictive offer or successor Begin. Every selected
+entry of a resident sequence must satisfy that admission.
 
 For this fixed-slot mode, use a progressive v2-or-later learned recipe with
 multiple explicitly selected
@@ -208,8 +213,8 @@ finite grant exhaustion and an expired fixed successor window.
 Six additional service regression functions cover the retained native wrapper
 through authenticated Next/Convene and fresh human approval, grant absence and
 fixed-window expiry, source loss and cumulative poll exhaustion, independent
-Stop with a partial operator frame, and actual loaded process/predictive
-admission refusal. Paired native and service cases distinguish an accepted
+Stop with a partial operator frame, and admission checks for actual loaded
+evaluator ownership. Paired native and service cases distinguish an accepted
 final operation from an abandoned one: the first still opens exactly once,
 while the second ends the wait without another source read or model poll.
 Existing closed historical command regressions preserve
