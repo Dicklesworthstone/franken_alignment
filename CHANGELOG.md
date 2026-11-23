@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: cover held process review in a resident sequence
+
+- Add a real native/process/native Message/Message/Finish regression with an
+  actual later process Hold, one shared operation grant and exactly three
+  original owned forecasts.
+- Assert future-round refusal without spending, explicit fixed continuation,
+  historical idempotence, exhaustion across the next actor handoff, exact
+  sidecars and the original human/publication/cleanup requirements.
+- Correct resident and predictive usage contracts and preserve the earlier live
+  operator section anchor. Independent source and scoped syntax checks passed;
+  the regression remains unexecuted with RCH unavailable.
+
 ## 2026-11-22: connect independent assessment to live Tower publication
 
 - Provision and independently recover original native credibility/Andon accounting

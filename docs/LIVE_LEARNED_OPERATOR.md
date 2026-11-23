@@ -276,6 +276,8 @@ dispatch to the refinement. Applied rounds retain their existing response kind;
 Unknown and refusals do not disclose an unobserved completion kind. See the
 [refinement response](TOWER_REVIEW_EXPLANATION.md#the-historical-refinement-response).
 
+<a id="continue-a-held-native-model-review"></a>
+
 ## Continue a held learned review
 
 A learned recipe retaining exactly one original native or process evaluator

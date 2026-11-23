@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: cover held process continuation across resident releases
+
+A further resident regression uses native Message, held process Message and
+native Finish under one original owned predictor and one operator grant. Its
+actual process Hold21 can open only fixed successor22: future Finish round31
+remains reserved, and a refused attempt spends no operation. Original
+Capabilities observations show one operation before selection and zero both
+after opening22 and after the next actor listener binds. Exact retries retain
+their historical receipt. Three separate human approvals, identical process
+sidecars, four numerical draws, exactly three forecasts, conserved charges and
+complete cleanup remain explicit assertions.
+
+Independent production tracing confirms the existing resident route reserves
+every request's fixed IDs before grant issuance, retains the same supervisor
+and operator service, dispatches later process selections through the new
+driver, and requires both helper owners to be reaped before the next release.
+No production change or allowance renewal was needed. Resident and predictive
+usage contracts now describe the supported process route.
+
+The new regression and registration passed independent source review and
+nonmutating scoped syntax parsing, bringing this feature to fifteen authored
+regression functions and nineteen checked Rust source files. Source identities
+and whitespace were checked. Required RCH remains absent; compilation,
+formatting, Clippy, runtime execution and qualification remain open.
+
 ## 2026-11-22: assess native cases while the original Tower owner stays live
 
 Ordinary plain and simple-witness checked Tower services can now provision

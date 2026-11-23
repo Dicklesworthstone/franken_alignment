@@ -187,8 +187,16 @@ exclude reload-based substitution. The updated admission regression covers nine
 valid, missing and ambiguous original evaluator combinations. Synthetic ballots
 and predictors establish no empirical reliability.
 
-The fourteen new regression functions and updated admission case are authored
-and independently source-reviewed, **not executed**. All seventeen changed
+A resident integration regression additionally keeps one owned predictor and
+one operator grant across native Message, held process Message and native
+Finish. It refuses the future Finish's reserved round without spending the
+operation, explicitly opens the held Message's own fixed successor, and checks
+that the exhausted grant survives the next actor handoff. Original completion
+assertions require three forecasts, four numerical draws, three fresh human
+sessions and complete child cleanup.
+
+The fifteen new regression functions and updated admission case are authored
+and independently source-reviewed, **not executed**. All nineteen changed
 Rust files passed nonmutating scoped syntax parsing with installed
 `rustfmt 1.10.0-nightly (9085017724 2026-08-30)` from
 `nightly-2026-08-31`; source blob identities and absence of trailing whitespace

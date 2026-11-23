@@ -157,8 +157,8 @@ the execution environment later restarted. Compilation, Clippy, runtime tests,
 empirical detector results and production qualification remain open.
 
 The later held-process continuation now runs through the original live service,
-using the existing independently selected operator grant. Its fourteen new
-regression functions and updated admission case remain unexecuted. All seventeen
+using the existing independently selected operator grant. Its fifteen new
+regression functions and updated admission case remain unexecuted. All nineteen
 changed Rust files passed scoped nonmutating syntax parsing with the installed
 nightly-2026-08-31 formatter, plus source-identity and whitespace checks. Required
 RCH compilation cannot start (`rch` absent, exit 127); syntax review supplies no

@@ -7,6 +7,9 @@ use fa_reference::action::consequence::Consequence;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileConveneBasis;
 use std::sync::atomic::AtomicU64;
 
+#[path = "process_convening.rs"]
+mod process_convening;
+
 fn convening(root: &Root, actor: &Profile) -> (PathBuf, live_operator::Selection) {
     let (path, _) = selection(root, actor);
     let original = fs::read_to_string(&path).unwrap();

@@ -391,48 +391,62 @@ retry or restore capacity.
 ### An explicitly selected successor after Hold
 
 A resident sequence may select the operator profile's finite `convening`
-grant when every scheduled recipe uses its original native model helpers.
-Ordinary recipes and exact required raw or owned pre-output predictors can use
-the grant; process-helper recipes reject this selection during admission.
-Each predictive Message or separately forecast Finish retains its own settled
-observation, coverage and lifetime work. A prior release cannot supply another
-request's evidence or renew its predictor allowance. Progressive recipes retain their original fixed-slot path:
-the native review already reserves each successor's round ID, evaluators and
-window before the first review.
+grant when each scheduled recipe retains exactly one original native or process
+evaluator owner. Ordinary recipes and exact required raw or owned pre-output
+predictors can use the grant. Each predictive Message or separately forecast
+Finish retains its own settled observation, coverage and lifetime work; a prior
+release cannot supply another request's evidence or renew its predictor
+allowance.
 
-A one-round recipe can instead preprovision additional complete helper rosters
-before its initial Begin. The service reserves the largest fully funded count
-within that recipe's original native work limits, the shared grant's remaining
-operations and 32 total initial-plus-reserved rounds. A selection with zero
-funded successors remains accepted without an actionable continuation. This
-grant cannot create native work allowance, and later releases cannot renew its
-spent operations.
+The invocation reserves every scheduled request's fixed review IDs before
+issuing its one operator grant. An explicit continuation cannot take a future
+release's native or process round ID. The current request can select only its
+own offered next fixed slot, or an unused ID for its separately funded native
+reserve.
+
+Progressive native recipes retain their original round IDs, evaluator rosters
+and windows. Process recipes likewise declare every executable roster and
+window before the first review; actionable process continuation requires
+multiple fixed slots and their original start, sidecar and poll capacity.
+Confirmed reaping of every predecessor direct child is required before taking
+a process ticket or acquiring the next policy/topology observation.
+
+A one-round **native** recipe can instead preprovision additional complete
+helper rosters before Begin. The service reserves the largest fully funded
+count within that recipe's original native work limits, the shared grant's
+remaining operations and 32 total initial-plus-reserved rounds. Zero funded
+successors remain accepted without actionable continuation. A single-round
+process recipe cannot use this native reserve or manufacture another roster.
 
 After an applied Hold without refinement, the service retains that request's
-original native wrapper while waiting for an authenticated explicit Next/Convene
-handoff. A progressive recipe opens only its exact next preprovisioned round
-within its original fixed window. A one-round recipe with a funded reserve
-accepts an explicit fresh unused round ID and receives a host-selected window
-within the original action deadline. Both consume the next evaluator roster
-that was already fixed before the initial Begin. The wait keeps the same
-run-wide Stop endpoint, actor cancellation, operator transport counters and
-logical/wall deadlines; it does not spend a native evaluation poll or regenerate
-the actor output. Every later evaluation spends the original cumulative poll
-allowance. Expiry or grant revocation ends the wait, and a consumed source or
-launch failure retires remaining reviewer custody without refund.
+original wrapper for authenticated explicit Next/Convene. Either fixed schedule
+opens only its exact next preprovisioned round within the original fixed
+window. A funded native reserve accepts an unused round ID and a host-selected
+window within the original action deadline. Every cohort was fixed before the
+initial Begin.
 
-A new Continue still requires the independent human decision and original
+Waiting retains the same run-wide Stop endpoint, actor cancellation, operator
+transport counters and logical/wall deadlines. It does not acquire policy
+evidence, spend a native evaluation/process protocol poll, or regenerate actor
+output. Process child cleanup remains active. A process continuation launch
+spends one original protocol poll; later review quanta share the original
+cumulative allowance. Expiry or grant revocation ends the wait. A consumed
+source or launch failure retires remaining custody without refund.
+
+A new Continue still requires an independent human decision and the original
 guarded publication. The next resident release remains blocked until the
-current request is confirmed Executed and its original cleanup completes.
-Operator grants stay finite across releases. Live recovered suffixes can
-continue newly admitted requests that reach a fresh Hold; historical held
-receipts cannot recreate an evaluator owner.
+current request is confirmed Executed and its original helper cleanup completes.
+Operator operations and queries remain spent across releases and reconnects;
+a final already admitted Pending ticket can finish without replenishing the
+grant. Live recovered suffixes can continue newly admitted requests that reach
+a fresh Hold, while historical held receipts cannot recreate an evaluator owner.
 
-See [learned held review](LEARNED_HELD_REVIEW.md) for the exact fixed-slot and
-source-binding contract, [one-round reserves](LEARNED_RESERVED_REVIEW.md) for the
-separately prepaid alternative, and [live learned operator](LIVE_LEARNED_OPERATOR.md)
-for profile selection. The added service regressions are authored and source
-reviewed; required RCH compilation and runtime qualification remain pending.
+See [native held review](LEARNED_HELD_REVIEW.md),
+[fixed process held review](PROCESS_LEARNED_HELD_REVIEW.md),
+[one-round native reserves](LEARNED_RESERVED_REVIEW.md) and
+[live learned operator selection](LIVE_LEARNED_OPERATOR.md) for the complete
+custody and source contracts. Regression source is authored and reviewed;
+required RCH compilation and runtime qualification remain pending.
 
 ## Retained evidence and results
 
