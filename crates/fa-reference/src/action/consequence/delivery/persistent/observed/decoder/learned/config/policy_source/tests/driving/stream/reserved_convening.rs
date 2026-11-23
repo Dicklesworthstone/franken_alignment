@@ -26,6 +26,9 @@ struct Case {
 }
 impl Case {
     fn new() -> (Self, FileSupervisedDriver) {
+        Self::new_with_schedule(&[])
+    }
+    fn new_with_schedule(schedule: &[(u64, u64)]) -> (Self, FileSupervisedDriver) {
         let root = Directory::new();
         let (mut host, reviewer) = FileOversight::create_with_learned_text_stream(
             root.store(),
@@ -38,6 +41,9 @@ impl Case {
             step(&mut host);
         }
         let (actor, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
+        if !schedule.is_empty() {
+            supervisor.reserve_review_rounds(schedule).unwrap();
+        }
         let (port, grant) = supervisor.convene_port(64, 4).unwrap();
         let source = reader(&root);
         publish(&root.store().with_extension("policy"), &capture(1));
@@ -481,3 +487,5 @@ fn explicit_successor_spends_the_original_remaining_poll_allowance() {
 }
 
 mod boundaries;
+#[path = "reserved_rounds.rs"]
+mod reserved_rounds;

@@ -130,6 +130,12 @@ impl FileSupervisedDriver {
             if self.job.is_some() || self.learned_probe_review().is_some() {
                 return Err(not_started(Error::WrongState));
             }
+            self.supervisor
+                .check_initial_review_rounds(
+                    request,
+                    launch.schedule.rounds.iter().map(|round| round.round),
+                )
+                .map_err(not_started)?;
             self.ensure_child_slot().map_err(not_started)?;
             let mut host = self.supervisor.host_mut().map_err(not_started)?;
             if host.storage_failure().is_some() {

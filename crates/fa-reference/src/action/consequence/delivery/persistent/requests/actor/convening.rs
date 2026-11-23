@@ -1,6 +1,7 @@
 //! Explicit, finite requests to reopen an original held congress. Queueing is
 //! not a review, an approval, a new observation or an execution permit.
 mod port;
+mod schedule;
 
 use super::{FileActorSupervisor, Knowledge, OwnerRef};
 use crate::Error;
@@ -229,11 +230,18 @@ struct Grant {
     operations: Cell<usize>,
     records: RefCell<BTreeMap<u64, Record>>,
     native_offer: RefCell<Option<NativeOffer>>,
+    planned: Rc<BTreeMap<u64, u64>>,
     scope: Scope,
     issuer: Weak<()>,
 }
 pub(super) struct Selection {
     grant: Weak<Grant>,
+    // A predeclared fixed schedule exists before issuance. Revoking an issued
+    // grant must never make that slot available for a fresh allowance.
+    issued: bool,
+    // Exact round -> request ownership for the complete resident schedule.
+    // It survives grant retirement, and is never a source of effect authority.
+    planned: Rc<BTreeMap<u64, u64>>,
     // Reserved round IDs survive revocation without retaining authority or its
     // receipt cache. At most the original 128 operation slots can enter here.
     rounds: BTreeSet<u64>,

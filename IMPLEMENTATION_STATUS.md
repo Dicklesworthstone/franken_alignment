@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-22: preserve native learned review round ownership
+
+The original supervisor can now reserve one bounded complete fixed round-to-request
+schedule before issuing its convening grant. Reserved dynamic successors cannot
+consume future fixed IDs; the exact original same-request fixed successor stays
+available. Native and process learned launches validate the full selected round
+set before clock or worker work. IDs already admitted for failed or abandoned
+successors remain spent after grant revocation, even when no Begin was recorded.
+This closes the original learned-launch gap in the shared round namespace without
+renumbering reviews, granting publication authority or replenishing work.
+
+Five added native regression functions cover atomic selection and no grant
+reissue, a real held Message followed by a fresh permitted successor and the exact
+future Finish with its separate human key, the original fixed-slot successor,
+pre-clock schedule substitution refusal, and failed/abandoned identity retention.
+The native files pass scoped pinned-nightly syntax/format checks and independent
+source review. Required native tests and the canonical xtask check through RCH
+both exit 127 before compilation because `rch` is unavailable. Compilation,
+runtime, Clippy and full qualification remain pending; no source manifest,
+acceptance condition or packet is closed. Resident service startup wiring is the
+next integration of this native reservation, not part of this source result.
+See [the reserved review contract](docs/LEARNED_RESERVED_REVIEW.md).
+
 ## 2026-11-22: expose predictive held successors through the live operator
 
 The existing learned operator `convening` selection now admits original native

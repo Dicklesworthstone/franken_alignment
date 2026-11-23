@@ -24,19 +24,30 @@ impl FileActorSupervisor<FileOversight> {
         if owner.host.storage_failure().is_some() {
             return Err(JournalError::Unavailable);
         }
-        if owner.convening.is_some() {
+        if owner
+            .convening
+            .as_ref()
+            .is_some_and(|selected| selected.issued)
+        {
             return Err(Error::Duplicate.into());
         }
+        let planned = owner.convening.as_ref().map_or_else(
+            || Rc::new(BTreeMap::new()),
+            |selected| Rc::clone(&selected.planned),
+        );
         let grant = Rc::new(Grant {
             queries: Cell::new(queries),
             operations: Cell::new(operations),
             records: RefCell::new(BTreeMap::new()),
             native_offer: RefCell::new(None),
+            planned: Rc::clone(&planned),
             scope: owner.host.actor_explanation_scope(),
             issuer: owner.host.journal_tail_identity(),
         });
         owner.convening = Some(Selection {
             grant: Rc::downgrade(&grant),
+            issued: true,
+            planned,
             rounds: BTreeSet::new(),
         });
         Ok((
@@ -237,7 +248,8 @@ impl FileActorSupervisor<FileOversight> {
 
     /// Bounded observation-only allocator for EVERY initial or successor helper
     /// review. Opaque external request IDs do not own the native round namespace.
-    /// Failed/abandoned admitted IDs remain excluded after grant revocation.
+    /// Fixed schedules and failed/abandoned admitted IDs remain excluded after
+    /// grant revocation. Callers with fixed IDs must use those exact IDs instead.
     pub fn next_review_round(&self, preferred: u64) -> Result<u64, JournalError> {
         if preferred == 0 {
             return Err(Error::InvalidInput.into());
@@ -249,13 +261,16 @@ impl FileActorSupervisor<FileOversight> {
         if owner.host.storage_failure().is_some() {
             return Err(JournalError::Unavailable);
         }
+        let planned = owner
+            .convening
+            .as_ref()
+            .map_or(0, |selected| selected.planned.len());
         let mut round = preferred;
-        for _ in 0..=MAX_OBSERVED_ROUNDS + MAX_CONVENE_OPERATIONS {
+        for _ in 0..=MAX_OBSERVED_ROUNDS + MAX_CONVENE_OPERATIONS + planned {
             if !owner.host.convene_round_used(round)
-                && owner
-                    .convening
-                    .as_ref()
-                    .is_none_or(|selected| !selected.rounds.contains(&round))
+                && owner.convening.as_ref().is_none_or(|selected| {
+                    !selected.rounds.contains(&round) && !selected.planned.contains_key(&round)
+                })
             {
                 return Ok(round);
             }
@@ -460,6 +475,13 @@ fn block(
     native_offer: Option<&NativeOffer>,
 ) -> Option<FileConveneBlockReason> {
     use FileConveneBlockReason::*;
+    if grant.planned.get(&round).is_some_and(|request| {
+        native_offer.is_none_or(|offer| {
+            offer.mode != NativeOfferMode::Fixed || offer.basis.request != *request
+        })
+    }) {
+        return Some(RoundAlreadyUsed);
+    }
     if records.contains_key(&round)
         || (native_offer.is_none_or(|offer| offer.mode != NativeOfferMode::Fixed)
             && host.convene_round_used(round))

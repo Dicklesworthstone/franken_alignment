@@ -127,6 +127,10 @@ impl FileSupervisedDriver {
             if self.job.is_some() || self.learned_probe_review().is_some() {
                 return Err(JournalError::from(Error::WrongState));
             }
+            self.supervisor.check_initial_review_rounds(
+                request,
+                launch.rounds.iter().map(|round| round.round),
+            )?;
             self.ensure_child_slot()?;
             let mut host = self.supervisor.host_mut()?;
             if host.storage_failure().is_some() {

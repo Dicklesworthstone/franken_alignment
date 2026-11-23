@@ -37,6 +37,27 @@ The original start method continues to select the existing fixed-slot mode.
 An independently chosen operator grant supplies a separate finite operation
 ceiling; it never creates native work capacity.
 
+## Preserve independently selected fixed round identities
+
+A host that selects several future learned reviews can call
+`FileActorSupervisor::reserve_review_rounds(&[(request, round), ...])` once
+before issuing its original convening grant. The bounded, atomic selection
+belongs to the original supervisor and binds every fixed round to its intended
+external request. It creates no review, journal event, model work or authority.
+
+A reserved successor cannot consume one of these planned IDs. The original
+fixed-slot successor remains usable only for its exact owning request. Initial
+native and process-helper launches must match that request's complete selected
+round set, and perform this check before clock, child or evaluator work. The
+ordinary allocator also skips all planned IDs. No round is silently renamed.
+
+IDs admitted for a dynamic successor remain spent after a failed or abandoned
+handoff and after grant revocation. The new initial-launch guard checks that
+original supervisor namespace as well as the acknowledged native round history.
+Neither installing a schedule nor dropping its grant permits a replacement
+convening allowance. A recovered owner must separately select its remaining
+future schedule; it cannot reuse a round already recorded in its journal.
+
 ## Keep one original live review and one offer
 
 The same `FileNativeSupervisedDriver` stays alive across the Hold. It retains

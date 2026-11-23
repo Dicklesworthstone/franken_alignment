@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-22: protect original learned review round identities
+
+- Reserve a complete finite fixed round schedule in its original supervisor
+  before issuing a convening grant, keeping each ID bound to its request.
+- Keep dynamic successors away from future fixed reviews and preserve the exact
+  same-request fixed successor; never silently renumber the selected schedule.
+- Reject reuse of failed or abandoned admitted successor IDs during later native
+  or process learned startup, before clock or child work.
+- Add five original-owner lifecycle regression functions, including actual
+  Message/Finish publication with distinct human keys. Scoped syntax/format and
+  independent source review completed; required RCH execution remains pending.
+
 ## 2026-11-22: integrate predictive native held reviews with live services
 
 - Allow required raw and owned pre-output native recipes through the existing
