@@ -1,4 +1,4 @@
-//! Independent ground-truth intake on the SAME live native authority owner.
+//! Independent case observation and ground-truth intake on the SAME live owner.
 //! One finite cooperative service spans the complete publication schedule.
 #[path = "../../../native_andon/assessment.rs"]
 mod assessment;
@@ -18,7 +18,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     FileOversight, credibility::FileIndependentEvaluator,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor;
-use protocol::{Basis, Outcome, Request};
+use protocol::{Basis, Outcome, Request, case::CaseRequest};
 use std::{
     fs,
     io::{self, Read, Write},
@@ -37,6 +37,21 @@ struct Connection {
     socket: UnixStream,
     input: Vec<u8>,
     output: Option<(Vec<u8>, usize)>,
+}
+
+enum Operation {
+    Assess(Request),
+    Case(CaseRequest),
+}
+
+impl Operation {
+    fn accept(settings: &Settings, bytes: &[u8]) -> Result<Self, String> {
+        // Both schemas are closed and disjoint. Neither parser does owner work.
+        // The same authenticated connection and finite allowances cover both.
+        Request::accept(settings, bytes)
+            .map(Self::Assess)
+            .or_else(|_| CaseRequest::accept(settings, bytes).map(Self::Case))
+    }
 }
 
 pub(super) struct Service {
@@ -67,6 +82,7 @@ impl Service {
         settings.check_unbound()?;
         {
             let host = driver.supervisor().host().map_err(debug)?;
+            evaluator.check_owner(&host).map_err(debug)?;
             let config = host
                 .andon_config()
                 .map_err(debug)?
@@ -249,13 +265,14 @@ impl Service {
             let mut buffer = [0_u8; 4096];
             match connection.socket.read(&mut buffer[..allowance]) {
                 Ok(0) => {
-                    let request = match Request::accept(&self.settings, &connection.input) {
+                    let request = match Operation::accept(&self.settings, &connection.input) {
                         Ok(request) => request,
                         Err(_) => return,
                     };
                     // EOF seals the entire request. Prefixes and a merely quiet
-                    // socket cannot enter a native label or refresh its clock.
-                    let response = match self.apply(supervisor, &request, clock) {
+                    // socket cannot disclose a case, enter a native label or
+                    // refresh its clock.
+                    let response = match self.execute(supervisor, &request, clock) {
                         Ok(response) => response,
                         Err(_) => {
                             self.retire();
@@ -286,6 +303,30 @@ impl Service {
         self.connection = Some(connection);
     }
 
+    fn execute(
+        &self,
+        supervisor: &mut FileActorSupervisor<FileOversight>,
+        request: &Operation,
+        clock: &mut impl FnMut() -> Result<ElapsedTick, String>,
+    ) -> Result<Vec<u8>, String> {
+        match request {
+            Operation::Assess(request) => self.apply(supervisor, request, clock),
+            Operation::Case(request) => {
+                // One immutable original-owner borrow supplies both the case
+                // and its evaluation predecessor. Observation reads no clock
+                // and acquires no helper, source, journal or effect authority.
+                let host = supervisor.host().map_err(debug)?;
+                if host.inspect().stop.is_some() || self.started.elapsed() >= self.wall {
+                    return Err("original evaluator owner is stopped or expired".into());
+                }
+                request.observe(
+                    &host,
+                    self.evaluator.as_ref().ok_or("evaluator role retired")?,
+                )
+            }
+        }
+    }
+
     fn apply(
         &self,
         supervisor: &mut FileActorSupervisor<FileOversight>,
@@ -296,10 +337,13 @@ impl Service {
         if host.inspect().stop.is_some() {
             return Err("original owner is stopped".into());
         }
+        let evaluator = self.evaluator.as_ref().ok_or("evaluator role retired")?;
+        // Reject replaced custody before a benign assessment can append Time.
+        evaluator.check_owner(&host).map_err(debug)?;
         let before = Basis::observe(&host)?;
         let result = request.assessment.apply(
             &mut host,
-            self.evaluator.as_ref().ok_or("evaluator role retired")?,
+            evaluator,
             &mut || {
                 if self.started.elapsed() < self.wall {
                     Ok(())

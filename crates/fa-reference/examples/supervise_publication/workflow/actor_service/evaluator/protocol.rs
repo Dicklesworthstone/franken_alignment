@@ -1,5 +1,8 @@
 //! Same closed assessment request; distinct live acknowledgment without a
 //! fabricated recovery Fence or an assertion that independent custody was saved.
+#[path = "protocol/case.rs"]
+pub(crate) mod case;
+
 use super::{
     Settings,
     assessment::{AssessmentRequest, MAX_ASSESSMENT_BYTES},

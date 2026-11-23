@@ -2,8 +2,10 @@
 
 For ordinary live services, [select `--andon` and independent evaluator custody](LIVE_ANDON_EVALUATION.md)
 to populate these native ledgers while the original owner retains its journal.
-The separate `evaluator-assess` client attaches original case-bound assessments;
-this Ledger capability remains a finite observation and grants no evaluator role.
+The separate `evaluator-case` client reads the exact original case identity and
+evaluation predecessor, and `evaluator-assess` attaches independently prepared
+case-bound assessments. This Ledger capability remains a finite observation and
+grants no evaluator role.
 
 The native Tower `ledger` read exposes the original durable owner's helper
 credibility and false-stop accounting to an independently authorized operator.

@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: discover cases through the original live evaluator
+
+The separately authenticated evaluator can now use `evaluator-case PROFILE ROUND`
+to obtain the exact original applied case and global evaluation predecessor while
+the original publication owner keeps its journal lock. A single immutable borrow
+produces an explicit Knowledge value with native journal, evaluation, control and
+authority coordinates. Case identifiers and revisions retain full-width decimal
+strings; a legitimate initial authority epoch of zero remains readable.
+
+Reads and assessments share the existing credential checks, EOF sealing,
+candidate/I/O/byte limits, wall deadline and Stop-first service checkpoints.
+The native evaluator brand is checked before any case or basis disclosure and at
+service startup; replacing an owner with identical numeric scope cannot transfer
+custody. Reads obtain no fresh clock, source, replay, helper, human approval,
+label or effect authority. Missing cases are Unknown without invented data.
+
+The authenticated client validates the closed request-bound observation before
+output. A read does not reserve its evaluation predecessor: another recorded
+review or assessment may make a later label stale, and the user must explicitly
+rediscover and prepare a new assessment. No retry or label is automated. The L8
+read is registered and documented, while generic actor/operator Tower dispatch
+continues to refuse it.
+
+Eight protocol, eight native-service, five real-socket client and one generic
+Tower registration regression functions are authored. Positive controls cover
+actual case-derived assessment and the valid epoch-zero Allow case; causal
+negatives cover foreign and recovered custody, stale predecessors, malformed
+frames, unauthorized peers, finite spending, Stop and unvalidated output.
+Independent source review corrected both the global revision accounting and
+the initial epoch boundary. Registry/schema consistency and remote diff checks
+are separate from runtime verification.
+
+The attempted required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+exited 127 because `rch` is unavailable. Compilation, Rust formatting/Clippy and
+runtime tests remain unexecuted for these changes. The executor also disconnected
+during editing; GitHub blob readbacks preserve the exact reviewed source.
+Bead `franken_alignment-address-resolver-6w62.6.1` and its parent remain in
+progress. No FA-105, FA-125 or deployment qualification is claimed.
+
 ## 2026-11-23: bind evaluator reads and preflight work to original custody
 
 The original native independent evaluator now exposes an immutable case accessor

@@ -351,6 +351,16 @@
       "note": ""
     },
     {
+      "verb": "evaluator-case",
+      "layer": "L8",
+      "class": "read",
+      "authority": "separately configured kernel-authenticated independent evaluator holding the original native evaluator role",
+      "idempotency": "explicit current observation; repeated reads consume the same original finite service allowance and never cache or reserve an evaluation predecessor",
+      "cost_class": "bounded immutable original-owner observation and cumulative original transport allowance",
+      "response": "Knowledge<EvaluationCaseIdentity> with exact native journal, evaluation, control and authority basis; never a ticket or label",
+      "note": "Linux supervise_publication evaluator-case adapter on the same independent live evaluator endpoint. Generic actor/operator Tower dispatch remains unsupported. Missing cases are Unknown; foreign or faulted custody refuses. No Time, source, replay, label, policy or effect work."
+    },
+    {
       "verb": "evaluator-assess",
       "layer": "L8",
       "class": "mutation",

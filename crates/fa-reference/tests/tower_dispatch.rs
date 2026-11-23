@@ -1606,3 +1606,67 @@ fn import_boundaries_refuse_mismatched_bases_limits_and_duplicate_predicate_ids(
         .expect("advanced source coordinate");
     assert!(TowerBuilder::new(advanced, basis(4), TowerLimits::default(), 1).is_ok());
 }
+
+#[test]
+fn evaluator_case_registration_keeps_case_disclosure_off_generic_tower_routes() {
+    let verb: Verb = "evaluator-case".parse().unwrap();
+    assert_eq!(verb, Verb::EvaluatorCase);
+    assert_eq!(verb.class(), VerbClass::Read);
+    assert!(!verb.is_connected());
+    let mut tower = fixture();
+    let before = tower.remaining_read_units();
+    let query = request(&tower, verb);
+    let response = tower.dispatch(&access(), query);
+    assert_eq!(response.envelope.status, ResponseStatus::Error);
+    assert_eq!(
+        response.envelope.reason_code,
+        Some(ReasonCode::CapabilityUnsupported)
+    );
+    assert_eq!(tower.remaining_read_units(), before);
+    assert_eq!(tower.journal_control_seq(), CONTROL_SEQ);
+
+    #[cfg(unix)]
+    {
+        use fa_reference::tower::publication::{
+            PublicationLimits, PublicationResult, PublicationTower,
+        };
+        let root = native_evaluator_fixture::Directory::new();
+        let (port, supervisor, _human, _proposal) = native_evaluator_fixture::create(&root);
+        let scope = native_evaluator_fixture::profile().delivery.scope;
+        let mount = Address::new(
+            scope.tenant.to_string(),
+            Noun::Run,
+            scope.run.to_string(),
+            Some(1),
+        )
+        .unwrap();
+        let mut native =
+            PublicationTower::new(mount.clone(), port, PublicationLimits::default()).unwrap();
+        let original = std::fs::read(root.store().join("delivery.bin")).unwrap();
+        for operator in [false, true] {
+            let access = TowerAccess::new(
+                CallerScope::full_tenant_access(scope.tenant.to_string()),
+                operator,
+                all_purposes(),
+                10,
+            );
+            let response = native.dispatch(
+                &access,
+                TowerRequest::new("separate-evaluator-custody-required", mount.clone(), verb),
+            );
+            assert_eq!(
+                response.envelope.reason_code,
+                Some(ReasonCode::CapabilityUnsupported)
+            );
+            assert_eq!(
+                response.result,
+                PublicationResult::Refused(Knowledge::unknown(UnknownReason::Unavailable))
+            );
+            assert_eq!(
+                std::fs::read(root.store().join("delivery.bin")).unwrap(),
+                original
+            );
+            assert_eq!(supervisor.host().unwrap().inspect().executions, 0);
+        }
+    }
+}

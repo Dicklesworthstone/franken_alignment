@@ -815,6 +815,18 @@ fn foreign_evaluator_refuses_shared_assessment_before_timestamping_another_owner
     original.review(1);
     replacement.review(1);
     assert_eq!(original.actor.scope, replacement.actor.scope);
+    {
+        let original_host = original.driver.supervisor().host().unwrap();
+        let replacement_host = replacement.driver.supervisor().host().unwrap();
+        assert_eq!(
+            original_host.evaluation_ticket(101).unwrap().case(),
+            replacement_host.evaluation_ticket(101).unwrap().case()
+        );
+        assert_eq!(
+            original_host.credibility_report().unwrap().revision,
+            replacement_host.credibility_report().unwrap().revision
+        );
+    }
     let request = original.request(1);
     let before = replacement.image();
     let revision = replacement
@@ -854,3 +866,9 @@ fn foreign_evaluator_refuses_shared_assessment_before_timestamping_another_owner
     );
     assert_ne!(original.image(), expected);
 }
+
+#[path = "tests/case_service.rs"]
+mod case_service;
+
+#[path = "tests/case_client.rs"]
+mod case_client;

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-23: expose original cases to the independent live evaluator
+
+- Add the bounded authenticated `evaluator-case` command on the original service.
+- Return exact case identity and one current native evaluation basis as Knowledge;
+  keep valid epoch-zero cases, Unknown and foreign/faulted custody distinct.
+- Share the original finite transport/Stop lifecycle with assessment, preserving
+  read-only journal behavior and explicit stale-predecessor refusal.
+- Validate full client responses before output; register the L8 read while keeping
+  generic actor/operator Tower dispatch unsupported.
+- Add 22 protocol, service, client and registration regression functions and the
+  narrow in-progress Bead. Independent source and diff review completed; required
+  RCH execution could not start (exit 127), so qualification remains open.
+
 ## 2026-11-23: check original evaluator custody before native work
 
 - Add immutable original-case discovery and a native evaluator owner check.

@@ -41,6 +41,59 @@ variant is `serve-create-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE
 WITNESS_PROFILE` with the same flags; only the original simple witness composition
 is supported. An explicit `--precheck-schedule` can accompany `--requests`.
 
+## Discover the original case before labeling
+
+The same independently configured evaluator can read one exact applied case
+without reopening the live journal:
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  evaluator-case EVALUATOR_PROFILE 101
+```
+
+The round argument is a nonzero canonical decimal integer. This uses the same
+original endpoint, evaluator role, kernel credential checks, lifetime and finite
+candidate/I/O/byte allowances as `evaluator-assess`. A read and a later label
+therefore require separate candidates from the existing allowance. Reconnecting
+or repeating a read does not replenish it. No additional profile or grant is
+created.
+
+A `fa.native-evaluator-case-request/1` binds the complete selected audience and
+round. The validated `fa.live-evaluator-case/1` response binds that exact request
+and returns `Knowledge`. A Known value contains only the original round, attempt,
+policy generation, congress generation and evidence-root identity. Its one native
+basis supplies journal revision, global evaluation revision, control sequence and
+authority epoch from the same immutable owner borrow. These coordinates and case
+identities are canonical decimal strings; authority epoch zero is valid.
+
+Use `knowledge.value` to bind the later assessment and
+`knowledge.basis.evaluation_revision` as its expected evaluation predecessor.
+The existing assessment document still takes unsigned integer literals for
+numeric fields. Preserve the full integer values when preparing it. Independently
+supply the origin, evidence identity and truth; discovery provides none of them.
+A recorded review itself advances the global evaluation revision, as does a
+new assessment. Another update between discovery and labeling can therefore
+make this predecessor stale. Explicitly rediscover before preparing a new label;
+the client does not retry, relabel or automatically assess a case.
+
+Unknown `case_not_recorded` has no basis or case value. The client prints that
+explicit observation and returns an error. It is not a claim of absence over an
+entire history. A foreign, recovered-old or storage-faulted custodian cannot
+disclose a case or basis. Stopped or retired services cannot admit a new read.
+Partial frames remain sealed until EOF and still yield to the independent Stop
+checkpoint.
+
+A read obtains no source, clock, replay, helper, human approval, native ticket,
+label or effect authority. It leaves the complete durable image unchanged.
+Member verdicts, input/payload bytes, individual labels and the noncloneable role
+are not serialized. The exact request, closed result shape and
+`effect_authority:false` are validated before client output. This validates the
+declared authenticated observation, not the empirical truth of a later label.
+
+The command is registered as an L8 read adapter. Generic actor/operator Tower
+requests remain unsupported; knowing a case identifier does not supply the
+separate evaluator role.
+
 ## Assess a completed review while service continues
 
 Run this command as the separately configured evaluator process:
@@ -67,8 +120,9 @@ evaluator role remain required.
 used by the offline evaluator. It names the original round, attempt, policy and
 congress generations, exact case evidence root, expected global evaluation
 revision, independent origin, evidence ID and benign/violation/censored truth.
-Obtain those identities from the independent evaluation of the original applied
-case; the public Ledger deliberately does not expose raw labels or evidence.
+Use the original case discovery above to obtain these exact identities and
+predecessor; the public Ledger deliberately does not expose individual cases,
+raw labels or evidence.
 
 The server obtains the ticket from its current native owner and compares the
 whole case identity. A new assessment requires the exact evaluation predecessor.
