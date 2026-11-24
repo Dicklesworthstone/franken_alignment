@@ -1,5 +1,46 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: continue accounted learned publication through fresh review and evaluation
+
+The paired Andon/evaluator selection now supports explicit single-request
+`--continue-generation`, `--after-message` and `--finish-after-message` on an
+existing accounted learned owner. It requires the independently retained input
+history anchor, a new output, full original/current accounting windows and an
+evaluation revision floor. Complete numerical, guard, publication and policy
+requirements remain independently selected; no on-disk omission becomes consent.
+
+Live open uses the original accounted cursor and the same shared one-event
+cooperative driver. The invocation deadline and authenticated Stop admission run
+before open, at each event and separately at Ready. Pending Stop takes the native
+terminal-only path before ordinary fencing or role issuance and retains its
+acknowledged anchor. Normal completion captures its successor before request and
+predecessor checks, retaining the cut even when later startup refuses.
+
+Fresh time/source eligibility, helper review and human approval remain mandatory
+for new publication. Recovery preserves numerical samples and cumulative work,
+evaluation history, costs, incidents and unknown liabilities. A new explicitly
+started process has a finite new service invocation; it does not revive old roles
+or reset native accounting. Post-review evaluation uses the remaining invocation
+allowance and can assess pending historical cases without resampling or rereview.
+The final retained anchor includes its acknowledged labels and accounting.
+
+The closed grammar preserves fresh resident evaluated creation and refuses
+resident recovery, predictors, joint/topology/campaign/checkpoint compositions and
+offline/receipt-only modes. Input/output and future endpoint custody extend to
+the retained archive and selected identity/credential assets. See
+[live accounted learned continuation](docs/LIVE_ANDON_EVALUATION.md#continue-an-evaluated-learned-service).
+
+Nine substantive regressions and one independent evaluator subprocess entry are
+authored, covering actual partial-generation continuation, Message/Finish,
+deferred original labels, fresh human rejection, invalid predecessor retention,
+complete contract/floor refusal, every replay deadline and authenticated Stop
+including the actual command's Ready cut. Scoped qualified source checks and
+independent review are recorded in
+`artifacts/execution/2026-11-23-accounted-learned-continuation-source-checks.log`.
+Required RCH compilation, runtime tests, Clippy and canonical qualification remain
+pending because the runner is unavailable. FA-026/105/134 and bead .6.7 remain in
+progress; no runtime or production qualification is claimed.
+
 ## 2026-11-23: recover learned numerical state with complete native accounting
 
 The new sealed accounted learned recovery cursor composes the original numerical

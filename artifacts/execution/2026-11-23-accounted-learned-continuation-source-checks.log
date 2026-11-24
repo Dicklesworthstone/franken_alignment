@@ -1,0 +1,54 @@
+Accounted learned live continuation — source-only verification
+Base: 6467ca2804935573a5a4876a89c15ac548c67830
+Independent source review: root, service owner and native recovery owner.
+Runtime qualification is pending; no compiler/test/Clippy execution is claimed.
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --version
+exit=0
+rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/cooperative.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs
+exit=0
+
+$ git diff --check -- crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/cooperative.rs crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs docs/LEARNED_ANDON_RECOVERY.md docs/LIVE_ANDON_EVALUATION.md docs/LEARNED_OPERATOR_PUBLICATION.md docs/COOPERATIVE_LEARNED_OPERATOR_RECOVERY.md IMPLEMENTATION_STATUS.md CHANGELOG.md registry/roadmap.json .beads/issues.jsonl
+exit=0
+
+e0f166f2e0402a7074d9b9daf67cd8faa0d03c9b4d8433e708efc8a7c070f98d  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs
+cfcd6056c1f5505a7c4cb19892764d31efc90404e5efdd1e3876a4af301aa313  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs
+d403b15b9b614ec24c3ec957e7d6e0270d77a01a9998408f3da8d3f910ca430e  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs
+398bd5aaa52489b0a1b0caa0573e9af9b9b21ccd3e94cda4bfb3a5bec77a013d  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs
+17c9a2768b7cd2532577769fee1b2dca6fc3e05738b073c92aa4aac3811cae40  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery.rs
+4868c6e0c93731a782e356d06a0621d68f4b578900642790eabf147f89ca806e  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/recovery/cooperative.rs
+bbe710fa3ae5b8d93f6b3973d3421af5a40efdb271b342c26144eff6c67e3644  crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs
+
+New substantive service regression functions: 9
+Independent evaluator subprocess test entry: 1
+
+$ bash -c 'RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check'
+exit=127
+bash: line 1: rch: command not found
+
+Required remote gate blocked: rch is not installed. No local compilation fallback was used.
+
+The execution workspace disconnected after these checks. Before publishing,
+each recovered Rust source was compared against its SHA-256 recorded above.
+All seven published Rust files match the exact checked bytes. This comparison
+is recovery-integrity evidence only; it is not compilation or test execution.

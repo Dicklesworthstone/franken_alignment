@@ -107,9 +107,31 @@ and an independent benign label charges the original Andon ledger. Evaluator
 authority retires before final history capture and cannot supply the human key.
 
 This selection supports plain and simple checked creation, optional precheck
-and paired operator/generation flags. Predictors, joint recipes/accounting,
-topology, campaigns, checkpoints, credibility activation, continuation,
-recovery and resident sequences require their separate complete compositions.
+and paired operator/generation flags. An existing accounted owner can explicitly
+continue through the same original generation, Message and Finish checks:
+
+```text
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --actor-profile ACTOR_PROFILE \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor RETAINED_INPUT --retain-history-anchor NEW_OUTPUT
+```
+
+Use exactly one of `--continue-generation`, `--after-message PREVIOUS_REQUEST`
+or `--finish-after-message PREVIOUS_REQUEST`. Both independent archives are
+mandatory for recovery. The supplied accounting profile must retain the original
+identity/initial windows, complete current window inventory and evaluation floor;
+the complete numerical recipe, guards, simple publication contract, policy and
+history prefix remain required. The original cooperative replay retains deadline
+and authenticated Stop handling before live roles, fresh source eligibility and
+new review/human approvals. Numerical spending and lifetime accounting survive;
+the explicitly restarted process receives a new finite service invocation.
+Pending old cases remain independently assessable after the new request ends.
+
+Predictors, joint recipes/accounting, topology, campaigns, checkpoints,
+credibility activation and offline/receipt-only modes require their separate
+complete compositions. Fresh resident evaluated creation is supported separately;
+resident evaluated recovery remains unsupported.
 See [live learned evaluation](LIVE_ANDON_EVALUATION.md#create-an-evaluated-learned-service)
 for exact profiles, custody checks, Stop/deadline behavior and pending execution
 qualification.
@@ -994,6 +1016,14 @@ evaluator deadline regression. Scoped qualified nightly-2026-09-08 Rust parsing,
 format and whitespace checks passed. Its compilation, runtime tests, Clippy and
 canonical gate remain unexecuted because RCH is unavailable; the historical
 execution record below does not qualify this new selection.
+
+The accounted continuation increment adds nine substantive regressions and a
+separate evaluator subprocess entry. They exercise real command generation,
+Message/Finish, old pending labels, fresh human rejection, exact recovery
+requirements, all replay deadlines, authenticated Stop and retained cuts after
+post-fence refusal. Its source checks and remote gate attempt are recorded in
+`artifacts/execution/2026-11-23-accounted-learned-continuation-source-checks.log`;
+required compilation/runtime/Clippy/canonical qualification remain pending.
 
 The last executed learned-command selection predates recipe version 5. It was
 independently reviewed and executed with qualified `nightly-2026-09-08`.

@@ -158,10 +158,11 @@ Optional `--precheck-profile` and paired `--operator-profile` /
 `--tower-generation` preserve their existing contracts. A separately installed
 operator Ledger grant can read accounting and calibration Findings. Required
 raw/owned predictors, held-out joint recipes, joint accounting, stronger witness
-compositions, topology, campaigns, checkpoints, credibility activation,
-continuation and recovery refuse this single-request opt-in. Fresh resident
-learned sequences use the separately complete composition below. In particular, an
-accounted learned journal cannot use the narrower evaluated-only recovery wrapper.
+compositions, topology, campaigns, checkpoints and credibility activation refuse
+this single-request opt-in. Explicit single-request continuation uses the complete
+anchored recovery composition below. Fresh resident learned sequences use their
+separate composition. An accounted learned journal cannot use the narrower
+evaluated-only recovery wrapper.
 
 Six substantive learned-service regression functions use the original numerical
 and helper paths with an independent evaluator subprocess: human approval and
@@ -174,6 +175,72 @@ test-only accounting harness retains the original live owner for inspection;
 it does not recover or replace it. Qualified scoped parsing/format and whitespace
 checks passed; RCH compilation, runtime tests, Clippy and canonical qualification
 remain unexecuted because the runner is unavailable.
+
+## Continue an evaluated learned service
+
+The same paired profiles support an explicit restart of an existing accounted
+learned owner. Supply the independently retained history anchor and a new output
+in addition to the actor, reviewer, accounting and evaluator profiles:
+
+```text
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --actor-profile ACTOR_PROFILE \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor RETAINED_INPUT --retain-history-anchor NEW_OUTPUT
+```
+
+Select exactly one original continuation mode:
+
+| Mode | Original work admitted after recovery |
+| --- | --- |
+| `--continue-generation` | Complete the same unfinished numerical generation before its original request; retained samples are not drawn again. |
+| `--after-message PREVIOUS_REQUEST` | Admit a new request only after the named original Message has a confirmed native receipt. |
+| `--finish-after-message PREVIOUS_REQUEST` | Admit Finish against the confirmed original Message history, with a fresh helper review and human decision. |
+
+The marginal accounting profile supplies the original deployment/evaluator and
+initial windows, **all** current windows, and an independently retained minimum
+evaluation revision. The original numerical recipe, complete learned guards,
+current policy/floors, simple publication requirements and exact history prefix
+must also match. These expectations come from the supplied profiles and archive;
+recovery never learns a more permissive contract from the journal being checked.
+Input/output archives remain distinct, and evaluator custody covers the retained
+input alongside recursive identity, credential, witness and role inputs.
+
+The [complete native cursor](LEARNED_ANDON_RECOVERY.md) replays one original event
+at a time. The same invocation deadline and authenticated Stop intake are checked
+before open, at every event and separately at Ready. A pending authenticated Stop
+uses the original admission Stop/Fence before ordinary fencing or any live role
+release. It retains the acknowledged terminal anchor and original liabilities;
+its receipt does not claim that effects drained. A refused checkpoint or contract
+leaves canonical and staged bytes unchanged.
+
+Ordinary completion acknowledges one native recovery fence, then provisions fresh
+separate roles. The command captures that successor before request/predecessor
+admission, so a later startup refusal can still retain the acknowledged cut.
+Numerical state starts paused, source eligibility and old approvals remain
+withdrawn, and the original fresh time/source, helper and human checks govern new
+publication. Unknown effects remain charged and are not automatically retried.
+
+Each explicitly selected process invocation has its own finite transport and
+evaluation lifetime. It does not revive the previous invocation's roles or unused
+service allowance, reset numerical work, or replace cumulative native accounting.
+Within the new invocation, replay, generation and review consume its original
+deadline; accepted request deadlines can narrow it. Post-review evaluation uses
+only the remaining allowance and can label still-pending historical cases on the
+same recovered owner. It cannot rerun generation/review or supply an effect key.
+The new output anchor includes acknowledged late labels and Andon changes.
+
+Resident recovery, receipt-only/effect-retry modes, offline terminal modes,
+predictors, joint accounting, topology, campaigns, checkpoints and credibility
+activation remain outside this paired live recovery grammar. Fresh resident
+creation retains the separate composition below.
+
+The new `learned/tests/evaluation/recovery.rs` sources exercise actual partial
+generation continuation, recovered Message and Finish, deferred historical labels,
+fresh human rejection, retained cuts on invalid predecessors, contract/floor
+refusals, every replay deadline and authenticated Stop before live role release.
+They are authored regressions with independent source review. Required RCH
+compilation, execution, Clippy and canonical qualification remain pending.
 
 ## Create an evaluated resident learned service
 

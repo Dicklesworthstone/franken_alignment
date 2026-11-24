@@ -905,7 +905,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs",
         "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs",
-        "docs/LEARNED_ANDON_RECOVERY.md"
+        "docs/LEARNED_ANDON_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs",
+        "artifacts/execution/2026-11-23-accounted-learned-continuation-source-checks.log"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2760,7 +2763,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs",
         "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs",
-        "docs/LEARNED_ANDON_RECOVERY.md"
+        "docs/LEARNED_ANDON_RECOVERY.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs",
+        "artifacts/execution/2026-11-23-accounted-learned-continuation-source-checks.log"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3822,7 +3828,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/recovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/recovery.rs",
+        "docs/LEARNED_ANDON_RECOVERY.md",
+        "artifacts/execution/2026-11-23-accounted-learned-continuation-source-checks.log"
       ],
       "founding_ideas": [
         "FI-A06"

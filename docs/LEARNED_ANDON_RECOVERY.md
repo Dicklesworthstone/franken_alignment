@@ -107,6 +107,19 @@ Accounted recovery requires this complete independent contract. Required raw
 or owned predictors need their own complete observer-preserving composition and
 remain outside this role bundle.
 
+## Continue through the live operator
+
+The paired `--andon` / `--evaluator-profile` learned command composes this cursor
+with explicit `--continue-generation`, `--after-message PREVIOUS_REQUEST` and
+`--finish-after-message PREVIOUS_REQUEST`. It requires both an independently
+retained input anchor and a fresh output, uses the original per-event/Ready
+deadline and authenticated Stop handling, and returns to the original source,
+helper and human approval path after successful fencing. Independent evaluation
+then services new and pending historical cases under the remaining finite
+invocation allowance. See
+[live accounted learned continuation](LIVE_ANDON_EVALUATION.md#continue-an-evaluated-learned-service)
+for the complete grammar and its bounded supported composition.
+
 ## Verification boundary
 
 Eight public regression functions use the existing original numerical, native review and

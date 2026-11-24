@@ -7,7 +7,7 @@ use fa_reference::action::consequence::delivery::persistent::{
 pub(super) use fa_reference::action::consequence::delivery::persistent::observed::decoder::learned::FileLearnedRecoveryProgress as Progress;
 use super::debug;
 
-pub(super) fn finish_replay<R, T>(
+pub(in super::super) fn finish_replay<R, T>(
     mut recovery: R,
     checkpoint: &mut impl FnMut(Option<Progress>) -> Result<(), String>,
     progress: impl Fn(&R) -> Progress,

@@ -1,5 +1,7 @@
 //! Real learned generation/native helper review and a separate evaluator process.
 //! Fixed weights exercise custody and two-key causality, not detector quality.
+#[path = "evaluation/recovery.rs"]
+mod recovery_tests;
 use super::super::anchors as archive;
 use super::peer_intake::{self as peers, Behavior};
 use super::*;

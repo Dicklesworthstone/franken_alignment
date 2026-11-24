@@ -86,7 +86,7 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
-    // Independent evaluation owns its fresh-only grammar before any stripper.
+    // Independent evaluation owns its complete create/recover grammar first.
     let (args, evaluation_options) = evaluation::take_options(args, credibility)?;
     let args = args.as_slice();
     // Operator selection owns the whole argv before an offline mode or another
@@ -211,7 +211,7 @@ where F: FnMut() -> ElapsedTick {
         .transpose()?;
     let evaluation = evaluation_options.map(evaluation::Options::read).transpose()?;
     if let Some(selected) = evaluation.as_ref() {
-        selected.check_inputs(&[Path::new(&args[1]), Path::new(&args[2]), Path::new(&args[3])])?;
+        selected.check_inputs(&loaded, &[Path::new(&args[1]), Path::new(&args[2]), Path::new(&args[3])])?;
     }
     let result = if let Some(evaluation) = evaluation.as_ref() {
         run_with_actor_services_evaluated(config, loaded, &peers, live_continuation, finishing,
@@ -401,7 +401,11 @@ where F: FnMut() -> ElapsedTick {
     let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
     let (started, evaluator_role) = match selected_evaluation {
         Some(selected) => {
-            let (custody, evaluator) = selected.create(&config, &loaded)?;
+            let (custody, evaluator) = if continuing {
+                selected.open(&config, &loaded, &mut control, &deadline, &mut time)?
+            } else {
+                selected.create(&config, &loaded)?
+            };
             (topology::Started { custody, source: None, output: None }, Some(evaluator))
         }
         None => (topology::start(&config, &loaded, continuing,
@@ -444,7 +448,7 @@ where F: FnMut() -> ElapsedTick {
             role, &driver, &deadline,
         ).map_err(retain_startup)?),
         (None, None) => None,
-        _ => unreachable!("evaluated creation returns the independently held role"),
+        _ => unreachable!("evaluated startup returns the independently held role"),
     };
     let mut wire = ActorWire::new(port);
     let RequestCycle { driver, response, failure, history, process } = execute_request_with_evaluation(

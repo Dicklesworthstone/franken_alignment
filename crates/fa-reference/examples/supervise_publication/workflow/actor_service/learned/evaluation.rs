@@ -1,10 +1,13 @@
 //! Independent post-review assessment of the same original learned owner.
 //! Selection precedes work; the finite evaluator lifetime includes generation
 //! and review. A late label never reruns either or supplies an effect key.
+#[path = "evaluation/recovery.rs"]
+mod recovery;
 use super::super::{Profile, andon_settings, evaluator};
 use super::{
     Config, Control, Deadline, ElapsedTick, FileHumanReviewer, FileOversight, FileSupervisedDriver,
-    Loaded, PeerProfile, RecoveryReserve, debug, fields, ingress, operator, precheck, recovery,
+    Loaded, PeerProfile, RecoveryReserve, debug, fields, ingress, operator, precheck,
+    recovery as learned_recovery,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::credibility::FileIndependentEvaluator;
 use std::{
@@ -12,13 +15,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "learned evaluation requires fresh create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; optional precheck and paired operator/generation retain their original contracts";
+const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional precheck and paired operator/generation retain their original contracts";
 
 const SEQUENCE_USAGE: &str = "resident learned evaluation requires fresh serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; an optional operator/generation pair retains its original contracts; recovery, governor, predictive, joint, topology and campaign selections need their own composition";
 
 pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
+    history_input: Option<PathBuf>,
 }
 
 /// Own the complete opted-in grammar before another parser can discard a mode.
@@ -36,7 +40,6 @@ pub(super) fn take_options(
     if credibility.is_some()
         || args.first().map(String::as_str) != Some("create-learned-generated")
         || args.len() < 12
-        || (args.len() - 4) % 2 != 0
         || args[1..4]
             .iter()
             .any(|arg| arg.is_empty() || arg.starts_with("--"))
@@ -45,26 +48,57 @@ pub(super) fn take_options(
     }
     let mut accounting = None;
     let mut peer = None;
+    let mut history_input = None;
     let mut seen = BTreeSet::new();
     let mut remaining = args[..4].to_vec();
-    for pair in args[4..].chunks_exact(2) {
-        if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(pair[0].as_str()) {
+    let mut continuing = false;
+    let mut at = 4;
+    while at < args.len() {
+        let flag = args[at].as_str();
+        if !seen.insert(flag) {
             return Err(USAGE.into());
         }
-        match pair[0].as_str() {
-            "--andon" => accounting = Some(PathBuf::from(&pair[1])),
-            "--evaluator-profile" => peer = Some(PathBuf::from(&pair[1])),
+        if matches!(flag, "--continue-generation" | "--after-message" | "--finish-after-message")
+            && std::mem::replace(&mut continuing, true)
+        {
+            return Err(USAGE.into());
+        }
+        if flag == "--continue-generation" {
+            remaining.push(args[at].clone());
+            at += 1;
+            continue;
+        }
+        let value = args.get(at + 1).ok_or(USAGE)?;
+        if value.is_empty() || value.starts_with("--") {
+            return Err(USAGE.into());
+        }
+        match flag {
+            "--andon" => accounting = Some(PathBuf::from(value)),
+            "--evaluator-profile" => peer = Some(PathBuf::from(value)),
+            "--history-anchor" => {
+                history_input = Some(PathBuf::from(value));
+                remaining.extend_from_slice(&args[at..at + 2]);
+            }
+            "--after-message" | "--finish-after-message" => {
+                let predecessor = value.parse::<u64>().map_err(|_| USAGE)?;
+                if predecessor == 0 || predecessor.to_string() != *value {
+                    return Err(USAGE.into());
+                }
+                remaining.extend_from_slice(&args[at..at + 2]);
+            }
             "--actor-profile"
             | "--retain-history-anchor"
             | "--precheck-profile"
             | "--operator-profile"
-            | "--tower-generation" => remaining.extend_from_slice(pair),
+            | "--tower-generation" => remaining.extend_from_slice(&args[at..at + 2]),
             _ => return Err(USAGE.into()),
         }
+        at += 2;
     }
     if !seen.contains("--actor-profile")
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
+        || continuing != history_input.is_some()
     {
         return Err(USAGE.into());
     }
@@ -73,6 +107,7 @@ pub(super) fn take_options(
         Some(Options {
             accounting: accounting.ok_or(USAGE)?,
             peer: peer.ok_or(USAGE)?,
+            history_input,
         }),
     ))
 }
@@ -123,6 +158,7 @@ pub(super) fn take_sequence_options(
     Ok((remaining, Some(Options {
         accounting: accounting.ok_or(SEQUENCE_USAGE)?,
         peer: peer.ok_or(SEQUENCE_USAGE)?,
+        history_input: None,
     })))
 }
 
@@ -130,12 +166,15 @@ pub(super) struct Selection {
     settings: andon_settings::Settings,
     pub(super) peer: evaluator::Settings,
     inputs: [PathBuf; 2],
+    history_input: Option<PathBuf>,
 }
 
 impl Options {
     pub(super) fn read(self) -> Result<Selection, String> {
         let settings = andon_settings::Settings::read(&self.accounting)?;
-        settings.creation()?;
+        if self.history_input.is_none() {
+            settings.creation()?;
+        }
         if settings.joint.is_some() {
             return Err(
                 "learned live evaluation requires the marginal evaluation/Andon profile".into(),
@@ -146,6 +185,7 @@ impl Options {
             settings,
             peer,
             inputs: [self.accounting, self.peer],
+            history_input: self.history_input,
         })
     }
 }
@@ -278,7 +318,7 @@ impl Selection {
             .collect::<Result<BTreeSet<_>, _>>()?;
         for path in paths.iter().chain(self.inputs.iter()) {
             if endpoints.contains(&fields::resolve_root(path)?) {
-                return Err("resident learned service endpoint conflicts with a selected input".into());
+                return Err("learned service endpoint conflicts with a selected input".into());
             }
         }
         Ok(())
@@ -299,11 +339,10 @@ impl Selection {
         credibility: Option<&Path>,
     ) -> Result<(), String> {
         let actor = actor.ok_or(USAGE)?;
-        if continuing
-            || finishing.is_some()
-            || after_message.is_some()
+        if ((finishing.is_some() || after_message.is_some()) && !continuing)
+            || continuing != loaded.recovery_anchor.is_some()
+            || continuing != self.history_input.is_some()
             || credibility.is_some()
-            || loaded.recovery_anchor.is_some()
             || loaded.anchor_output.is_none()
             || loaded.topology.is_some()
             || loaded.checkpoint_on_generation.is_some()
@@ -320,9 +359,14 @@ impl Selection {
         {
             return Err(USAGE.into());
         }
-        self.settings.creation()?;
-        super::recipe::check_creation(config, loaded)?;
-        super::credential::check_creation(loaded)?;
+        if continuing {
+            super::credential::check_selection(loaded)?;
+            self.recovery_requirements(config, loaded)?;
+        } else {
+            self.settings.creation()?;
+            super::recipe::check_creation(config, loaded)?;
+            super::credential::check_creation(loaded)?;
+        }
         if let Some(publication) = &loaded.publication {
             publication.simple_limits()?;
         }
@@ -336,57 +380,59 @@ impl Selection {
             self.settings.config.identity(),
         )?;
         let history = loaded.anchor_output.as_deref().expect("required above");
-        let mut custody = vec![
-            config.source.path(),
-            history,
-            self.inputs[0].as_path(),
-            self.inputs[1].as_path(),
-        ];
+        let mut custody = vec![config.source.path()];
+        custody.extend(self.history_input.as_deref());
         if let Some(precheck) = precheck {
-            custody.push(precheck.socket_path());
+            self.peer.check_custody_paths(&[precheck.socket_path()])?;
         }
         if let Some(publication) = &loaded.publication {
             custody.extend(publication.input_paths().iter().map(PathBuf::as_path));
         }
-        self.peer.check_custody_paths(&custody)?;
+        if let Some(identity) = &loaded.identity {
+            custody.push(&identity.observed_manifest);
+        }
+        if let Some(credential) = &loaded.credential {
+            custody.extend(credential.input_paths());
+        }
+        self.check_sequence_inputs(history, &custody)?;
         // A new output can alias a future endpoint even though neither exists.
         // Refuse before binding any listener or publishing the evaluated owner.
-        let history = fields::resolve_root(history)?;
         let review_socket = reviewer.socket(loaded.request);
         let stop_socket = crate::workflow::control::socket_path(reviewer, loaded.request);
         let mut endpoints = vec![
-            actor.socket.as_path(),
-            review_socket.as_path(),
-            stop_socket.as_path(),
-            self.peer.socket_path(),
+            actor.socket.clone(),
+            review_socket,
+            stop_socket,
+            self.peer.socket_path().to_path_buf(),
         ];
         if let Some(operator) = operator {
-            endpoints.push(&operator.settings.socket);
+            endpoints.push(operator.settings.socket.clone());
         }
         if let Some(precheck) = precheck {
-            endpoints.push(precheck.socket_path());
+            endpoints.push(precheck.socket_path().to_path_buf());
         }
-        for endpoint in endpoints {
-            if history == fields::resolve_root(endpoint)? {
-                return Err(
-                    "learned evaluation history output conflicts with a service endpoint".into(),
-                );
-            }
-        }
+        self.check_history_endpoints(history, &endpoints)?;
+        let custody = custody.into_iter().map(Path::to_path_buf).collect::<Vec<_>>();
+        self.check_sequence_endpoint_inputs(&endpoints, &custody)?;
         Ok(())
     }
 
-    pub(super) fn check_inputs(&self, paths: &[&Path]) -> Result<(), String> {
-        self.peer.check_custody_paths(paths)
+    pub(super) fn check_inputs(&self, loaded: &Loaded, paths: &[&Path]) -> Result<(), String> {
+        let history = loaded.anchor_output.as_deref().ok_or(USAGE)?;
+        self.check_sequence_inputs(history, paths)?;
+        if let Some(path) = &self.history_input {
+            self.check_sequence_inputs(history, &[path])?;
+        }
+        Ok(())
     }
 
     pub(super) fn create(
         &self,
         config: &Config,
         loaded: &Loaded,
-    ) -> Result<(recovery::Custody, FileIndependentEvaluator), String> {
+    ) -> Result<(learned_recovery::Custody, FileIndependentEvaluator), String> {
         self.settings.creation()?;
-        let guards = recovery::requirements(config, loaded).guards;
+        let guards = learned_recovery::requirements(config, loaded).guards;
         let registration = super::credential::registration(loaded)?;
         let (host, roles) = FileOversight::create_andon_guarded_with_learned_generation_reserved(
             &config.store,

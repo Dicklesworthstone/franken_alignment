@@ -121,3 +121,22 @@ stopped before compilation because `rch` is absent (exit 127). The source snapsh
 includes the complete parent tree and this integration; raw attempt logs are
 outside it. No compile/test result is claimed. The scoped bead remains in
 progress; the full FA-014 packet and its prerequisites remain open.
+
+## Complete accounted learned continuation · 2026-11-23
+
+Paired `--andon` / `--evaluator-profile` continuation now uses the same shared
+one-event driver and original Control listener with the
+[complete accounted learned cursor](LEARNED_ANDON_RECOVERY.md). Pre-open, every
+event and Ready retain the original deadline/Stop order. Full independent
+accounting, evaluation, numerical, guard, publication and anchor requirements
+must pass before any live-role handoff; an admitted Stop selects only the native
+terminal target. Both ordinary startup refusal after fencing and acknowledged
+terminal Stop retain their successor anchor through the original output rules.
+
+This supports explicit single-request generation continuation, next Message and
+Finish with fresh role/source/review/human custody. It does not reset historical
+work, labels, costs or unknown liabilities. The shared replay driver changes only
+module visibility so this composition can reuse it. See
+[live continuation](LIVE_ANDON_EVALUATION.md#continue-an-evaluated-learned-service)
+for supported profiles and invocation lifetime. The new causal regression sources
+remain pending the required RCH compilation and execution gate.

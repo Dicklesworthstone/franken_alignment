@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-23: continue accounted learned work with independently anchored recovery
+
+- Extend paired live Andon/evaluator selection to explicit unfinished generation,
+  next Message and Finish, requiring retained input and new output anchors.
+- Reuse original numerical replay and every deadline/Stop checkpoint; exact
+  independent accounting windows/floors and learned contracts precede live roles.
+- Preserve the original terminal Stop suffix and acknowledged startup cut;
+  retain the successor anchor even when a later predecessor check refuses.
+- Require fresh source, helper and human custody for new publication; carry old
+  pending cases into independent post-review evaluation under finite new service
+  invocation limits while retaining native cumulative work and accounting.
+- Add nine substantive causal regressions plus an evaluator process harness.
+  Source review/qualified scoped checks are separate from required RCH compilation,
+  execution and canonical qualification, which remain pending.
+
 ## 2026-11-23: recover accounted learned owners through original native replay
 
 - Add a sealed anchored learned recovery cursor that carries complete independent

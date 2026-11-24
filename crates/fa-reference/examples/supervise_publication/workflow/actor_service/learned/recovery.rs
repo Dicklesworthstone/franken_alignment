@@ -26,7 +26,8 @@ use super::{
     FileLearnedTextStreamActorPort, FileOversight, FileSupervisedDriver, Instant,
     LearnedTextRelease, Loaded, RecoveryReserve, RunResult, cleanup, debug, encode_command,
 };
-use cooperative::{Progress, finish_replay};
+use cooperative::Progress;
+pub(super) use cooperative::finish_replay;
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
     FileConsistencyConfig, FileConsistencyObserver, learned::FileLearnedConsistencyConfig,
 };
