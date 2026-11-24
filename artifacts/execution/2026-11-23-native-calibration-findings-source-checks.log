@@ -1,0 +1,78 @@
+Native calibration Findings and learned recovery boundary: source checks only.
+Qualified toolchain: nightly-2026-09-08; Rust edition 2024.
+No compilation, runtime tests, Clippy or deployment qualification performed.
+
+Required gate attempt (captured from shell):
+$ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+/bin/bash: line 1: rch: command not found
+exit_code=127
+
+rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_ledger.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger/findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/learned.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger/findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/publication.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/publication/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/publication/operator_capabilities.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/wire/publication.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/wire/publication/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/tower/wire/publication/governance_ledger.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/file_governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/recovery_profile.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/tower_governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/bootstrap.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/learned/bootstrap.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger/findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger/findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/tower/publication/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/tower/wire/publication/governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/file_governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/recovery_profile.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/tower_governance_findings.rs
+exit_code=0
+$ /home/agent/.rustup/toolchains/nightly-2026-09-08-x86_64-unknown-linux-gnu/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs
+exit_code=0
+$ git diff --check
+
+
+exit_code=0
+registry/roadmap.json: JSON parsing passed; only result_artifacts changed.
+Parsed 22 scoped Rust files; checked formatting of 9 new/newly formatted modules. Authored regressions remain unexecuted.

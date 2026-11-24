@@ -309,7 +309,7 @@ fn absent_section(domain: &str, basis: FileGovernanceLedgerBasis) -> String {
     ])
 }
 
-fn basis_json(basis: FileGovernanceLedgerBasis) -> String {
+pub(super) fn basis_json(basis: FileGovernanceLedgerBasis) -> String {
     let scope = basis.scope;
     object_json(&[
         (

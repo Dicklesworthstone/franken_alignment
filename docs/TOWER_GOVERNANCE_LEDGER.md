@@ -7,6 +7,11 @@ evaluation predecessor, and `evaluator-assess` attaches independently prepared
 case-bound assessments. This Ledger capability remains a finite observation and
 grants no evaluator role.
 
+The same finite disclosure grant also serves the registered
+[`findings` verb](TOWER_GOVERNANCE_FINDINGS.md), which selects original calibration
+incidents and their exact support. Ledger and Findings consume one shared
+allowance; choosing a different read cannot renew it.
+
 The native Tower `ledger` read exposes the original durable owner's helper
 credibility and false-stop accounting to an independently authorized operator.
 The counters come from acknowledged native reviews and independent evaluator

@@ -34,6 +34,8 @@ mod journal_tail;
 pub use journal_tail::LinkedJournalTail;
 mod governance_ledger;
 pub use governance_ledger::LinkedGovernanceLedger;
+mod governance_findings;
+pub use governance_findings::LinkedGovernanceFindings;
 mod request_history;
 pub use request_history::LinkedRequestHistory;
 #[cfg(target_os = "linux")]
@@ -73,7 +75,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 17] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 18] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -91,6 +93,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 17] = [
     Verb::PolicyReplay,
     Verb::Promote,
     Verb::Ledger,
+    Verb::Findings,
 ];
 
 /// Smallest native response allowance; also the compatibility default.
@@ -135,6 +138,7 @@ pub enum PublicationResult {
     JournalTail(LinkedJournalTail),
     RequestHistory(LinkedRequestHistory),
     GovernanceLedger(LinkedGovernanceLedger),
+    GovernanceFindings(LinkedGovernanceFindings),
     Explanation(FileExplanationResult),
     HoldDiagnosis(LinkedHoldDiagnosis),
     ResolutionNext(LinkedResolutionNext),
@@ -473,6 +477,7 @@ impl PublicationTower {
                 Verb::Situation
                     | Verb::Tail
                     | Verb::Ledger
+                    | Verb::Findings
                     | Verb::Related
                     | Verb::Explain
                     | Verb::WhyHeld
@@ -492,6 +497,7 @@ impl PublicationTower {
                 Verb::Situation
                     | Verb::Tail
                     | Verb::Ledger
+                    | Verb::Findings
                     | Verb::Related
                     | Verb::Explain
                     | Verb::WhyHeld
@@ -539,6 +545,10 @@ impl PublicationTower {
 
         if request.verb == Verb::Ledger {
             return self.dispatch_governance_ledger(access, request);
+        }
+
+        if request.verb == Verb::Findings {
+            return self.dispatch_governance_findings(access, request);
         }
 
         if request.verb == Verb::Situation {

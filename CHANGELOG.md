@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-23: expose original calibration incidents through Findings
+
+- Connect the registered Findings verb to the original native credibility/Andon
+  owner, independent operator grant, sealed Tower wire and authenticated client.
+- Share the existing finite Ledger allowance; preserve exact source cuts, native
+  thresholds, full-width costs, opening/support rounds and custody failures.
+- Keep all six unsupported full risk-theater queries explicitly Unknown, with
+  no effect/policy authority, source replacement, truncation or query refund.
+- Validate exact outer response dependencies as well as native schema, basis,
+  request correlation, incident arithmetic and complete supports.
+- Refuse accounted learned histories through the narrower evaluated-only
+  recovery profile before replay; preserve ordinary evaluated-only recovery.
+- Add fifteen dedicated Findings and two recovery regression functions. Scoped
+  qualified parsing/format and whitespace checks passed; required RCH builds,
+  runtime tests, Clippy and canonical qualification remain unexecuted.
+
 ## 2026-11-23: bootstrap learned evaluation and Andon accounting atomically
 
 - Add a reserved learned constructor that installs the exact recipe, complete

@@ -1,4 +1,4 @@
-//! Recover evaluated learned generation without losing independent evaluator custody.
+//! Recover marginal evaluated learned generation with no Andon accounting contract.
 //! Original numerical replay, reset and the sole completion/fence write stay sealed.
 mod bootstrap;
 use super::super::super::credibility::CredibilityEvent;
@@ -48,6 +48,8 @@ impl FileOversight {
     /// Bind the exact numerical recipe, evaluation protocol and numerical guard
     /// inventory before replay. The remaining guards, effective policy, credential
     /// epoch and independent floors must match before Ready or any recovery write.
+    /// Native Andon histories are refused before numerical replay because this
+    /// profile has no independently retained accounting/window expectations.
     pub fn begin_open_evaluated_guarded_with_learned_generation(
         directory: impl AsRef<Path>,
         profile: FileOversightProfile,
@@ -68,6 +70,8 @@ impl FileOversight {
     /// Additionally compare the independently retained original exact prefix on
     /// the SAME canonical bytes and exclusive lock before numerical replay.
     /// Counter floors alone cannot reject an equal-counter history fork.
+    /// An anchor does not supply the missing Andon accounting contract; such
+    /// histories remain outside this marginal evaluated-only profile.
     pub fn begin_open_evaluated_guarded_anchored_with_learned_generation(
         directory: impl AsRef<Path>,
         profile: FileOversightProfile,
@@ -131,12 +135,18 @@ fn begin(
     }
     expected.guards.check_decoder_config(events)?;
     check_protocol(events, protocol)?;
-    // Joint qualification is a distinct independently pinned contract. Neither
-    // a sole joint enable nor a malformed mixed history is this profile.
+    // Joint qualification and native Andon accounting require their own
+    // independently pinned contracts. A history anchor supplies no window
+    // inventory or evaluation floor. Refuse before any numerical replay,
+    // cleanup, fence or separately held role can be returned.
     if events.iter().any(|event| {
         matches!(
             event,
-            Event::Credibility(CredibilityEvent::EnableJoint(_, _))
+            Event::Credibility(
+                CredibilityEvent::EnableJoint(_, _)
+                    | CredibilityEvent::EnableAndon(_)
+                    | CredibilityEvent::AndonWindow(_)
+            )
         )
     }) {
         return Err(Error::Binding.into());

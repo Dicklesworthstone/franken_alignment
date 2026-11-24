@@ -2737,7 +2737,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/learned/bootstrap.rs",
         "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs",
-        "docs/LEARNED_ANDON_BOOTSTRAP.md"
+        "docs/LEARNED_ANDON_BOOTSTRAP.md",
+        "docs/TOWER_GOVERNANCE_FINDINGS.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger/findings.rs",
+        "crates/fa-reference/tests/file_governance_findings.rs",
+        "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/recovery_profile.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3425,7 +3429,15 @@
       "result_artifacts": [
         "crates/fa-reference/src/governance_assurance.rs",
         "crates/fa-reference/tests/risk_theater.rs",
-        "docs/RISK_THEATER_REFERENCE.md"
+        "docs/RISK_THEATER_REFERENCE.md",
+        "docs/TOWER_GOVERNANCE_FINDINGS.md",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger/findings.rs",
+        "crates/fa-reference/src/tower/publication/governance_findings.rs",
+        "crates/fa-reference/src/tower/wire/publication/governance_findings.rs",
+        "crates/fa-reference/tests/file_governance_findings.rs",
+        "crates/fa-reference/tests/tower_governance_findings.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_findings.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger/findings.rs"
       ],
       "founding_ideas": [
         "FI-A18",
@@ -3772,7 +3784,13 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
         "docs/RESIDENT_NATIVE_PUBLICATION.md",
-        "docs/LIVE_ANDON_EVALUATION.md"
+        "docs/LIVE_ANDON_EVALUATION.md",
+        "docs/TOWER_GOVERNANCE_FINDINGS.md",
+        "crates/fa-reference/src/tower/publication/governance_findings.rs",
+        "crates/fa-reference/src/tower/wire/publication/governance_findings.rs",
+        "crates/fa-reference/tests/tower_governance_findings.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/governance_findings.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tower/client/tests/operator/governance_ledger/findings.rs"
       ],
       "founding_ideas": [
         "FI-A06"

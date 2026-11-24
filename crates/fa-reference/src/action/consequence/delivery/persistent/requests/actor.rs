@@ -7,7 +7,9 @@ pub use capabilities::{
 };
 mod governance_ledger;
 pub use governance_ledger::{
-    FileAndonLedgerSnapshot, FileCredibilityLedgerSnapshot, FileGovernanceLedgerBasis,
+    FileAndonCalibrationFindings, FileAndonLedgerSnapshot, FileCredibilityCalibrationSnapshot,
+    FileCredibilityLedgerSnapshot, FileGovernanceFindingsObservation, FileGovernanceFindingsResult,
+    FileGovernanceFindingsSnapshot, FileGovernanceLedgerBasis,
     FileGovernanceLedgerObservation, FileGovernanceLedgerResult, FileGovernanceLedgerSnapshot,
     FileSupervisorGovernanceLedgerGrant, FileSupervisorGovernanceLedgerPort,
     MAX_GOVERNANCE_LEDGER_QUERIES,

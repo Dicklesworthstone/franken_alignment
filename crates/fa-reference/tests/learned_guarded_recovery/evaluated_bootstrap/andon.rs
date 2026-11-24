@@ -1,9 +1,10 @@
 //! Original learned startup with an independent evaluator and native accounting.
+#[path = "andon/recovery_profile.rs"]
+mod recovery_profile;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::RecoveryReserve;
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    credibility::andon::FileAndonConfig,
-    guarded::evaluation::FileEvaluatedOversightRoles,
+    credibility::andon::FileAndonConfig, guarded::evaluation::FileEvaluatedOversightRoles,
 };
 use fa_reference::round::review::andon::{AndonBudget, LedgerIdentity};
 
@@ -119,7 +120,10 @@ fn complete_bootstrap_cannot_consume_the_terminal_event_tail() {
     .unwrap();
     let capacity = host.journal_capacity().unwrap();
     assert_eq!(capacity.ordinary_remaining().events, 0);
-    assert_eq!(capacity.remaining().events, RecoveryReserve::terminal().events);
+    assert_eq!(
+        capacity.remaining().events,
+        RecoveryReserve::terminal().events
+    );
     assert!(capacity.terminal_space_remaining());
 }
 
@@ -279,7 +283,11 @@ fn only_original_independent_benign_labels_charge_a_held_learned_case() {
             .unwrap()
     );
     assert_eq!(host.andon_ledger().unwrap().windows()[&1].false_stops, 0);
-    assert!(host.andon_ledger().unwrap().windows()[&1].incident.is_none());
+    assert!(
+        host.andon_ledger().unwrap().windows()[&1]
+            .incident
+            .is_none()
+    );
     let ticket = host.evaluation_ticket(101).unwrap();
     let benign = Assessment {
         origin: 201,
@@ -297,7 +305,10 @@ fn only_original_independent_benign_labels_charge_a_held_learned_case() {
     assert_eq!(window.false_stops, 1);
     assert_eq!(window.total_cost, 7);
     assert_eq!(window.incident.as_ref().unwrap().opened_by_round, 101);
-    assert_eq!(window.incident.as_ref().unwrap().rounds, BTreeSet::from([101]));
+    assert_eq!(
+        window.incident.as_ref().unwrap().rounds,
+        BTreeSet::from([101])
+    );
     let before_retry = root.bytes();
     let ticket = host.evaluation_ticket(101).unwrap();
     let revision = host.revision();
@@ -308,7 +319,10 @@ fn only_original_independent_benign_labels_charge_a_held_learned_case() {
             .unwrap()
     );
     assert_eq!(root.bytes(), before_retry);
-    assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+    assert_eq!(
+        host.learned_generation_inspection().unwrap().numerical,
+        numerical
+    );
     assert_eq!(host.inspect().executions, 0);
     assert!(
         host.authorize(host.revision(), 1, &input, snapshot())
@@ -321,7 +335,10 @@ fn accounting_does_not_replace_fresh_generation_or_the_independent_human_key() {
     let root = Directory::new();
     let (mut host, roles) = accounted(&root, config(0), &guards());
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
-    assert!(host.propose(host.revision(), 99, spec(&host), snapshot()).is_err());
+    assert!(
+        host.propose(host.revision(), 99, spec(&host), snapshot())
+            .is_err()
+    );
     step(&mut host).unwrap();
     fresh_identity(&mut host, &roles.oversight, 1, 1);
     let (action, input, automatic, request) = prepared(&mut host, 1, 101);

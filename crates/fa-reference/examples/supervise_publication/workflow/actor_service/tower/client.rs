@@ -30,6 +30,8 @@ mod convening;
 mod fence;
 #[path = "client/governance_ledger.rs"]
 mod governance_ledger;
+#[path = "client/governance_findings.rs"]
+mod governance_findings;
 #[path = "client/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "client/journal_tail.rs"]
@@ -246,6 +248,7 @@ fn exchange_endpoint(
         policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
         operator_capabilities::check_profile(&parsed, &document.request, endpoint.scope)?;
         governance_ledger::check_profile(&parsed, &document.request, endpoint.scope)?;
+        governance_findings::check_profile(&parsed, &document.request, endpoint.scope)?;
         emit_response(&response, output, &budget)?;
     }
     Ok(())
@@ -463,7 +466,7 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_POLICY_PROMOTION_REPLY_ITEMS
             } else if request.verb == Verb::Related {
                 MAX_REQUEST_HISTORY_REPLY_ITEMS
-            } else if request.verb == Verb::Ledger {
+            } else if matches!(request.verb, Verb::Ledger | Verb::Findings) {
                 // Complete bounded member/window accounting fits the original
                 // response ceiling; no implicit paging or omission is allowed.
                 MAX_REPLY_BYTES / 4
@@ -544,6 +547,15 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("situation"), Verb::Situation) => {}
         (Some("governance-ledger"), Verb::Ledger) => {
             if !governance_ledger::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
+        (Some("governance-findings"), Verb::Findings) => {
+            if !governance_findings::matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,

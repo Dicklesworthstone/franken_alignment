@@ -72,7 +72,7 @@ impl OperatorCapabilityKind {
             Self::Situation => &[Verb::Situation],
             Self::JournalTail => &[Verb::Tail],
             Self::RequestHistory => &[Verb::Related],
-            Self::GovernanceLedger => &[Verb::Ledger],
+            Self::GovernanceLedger => &[Verb::Ledger, Verb::Findings],
             Self::AdmissionExplanation | Self::ReviewExplanation => &[Verb::Explain],
             Self::HoldDiagnosis => &[Verb::WhyHeld],
             Self::Resolution | Self::Cancellation | Self::Abandonment => {

@@ -5,6 +5,13 @@
 //! they do not authenticate the evaluator, establish population error bounds,
 //! qualify a deployment or change the committee's publication authority.
 
+mod findings;
+pub use findings::{
+    FileAndonCalibrationFindings, FileCredibilityCalibrationSnapshot,
+    FileGovernanceFindingsObservation, FileGovernanceFindingsResult,
+    FileGovernanceFindingsSnapshot,
+};
+
 use super::{
     ActorError, FileActorPort, FileActorSupervisor, JournalError, Knowledge, OwnerRef,
     UnknownReason,

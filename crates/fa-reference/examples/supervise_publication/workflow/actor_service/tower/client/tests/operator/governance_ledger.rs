@@ -1,5 +1,8 @@
 //! Actual native evaluation accounting through the authenticated operator
 //! command. Counter consistency never certifies label truth or effect authority.
+#[path = "governance_ledger/findings.rs"]
+mod findings;
+
 use super::super::super::governance_ledger as validation;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::credibility::andon::FileAndonConfig;

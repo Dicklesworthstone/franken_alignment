@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: observe original calibration findings through live Tower
+
+The existing Findings verb now reaches the original acknowledged credibility
+and Andon ledgers through the independent operator service and authenticated
+client. It selects original false-stop incidents with the exact evaluation
+scope, immutable budgets, full-width costs, opening rounds and complete support.
+Ledger and Findings consume the same finite disclosure grant. Actor intake
+cannot query it; revocation, lost custody, missing sources and exhaustion retain
+their distinct non-authority states. The read changes no journal or admission.
+
+Sealed provenance binds the original owner, registration and request. The wire
+encoder and client validate exact source cuts, canonical decimals, incident
+arithmetic, support sets and outer status/dependency fields. A complete response
+must fit its declared allowance; no truncation or query refund occurs. Global
+Tower eligibility remains unobserved. All six full FA-125 risk-theater query
+families remain explicitly Unknown: this native incident observation supplies
+no fabricated detector coverage or authority to change policy.
+
+Independent review also found and corrected a missing recovery boundary in the
+new learned composition: the narrower evaluated-only recovery wrapper now rejects
+Andon histories before numerical replay, even with an exact retained anchor.
+Its requirements do not pin the accounting identity, complete windows or label
+floor. Paired ordinary evaluated-only recovery remains supported; general
+lower-level recovery APIs are unchanged.
+
+Fifteen Findings regression functions cover actual native labels, recovery
+retention, wide costs, finite grants, source/role failures, complete results and
+authenticated causal mutations. Two additional learned recovery regressions
+pair accounted refusal with ordinary evaluated-only success. See
+[Findings](docs/TOWER_GOVERNANCE_FINDINGS.md) and
+[learned startup](docs/LEARNED_ANDON_BOOTSTRAP.md).
+
+The workspace connection recovered and qualified nightly-2026-09-08 scoped
+Rust parsing/format checks and whitespace checks passed, including the preceding
+learned bootstrap sources. Independent source review is complete. RCH remains
+unavailable (the required gate exited 127 before starting); compilation, Clippy,
+runtime tests and canonical qualification remain unexecuted. FA-105/125/134
+roadmap acceptance stays in progress and no deployment gate is closed.
+
 ## 2026-11-23: account for learned generation in the original first image
 
 The original guarded learned constructor now composes independent evaluation,

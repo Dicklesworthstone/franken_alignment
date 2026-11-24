@@ -66,6 +66,20 @@ Input validation precedes retained cloning. Public address fields are rechecked
 against the canonical ASCII component grammar. Exceeding a bound refuses the
 operation; findings and supports are never silently truncated.
 
+## Native calibration observation
+
+The separate [live Tower Findings path](TOWER_GOVERNANCE_FINDINGS.md) now reads
+actual calibration incidents from the original acknowledged credibility and
+Andon owner through a finite operator-only grant. It preserves original budgets,
+window identities, costs and incident support without accepting caller scores
+or thresholds. Missing native sources remain Unknown; a configured source with
+no incident is known empty only for its declared native predicate.
+
+That observation does not feed or authenticate this reference detector. All six
+full risk-theater query families remain explicitly Unknown in the live result,
+including Andon closure modes. No observed incident can change policy or
+substitute for a missing query's evidence.
+
 ## Qualification and remaining integration
 
 Fourteen authored regression functions cover all six families across 48 closed
@@ -77,9 +91,11 @@ not been executed for this change. Scoped Rust parsing/format and whitespace
 checks passed. Required remote-only RCH compilation and the canonical gate could
 not start because the runner is unavailable in the development environment.
 
-FA-125 remains in progress. This repair does not implement the six native ledger
+FA-125 remains in progress. The reference kernel does not implement the six native ledger
 query predicates, authenticated journal ingestion/closure, governed threshold
 changes, durable incident opening, or enforcement of evaluator/governance-only
-access. `NotActorVisible` is a marker, not an authorization boundary. Neither a
+access for its caller-supplied projections. The live native calibration read
+has an operator authorization boundary; `NotActorVisible` in this reference
+kernel is only a marker. Neither a
 reference finding nor successful oracle agreement grants policy authority.
 The existing acceptance conditions and execution gate remain unchanged.

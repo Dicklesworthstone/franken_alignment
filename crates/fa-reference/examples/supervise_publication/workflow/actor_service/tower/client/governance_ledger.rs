@@ -23,7 +23,7 @@ pub(super) fn matches(value: &Json, request: &TowerRequest, envelope: &Json) -> 
 }
 
 pub(super) fn refused_matches(value: &Json, request: &TowerRequest, envelope: &Json) -> bool {
-    if request.verb != Verb::Ledger {
+    if !matches!(request.verb, Verb::Ledger | Verb::Findings) {
         return true;
     }
     if value.get("type").and_then(Json::as_str) != Some("PublicationRefusal")
@@ -217,7 +217,7 @@ fn validate(value: &Json, request: &TowerRequest) -> Option<(Option<Scope>, Opti
     }
 }
 
-fn read_basis(basis: &Json, request: &TowerRequest) -> Option<Scope> {
+pub(super) fn read_basis(basis: &Json, request: &TowerRequest) -> Option<Scope> {
     if !exact(
         basis,
         &[
@@ -519,7 +519,7 @@ fn andon(value: &Json) -> Option<()> {
     Some(())
 }
 
-fn decimal128(value: &Json) -> Option<u128> {
+pub(super) fn decimal128(value: &Json) -> Option<u128> {
     let text = value.as_str()?;
     let number = text.parse::<u128>().ok()?;
     (number.to_string() == text).then_some(number)

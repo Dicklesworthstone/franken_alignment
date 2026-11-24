@@ -10,6 +10,7 @@ mod convening;
 mod explanation;
 mod fence;
 mod governance_ledger;
+mod governance_findings;
 mod hold_diagnosis;
 mod inspection;
 mod journal_tail;
@@ -148,6 +149,19 @@ impl PublicationResponse {
                     &encoder,
                 )?,
             ),
+            PublicationResult::GovernanceFindings(linked) => {
+                governance_findings::validate_envelope(linked, &self.envelope)?;
+                (
+                    "governance-findings",
+                    governance_findings::encode(
+                        linked,
+                        &self.envelope.address,
+                        &self.envelope.operation_id,
+                        self.envelope.idempotency_key.as_deref(),
+                        &encoder,
+                    )?,
+                )
+            }
             PublicationResult::Explanation(native) => (
                 "explanation",
                 explanation::encode(native, &self.envelope.address, &encoder)?,

@@ -42,6 +42,14 @@ assessment retry cannot duplicate the charge. Labels do not provide the separate
 human key or restart a held effect. Accounting windows and costs remain native
 history; this constructor adds no recovery protocol or live endpoint by itself.
 
+The narrower evaluated-only learned recovery profile rejects histories containing
+Andon configuration or registered windows before numerical replay, cleanup or
+fencing. Its independent requirements do not pin the accounting identity,
+complete windows or evaluation floor; even an exact history anchor cannot supply
+that contract. Ordinary evaluated-only histories still use their original
+anchored or unanchored recovery. General lower-level learned recovery APIs are
+unchanged; this refusal is specific to the evaluated-only wrapper.
+
 Six public regression functions in
 `tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs` cover complete
 role retention, exact reserve capacity, malformed input refusal before storage,
@@ -50,7 +58,10 @@ costs, and actual publication requiring generation plus both review keys.
 They reuse original numerical and durable APIs; fixture judgments are not
 empirical detector evidence.
 
-The required RCH command could not start because the runner was unavailable
-(exit 127). The workspace subsequently disconnected. These sources received
-manual review; the new functions have not been parsed, compiled, formatted,
-run through Clippy or executed in this session. FA-105 remains in progress.
+Two further regressions in `andon/recovery_profile.rs` exercise that fail-closed
+recovery boundary and paired ordinary evaluated-only recovery. After the
+workspace connection recovered, qualified `nightly-2026-09-08` parsing and
+formatting checks passed for the scoped sources, as did whitespace checks and
+independent source review. The required RCH command could not start because the
+runner was unavailable (exit 127); compilation, Clippy and runtime execution
+remain unexecuted. Roadmap FA-105 remains in progress.
