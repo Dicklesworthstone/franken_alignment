@@ -622,3 +622,33 @@ fn prepared_guarded_history_rejects_omitted_or_changed_original_requirements() {
     }
     verify_prepared(&case, &prepared);
 }
+
+#[test]
+fn prepared_history_reserves_missing_witness_and_credential_names_before_creation() {
+    let root = Root::new();
+    let mut case = Case::new(&root, false);
+    select_guards(&root, &case, true, true);
+    let alias = root.0.join("custody-parent");
+    std::os::unix::fs::symlink(&root.0, &alias).unwrap();
+    for name in ["broker.bin", "provider.bin", "producer"] {
+        case.anchor = alias.join(name);
+        let error = prepare::command(
+            &case.args(),
+            None,
+            || panic!("conflicting preparation output reached the clock"),
+            &mut Vec::new(),
+        )
+        .unwrap_err();
+        assert!(error.contains("output conflicts with an independently selected input"), "{error}");
+        assert!(!case.config.store.exists());
+        assert!(!root.0.join(name).exists());
+    }
+
+    // A similarly named sibling remains available while the independent inputs
+    // are offline. The result is a usable unsampled checkpoint.
+    case.anchor = alias.join("broker.bin.anchor");
+    let prepared = case.prepare();
+    verify_prepared(&case, &prepared);
+    assert!(!root.0.join("broker.bin").exists());
+    assert!(!root.0.join("producer").exists());
+}

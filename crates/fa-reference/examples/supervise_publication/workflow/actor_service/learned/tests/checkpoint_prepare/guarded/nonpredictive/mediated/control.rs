@@ -139,3 +139,43 @@ fn ordinary_mediated_capture_keeps_ready_deadline_exact_pair_and_request_boundar
     assert_eq!(number(&value, "sampled_draws"), 0);
     assert_eq!(view(&case).executions, 0);
 }
+
+#[test]
+fn offline_capture_preserves_missing_next_sources_before_acknowledging_a_new_checkpoint() {
+    let root = Root::new();
+    let case = selected(&root);
+    let request = prepared_request(&root, &case);
+    let before = case.disk();
+    let next_graph = root.0.join("live-2.json");
+    let next_inventory = root.0.join("inventory-2.json");
+    assert!(!next_graph.exists() && !next_inventory.exists());
+    let mut args = command(&root, &case, request, "isolated");
+    let history = args[8].clone();
+    let profile = PathBuf::from(&args[10]);
+    let source = root.0.join("isolated.topology");
+    let original = fs::read_to_string(&profile).unwrap();
+
+    args[8] = next_graph.display().to_string();
+    let error = control::command(&args, None, || ElapsedTick(1000), &mut Vec::new()).unwrap_err();
+    assert!(error.contains("output conflicts with an independently selected input"), "{error}");
+    assert_eq!(case.disk(), before);
+    assert!(!next_graph.exists() && !source.exists());
+
+    args[8] = history;
+    fs::write(&profile, original.replace(source.to_str().unwrap(), next_inventory.to_str().unwrap())).unwrap();
+    let error = control::command(&args, None, || ElapsedTick(1000), &mut Vec::new()).unwrap_err();
+    assert!(error.contains("output conflicts with an independently selected input"), "{error}");
+    assert_eq!(case.disk(), before);
+    assert!(!next_inventory.exists() && !Path::new(&args[8]).exists());
+
+    // Restore only the independent output. Neither next source has to exist
+    // to capture a second checkpoint under the retained historical pair.
+    fs::write(profile, original).unwrap();
+    let mut output = Vec::new();
+    control::command(&args, None, || ElapsedTick(1000), &mut output).unwrap();
+    let value = result(&output);
+    assert_eq!(number(&value, "appended_events"), 1);
+    assert_eq!(number(&value, "sampled_draws"), 0);
+    assert_eq!(checkpoint(&source).history_anchor(), &custody::load(Path::new(&args[8])).unwrap());
+    assert!(!next_graph.exists() && !next_inventory.exists());
+}

@@ -134,6 +134,7 @@ where F: FnMut() -> ElapsedTick {
         }
         _ => None,
     };
+    anchors::check_checkpoint_outputs(config, loaded)?;
     let (acknowledged, saved) = recovery::stream_checkpoint::execute_paired(config, loaded, request,
         &mut |_| deadline.check(time())).map_err(|error| format!(
             "native stream checkpoint control is unconfirmed: {error}; preserve the original independent expectation and input history anchor"))?;

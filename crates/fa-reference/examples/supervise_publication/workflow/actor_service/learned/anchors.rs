@@ -1,7 +1,7 @@
 //! Private operator custody of exact original history prefixes.
 //! A pathname is not authentication: the selected input must be independently
 //! retained, and the old archive remains required until a new export succeeds.
-use super::{Config, FileOversight, FileSupervisedDriver, Loaded, USAGE, debug, fields};
+use super::{Config, FileOversight, FileSupervisedDriver, Loaded, USAGE, debug, fields, topology};
 use crate::config::read_regular;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::{
     FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES,
@@ -95,6 +95,53 @@ impl Options {
         loaded.anchor_output = output;
         Ok(())
     }
+}
+
+/// A new archive must leave the names of independent inputs available. A
+/// missing parent of a future witness or source must remain a directory slot.
+pub(super) fn check_checkpoint_outputs(config: &Config, loaded: &Loaded) -> Result<(), String> {
+    let mut inputs = vec![config.source.path()];
+    let topology_output = match &loaded.topology {
+        Some(topology::Selection::Create(selection)) => {
+            inputs.extend(selection.input_paths());
+            selection.acknowledged_output()
+        }
+        Some(topology::Selection::Recover { selection, .. }) => {
+            inputs.extend(selection.input_paths());
+            selection.acknowledged_output()
+        }
+        None => None,
+    };
+    let outputs = loaded
+        .anchor_output
+        .as_deref()
+        .into_iter()
+        .chain(topology_output)
+        .map(fields::resolve_root)
+        .collect::<Result<Vec<_>, _>>()?;
+    if outputs.is_empty() {
+        return Ok(());
+    }
+    if let Some(publication) = &loaded.publication {
+        inputs.extend(publication.input_paths().iter().map(PathBuf::as_path));
+    }
+    if let Some(credential) = &loaded.credential {
+        inputs.extend(credential.input_paths());
+    }
+    if let Some(identity) = &loaded.identity {
+        inputs.push(&identity.observed_manifest);
+    }
+    for input in inputs {
+        // Original source and credential readers require regular files. Compare
+        // their directory entries without opening or reading the selected file.
+        let parent = input.parent().ok_or("checkpoint input has no parent")?;
+        let name = input.file_name().ok_or("checkpoint input has no filename")?;
+        let input = fields::resolve_root(parent)?.join(name);
+        if outputs.iter().any(|output| input.starts_with(output)) {
+            return Err("checkpoint archive output conflicts with an independently selected input".into());
+        }
+    }
+    Ok(())
 }
 
 fn outside_store(path: &Path, store: &Path) -> Result<(), String> {

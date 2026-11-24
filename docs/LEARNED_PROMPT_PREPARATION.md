@@ -73,6 +73,14 @@ uses private file permissions, and synchronizes both file and parent directory.
 The output is the exact native history anchor captured while the successful
 owner remains healthy, not a newly opened or later fenced history.
 
+Checkpoint preparation, live checkpoint capture, and offline checkpoint and reset
+commands reserve the names of independently selected policy evidence, witness,
+identity, credential and topology inputs. Neither retained archive may occupy a
+selected file or a missing parent directory needed to provision that file.
+Admission resolves directory aliases before the checkpoint or reset operation.
+For example, offline capture can run while the selected next topology document
+is missing, provided that both archives have separate destinations.
+
 An optional campaign profile uses the existing
 [first-image campaign contract](LEARNED_CAMPAIGN_CREATION.md). Its full inventory
 is installed before prompt work. Later recovery must independently select that

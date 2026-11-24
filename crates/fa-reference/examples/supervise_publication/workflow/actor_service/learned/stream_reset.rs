@@ -370,6 +370,7 @@ pub(super) struct SourceRetention<'a> {
 }
 impl<'a> SourceRetention<'a> {
     fn admit(config: &Config, loaded: &'a Loaded) -> Result<Option<Self>, String> {
+        anchors::check_checkpoint_outputs(config, loaded)?;
         let Some(topology::Selection::Recover { selection, history }) = loaded.topology.as_ref() else {
             return Ok(None);
         };

@@ -20,7 +20,7 @@ pub(super) struct Selection {
     pub check: u64,
     pub measurement_sequence: u64,
     pub budget: DecoderBudget,
-    observed_manifest: PathBuf,
+    pub(super) observed_manifest: PathBuf,
 }
 
 pub(super) struct Session {

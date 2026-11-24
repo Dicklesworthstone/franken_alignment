@@ -111,6 +111,7 @@ impl Selection {
                 return Err("history anchor and topology checkpoint outputs must be distinct new files".into());
             }
         }
+        super::anchors::check_checkpoint_outputs(config, loaded)?;
         if loaded.generation.requires_owned_forecast_stream_restart_audit()
             && self.sampled_draws != 0 {
             return Err("owned prompt-audit checkpoint selection requires zero sampled draws".into());
