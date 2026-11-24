@@ -10,6 +10,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
 };
 use std::io::Cursor;
 
+#[path = "andon/final_evaluation.rs"]
+mod final_evaluation;
+
 fn settings() -> Settings {
     Settings::decode(include_bytes!(
         "../../../../../../fixtures/native_andon_operator.json"

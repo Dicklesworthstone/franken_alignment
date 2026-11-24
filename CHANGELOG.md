@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-23: retain final ordinary cases for independent evaluation
+
+- Preserve the original live evaluator after the final ordinary Tower request,
+  including helper Hold, for bounded case discovery and independent assessment.
+- Reuse original owner, role and finite budgets through creation or guarded
+  recovery; never start another request, review or publication from this phase.
+- Keep Stop and operator Fence ahead of labels, preserve independent evaluation
+  after actor transport failure, and retire intake before reply-only grace.
+- Retain acknowledged late labels in the final history anchor and add seven
+  substantive process/socket regressions plus two gated subprocess entries.
+  Qualified scoped parsing/format and whitespace checks passed; required RCH
+  compilation, runtime tests, Clippy and canonical qualification remain pending.
+
 ## 2026-11-23: evaluate the original learned owner after live review
 
 - Add explicit paired Andon/evaluator selection to fresh learned creation with

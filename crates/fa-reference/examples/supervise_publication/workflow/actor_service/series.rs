@@ -1313,11 +1313,6 @@ where
             }
             Ok(())
         })();
-        if let Some(service) = &mut evaluator {
-            // The original final reply grace may drain an entered response; it
-            // does not open new assessment work after the finite schedule ends.
-            service.finish();
-        }
         // Also revoke on Stop, source/bootstrap errors, timeout or transport
         // failure before original stop/drain and terminal reply grace.
         if let Some(mut service) = sidecar.take() {
@@ -1357,10 +1352,80 @@ where
             // original operator reply channel, never a second drain entry.
             drop(early_control.take());
         }
-        let started = Instant::now();
         let mut actor_transport_failed = false;
+        if failure.is_none() && evaluator.is_some() {
+            // The last applied review, including a final Hold, needs the same
+            // opportunity for independent evaluation as an intermediate one.
+            // Keep the ORIGINAL service and remaining allowances: this phase
+            // cannot select another request, refresh evidence, launch helpers,
+            // approve an effect or replenish a transport/authority budget.
+            loop {
+                if evaluator
+                    .as_ref()
+                    .is_none_or(evaluator::Service::is_retired)
+                    || deadline.check(time()).is_err()
+                    || driver.supervisor().host().map_or(true, |host| {
+                        host.storage_failure().is_some() || host.inspect().stop.is_some()
+                    })
+                {
+                    break;
+                }
+                let stopped = match early_control.as_mut() {
+                    Some(control) => {
+                        control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
+                    }
+                    None => Err("original evaluated Stop custody is unavailable".into()),
+                };
+                match stopped {
+                    Ok(false) => {}
+                    Ok(true) => break,
+                    Err(error) => {
+                        failure.get_or_insert(error);
+                        break;
+                    }
+                }
+                if let Some(service) = &mut operator {
+                    service.checkpoint();
+                }
+                // A separately granted operator Fence may have acknowledged
+                // Stop in the preceding turn. Complete its original cleanup
+                // before any case disclosure, Time event or label is admitted.
+                let stopped = match early_control.as_mut() {
+                    Some(control) => control.native_stop(&mut driver, &mut time),
+                    None => Err("original evaluated Stop custody is unavailable".into()),
+                };
+                match stopped {
+                    Ok(false) => {}
+                    Ok(true) => break,
+                    Err(error) => {
+                        failure.get_or_insert(error);
+                        break;
+                    }
+                }
+                evaluator
+                    .as_mut()
+                    .expect("selected original evaluator")
+                    .checkpoint_driver(&mut driver);
+                if !actor_transport_failed {
+                    if let Err(error) = ingress.observe_sequence(&mut driver, &completed) {
+                        failure.get_or_insert(error);
+                        actor_transport_failed = true;
+                        // Losing a response cannot spend the independently
+                        // selected evaluator's remaining original opportunity.
+                        ingress.revoke();
+                    }
+                }
+                pause(actor.poll_ms);
+            }
+        }
+        // No new case or assessment enters terminal reply grace. The same
+        // finite transport may only drain an already acknowledged response.
+        if let Some(service) = &mut evaluator {
+            service.finish();
+        }
+        let started = Instant::now();
         while started.elapsed() < Duration::from_millis(actor.reply_ms) {
-            if owner_start == OwnerStart::Reconciled {
+            if owner_start == OwnerStart::Reconciled || evaluator.is_some() {
                 if let Some(control) = &mut early_control {
                     if let Err(error) =
                         control.checkpoint(&mut driver, &reviewer, &deadline, &mut time)
@@ -1372,13 +1437,13 @@ where
             if let Some(service) = &mut operator {
                 service.checkpoint();
             }
-            if let Some(service) = &mut evaluator {
-                service.checkpoint_driver(&mut driver);
-            }
             if let Some(control) = &mut early_control {
                 if let Err(error) = control.native_stop(&mut driver, &mut time) {
                     failure.get_or_insert(error);
                 }
+            }
+            if let Some(service) = &mut evaluator {
+                service.checkpoint_driver(&mut driver);
             }
             if !actor_transport_failed {
                 if let Err(error) = ingress.observe_sequence(&mut driver, &completed) {

@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: retain independent evaluation after the final ordinary review
+
+The ordinary live Tower service now preserves the original independent evaluator
+after its final scheduled request, including a real helper Hold. Case discovery
+and labels use the same owner, endpoint, role and remaining time/candidate/I/O/byte
+allowances. This also follows the existing guarded recovery service. No new
+request, source acquisition, helper review or effect is scheduled by this phase.
+
+Original Stop precedes assessment, including after an operator command can Fence
+the owner. A failed actor transport retains its error while the evaluator keeps
+its independent remaining opportunity. An earlier workflow failure, unhealthy
+storage, acknowledged Stop or elapsed deadline ends new evaluation. Label intake
+ends before reply-only grace, and evaluator retirement precedes final history
+retention. The same anchor therefore includes acknowledged final-case accounting.
+
+Seven substantive service regressions and two gated subprocess entries cover
+actual approved publication, human rejection and helper Hold accounting, the
+original finite candidates, Stop, operator Fence and deadline against partial
+frames, actor-session failure and anchored source-free recovery. Fixture verdicts
+exercise integration and custody; they do not qualify empirical detector
+performance. Independent source review is complete. The required RCH command
+exited 127 because the runner is unavailable; compilation, runtime tests, Clippy
+and canonical qualification remain pending. Qualified nightly-2026-09-08 scoped Rust parsing/format and whitespace checks
+passed after the workspace recovered. This scoped FA-105/134 work and its Bead
+retain in-progress acceptance.
+
 ## 2026-11-23: independently assess completed learned publication reviews
 
 Fresh single-request learned creation now accepts paired Andon and evaluator

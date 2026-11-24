@@ -294,6 +294,18 @@ timestamp a replacement owner before the final native label guard refuses it.
 
 ## Lifetime, Stop and custody
 
+Ordinary scheduled creation and guarded recovery retain the evaluator after
+the final request workflow, including a final helper Hold. An evaluator may
+wait for the actor's actual terminal response, then discover and assess that
+original case using its remaining allowance. This final phase does not select
+another request, reacquire source evidence, launch helpers or retry publication.
+Original Stop runs first, and an operator Fence is checked before any label.
+An actor reply failure retires only the actor transport and preserves its error
+while the separate evaluator can finish its remaining opportunity. Earlier
+workflow failure, unhealthy storage, acknowledged Stop or deadline exhaustion
+ends new assessment work. Evaluator intake closes before reply-only grace and
+final history retention; the retained anchor includes acknowledged late labels.
+
 One evaluator service spans the whole finite request schedule. Reconnecting or
 moving to the next request does not issue another role or replenish candidate,
 I/O, byte or time allowances. A complete request requires EOF; a prefix or quiet
