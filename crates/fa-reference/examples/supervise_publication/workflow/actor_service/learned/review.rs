@@ -20,6 +20,7 @@ use fa_reference::action::consequence::oversight::{
 };
 use std::collections::BTreeSet;
 
+#[path = "review/reserved_convening.rs"]
 mod reserved_convening;
 
 pub(super) struct Reviewed {
