@@ -3,6 +3,7 @@
 //! Machine. No scores, label roles or compact accounting seeds are imported.
 pub mod generated;
 pub mod joint;
+pub mod learned;
 
 use super::super::super::credibility::{CredibilityEvent, andon::FileAndonConfig};
 use super::super::super::{
@@ -75,15 +76,23 @@ impl FileAndonRecoveryRequirements {
         events: &[Event],
         protocol: &EvaluationProtocol,
     ) -> Result<(), Error> {
+        self.preflight_evaluated_with_publication(events, protocol, None)
+    }
+
+    // Learned Enable installs its recipe-owned witness gate within that SAME
+    // original transition. Only the sealed learned cursor may supply this
+    // additional activation, from its independently bound complete recipe.
+    // Ordinary/generated recovery retains its exact top-level-only inventory.
+    fn preflight_evaluated_with_publication(
+        &self,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+        recipe_publication: Option<PublicationLimits>,
+    ) -> Result<(), Error> {
         self.preflight(events)?;
         self.base.guards.check_decoder_config(events)?;
         joint::check_protocol(events, protocol, self.joint)?;
-        let mut publication = events.iter().filter_map(|event| match event {
-            Event::PublicationWitness(super::super::super::publication::witness_gate::WitnessEvent::Enable(limits)) => Some(*limits),
-            _ => None,
-        });
-        if publication.next() != self.publication || publication.next().is_some() { return Err(Error::Binding); }
-        Ok(())
+        self.check_publication(events, recipe_publication)
     }
 
     pub(in super::super) fn check_replayed(
@@ -93,16 +102,23 @@ impl FileAndonRecoveryRequirements {
         events: &[Event],
         protocol: &EvaluationProtocol,
     ) -> Result<(), Error> {
+        self.check_replayed_with_publication(profile, machine, events, protocol, None)
+    }
+
+    fn check_replayed_with_publication(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+        recipe_publication: Option<PublicationLimits>,
+    ) -> Result<(), Error> {
         self.base
             .check_evaluated(profile, machine, events, Some(protocol))?;
         if machine.andon_contract() != Some(&self.config)
             || machine.broker.joint_credibility_policy() != self.joint
         { return Err(Error::Binding); }
-        let mut publication = events.iter().filter_map(|event| match event {
-            Event::PublicationWitness(super::super::super::publication::witness_gate::WitnessEvent::Enable(limits)) => Some(*limits),
-            _ => None,
-        });
-        if publication.next() != self.publication || publication.next().is_some() { return Err(Error::Binding); }
+        self.check_publication(events, recipe_publication)?;
         let source = machine.broker.andon_source()?;
         if source.revision() < self.minimum_evaluation_revision {
             return Err(Error::Stale);
@@ -116,6 +132,19 @@ impl FileAndonRecoveryRequirements {
         {
             return Err(Error::Binding);
         }
+        Ok(())
+    }
+
+    fn check_publication(
+        &self,
+        events: &[Event],
+        recipe_publication: Option<PublicationLimits>,
+    ) -> Result<(), Error> {
+        let mut publication = recipe_publication.into_iter().chain(events.iter().filter_map(|event| match event {
+            Event::PublicationWitness(super::super::super::publication::witness_gate::WitnessEvent::Enable(limits)) => Some(*limits),
+            _ => None,
+        }));
+        if publication.next() != self.publication || publication.next().is_some() { return Err(Error::Binding); }
         Ok(())
     }
 

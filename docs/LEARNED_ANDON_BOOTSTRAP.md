@@ -53,6 +53,12 @@ that contract. Ordinary evaluated-only histories still use their original
 anchored or unanchored recovery. General lower-level learned recovery APIs are
 unchanged; this refusal is specific to the evaluated-only wrapper.
 
+The [complete accounted learned recovery cursor](LEARNED_ANDON_RECOVERY.md)
+provides the corresponding positive recovery path. It requires the exact retained
+history anchor, original numerical recipe, complete independently selected
+evaluation/Andon windows and floors, and original guards. Native replay and
+accounting stay with one locked owner through its original fence or terminal Stop.
+
 Six public regression functions in
 `tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs` cover complete
 role retention, exact reserve capacity, malformed input refusal before storage,

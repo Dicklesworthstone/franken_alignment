@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: recover learned numerical state with complete native accounting
+
+The new sealed accounted learned recovery cursor composes the original numerical
+replay with full independently retained evaluation and Andon requirements. Its
+mandatory exact history anchor, original recipe, accounting identity and complete
+window inventory are checked before event zero. Guard, policy, credential,
+publication, optional joint and evaluation/counter floors must pass before Ready
+or any finalizer. No raw candidate or partially recovered evaluator can escape.
+
+Successful completion uses the same original canonical comparison, capacity law
+and single acknowledged recovery Fence before issuing fresh separate roles.
+Pending/censored labels, lifetime false stops, window costs, calibration incident
+support, numerical spending and unresolved effects remain native history. The
+numerical owner stays paused; clock, source eligibility and old approvals remain
+withdrawn. Required raw/owned prediction lanes retain their separate contracts.
+
+The same guarded cursor supports original pending numerical/stream reset and
+terminal Stop operations. Reset preparation is checked before and after the
+native transition; it cannot rewind accounting. Authenticated admission Stop can
+consume the verified Ready cursor without ordinary fencing or live-role release
+first. Terminal reserve and exact native retry semantics are unchanged. Dropping
+replay leaves canonical/staged bytes untouched; one event and final I/O remain
+synchronous, with no interruptible-kernel latency claim.
+
+Eight public regression functions pair original numerical/accounting reconstruction and
+fresh two-key work with incorrect independent expectations, sticky floors,
+equal-counter forks, pending reset and clock-free Stop. See
+[the accounted learned recovery contract](docs/LEARNED_ANDON_RECOVERY.md).
+This supplies the positive complete-contract path alongside the evaluated-only
+wrapper's existing refusal of Andon history.
+
+Independent source review and scoped qualified nightly-2026-09-08 parsing/format
+checks passed, as recorded in
+`artifacts/execution/2026-11-23-accounted-learned-recovery-source-checks.log`.
+They are separate from execution. Required RCH compilation, runtime tests,
+Clippy and canonical qualification remain pending because the runner is absent.
+FA-026/105 acceptance and native recovery bead .6.6 remain in progress; no
+production or empirical detector qualification is claimed.
+
 ## 2026-11-23: retain independent evaluation through resident learned publication
 
 Fresh `serve-learned-generated` creation now accepts paired Andon and evaluator

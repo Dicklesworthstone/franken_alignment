@@ -1,0 +1,36 @@
+Accounted learned native recovery — source-only verification
+Base: 8fc78d56d09db7ff20e0cc4c9990e445bd48e6d9
+Independent source review: root, native owner and public-regression owner.
+Runtime qualification is pending; no compiler/test/Clippy execution is claimed.
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --version
+exit=0
+rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon.rs
+exit=0
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs
+exit=0
+
+$ git diff --check -- crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon.rs crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs docs/LEARNED_ANDON_RECOVERY.md docs/LEARNED_ANDON_BOOTSTRAP.md IMPLEMENTATION_STATUS.md CHANGELOG.md registry/roadmap.json .beads/issues.jsonl
+exit=0
+
+Native new regression functions: 8
+Native compile-fail documentation examples (unexecuted): 2
+ff11ce5c0831df5a4123e8abbdcf08268c442019672f64b98d0588bb2870e0fb  crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs
+ac8ae4f70ec5af03482ef60e4b1299f2754c751991fdad3b1ccf31f16c802fdf  crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs
+045f8266d97d8460d17b487716eb760fbc93b289008636dc734d85558ae85352  crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon.rs
+65498d038e1d6b6760944e881360eefba963ac8c9ee16c5076add7ac169f23b8  crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs
+
+$ bash -c 'RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check'
+exit=127
+bash: line 1: rch: command not found
+
+Required remote gate blocked: rch is not installed. No local compilation fallback was used.

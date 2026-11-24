@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-23: recover accounted learned owners through original native replay
+
+- Add a sealed anchored learned recovery cursor that carries complete independent
+  evaluation/Andon, numerical, guard, publication, policy and floor expectations.
+- Preserve the original replay owner, exact canonical cut, work accounting and
+  terminal reserve; return fresh separate roles only after its acknowledged fence.
+- Retain pending labels, false-stop costs, incident supports and unknown effects
+  through ordinary recovery and explicit original pending reset completion.
+- Keep original clock-free admission Stop and terminal drain paths available
+  after full verification without first releasing live roles.
+- Add public positive/causal-negative regression sources for reconstruction,
+  new two-key work, expectation/floor failures, forks, reset and terminal control.
+  Required remote compilation, execution and canonical qualification stay pending.
+
 ## 2026-11-23: evaluate resident learned cases across Message and Finish
 
 - Compose paired Andon/evaluator profiles with fresh resident learned creation,

@@ -1,4 +1,6 @@
 //! Original learned startup with an independent evaluator and native accounting.
+#[path = "andon/accounted_recovery.rs"]
+mod accounted_recovery;
 #[path = "andon/recovery_profile.rs"]
 mod recovery_profile;
 use super::*;

@@ -902,7 +902,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs",
+        "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs",
+        "docs/LEARNED_ANDON_RECOVERY.md"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2754,7 +2757,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/andon/learned.rs",
+        "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon/accounted_recovery.rs",
+        "docs/LEARNED_ANDON_RECOVERY.md"
       ],
       "founding_ideas": [
         "FI-A08",
