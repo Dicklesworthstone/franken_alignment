@@ -2734,7 +2734,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/guarded/evaluation/learned/bootstrap.rs",
+        "crates/fa-reference/tests/learned_guarded_recovery/evaluated_bootstrap/andon.rs",
+        "docs/LEARNED_ANDON_BOOTSTRAP.md"
       ],
       "founding_ideas": [
         "FI-A08",

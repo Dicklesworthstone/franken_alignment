@@ -279,6 +279,27 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    /// Admit the complete first-image event inventory before creating storage.
+    /// The canonical encoder still validates every byte with the final store
+    /// identity. Bootstrap extensions cannot borrow the terminal recovery tail.
+    pub(super) fn checked_event_capacity(self) -> Result<Self, JournalError> {
+        use super::super::super::recovery_capacity::{Admission, Class};
+        if self.events.len() > self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
+        if let Some(reserve) = self.events.iter().find_map(|event| match event {
+            Event::Core(super::super::BaseEvent::ReserveRecovery(reserve)) => Some(*reserve),
+            _ => None,
+        }) {
+            Admission::new(self.profile.delivery.limits).record(
+                Class::Install(reserve),
+                self.events.len(),
+                0,
+            )?;
+        }
+        Ok(self)
+    }
+
     /// Check the complete learned/guarded topology inventory before its first
     /// image exists. Native recipe-owned source installation remains unique.
     pub(super) fn checked_mediated(

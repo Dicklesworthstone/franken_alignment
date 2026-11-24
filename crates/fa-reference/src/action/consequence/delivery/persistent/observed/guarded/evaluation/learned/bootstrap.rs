@@ -8,9 +8,52 @@ use super::{
     FileOversightProfile, JournalError, check_profile,
 };
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
+use crate::action::consequence::delivery::persistent::observed::credibility::andon::FileAndonConfig;
 use std::path::Path;
 
 impl FileOversight {
+    /// Create one original learned, evaluated and Andon-accounted owner with
+    /// terminal recovery capacity in its FIRST acknowledged image. Complete
+    /// recipe-owned source and guard checks precede storage creation. Numerical
+    /// work, independent labels and human approval still require their original
+    /// separately held interfaces; none is fabricated during bootstrap.
+    ///
+    /// The evaluator cannot serve as a predictor. Recipes requiring a raw or
+    /// owned pre-output forecast must use their distinct role-preserving lane.
+    /// Existing stores cannot be replaced or retrofitted through this method.
+    pub fn create_andon_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        protocol: EvaluationProtocol,
+        accounting: &FileAndonConfig,
+        config: FileLearnedConfig,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
+        if config.required_pre_output_forecast().is_some()
+            || config.required_owned_pre_output_forecast().is_some()
+        {
+            return Err(Error::Binding.into());
+        }
+        let prepared = super::super::super::learned::prepare_reserved(
+            profile,
+            guards,
+            registration,
+            config,
+            reserve,
+        )?
+        .evaluated(protocol.clone())?
+        .with_andon(accounting)?
+        .checked_evaluated(guards, &protocol)?
+        .checked_event_capacity()?;
+        let store = storage::Store::create(directory.as_ref())?;
+        let (host, oversight) = prepared.publish(store)?;
+        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
+        Ok((host, roles))
+    }
+
     /// Install the exact learned recipe, independent evaluation protocol and
     /// every declared guard in the first canonical image. The original prepared
     /// bootstrap validates native transitions before storage is created, and its

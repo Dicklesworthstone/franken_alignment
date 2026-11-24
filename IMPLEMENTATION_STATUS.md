@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: account for learned generation in the original first image
+
+The original guarded learned constructor now composes independent evaluation,
+Andon accounting and terminal recovery capacity before its sole canonical
+publication. Complete recipe-owned source, numerical and guard bindings are
+checked before storage creation, and the complete bootstrap event inventory must
+leave its terminal reserve. The original encoder checks actual bytes with the
+final store identity. Only acknowledgment returns the original owner and its
+separately held roles.
+
+The new public constructor retains native generation, fresh source/identity,
+independent labels and human approval as separate operations. It cannot retrofit
+an existing store, reset accounting or substitute an evaluator for a required
+pre-output predictor. This is a bounded FA-105 increment serving FI-A08/A13/A18,
+with no dependency, journal format or production qualification change.
+
+Six regression functions exercise original numerical and durable APIs: role
+selection, exact and one-short reserve capacity, malformed bootstrap inputs,
+recipe-owned source agreement, independently labeled held outcomes and
+idempotent Andon costs, and a permitted publication still requiring both keys.
+See [the API contract](docs/LEARNED_ANDON_BOOTSTRAP.md).
+
+The required `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because `rch` is absent (exit 127). The workspace then became
+unavailable; source work continued through GitHub. Independent manual source
+review is separate from parsing, formatting, compilation, Clippy and runtime
+execution, which remain unexecuted for this increment. Existing in-progress
+acceptance is retained; no bead or deployment gate is closed.
+
 ## 2026-11-23: retain live native evaluation through resident publication
 
 Fresh `serve-native-generated` creation now explicitly composes paired Andon

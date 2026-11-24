@@ -371,3 +371,6 @@ fn recipe_owned_policy_source_must_match_declaration_and_is_installed_once() {
     assert_eq!(host.credibility_report().unwrap(), report);
     assert_eq!(host.inspect().executions, 0);
 }
+
+#[path = "evaluated_bootstrap/andon.rs"]
+mod andon;

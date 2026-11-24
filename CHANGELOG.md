@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-23: bootstrap learned evaluation and Andon accounting atomically
+
+- Add a reserved learned constructor that installs the exact recipe, complete
+  guards, native evaluator and Andon accounting in one acknowledged first image.
+- Admit the complete event inventory without spending terminal recovery capacity;
+  keep canonical byte checks and separate human/evaluator role custody.
+- Preserve recipe-owned source identity and reject incompatible predictor lanes.
+- Add six public regression functions pairing actual generation/publication with
+  reserve, binding, foreign-role, censored-label and duplicate-charge negatives.
+  Required RCH execution remains pending; the disconnected workspace prevented
+  local parsing/formatting checks.
+
 ## 2026-11-23: evaluate resident native publication with original custody
 
 - Add explicit paired Andon/evaluator selection for fresh resident native
