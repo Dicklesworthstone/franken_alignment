@@ -23,6 +23,8 @@ const PEER_TEST: &str = "workflow::actor_service::native::sequence::tests::andon
 
 #[path = "andon/held_case.rs"]
 mod held_case;
+#[path = "andon/continuation.rs"]
+mod continuation;
 #[path = "andon/recovery.rs"]
 mod recovered;
 #[path = "andon/stop_failure.rs"]

@@ -1,0 +1,26 @@
+UTC: 2026-11-24T20:42:25.508388+00:00
+CWD: /workspace/scratch/df8f11d29567/franken_alignment
+BASE_HEAD: fda8317d9b530de63e42e2cc6d9366400ee6c0fd
+SOURCE_MANIFEST: /workspace/scratch/df8f11d29567/verification/native-resident-continuation-final-source-checks.json
+SOURCE_MANIFEST_SHA256: 6d3259b43dc4072aacb04f6acc1475803e5ee82e8b4955af70e7002ea304f6f9
+RCH_VERSION: rch 2.1.37 (commit 550f62e7f4d9)
+ENV: RCH_REQUIRE_REMOTE=1 RCH_CANONICAL_PROJECT_ROOT=/workspace/scratch/df8f11d29567
+COMMAND: ["/workspace/scratch/df8f11d29567/tooling/rch/rch", "exec", "--", "cargo", "+nightly-2026-09-08", "run", "--locked", "-p", "xtask", "--", "check"]
+  [2m2026-11-24T20:42:25.515487Z[0m [33m WARN[0m [1;33mrch::hook[0m[33m: [33mFailed to query daemon: Daemon socket not found at /home/agent/.local/run/rch.sock, attempting recovery[0m
+    [2;3mat[0m rch/src/hook.rs:5326 [2;3mon[0m ThreadId(1)
+
+  [2m2026-11-24T20:42:25.520042Z[0m [33m WARN[0m [1;33mrch::hook::incident[0m[33m: [33mhook incident recorded, [1;33mreason_code[0m[33m: RCH-I010, [1;33mfailure_class[0m[33m: "daemon socket refused", [1;33mselected_mode[0m[33m: Local, [1;33mlocal_fallback_allowed[0m[33m: false[0m
+    [2;3mat[0m rch/src/hook.rs:3250 [2;3mon[0m ThreadId(1)
+
+  [2m2026-11-24T20:42:25.520619Z[0m [32m INFO[0m [1;32mrch::hook::auto_start[0m[32m: [32mDaemon unavailable, attempting recovery[0m
+    [2;3mat[0m rch/src/hook/auto_start.rs:502 [2;3mon[0m ThreadId(1)
+
+  [2m2026-11-24T20:42:25.520985Z[0m [32m INFO[0m [1;32mrch::hook::auto_start_lock[0m[32m: [32mdoctor.autostart_lock.acquired, [1;32mpath[0m[32m: /tmp/rch-autostart-1000/startup.lock, [1;32mpid[0m[32m: 7[0m
+    [2;3mat[0m rch/src/hook/auto_start.rs:286 [2;3mon[0m ThreadId(1)
+
+  [2m2026-11-24T20:42:25.521076Z[0m [32m INFO[0m [1;32mrch::hook::auto_start[0m[32m: [32mSpawning rchd, [1;32mbinary[0m[32m: /workspace/scratch/df8f11d29567/tooling/rch/rchd, [1;32msocket[0m[32m: /home/agent/.local/run/rch.sock[0m
+    [2;3mat[0m rch/src/hook/auto_start.rs:469 [2;3mon[0m ThreadId(1)
+
+[RCH] remote required; refusing local fallback (daemon unavailable) — retryable
+
+EXIT_CODE: 103

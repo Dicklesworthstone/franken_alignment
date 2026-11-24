@@ -217,9 +217,12 @@ successful recovery appends one original recovery Fence and returns a fresh
 reviewer role. That same owner, numerical state and Stop session then serve the
 complete suffix, without reopening between its entries.
 
-Use suffix recovery at the original confirmed-Message boundary. A pending or
-partly generated release must first use the existing single-release recovery
-path; this mode cannot skip its outstanding numerical or publication work.
+Use `--after-message` recovery at the original confirmed-Message boundary. An
+accounted service can instead explicitly select
+[`--continue-generation`](#resume-interrupted-accounted-generation) for its
+original pending or completed-but-unsubmitted first Message. Ordinary unaccounted
+pending generation retains the existing single-release recovery path. No mode
+can skip outstanding numerical or publication work.
 
 The complete remaining selection must describe new work. All actor request IDs
 must be absent from the retained request history, and every selected Message's
@@ -252,7 +255,10 @@ Creation and explicit suffix recovery accept
 `--retain-history-anchor NEW_OUTPUT`. Recovery also accepts
 `--history-anchor INPUT` together with `--after-message PREVIOUS_REQUEST`.
 These selections compose with checked publication, per-release prechecks,
-the independent operator and explicit credibility requalification.
+the independent operator and explicit credibility requalification. Accounted
+recovery also accepts the explicit `--continue-generation` mode described
+[below](#resume-interrupted-accounted-generation), under its separate supported
+composition; it requires both input and new output history anchors.
 
 ```sh
 supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
@@ -753,10 +759,76 @@ acknowledged late labels after evaluator authority has retired.
 The requirements, accounting/evaluator profiles and frozen input anchor are
 reserved against the store, retained output, future service endpoints and
 selected recipe/model/source/witness inputs before numerical asset loading.
-This composition resumes a confirmed Message boundary. Interrupted resident
-generation retains the separate single-request recovery path. The authored
-positive and causal-negative regression cases still require remote RCH
-compilation and runtime qualification before acceptance can close.
+This mode resumes a confirmed Message boundary. The next section selects an
+interrupted original generation instead. The authored positive and causal-negative
+regression cases still require remote RCH compilation and runtime qualification
+before acceptance can close.
+
+### Resume interrupted accounted generation
+
+Select `--continue-generation` when the first remaining Message already has an
+original pending or completed-but-unsubmitted native text intent:
+
+```sh
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --continue-generation \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor /absolute/independent/original-native.anchor \
+  --retain-history-anchor /absolute/independent/new-native.anchor \
+  --evaluation-recovery RECOVERY_REQUIREMENTS
+```
+
+This unary option takes no value and cannot be combined with `--after-message`.
+Both accounting/evaluator profiles, an independently retained input anchor, a
+new output anchor and the same closed recovery requirements are mandatory. The
+optional simple witness profile and independent operator pair remain available;
+governor, topology, joint accounting, credibility activation and non-null
+prechecks retain their separate composition requirements.
+
+The remaining sequence contains 1 through 16 entries and starts with a Message.
+Its first recipe must identify the exact original text intent: generation,
+prompt, stop token, token limit, work limit and original numerical command must
+match the retained history. A pending command resumes from its actual KV/RNG
+state and sampled prefix. A command already completed on its monitored stop
+token can proceed to fresh submission and review without sampling again. A
+failed, held, cancelled or limit-exhausted generation does not become a completed
+Message by selecting this mode. An already recorded actor request cannot be
+reused as the first entry.
+
+After the original recovery Fence and before fresh source reads, numerical
+work, review listeners or reference output, admission scans the entire remaining
+sequence. Every actor request must be absent from retained history. Only the
+first Message may name an existing generation; every later Message generation
+must be unused. The original remaining stream allowance must cover all selected
+Messages. A collision in a later entry therefore refuses the whole selection
+before the first resumed release can publish. The acknowledged Fence remains
+in the newly retained history on such a refusal.
+
+The first Message uses the original single-request intent selector and resume
+operation. It does not reconstruct a command from the current position or reset
+cumulative work. Each later Message still requires the immediately preceding
+confirmed receipt. Finish retains the last Message's exact recipe and performs
+no sampling. A single resumed Message is a valid selection; a singleton Finish
+requires `--after-message` instead. Ending after a Message does not implicitly
+close the stream.
+
+One recovered owner and one fresh independent evaluator serve the whole
+selection. Original numerical spending, complete current accounting windows,
+pending cases and liabilities survive; later handoffs do not replenish the
+evaluator's finite allowance. Every effect requires fresh source evidence,
+helper review and a separate human approval. A rejection of the resumed Message
+retains its spent work and prevents all later entries from starting. Original
+Stop and deadline remain active through replay, Ready, resumed generation and
+all subsequent releases. An authenticated Stop at Ready retains the sampled
+prefix and accounted terminal history before any ordinary recovery Fence or
+fresh role is issued.
+
+Five authored regression functions cover pending and completed-unsubmitted
+first intents through Message/Finish, singleton continuation and human refusal,
+changed intent and later historical-generation collisions, Stop at Ready, and
+closed unary grammar. They still require the repository's remote compilation
+and runtime qualification; source checks alone do not establish these runtime
+outcomes.
 
 ## Independent policy governance during native creation
 
@@ -859,8 +931,9 @@ driver once, after the sequence has completed or stopped.
 
 ## Scope and verification
 
-The resident command creates a new native stream or explicitly selects a new
-remaining suffix with `--after-message`. Existing single-release native
+The resident command creates a new native stream, explicitly selects a new
+remaining suffix with `--after-message`, or resumes the first original accounted
+intent with `--continue-generation`. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
 credibility activation, topology or policy-governor services. History custody
@@ -870,15 +943,17 @@ operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows. Native governance requires the
 explicit creation or independently guarded recovery governor selection described above.
 Live evaluation and Andon accounting require their paired selection and new
-retained anchor. Accounted suffix recovery additionally requires the explicit
-predecessor, independent input anchor and evaluation recovery requirements above;
-it does not imply governance or precheck support.
+retained anchor. Accounted recovery additionally requires explicit
+`--after-message` or `--continue-generation`, an independent input anchor and
+the evaluation recovery requirements above; it does not imply governance or
+precheck support.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,
 later rejection, independent Stop, fresh-source loss and checked witness failure.
 Recovery cases cover new suffix publication, singleton Finish without inference,
-original replay Stop and rejection of historical or incompatible selections.
+pending or completed-unsubmitted first Message continuation, original replay
+Stop and rejection of historical or incompatible selections.
 Retained-history cases cover actual prefix/suffix and Finish publication, frozen
 input, rollback and divergent-history refusal, startup Fence retention, Ready
 Stop and deadline boundaries, and output collision without effect retry.

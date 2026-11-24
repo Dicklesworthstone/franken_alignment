@@ -1,0 +1,76 @@
+{
+  "utc": "2026-11-24T20:42:10.759574+00:00",
+  "base_head": "fda8317d9b530de63e42e2cc6d9366400ee6c0fd",
+  "tool": "rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)",
+  "distribution": "nightly-2026-09-08",
+  "rustfmt_archive_sha256": "d20583c1abaa6f77940a20eb9634a5bf05ba1df0ba5cfeb7b1b4347635ac3f53",
+  "shared_library_component_sha256": "411b2537745e40c8ccb625688de5e0869fca029a2e2f63f1a8fa6995bfc8b1e6",
+  "scope": "7 frozen Rust source/test files; Rust2024 scoped parse, no typecheck/build/test",
+  "format": "Changed ranges only in six existing files, legacy layout/order preserved; new continuation test file fully formatted",
+  "files": [
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+      "sha256": "0fdd3f314ba9b01bd3548c0fd06e53ea4320f84cabf2ff0ac891c4df120ae67c",
+      "git_blob_sha1": "9bc07e08c72573f0564630c7d77495be67bd39cd",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/anchors.rs",
+      "sha256": "6632cf65ac71b325610d81ce4f45fbb4eb5338f17ee51fd93c18150e488d3ae3",
+      "git_blob_sha1": "36cf6f896458e0c859d8e7ecdce10a402d019c9c",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+      "sha256": "e7299eecc7612dee498d2c61b2fd35ab8db33712d06645bdcdad3d7d0eeb83bb",
+      "git_blob_sha1": "efef09bdbf10defa443611b65228b33a52200684",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+      "sha256": "1fb7bb4462837aaacf8bc23af39149c1eabbda243091c94f8ae30261e0ad62bb",
+      "git_blob_sha1": "ab338097a17dcf43c750cd0b45ac197d338d74d5",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/recovery.rs",
+      "sha256": "998870d515d9ee0151a5c62acb7fa91a1fa72fee2603fed454580274e4a840f9",
+      "git_blob_sha1": "dd0f52af4a44561c126474e7405e7203c51fc0e2",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+      "sha256": "e3579419c4b7f62737018184fee442099b61f65a6d7d09881fc7ef782df95047",
+      "git_blob_sha1": "bd2683cbb3aaceaff75983725386e4aeffacd338",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/continuation.rs",
+      "sha256": "bf82446b12e85d4bd4a6cbd378e08559cea804816e82f977ff45b54f018a6dbe",
+      "git_blob_sha1": "c3d6d5f5448f5fe1df16541e6be6d9ffe82ead4f",
+      "parse_exit": 0,
+      "stderr": ""
+    }
+  ],
+  "new_file_format_check": {
+    "files": [
+      "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/continuation.rs"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "git_diff_check": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "test_functions_added": 5,
+  "source_review": "Original pending/completed-unsubmitted intent selector; full future history preflight after retained Fence before live services; first-only resume; first-human numerical assertions; same evaluator inode/candidate allowance; fresh human decisions; Ready Stop."
+}

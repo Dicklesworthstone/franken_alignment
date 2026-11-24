@@ -5,7 +5,8 @@
 
 use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
 use super::{
-    Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, andon, evaluation, governor,
+    Config, Entry, MAX_ENTRIES, Mode, PeerProfile, Profile, Release, anchors, andon, evaluation,
+    governor,
 };
 use crate::config::read_regular;
 use crate::workflow::actor_service::{andon_settings, evaluator};
@@ -16,7 +17,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor; evaluated --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; governor/topology/activation/joint/precheck compositions remain separate";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint/precheck compositions remain separate";
 
 struct Input {
     recipe: PathBuf,
@@ -148,7 +149,13 @@ where
     let (args, history_options) = anchors::take_options(&args)?;
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
-    history_options.check_mode(after)?;
+    let mode = accounting_paths
+        .as_ref()
+        .map_or(Mode::from_after(after), |paths| paths.mode);
+    if mode.after() != after {
+        return Err(andon::INVALID.into());
+    }
+    history_options.check_selected_mode(mode)?;
     let mut selected_files = args[1..4].iter().map(PathBuf::from).collect::<Vec<_>>();
     selected_files.extend(publication_path.iter().cloned());
     selected_files.extend(operator_option.iter().map(|(path, _)| path.clone()));
@@ -216,7 +223,7 @@ where
         .map(|path| governor::requirements::Selection::read(path, &config))
         .transpose()?;
     if let Some(accounting) = accounting {
-        accounting.check_mode(after)?;
+        accounting.check_mode(mode)?;
         accounting.check_configuration(&config, publication.as_ref())?;
         let mut files = selected_files
             .iter()
@@ -232,7 +239,7 @@ where
             Path::new(&args[2]),
             &config,
             &peers,
-            after,
+            mode,
             selected_operator.as_ref(),
             None,
             Some(history_options),
@@ -242,7 +249,7 @@ where
             &files,
         )?;
         return super::run_accounted(
-            config, entries, &peers, publication.as_ref(), (after, selected_operator.as_ref()),
+            config, entries, &peers, publication.as_ref(), (mode, selected_operator.as_ref()),
             history.as_ref().ok_or(andon::INVALID)?, accounting, time, output,
         );
     }
@@ -357,6 +364,11 @@ fn decode(bytes: &[u8], base: &Path) -> Result<Vec<Input>, String> {
 }
 
 fn decode_selected(bytes: &[u8], base: &Path, after: Option<u64>) -> Result<Vec<Input>, String> {
+    decode_mode(bytes, base, Mode::from_after(after))
+}
+
+fn decode_mode(bytes: &[u8], base: &Path, mode: Mode) -> Result<Vec<Input>, String> {
+    let after = mode.after();
     let mut root = object(
         strict_json::parse(
             bytes,
@@ -378,7 +390,7 @@ fn decode_selected(bytes: &[u8], base: &Path, after: Option<u64>) -> Result<Vec<
         return Err("native sequence entries must be an array".into());
     };
     end(root)?;
-    check_count(values.len(), after)?;
+    check_count(values.len(), mode)?;
     let count = values.len();
     values
         .into_iter()
@@ -530,7 +542,7 @@ fn load_with_recovery_services(
         path,
         config,
         peers,
-        after,
+        Mode::from_after(after),
         selected_operator,
         credibility,
         history_options,
@@ -545,7 +557,7 @@ fn load_with_complete_services(
     path: &Path,
     config: &Config,
     peers: &PeerProfile,
-    after: Option<u64>,
+    mode: Mode,
     selected_operator: Option<&operator::Selection>,
     credibility: Option<&Path>,
     history_options: Option<anchors::Options>,
@@ -554,8 +566,12 @@ fn load_with_complete_services(
     accounting: Option<andon::Selection<'_>>,
     accounting_inputs: &[&Path],
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
+    let after = mode.after();
+    if mode == Mode::ContinueGeneration && accounting.is_none() {
+        return Err(andon::INVALID.into());
+    }
     if let Some(accounting) = accounting {
-        accounting.check_mode(after)?;
+        accounting.check_mode(mode)?;
         if credibility.is_some() || selected_governor.is_some() || recovery_path.is_some() {
             return Err(andon::INVALID.into());
         }
@@ -568,7 +584,7 @@ fn load_with_complete_services(
         recovery_path.is_some(),
     )?;
     if let Some(options) = &history_options {
-        options.check_mode(after)?;
+        options.check_selected_mode(mode)?;
         options.check_files(&[path.to_path_buf()])?;
         if let Some(recovery) = recovery_path {
             options.check_files(&[recovery.to_path_buf()])?;
@@ -584,9 +600,10 @@ fn load_with_complete_services(
         .parent()
         .ok_or("native sequence profile has no parent")?;
     let bytes = read_regular(path, MAX_PROFILE_BYTES)?;
-    let plan = match after {
-        Some(_) => decode_selected(&bytes, base, after)?,
-        None => decode(&bytes, base)?,
+    let plan = match mode {
+        Mode::Create => decode(&bytes, base)?,
+        Mode::AfterMessage(_) => decode_selected(&bytes, base, after)?,
+        Mode::ContinueGeneration => decode_mode(&bytes, base, mode)?,
     };
     if let Some(accounting) = accounting {
         // Precheck composition requires its own full disclosure lifetime and
@@ -724,7 +741,7 @@ fn load_with_complete_services(
     }
     let history = history_options
         .map(|options| {
-            options.admit(
+            options.admit_mode(
                 config,
                 &actors
                     .iter()
@@ -733,7 +750,7 @@ fn load_with_complete_services(
                     .collect::<Vec<_>>(),
                 peers,
                 selected_operator,
-                after,
+                mode,
                 credibility,
             )
         })
@@ -788,9 +805,10 @@ fn load_with_complete_services(
             precheck,
         });
     }
-    match after {
-        Some(_) => validate_selected(config, &entries, peers, after)?,
-        None => validate(config, &entries, peers)?,
+    match mode {
+        Mode::Create => validate(config, &entries, peers)?,
+        Mode::AfterMessage(_) => validate_selected(config, &entries, peers, after)?,
+        Mode::ContinueGeneration => validate_mode(config, &entries, peers, mode)?,
     }
     Ok((entries, history))
 }
@@ -812,7 +830,17 @@ pub(super) fn validate_selected(
     peers: &PeerProfile,
     after: Option<u64>,
 ) -> Result<(), String> {
-    check_count(entries.len(), after)?;
+    validate_mode(config, entries, peers, Mode::from_after(after))
+}
+
+pub(super) fn validate_mode(
+    config: &Config,
+    entries: &[Entry],
+    peers: &PeerProfile,
+    mode: Mode,
+) -> Result<(), String> {
+    let after = mode.after();
+    check_count(entries.len(), mode)?;
     super::disclosure::check_initial_epoch(entries[0].precheck.as_ref(), after)?;
     validate_actors(
         config,
@@ -881,15 +909,15 @@ pub(super) fn validate_selected(
     Ok(())
 }
 
-fn check_count(count: usize, after: Option<u64>) -> Result<(), String> {
-    if after == Some(0) {
+fn check_count(count: usize, mode: Mode) -> Result<(), String> {
+    if mode.after() == Some(0) {
         return Err(
             "native sequence recovery requires a nonzero original message predecessor".into(),
         );
     }
-    let minimum = if after.is_some() { 1 } else { 2 };
+    let minimum = if mode.is_recovery() { 1 } else { 2 };
     if !(minimum..=MAX_ENTRIES).contains(&count) {
-        return Err(if after.is_some() {
+        return Err(if mode.is_recovery() {
             "native sequence recovery requires 1..=16 independently selected remaining entries"
                 .into()
         } else {

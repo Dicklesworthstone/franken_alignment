@@ -48,10 +48,13 @@ with paired `--andon` and `--evaluator-profile` profiles and a new
 labels them across Message/Finish handoffs under one finite allowance; optional
 operator Ledger reads the original accounting. A held final review remains
 labelable under the remaining original budgets. Final intake retirement precedes
-the retained history cut. Accounted recovery requires the original confirmed
-Message, independent input history and explicit recovery floors; singleton
-Finish preserves the original numerical work without new inference. Each
-release still needs separate human approval. This composition remains pending
+the retained history cut. Accounted recovery requires independent input history
+and explicit recovery floors. `--after-message` selects an original confirmed
+Message; [`--continue-generation`](docs/RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-accounted-generation)
+resumes the exact pending or completed-but-unsubmitted first Message before
+serving the remaining sequence. Both retain original numerical spend and the
+complete accounting inventory. A singleton Finish uses `--after-message` without
+new inference. Each release still needs separate human approval. This composition remains pending
 required RCH compilation and runtime qualification.
 
 Single-request native generated services also support

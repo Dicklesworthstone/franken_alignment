@@ -1,0 +1,29 @@
+{
+  "utc": "2026-11-24T20:42:25.508388+00:00",
+  "base_head": "fda8317d9b530de63e42e2cc6d9366400ee6c0fd",
+  "source_manifest": "/workspace/scratch/df8f11d29567/verification/native-resident-continuation-final-source-checks.json",
+  "source_manifest_sha256": "6d3259b43dc4072aacb04f6acc1475803e5ee82e8b4955af70e7002ea304f6f9",
+  "raw_log": "/workspace/scratch/df8f11d29567/verification/rch-required-gate-native-resident-continuation-final.log",
+  "raw_log_sha256": "67acbab5d547c67d001d642cc4fadf4b4ad5f8acd5d576d2ea02cccf2734191a",
+  "command": [
+    "/workspace/scratch/df8f11d29567/tooling/rch/rch",
+    "exec",
+    "--",
+    "cargo",
+    "+nightly-2026-09-08",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "environment": {
+    "RCH_REQUIRE_REMOTE": "1",
+    "RCH_CANONICAL_PROJECT_ROOT": "/workspace/scratch/df8f11d29567"
+  },
+  "rch_version": "rch 2.1.37 (commit 550f62e7f4d9)",
+  "exit_code": 103,
+  "source_hashes_unchanged": true,
+  "result": "RCH refused before Cargo; daemon unavailable and no configured workers; local fallback prohibited. No compilation or tests executed."
+}

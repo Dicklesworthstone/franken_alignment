@@ -2,19 +2,20 @@
 //! Configuration and evaluator custody are selected before numerical assets,
 //! listeners or the first image; none is inferred from a later journal.
 use super::super::{Config, PeerProfile, Profile, PublicationProfile, operator};
-use super::{anchors, evaluation};
+use super::{Mode, anchors, evaluation};
 use crate::workflow::actor_service::{andon_settings, evaluator};
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
 
-pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; governance, topology, joint promotion, activation and precheck schedules require their own composition";
+pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; governance, topology, joint promotion, activation and precheck schedules require their own composition";
 
 pub(super) struct Paths {
     pub settings: PathBuf,
     pub evaluator: PathBuf,
     pub recovery: Option<PathBuf>,
+    pub mode: Mode,
 }
 
 #[derive(Clone, Copy)]
@@ -31,20 +32,19 @@ pub(super) fn take_options(
     args: &[String],
     credibility: Option<&Path>,
 ) -> Result<(Vec<String>, Option<Paths>), String> {
-    if !args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluation-recovery"))
-    {
+    if !args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--andon" | "--evaluator-profile" | "--evaluation-recovery"
+        )
+    }) {
         return Ok((args.to_vec(), None));
     }
     if credibility.is_some()
         || args.len() < 10
         || args.len() > 22
-        || args.len() % 2 != 0
         || args.first().map(String::as_str) != Some("serve-native-generated")
-        || args[1..4]
-            .iter()
-            .any(|value| value.is_empty() || value.starts_with("--"))
+        || args[1..4].iter().any(|value| value.is_empty() || value.starts_with("--"))
     {
         return Err(INVALID.into());
     }
@@ -52,22 +52,39 @@ pub(super) fn take_options(
     let mut settings = None;
     let mut evaluator = None;
     let mut recovery = None;
+    let mut mode = None;
     let mut seen = BTreeSet::new();
-    for pair in args[4..].chunks_exact(2) {
-        if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(pair[0].as_str()) {
+    let mut index = 4;
+    while index < args.len() {
+        let flag = args[index].as_str();
+        if !seen.insert(flag) {
             return Err(INVALID.into());
         }
-        match pair[0].as_str() {
-            "--andon" => settings = Some(PathBuf::from(&pair[1])),
-            "--evaluator-profile" => evaluator = Some(PathBuf::from(&pair[1])),
-            "--evaluation-recovery" => recovery = Some(PathBuf::from(&pair[1])),
+        if flag == "--continue-generation" {
+            if mode.replace(Mode::ContinueGeneration).is_some() {
+                return Err(INVALID.into());
+            }
+            index += 1;
+            continue;
+        }
+        let value = args.get(index + 1).ok_or(INVALID)?;
+        if value.is_empty() || value.starts_with("--") {
+            return Err(INVALID.into());
+        }
+        let pair = &args[index..index + 2];
+        match flag {
+            "--andon" => settings = Some(PathBuf::from(value)),
+            "--evaluator-profile" => evaluator = Some(PathBuf::from(value)),
+            "--evaluation-recovery" => recovery = Some(PathBuf::from(value)),
             "--after-message" => {
-                let value = &pair[1];
                 if value.len() > 20
                     || value.starts_with('0')
                     || !value.bytes().all(|byte| byte.is_ascii_digit())
-                    || value.parse::<u64>().is_err()
                 {
+                    return Err(INVALID.into());
+                }
+                let after = value.parse::<u64>().map_err(|_| INVALID)?;
+                if mode.replace(Mode::AfterMessage(after)).is_some() {
                     return Err(INVALID.into());
                 }
                 remaining.extend_from_slice(pair);
@@ -79,11 +96,13 @@ pub(super) fn take_options(
             | "--tower-generation" => remaining.extend_from_slice(pair),
             _ => return Err(INVALID.into()),
         }
+        index += 2;
     }
+    let mode = mode.unwrap_or(Mode::Create);
     if !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
-        || seen.contains("--after-message") != seen.contains("--history-anchor")
-        || seen.contains("--after-message") != recovery.is_some()
+        || mode.is_recovery() != seen.contains("--history-anchor")
+        || mode.is_recovery() != recovery.is_some()
     {
         return Err(INVALID.into());
     }
@@ -93,6 +112,7 @@ pub(super) fn take_options(
             settings: settings.ok_or(INVALID)?,
             evaluator: evaluator.ok_or(INVALID)?,
             recovery,
+            mode,
         }),
     ))
 }
@@ -126,8 +146,11 @@ pub(super) fn check_endpoint_files(endpoints: &[PathBuf], files: &[&Path]) -> Re
 }
 
 impl Selection<'_> {
-    pub(super) fn check_mode(self, after: Option<u64>) -> Result<(), String> {
-        if after == Some(0) || after.is_some() != self.recovery.is_some() {
+    pub(super) fn check_mode(self, mode: Mode) -> Result<(), String> {
+        if mode.after() == Some(0)
+            || mode.is_recovery() != self.recovery.is_some()
+            || self.paths.is_some_and(|paths| paths.mode != mode)
+        {
             return Err(INVALID.into());
         }
         Ok(())

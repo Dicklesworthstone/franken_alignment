@@ -107,9 +107,12 @@ allowances persist across Message/Finish handoffs, including a bounded labeling
 opportunity after a final helper Hold. Creation and
 [explicitly anchored suffix recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
 accept the marginal `/1` accounting profile and optional simple witnesses/operator
-Ledger. Recovery selects `--after-message`, an independent input anchor and the
-same explicit evaluation recovery requirements used below; one fresh evaluator
-serves the recovered suffix without renewing its allowance at handoffs. Joint
+Ledger. Recovery selects `--after-message` for a confirmed boundary or
+[`--continue-generation`](RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-accounted-generation)
+for the exact original pending or completed-but-unsubmitted first Message.
+Both require an independent input anchor and the same explicit evaluation
+recovery requirements used below; one fresh evaluator serves the recovered
+sequence without renewing its allowance at handoffs. Joint
 profiles, governance, topology and selected prechecks remain separate. Required
 RCH compilation and runtime qualification remain pending.
 

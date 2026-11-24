@@ -1,6 +1,7 @@
 //! Independently selected custody for native resident recovery. Archive bytes
 //! are frozen before recipes; acknowledged output never replaces an old anchor.
 use super::super::{Config, FileOversight, FileSupervisedDriver, PeerProfile, Profile, debug, exact_precheck, operator};
+use super::Mode;
 use crate::config::read_regular;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::anchored::{
     FileHistoryAnchor, MAX_HISTORY_ANCHOR_BYTES,
@@ -13,7 +14,7 @@ use std::{
 };
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
-const USAGE: &str = "native sequence history requires --history-anchor INPUT only with --after-message, and/or --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "native sequence history requires --history-anchor INPUT only with --after-message or explicitly accounted --continue-generation, and/or --retain-history-anchor NEW_OUTPUT";
 
 #[derive(Default)]
 pub(super) struct Options {
@@ -103,6 +104,14 @@ impl Options {
         Ok(())
     }
 
+    pub(super) fn check_selected_mode(&self, mode: Mode) -> Result<(), String> {
+        match mode {
+            Mode::ContinueGeneration => Ok(()),
+            Mode::Create | Mode::AfterMessage(_) => self.check_mode(mode.after()),
+        }
+    }
+
+    #[cfg(test)]
     pub(super) fn admit(
         self,
         config: &Config,
@@ -112,7 +121,26 @@ impl Options {
         after: Option<u64>,
         credibility: Option<&Path>,
     ) -> Result<Selection, String> {
-        self.check_mode(after)?;
+        self.admit_mode(
+            config,
+            entries,
+            peers,
+            operator,
+            Mode::from_after(after),
+            credibility,
+        )
+    }
+
+    pub(super) fn admit_mode(
+        self,
+        config: &Config,
+        entries: &[(&Profile, Option<&exact_precheck::Selection>)],
+        peers: &PeerProfile,
+        operator: Option<&operator::Selection>,
+        mode: Mode,
+        credibility: Option<&Path>,
+    ) -> Result<Selection, String> {
+        self.check_selected_mode(mode)?;
         if self.input.is_none() && self.output.is_none() {
             return Ok(Selection::default());
         }
@@ -179,16 +207,16 @@ impl Selection {
         Ok(())
     }
 
-    pub(super) fn check(
+    pub(super) fn check_selected(
         &self,
         config: &Config,
         entries: &[(&Profile, Option<&exact_precheck::Selection>)],
         peers: &PeerProfile,
         operator: Option<&operator::Selection>,
-        after: Option<u64>,
+        mode: Mode,
         credibility: Option<&Path>,
     ) -> Result<(), String> {
-        if self.input.is_some() && after.is_none_or(|id| id == 0) {
+        if self.input.is_some() && (!mode.is_recovery() || mode.after() == Some(0)) {
             return Err(USAGE.into());
         }
         if self.input.is_none() && self.output.is_none() {

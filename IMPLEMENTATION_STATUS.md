@@ -1,5 +1,55 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: resume interrupted accounted native generation in a resident sequence
+
+`serve-native-generated --continue-generation` explicitly resumes the first
+original pending or completed-but-unsubmitted native Message and retains that
+owner through the remaining sequence. A typed mode survives option removal,
+manifest admission, history custody and runner selection; no predecessor ID is
+invented. This mode requires paired Andon/evaluator profiles, an independently
+retained input anchor, new output anchor and explicit evaluation recovery floors.
+It accepts a singleton Message; a singleton Finish still requires a confirmed
+`--after-message` boundary. Ordinary unaccounted command grammar is unchanged.
+
+The original single-request selector validates the exact retained text intent,
+including its prompt and limits, current numerical predecessor and unfinished
+or successful stop-token state. The first entry uses the original resume path,
+preserving sampled prefix, KV/RNG state and cumulative work. A completed intent
+reaches fresh submission without additional draws. Every later Message retains
+its confirmed predecessor requirement, and Finish performs no generation.
+Before fresh source reads, numerical work, review intake or reference output,
+whole-sequence admission rejects any recorded actor request, any historical
+later Message generation, or an exceeded original stream allowance. An admission
+refusal retains the already acknowledged original recovery Fence.
+
+One recovered owner and one fresh independent evaluator retain complete current
+accounting windows, pending cases, liabilities and finite invocation allowances
+across all releases. Separate helper review and human approval remain necessary
+for each effect. A rejected first Message preserves spent numerical work and
+prevents successor generation. The existing checked replay driver retains Stop
+priority at every event and Ready; its terminal path preserves a partial sampled
+prefix and accounted history before ordinary recovery Fence or fresh role issue.
+
+The [operator contract](docs/RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-accounted-generation)
+documents this explicit selection. Five new regression functions cover real
+partial and completed-unsubmitted generation through Message/Message/Finish,
+older completed history, singleton continuation, independent human rejection,
+changed prompt/limit and later historical-ID refusal, Ready Stop, registered
+window preservation and closed unary grammar. Source review corrected an
+anchors-only fixture that accidentally repeated the unary option already owned
+by the accounting parser. Tests remain authored intent until remote execution.
+FA-025, FA-026, FA-105 and FA-134 and Bead
+`franken_alignment-address-resolver-6w62.6.3.2` remain in progress pending
+successful exact-source compilation, runtime tests and required qualification.
+
+All seven changed Rust files passed scoped Rust 2024 parsing with the qualified
+`nightly-2026-09-08` formatter; the new test module passed full formatting checks,
+and `git diff --check` passed. The [source receipt](artifacts/execution/2026-11-24-native-resident-continuation-source-checks.json)
+pins the final hashes. The [required RCH attempt](artifacts/execution/2026-11-24-native-resident-continuation-rch.log)
+returned exit 103 before Cargo because no remote worker was available and local
+fallback was prohibited. Those hashes were unchanged after the attempt. No
+compilation, type checking, runtime, Clippy or canonical qualification is claimed.
+
 ## 2026-11-24: recover accounted resident native Message/Finish suffixes
 
 `serve-native-generated` now connects an explicitly selected accounted suffix

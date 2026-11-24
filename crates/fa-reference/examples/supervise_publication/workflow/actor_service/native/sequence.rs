@@ -29,6 +29,32 @@ use fa_reference::action::consequence::oversight::actor::ActorProposal;
 
 pub(super) const MAX_ENTRIES: usize = 16;
 
+/// A selected start cannot acquire a different recovery meaning after options
+/// are removed. Pending generation has no invented Message predecessor.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Mode {
+    Create,
+    ContinueGeneration,
+    AfterMessage(u64),
+}
+
+impl Mode {
+    pub(super) fn from_after(after: Option<u64>) -> Self {
+        after.map_or(Self::Create, Self::AfterMessage)
+    }
+
+    pub(super) fn after(self) -> Option<u64> {
+        match self {
+            Self::AfterMessage(after) => Some(after),
+            Self::Create | Self::ContinueGeneration => None,
+        }
+    }
+
+    pub(super) fn is_recovery(self) -> bool {
+        self != Self::Create
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Release {
     Message,
@@ -242,7 +268,7 @@ where
         entries,
         reviewer_profile,
         publication,
-        selection,
+        (Mode::from_after(selection.0), selection.1),
         credibility,
         history,
         governor,
@@ -280,7 +306,7 @@ where
         entries,
         reviewer_profile,
         publication,
-        (None, selected_operator),
+        (Mode::Create, selected_operator),
         history,
         andon::Selection {
             settings,
@@ -318,7 +344,44 @@ where
         entries,
         reviewer_profile,
         publication,
-        (Some(selection.0), selection.1),
+        (Mode::AfterMessage(selection.0), selection.1),
+        history,
+        andon::Selection {
+            settings,
+            evaluator,
+            recovery: Some(recovery),
+            paths: None,
+        },
+        time,
+        output,
+    )
+}
+
+/// Continue the first original unsubmitted intent, then retain that same live
+/// numerical owner through every independently selected successor release.
+#[cfg(test)]
+pub(super) fn run_with_andon_continuation<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selected_operator: Option<&operator::Selection>,
+    history: &anchors::Selection,
+    settings: &super::super::andon_settings::Settings,
+    evaluator: &super::super::evaluator::Settings,
+    recovery: &evaluation::Recovery,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_accounted(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        (Mode::ContinueGeneration, selected_operator),
         history,
         andon::Selection {
             settings,
@@ -336,7 +399,7 @@ fn run_accounted<F>(
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
-    selection: (Option<u64>, Option<&operator::Selection>),
+    selection: (Mode, Option<&operator::Selection>),
     history: &anchors::Selection,
     accounting: andon::Selection<'_>,
     time: F,
@@ -358,7 +421,7 @@ fn run_retained<F>(
     entries: Vec<Entry>,
     reviewer_profile: &PeerProfile,
     publication: Option<&PublicationProfile>,
-    selection: (Option<u64>, Option<&operator::Selection>),
+    selection: (Mode, Option<&operator::Selection>),
     credibility: Option<&Path>,
     history: Option<&anchors::Selection>,
     selected_governor: Option<&governor::Settings>,
@@ -371,7 +434,11 @@ fn run_retained<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (after, selected_operator) = selection;
+    let (mode, selected_operator) = selection;
+    if mode == Mode::ContinueGeneration && accounting.is_none() {
+        return Err(andon::INVALID.into());
+    }
+    let after = mode.after();
     governor::check_selected(
         selected_governor,
         selected_operator,
@@ -381,9 +448,9 @@ where
     )?;
     governor::check_publication(selected_governor, publication)?;
     requalification::check_mode(after, credibility)?;
-    profile::validate_selected(&config, &entries, reviewer_profile, after)?;
+    profile::validate_mode(&config, &entries, reviewer_profile, mode)?;
     if let Some(accounting) = accounting {
-        accounting.check_mode(after)?;
+        accounting.check_mode(mode)?;
         if credibility.is_some()
             || selected_governor.is_some()
             || requirements.is_some()
@@ -462,7 +529,7 @@ where
         credibility,
     )?;
     if let Some(history) = history {
-        history.check(
+        history.check_selected(
             &config,
             &entries
                 .iter()
@@ -470,7 +537,7 @@ where
                 .collect::<Vec<_>>(),
             reviewer_profile,
             selected_operator,
-            after,
+            mode,
             credibility,
         )?;
     }
@@ -570,11 +637,11 @@ where
     {
         return Err("native sequence source, reserve and publication contracts must match".into());
     }
-    if let Some(after) = after {
+    if mode.is_recovery() {
         // The original opener has already applied its single recovery Fence.
         // Inspect the complete suffix before a source read, fresh qualification,
         // reference output or numerical command can start new work.
-        recovered::preflight(&host, &entries, after, first_deadline.logical)?;
+        recovered::preflight(&host, &entries, mode, first_deadline.logical)?;
     }
     requalification::check_epoch(first.precheck.as_ref(), &host, credibility.is_some())?;
     if credibility.is_none() {
@@ -693,11 +760,12 @@ where
                 profile: entry.actor.clone(),
                 attempted: 0,
             };
-            let cycle = execute_entry(
+            let cycle = execute_entry_selected(
                 &mut driver,
                 &mut config,
                 entry,
                 previous,
+                index == 0 && mode == Mode::ContinueGeneration,
                 if index == 0 { credibility } else { None },
                 EntryServices {
                     control: &mut control,
@@ -868,11 +936,39 @@ struct EntryServices<'a> {
     governed: bool,
 }
 
+#[cfg(test)]
 fn execute_entry<F>(
     driver: &mut FileSupervisedDriver,
     config: &mut Config,
     entry: &Entry,
     previous: Option<u64>,
+    credibility: Option<&Path>,
+    services: EntryServices<'_>,
+    time: &mut F,
+    output: &mut impl Write,
+) -> Result<bool, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    execute_entry_selected(
+        driver,
+        config,
+        entry,
+        previous,
+        false,
+        credibility,
+        services,
+        time,
+        output,
+    )
+}
+
+fn execute_entry_selected<F>(
+    driver: &mut FileSupervisedDriver,
+    config: &mut Config,
+    entry: &Entry,
+    previous: Option<u64>,
+    resume_generation: bool,
     credibility: Option<&Path>,
     services: EntryServices<'_>,
     time: &mut F,
@@ -953,7 +1049,12 @@ where
             proposal
         }
         Release::Message => {
-            let complete = if let Some(prepared) = prepared {
+            let complete = if resume_generation {
+                super::recovery::resume(
+                    driver, config, &entry.inputs,
+                    (&mut *control, reviewer, deadline), &mut *time,
+                )?
+            } else if let Some(prepared) = prepared {
                 continuation::start(
                     driver,
                     config,

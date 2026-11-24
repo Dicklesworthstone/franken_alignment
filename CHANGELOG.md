@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-24: continue interrupted accounted native resident generation
+
+- Add explicit `--continue-generation` to resume an original pending or
+  completed-but-unsubmitted first Message and serve its remaining resident
+  sequence, including a singleton Message. Retain the original sampled prefix,
+  numerical command, work budget and independently anchored accounting history.
+- Scan every selected actor and future generation against retained history before
+  new work. Preserve fresh source, helper review and separate human approval;
+  first-release refusal prevents successors while retaining spent work.
+- Carry one recovered owner and independent evaluator through later Messages and
+  Finish. Keep original Stop/Ready handling, complete registered windows and
+  finite allowances; singleton Finish still selects a confirmed predecessor.
+- Add five causal regression functions and document the complete selection.
+  Required remote compilation, runtime tests and canonical qualification remain
+  pending.
+
 ## 2026-11-24: recover accounted resident native publication
 
 - Resume a confirmed native Message's remaining resident suffix under explicit

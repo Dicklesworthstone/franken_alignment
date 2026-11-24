@@ -110,7 +110,11 @@ original lifecycle requirements. Already recorded actor requests refuse live
 evaluation and retain their acknowledged recovery successor. Every new effect
 still needs fresh source, helper review and independent human approval.
 Resident native recovery with evaluation uses its
-[explicit remaining-sequence contract](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix).
+[explicit remaining-sequence contract](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
+at a confirmed Message boundary, or
+[`--continue-generation`](RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-accounted-generation)
+to resume the exact original pending or completed-but-unsubmitted first Message
+and continue through the remaining releases.
 Stronger publication compositions remain separate work. The live recovery implementation and regressions are
 source reviewed; required remote compilation and runtime qualification remain
 pending.
