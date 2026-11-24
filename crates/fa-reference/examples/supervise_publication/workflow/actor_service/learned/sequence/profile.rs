@@ -110,6 +110,73 @@ pub(super) fn load(
     Ok(entries)
 }
 
+/// Freeze the complete selected schedule and reserve its original profile,
+/// source, archive and endpoint roles before numerical or helper asset reads.
+/// Later request files cannot disappear and let a listener take their names.
+pub(super) fn load_evaluated(
+    path: &Path,
+    config: &Config,
+    peers: &super::PeerProfile,
+    selected_operator: Option<&super::super::operator::Selection>,
+    evaluation: &super::super::evaluation::Selection,
+    history: &Path,
+    selected_inputs: &[PathBuf],
+) -> Result<Vec<Entry>, String> {
+    evaluation.check_sequence_inputs(history, &[path, config.source.path()])?;
+    let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, None, false)?;
+    let mut inputs = selected_inputs.to_vec();
+    inputs.extend([path.to_path_buf(), config.source.path().to_path_buf()]);
+    for input in &plan {
+        let mut paths = vec![input.recipe.as_path(), input.actor.as_path()];
+        paths.extend(input.precheck.as_deref());
+        evaluation.check_sequence_inputs(history, &paths)?;
+        inputs.extend(paths.into_iter().map(Path::to_path_buf));
+    }
+    let prepared = plan.into_iter().map(|input| {
+        let actor = Profile::read(&input.actor)?;
+        let precheck = input.precheck.as_deref()
+            .map(super::super::precheck::Settings::read).transpose()?;
+        let recipe = recipe::EvaluatedRecipe::read(&input.recipe, config)?;
+        evaluation.check_sequence_inputs(history, &recipe.input_paths())?;
+        Ok((input.release, recipe, actor, precheck))
+    }).collect::<Result<Vec<_>, String>>()?;
+    let actors = prepared.iter().map(|(_, _, actor, _)| actor).collect::<Vec<_>>();
+    evaluation.check_sequence_actors(config, &actors, peers, selected_operator)?;
+    super::super::precheck::Settings::check_schedule(
+        prepared.iter().filter_map(|(_, _, _, precheck)| precheck.as_ref()))?;
+    let mut endpoints = vec![evaluation.peer.socket_path().to_path_buf()];
+    if let Some(selected) = selected_operator { endpoints.push(selected.settings.socket.clone()); }
+    for (_, _, actor, precheck) in &prepared {
+        endpoints.extend([actor.socket.clone(), peers.socket(actor.request),
+            crate::workflow::control::socket_path(peers, actor.request)]);
+        if let Some(precheck) = precheck {
+            super::super::precheck::check(precheck, config, Some(actor), peers)?;
+            evaluation.peer.check_custody_paths(&[precheck.socket_path()])?;
+            endpoints.push(precheck.socket_path().to_path_buf());
+        }
+    }
+    evaluation.check_history_endpoints(history, &endpoints)?;
+    for (_, recipe, _, _) in &prepared {
+        inputs.extend(recipe.input_paths().into_iter().map(Path::to_path_buf));
+    }
+    evaluation.check_sequence_endpoint_inputs(&endpoints, &inputs)?;
+    let mut protected = endpoints;
+    protected.push(history.to_path_buf());
+    protected.push(config.store.clone());
+    let mut entries: Vec<Entry> = Vec::with_capacity(prepared.len());
+    for (release, recipe, actor, precheck) in prepared {
+        let mut loaded = recipe.load(config, &protected)?;
+        if let Some(original) = entries.first() {
+            if loaded.generation != original.loaded.generation || loaded.stream != original.loaded.stream {
+                return Err("sequence recipes disagree on the complete original generation or stream".into());
+            }
+            loaded.generation = original.loaded.generation.clone();
+        }
+        entries.push(Entry { loaded, actor, release, precheck });
+    }
+    Ok(entries)
+}
+
 /// Admit every original recipe's supported mode before the first model/helper
 /// asset is read. The same frozen documents then enter the ordinary loaders.
 pub(super) fn load_governed(

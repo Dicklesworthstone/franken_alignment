@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-23: evaluate resident learned cases across Message and Finish
+
+- Compose paired Andon/evaluator profiles with fresh resident learned creation,
+  installing the original guarded numerical and accounting owner atomically.
+- Retain one independent evaluator and its remaining original budgets through
+  Message/Finish handoffs, helper retirement and final or early held outcomes.
+- Keep completed cases assessable after actor transport failure while ending
+  succession, retaining the original error and preserving Stop/control priority.
+- Retire label authority before final reply-only grace and retain acknowledged
+  assessments in the original history anchor without source or generation retries.
+- Preflight complete future entry roles, sockets, metadata and delayed inputs;
+  refuse unsupported governance, recovery and prediction compositions explicitly.
+- Add independent process/socket regressions for actual resident command dispatch,
+  original early/final cases, Hold/rejection, finite candidates, partial-frame
+  Stop/deadline handling, intermediate actor failure and custody negatives.
+  Qualified scoped parsing and whitespace checks passed; required remote RCH
+  compilation, runtime tests, Clippy and canonical qualification remain pending.
+
 ## 2026-11-23: retain final ordinary cases for independent evaluation
 
 - Preserve the original live evaluator after the final ordinary Tower request,

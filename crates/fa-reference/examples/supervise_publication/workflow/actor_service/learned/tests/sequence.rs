@@ -29,6 +29,7 @@ use std::{collections::BTreeSet, io::Write, os::unix::net::UnixStream,
 #[path = "sequence_operator.rs"] mod operator;
 #[path = "sequence_precheck.rs"] mod prechecks;
 #[path = "sequence_governor.rs"] mod governor;
+#[path = "sequence/evaluation.rs"] mod evaluation;
 
 const DUE: [ElapsedTick; 3] = [ElapsedTick(50_000), ElapsedTick(49_000), ElapsedTick(48_000)];
 

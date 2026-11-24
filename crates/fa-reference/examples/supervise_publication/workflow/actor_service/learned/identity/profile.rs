@@ -19,6 +19,10 @@ pub(in super::super) struct Profile {
     pub selection: Selection,
 }
 impl Profile {
+    pub(in super::super) fn input_paths(&self) -> [&std::path::Path; 2] {
+        [&self.passport, &self.selection.observed_manifest]
+    }
+
     pub(in super::super) fn registration(&self, assets: &mut Assets)
         -> Result<FileIdentityRequirement, String>
     {

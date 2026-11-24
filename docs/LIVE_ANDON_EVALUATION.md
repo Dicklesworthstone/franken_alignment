@@ -159,8 +159,8 @@ Optional `--precheck-profile` and paired `--operator-profile` /
 operator Ledger grant can read accounting and calibration Findings. Required
 raw/owned predictors, held-out joint recipes, joint accounting, stronger witness
 compositions, topology, campaigns, checkpoints, credibility activation,
-continuation, recovery and resident learned sequences refuse this opt-in. They
-require separately complete role and recovery contracts. In particular, an
+continuation and recovery refuse this single-request opt-in. Fresh resident
+learned sequences use the separately complete composition below. In particular, an
 accounted learned journal cannot use the narrower evaluated-only recovery wrapper.
 
 Six substantive learned-service regression functions use the original numerical
@@ -174,6 +174,20 @@ test-only accounting harness retains the original live owner for inspection;
 it does not recover or replace it. Qualified scoped parsing/format and whitespace
 checks passed; RCH compilation, runtime tests, Clippy and canonical qualification
 remain unexecuted because the runner is unavailable.
+
+## Create an evaluated resident learned service
+
+Fresh `serve-learned-generated` can select the same paired accounting/evaluator
+profiles and required new history output for a complete finite Message/Finish
+sequence. Its original evaluator survives handoffs under one cumulative allowance;
+bounded inter-request reply windows and the final case phase service that same
+role. The accepted final request deadline cannot renew or outlive the original
+invocation lease. Final Hold and human rejection remain labelable without
+restarting numerical or helper work. A late intermediate actor reply failure
+ends succession but preserves the healthy evaluator's independent opportunity.
+See the full [resident learned contract](RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
+for the closed supported grammar, complete future input/endpoint custody,
+Stop precedence and source-only verification boundary.
 
 ## Discover the original case before labeling
 

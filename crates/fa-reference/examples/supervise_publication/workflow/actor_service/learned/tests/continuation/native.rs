@@ -40,11 +40,15 @@ fn word(vocabulary: &mut Vec<TokenBytes>, merges: &mut Vec<Merge>, bytes: &[u8])
 }
 
 pub(super) fn provision(root: &Root) {
+    provision_response(root, b"allow");
+}
+
+pub(super) fn provision_response(root: &Root, spelling: &[u8]) {
     let mut vocabulary: Vec<_> = (0..=255)
         .map(|byte| TokenBytes::Content(vec![byte]))
         .collect();
     let mut merges = Vec::new();
-    let response = word(&mut vocabulary, &mut merges, b"allow");
+    let response = word(&mut vocabulary, &mut merges, spelling);
     for bytes in [
         b"Should this exact publication proceed?".as_slice(),
         b"reference/helper/alpha",

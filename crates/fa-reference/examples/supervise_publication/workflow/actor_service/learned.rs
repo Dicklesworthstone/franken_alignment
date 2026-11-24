@@ -555,9 +555,30 @@ where F: FnMut() -> ElapsedTick {
     execute_request_with_evaluation(driver, config, loaded, services, control, deadline, time, None)
 }
 
-fn execute_request_with_evaluation<F>(mut driver: FileSupervisedDriver, config: &mut Config,
+fn execute_request_with_evaluation<F>(driver: FileSupervisedDriver, config: &mut Config,
     loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
     deadline: &mut Deadline, time: &mut F, evaluator: Option<&mut super::evaluator::Service>) -> RequestCycle
+where F: FnMut() -> ElapsedTick {
+    execute_request_selected_evaluation(driver, config, loaded, services, control,
+        deadline, time, evaluator, true)
+}
+
+/// Intermediate successful resident requests pump evaluation only during their
+/// existing reply grace. A final release or nonexecuted outcome retains one
+/// terminal labeling phase without starting another actor/helper workflow.
+fn execute_request_with_resident_evaluation<F>(driver: FileSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
+    deadline: &mut Deadline, time: &mut F, evaluator: Option<&mut super::evaluator::Service>,
+    last: bool) -> RequestCycle
+where F: FnMut() -> ElapsedTick {
+    execute_request_selected_evaluation(driver, config, loaded, services, control,
+        deadline, time, evaluator, last)
+}
+
+fn execute_request_selected_evaluation<F>(mut driver: FileSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
+    deadline: &mut Deadline, time: &mut F, mut evaluator: Option<&mut super::evaluator::Service>,
+    terminal_evaluation: bool) -> RequestCycle
 where F: FnMut() -> ElapsedTick {
     let RequestServices { peers, reviewer, prediction, identity, credential, intake, wire, operator, finishing,
         message_continuation, credibility, stop_operation } = services;
@@ -735,16 +756,51 @@ where F: FnMut() -> ElapsedTick {
             }
         });
     }
-    if let Some(evaluator) = evaluator {
-        evaluation::complete(evaluator, &mut driver, reviewer, control, deadline, time,
-            intake, operator, config.timing.poll_ms, &mut failure);
+    let mut resident_evaluation_pending = false;
+    if let Some(service) = evaluator.as_deref_mut() {
+        let executed = driver.supervisor().host().ok().is_some_and(|host| {
+            matches!(host.request_status(loaded.request).map(|status| status.disposition),
+                Ok(FileRequestDisposition::Admitted { stage: ActionState::Confirmed, .. }))
+                && matches!(host.request_resolution(loaded.request),
+                    Ok(Some(fa_reference::action::consequence::delivery::EndpointOutcome::Executed { .. })))
+        });
+        if terminal_evaluation || !executed || failure.is_some() {
+            evaluation::complete(service, &mut driver, reviewer, control, deadline, time,
+                intake, operator, config.timing.poll_ms, &mut failure);
+        } else {
+            resident_evaluation_pending = true;
+        }
     }
     // Receipt delivery cannot restart generation, review, reconciliation or an
     // effect. Preserve transport failure alongside the original actor outcome.
+    let mut complete_after_actor_failure = false;
     if let Some(intake) = intake.as_mut() {
-        if let Err(error) = intake.finish_serviced(&mut driver, reviewer, control, deadline, time, operator) {
-            let error = format!("learned actor response service failed: {error}; no effect retry was sent");
+        let finished = match evaluator.as_deref_mut() {
+            Some(service) => intake.finish_serviced_with_evaluation(&mut driver, reviewer, control,
+                deadline, time, operator, Some(service)),
+            None => intake.finish_serviced(&mut driver, reviewer, control, deadline, time, operator)
+                .map_err(|message| ingress::ReplyFailure { message, transport_only: false }),
+        };
+        if let Err(error) = finished {
+            complete_after_actor_failure = resident_evaluation_pending && error.transport_only;
+            let error = format!("learned actor response service failed: {}; no effect retry was sent", error.message);
             failure = Some(match failure { Some(original) => format!("{original}; {error}"), None => error });
+        }
+    }
+    if complete_after_actor_failure {
+        // The confirmed release ended this sequence only because its actor
+        // transport failed. Revoke that transport and preserve its error while
+        // the same evaluator consumes its remaining original terminal budget.
+        drop(intake.take());
+        if let Some(service) = evaluator {
+            let actor_failure = failure.take();
+            evaluation::complete(service, &mut driver, reviewer, control, deadline, time,
+                intake, operator, config.timing.poll_ms, &mut failure);
+            failure = match (actor_failure, failure) {
+                (Some(actor), Some(assessment)) => Some(format!("{actor}; {assessment}")),
+                (Some(actor), None) => Some(actor),
+                (None, assessment) => assessment,
+            };
         }
     }
     let response = wire.exchange(&encode_command(&Command::Poll { request: loaded.request })

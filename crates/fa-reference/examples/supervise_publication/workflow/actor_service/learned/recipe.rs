@@ -143,6 +143,53 @@ fn load_selected(file: &Path, config: &Config, mode: LoadMode) -> Result<Loaded,
 /// predictive or differently governed recipe after the preflight succeeds.
 pub(super) struct GovernedRecipe(Recipe);
 
+/// An original resident recipe frozen before numerical/helper assets. The
+/// evaluator composition cannot erase a required predictor, joint contract or
+/// independently selected recovery policy while creating an accounted owner.
+pub(super) struct EvaluatedRecipe(Recipe);
+
+impl EvaluatedRecipe {
+    pub(super) fn read(file: &Path, config: &Config) -> Result<Self, String> {
+        let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
+        if !recipe.continuation || recipe.files.forecast.is_some() || recipe.joint.is_some()
+            || recipe.expected_campaigns.is_some()
+            || recipe.expected_policy.as_ref()
+                .is_some_and(|policy| policy != &config.profile.delivery.policy)
+        {
+            return Err("resident learned evaluation requires an original nonpredictive, non-joint creation recipe without campaign recovery expectations".into());
+        }
+        Ok(Self(recipe))
+    }
+
+    /// The direct inventory includes delayed measurement and publication
+    /// inputs. Nested model/helper sources retain the same guarded Assets
+    /// admission at each actual read; neither archive nor endpoint custody can
+    /// be smuggled into a checkpoint manifest or reviewer roster.
+    pub(super) fn input_paths(&self) -> Vec<&Path> {
+        let recipe = &self.0;
+        let weights = match &recipe.files.weights {
+            WeightsInput::Single(path) | WeightsInput::Source(path) => path.as_path(),
+        };
+        let mut paths = vec![recipe.files.configuration.as_path(), weights,
+            Path::new(recipe.files.tokenizer.path()), recipe.files.sampling.as_path(),
+            recipe.files.prompt.as_path(), recipe.files.fit_binding.as_path(),
+            recipe.files.fit_archive.as_path(), recipe.files.monitor.as_path()];
+        paths.extend(recipe.files.native.iter().map(PathBuf::as_path));
+        paths.extend(recipe.checked_publication.iter().map(PathBuf::as_path));
+        paths.extend(recipe.credential.iter().map(PathBuf::as_path));
+        if let Some(identity) = &recipe.computed_identity { paths.extend(identity.input_paths()); }
+        paths
+    }
+
+    pub(super) fn load(self, config: &Config, protected: &[PathBuf]) -> Result<Loaded, String> {
+        // Reuse the existing complete-closure path guard, conjoined with this
+        // recipe's original byte ceiling. This grants no fleet or live rights.
+        let mut assets = Assets::for_fleet(self.0.assets_bytes, protected)?;
+        assets.constrain(self.0.assets_bytes)?;
+        load_recipe(self.0, config, LoadMode::Publication, &mut assets)
+    }
+}
+
 impl GovernedRecipe {
     pub(super) fn read(
         file: &Path,

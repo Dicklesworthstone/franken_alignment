@@ -52,6 +52,15 @@ the retained history cut. Each release still needs separate human approval;
 this creation-only composition remains pending required RCH compilation and
 runtime qualification.
 
+Fresh [resident learned sequences](docs/RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
+also accept paired Andon/evaluator profiles and a new independent history output.
+One original evaluator follows Message/Finish handoffs under cumulative limits.
+A final Hold, human rejection or late actor response failure leaves only the
+remaining independent assessment opportunity, without new generation or effect
+authority. Original Stop, complete future input/endpoint custody and separate
+human approvals remain mandatory. Source/regression work is present; required
+RCH compilation and runtime qualification remain pending.
+
 Resident native creation and suffix recovery also accept an explicitly selected
 independent Tower operator. One original authenticated service retains its
 observation/control grants, finite counters and deadline through Message/Finish

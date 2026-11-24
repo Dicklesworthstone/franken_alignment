@@ -60,6 +60,12 @@ pub(super) struct Selection {
 }
 
 impl Selection {
+    /// Independently selected inputs remain reserved even when only the first
+    /// resident request will acquire the original credential capability.
+    pub(super) fn input_paths(&self) -> [&Path; 3] {
+        [&self.inventory_path, &self.broker_path, &self.provider_path]
+    }
+
     pub(super) fn load(path: &Path, config: &Config, assets: &mut Assets, live: bool)
         -> Result<Self, String>
     {

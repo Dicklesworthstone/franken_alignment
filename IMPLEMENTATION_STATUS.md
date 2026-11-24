@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: retain independent evaluation through resident learned publication
+
+Fresh `serve-learned-generated` creation now accepts paired Andon and evaluator
+profiles with an independent retained history output. The original atomic learned
+constructor installs the numerical recipe, guards, independent evaluation,
+accounting and terminal recovery reserve in its first acknowledged image.
+Plain and simple checked publication retain their original source, native or
+process helper and human approval requirements.
+
+One evaluator role, endpoint and original finite time/candidate/I/O/byte allowance
+survive Message and Finish handoffs. Intermediate reply/helper-retirement windows
+service completed cases without renewing the invocation lifetime. Final Finish,
+an early helper Hold or human rejection retain bounded independent assessment
+without fresh source/model/helper inputs, numerical sampling or review retries.
+The final accepted actor deadline also bounds assessment.
+
+A late actor transport failure stops succession and retires the failed actor
+while preserving the healthy evaluator's remaining opportunity and the original
+error. Stop, operator Fence and control failures remain separate terminal states;
+none authorizes further labeling. Evaluator retirement precedes terminal
+reply-only grace and final history retention, so acknowledged labels and Andon
+accounting remain in the original anchor.
+
+The closed opt-in grammar retains the existing optional operator/generation pair
+and version-two prechecks. It checks scheduled credentials, future endpoints,
+profiles, recursive assets and delayed witness/identity/credential paths before
+owner creation. Unsupported recovery, governor, topology, campaign, checkpoint,
+raw/owned predictor, joint held-out and activation combinations refuse before
+clock or owner work.
+
+Substantive regressions cover the real three-request Message/Message/Finish
+sequence, actual command dispatch, retained early and final cases, final and
+first-request Hold, human rejection, exhausted original candidates, partial-frame
+Stop/deadline handling, actor transport failure, source removal and pre-clock
+grammar/custody negatives. The transport regression waits for the failed actor
+listener to disappear before independent labeling. See the
+[resident contract](docs/RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting).
+
+Independent source review and qualified nightly-2026-09-08 scoped Rust parsing
+and whitespace checks passed. The required remote RCH gate cannot start because
+`rch` is unavailable (exit 127). Compilation, runtime tests, Clippy and canonical
+qualification remain unexecuted. FA-026/105/134 and the scoped resident Bead retain
+in-progress acceptance; fixture verdicts do not qualify empirical detection.
+
 ## 2026-11-23: retain independent evaluation after the final ordinary review
 
 The ordinary live Tower service now preserves the original independent evaluator

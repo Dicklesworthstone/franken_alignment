@@ -7,8 +7,8 @@
 use super::{Config, Loaded, PeerProfile, Deadline, ElapsedTick, Duration, Instant,
     FileHumanReviewer, FileSupervisedDriver, LearnedTextRelease, ActorWire, ActorOutcome, Knowledge, RequestServices,
     RequestCycle, Control, MessageContinuation, debug, plus, clock, cleanup, stop,
-    anchors, campaigns, checkpoint_on_generation, topology, prediction, identity, operator,
-    ingress, process, request_preflight, execute_request};
+    anchors, campaigns, checkpoint_on_generation, topology, prediction, identity, operator, evaluation,
+    ingress, process, request_preflight, execute_request, execute_request_with_resident_evaluation};
 use super::super::Profile;
 use fa_reference::action::{ActionState, consequence::delivery::{EndpointOutcome,
     persistent::requests::FileRequestDisposition}};
@@ -62,7 +62,28 @@ pub(super) fn command_with_clock<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let (args, governor_path) = governor::take_option(args)?;
+    // The entire opted-in accounting grammar precedes every option stripper.
+    // A recovery or governor request cannot turn into unaccounted creation.
+    let (args, evaluation_options) = evaluation::take_sequence_options(args, credibility)?;
+    let mut selected_inputs = args.iter().skip(1).take(3)
+        .map(std::path::PathBuf::from).collect::<Vec<_>>();
+    let evaluated_history = if evaluation_options.is_some() {
+        for pair in args[4..].chunks_exact(2) {
+            if pair[0] == "--operator-profile" {
+                selected_inputs.push(std::path::PathBuf::from(&pair[1]));
+            }
+        }
+        let selected = args[4..].chunks_exact(2)
+            .find(|pair| pair[0] == "--retain-history-anchor")
+            .expect("evaluation grammar requires its retained output");
+        Some(super::fields::path(&selected[1])?)
+    } else { None };
+    let evaluation = evaluation_options.map(evaluation::Options::read).transpose()?;
+    if let (Some(selected), Some(history)) = (evaluation.as_ref(), evaluated_history.as_deref()) {
+        selected.check_sequence_inputs(history,
+            &selected_inputs.iter().map(std::path::PathBuf::as_path).collect::<Vec<_>>())?;
+    }
+    let (args, governor_path) = governor::take_option(&args)?;
     // The operator pair owns the complete live grammar before another option
     // parser can erase an incompatible historical or maintenance selection.
     let (args, operator_path) = operator::take_option(&args)?;
@@ -112,7 +133,11 @@ where
     } else {
         None
     };
-    let mut entries = if let Some(governor) = governor.as_ref() {
+    let mut entries = if let Some(selected) = evaluation.as_ref() {
+        profile::load_evaluated(Path::new(&args[2]), &config, &peers,
+            operator.as_ref(), selected,
+            evaluated_history.as_deref().expect("explicit evaluation output"), &selected_inputs)?
+    } else if let Some(governor) = governor.as_ref() {
         profile::load_governed(
             Path::new(&args[2]),
             &config,
@@ -158,17 +183,14 @@ where
             topology::Mode::Create
         },
     )?;
-    let result = run_with_services(
-        config,
-        entries,
-        &peers,
-        continuing,
-        after,
-        credibility,
-        operator.as_ref(),
-        governor.as_ref(),
-        time,
-    )?;
+    let result = if let Some(evaluation) = evaluation.as_ref() {
+        run_with_evaluation(config, entries, &peers, operator.as_ref(), evaluation, time)?
+    } else {
+        run_with_services(
+            config, entries, &peers, continuing, after, credibility,
+            operator.as_ref(), governor.as_ref(), time,
+        )?
+    };
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -340,6 +362,7 @@ fn retire<F>(
     control: &mut Control,
     deadline: &Deadline,
     operator: &mut Option<operator::Service>,
+    mut evaluator: Option<&mut super::super::evaluator::Service>,
     actor: &Profile,
     time: &mut F,
 ) -> Result<bool, String>
@@ -376,6 +399,11 @@ where
                 crate::workflow::pause(pause);
             }
             return stopping.map(|_| false);
+        }
+        // A handoff is still part of the same finite service. Stop and any
+        // newly acknowledged operator Fence win before a labeling quantum.
+        if let Some(service) = evaluator.as_deref_mut() {
+            service.checkpoint_driver(driver);
         }
         if let Some(history) = process.as_mut() {
             history.reap();
@@ -456,6 +484,39 @@ where
 /// Retain the same explicitly issued governor and numerical operator for every
 /// message in the original finite sequence; no later entry can provision one.
 pub(super) fn run_with_services<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    peers: &PeerProfile,
+    continuing: bool,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    selected_operator: Option<&operator::Selection>,
+    selected_governor: Option<&governor::Settings>,
+    time: F,
+) -> Result<SequenceResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_with_selected_services(config, entries, peers, continuing, after_message,
+        credibility, selected_operator, selected_governor, None, time)
+}
+
+/// Explicit fresh accounting binds one evaluator to the same resident owner.
+/// No later entry may provision a replacement role or service allowance.
+pub(super) fn run_with_evaluation<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    peers: &PeerProfile,
+    selected_operator: Option<&operator::Selection>,
+    selected_evaluation: &evaluation::Selection,
+    time: F,
+) -> Result<SequenceResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_selected_services(config, entries, peers, false, None, None,
+        selected_operator, None, Some(selected_evaluation), time)
+}
+
+fn run_with_selected_services<F>(
     mut config: Config,
     entries: Vec<Entry>,
     peers: &PeerProfile,
@@ -464,11 +525,10 @@ pub(super) fn run_with_services<F>(
     credibility: Option<&Path>,
     selected_operator: Option<&operator::Selection>,
     selected_governor: Option<&governor::Settings>,
+    selected_evaluation: Option<&evaluation::Selection>,
     mut time: F,
 ) -> Result<SequenceResult, String>
-where
-    F: FnMut() -> ElapsedTick,
-{
+where F: FnMut() -> ElapsedTick {
     let recovery = if selected_governor.is_some()
         || entries.first().is_some_and(|entry| entry.loaded.recovery_anchor.is_some())
     {
@@ -480,6 +540,12 @@ where
         validate_entries(&config, &entries, peers, recovery)?;
     } else {
         validate(&config, &entries, peers)?;
+    }
+    if let Some(selected) = selected_evaluation {
+        if continuing || after_message.is_some() || credibility.is_some() || selected_governor.is_some() {
+            return Err("resident learned evaluation requires its original fresh creation profile".into());
+        }
+        selected.check_sequence(&config, &entries, peers, selected_operator)?;
     }
     governor::check_selection(
         selected_governor,
@@ -558,11 +624,14 @@ where
     // it with each request preserves one socket, candidate quota and outcome.
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
-    let (started, governor_role) = if selected_governor.is_some() {
+    let (started, governor_role, evaluator_role) = if let Some(selected) = selected_evaluation {
+        let (custody, evaluator) = selected.create(&config, &first.loaded)?;
+        (topology::Started { custody, source: None, output: None }, None, Some(evaluator))
+    } else if selected_governor.is_some() {
         let (started, role) = topology::start_governed(
             &config, &first.loaded, continuing, &mut control, &deadline, &mut time,
         )?;
-        (started, Some(role))
+        (started, Some(role), None)
     } else {
         (
             topology::start(
@@ -573,6 +642,7 @@ where
                 &deadline,
                 &mut time,
             )?,
+            None,
             None,
         )
     };
@@ -644,10 +714,17 @@ where
                 .ok_or("learned governor has no original promotion operator")?
                 .attach_governor(service)?;
         }
-        Ok::<_, String>((reviewer, prediction, identity, continuation, port, driver, operator))
+        let evaluator = match (selected_evaluation, evaluator_role) {
+            (Some(selected), Some(role)) => Some(super::super::evaluator::Service::start(
+                &selected.peer, &first.actor, role, &driver, &global,
+            )?),
+            (None, None) => None,
+            _ => return Err("resident learned creation lost its independent evaluator custody".into()),
+        };
+        Ok::<_, String>((reviewer, prediction, identity, continuation, port, driver, operator, evaluator))
     })();
     let (reviewer, mut prediction, mut identity, mut initial_continuation, port,
-        mut driver, mut operator) = match startup {
+        mut driver, mut operator, mut evaluator) = match startup {
         Ok(started) => started,
         Err(error) => return Err(startup_custody.retain_error(error)),
     };
@@ -670,6 +747,7 @@ where
                 &mut control,
                 &global,
                 &mut operator,
+                evaluator.as_mut(),
                 &entries[index - 1].actor,
                 &mut time,
             ) {
@@ -735,11 +813,7 @@ where
                 break;
             }
         };
-        let cycle = execute_request(
-            driver,
-            &mut config,
-            &entry.loaded,
-            RequestServices {
+        let services = RequestServices {
                 peers,
                 reviewer: &reviewer,
                 prediction: &mut prediction,
@@ -752,11 +826,14 @@ where
                 message_continuation,
                 credibility: if index == 0 { credibility } else { None },
                 stop_operation: first.loaded.request,
-            },
-            &mut control,
-            &mut deadline,
-            &mut time,
-        );
+            };
+        let cycle = if evaluator.is_some() {
+            execute_request_with_resident_evaluation(driver, &mut config, &entry.loaded, services,
+                &mut control, &mut deadline, &mut time, evaluator.as_mut(), index + 1 == entries.len())
+        } else {
+            execute_request(driver, &mut config, &entry.loaded, services,
+                &mut control, &mut deadline, &mut time)
+        };
         let RequestCycle {
             driver: current,
             response,
@@ -796,6 +873,10 @@ where
     }
     // The observational endpoint ends with this finite service. Retirement
     // revokes its original custodians, not publication rights or receipts.
+    if let Some(service) = evaluator.as_mut() {
+        service.finish();
+        service.retire();
+    }
     if let Some(service) = operator.as_mut() {
         service.retire();
     }

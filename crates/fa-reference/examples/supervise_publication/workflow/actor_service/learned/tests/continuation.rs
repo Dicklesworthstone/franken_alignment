@@ -39,6 +39,12 @@ pub(super) fn write(root: &Root) -> PathBuf {
     path
 }
 
+/// Preserve complete continuation prompt coverage for either actual native
+/// fixture verdict. This changes only independently provisioned test weights.
+pub(super) fn provision_response(root: &Root, spelling: &[u8]) {
+    native::provision_response(root, spelling);
+}
+
 pub(super) fn next(root: &Root, config: &Config, request: u64) -> (PathBuf, Loaded) {
     let path = root.0.join(format!("request-{request}.json"));
     let original = fs::read_to_string(root.0.join("recipe.json")).unwrap();

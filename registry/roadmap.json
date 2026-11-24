@@ -897,7 +897,12 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/stop_failure.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/held_case.rs",
-        "docs/LIVE_ANDON_EVALUATION.md"
+        "docs/LIVE_ANDON_EVALUATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2745,7 +2750,11 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/series.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/andon/final_evaluation.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/andon/final_evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3801,7 +3810,13 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests.rs",
         "docs/LEARNED_OPERATOR_PUBLICATION.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/series.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/andon/final_evaluation.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/andon/final_evaluation.rs",
+        "docs/RESIDENT_LEARNED_PUBLICATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/sequence/profile.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/transport.rs"
       ],
       "founding_ideas": [
         "FI-A06"

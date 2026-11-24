@@ -91,6 +91,14 @@ pub(super) struct Intake {
     release: LearnedTextRelease,
     precheck: Option<super::precheck::Selection>,
 }
+
+/// A failed actor reply cannot erase an independent assessment opportunity.
+/// Stop/control failures remain a separate reason to end that opportunity.
+pub(super) struct ReplyFailure {
+    pub(super) message: String,
+    pub(super) transport_only: bool,
+}
+
 impl Intake {
     pub(super) fn select_precheck(&mut self, settings: &super::precheck::Settings,
         reviewer: &PeerProfile)
@@ -265,12 +273,31 @@ impl Intake {
         reviewer: &FileHumanReviewer, control: &mut Control, deadline: &Deadline, time: &mut F,
         operator: &mut Option<super::operator::Service>) -> Result<(), String>
     where F: FnMut() -> ElapsedTick {
+        self.finish_serviced_with_evaluation(driver, reviewer, control, deadline, time,
+            operator, None).map_err(|failure| failure.message)
+    }
+
+    /// An intermediate resident receipt may also service the original evaluator.
+    /// This bounded grace does not finish or renew that independent service;
+    /// later Message/Finish entries retain its exact candidate and I/O counters.
+    pub(super) fn finish_serviced_with_evaluation<F>(&mut self,
+        driver: &mut FileSupervisedDriver, reviewer: &FileHumanReviewer,
+        control: &mut Control, deadline: &Deadline, time: &mut F,
+        operator: &mut Option<super::operator::Service>,
+        mut evaluator: Option<&mut super::super::evaluator::Service>) -> Result<(), ReplyFailure>
+    where F: FnMut() -> ElapsedTick {
         let started = Instant::now();
         let window = Duration::from_millis(self.profile.reply_ms);
         let mut failure = None;
         let mut actor_transport_failed = false;
+        let mut control_ended = false;
         while started.elapsed() < window && deadline.check(time()).is_ok() {
-            if let Err(error) = control.checkpoint(driver, reviewer, deadline, time) {
+            let stopped = control.checkpoint(driver, reviewer, deadline, time);
+            if !matches!(&stopped, Ok(false)) {
+                control_ended = true;
+                if let Some(service) = evaluator.as_deref_mut() { service.finish(); }
+            }
+            if let Err(error) = stopped {
                 // The original one-use Stop service retains its first failed
                 // outcome. Keep reporting it without suppressing the actor's
                 // original terminal result, including ControllerUnavailable
@@ -278,10 +305,19 @@ impl Intake {
                 failure.get_or_insert(error);
             }
             super::operator::checkpoint_driver(operator, driver);
-            if let Err(error) = control.native_stop(driver, time) {
+            let stopped = control.native_stop(driver, time);
+            if !matches!(&stopped, Ok(false)) {
+                control_ended = true;
+                if let Some(service) = evaluator.as_deref_mut() { service.finish(); }
+            }
+            if let Err(error) = stopped {
                 // Keep flushing the original historical reply after cleanup
                 // failure; the shared control will not repeat its drain.
                 failure.get_or_insert(error);
+            }
+            // Both Stop boundaries precede every independent evaluator quantum.
+            if let Some(service) = evaluator.as_deref_mut() {
+                service.checkpoint_driver(driver);
             }
             if !actor_transport_failed {
                 if let Err(error) = self.observe_transport(driver.supervisor_mut()) {
@@ -302,7 +338,10 @@ impl Intake {
             crate::workflow::pause(pause);
         }
         self.session.revoke();
-        failure.map_or(Ok(()), Err)
+        failure.map_or(Ok(()), |message| Err(ReplyFailure {
+            message,
+            transport_only: actor_transport_failed && !control_ended,
+        }))
     }
 }
 impl Drop for Intake { fn drop(&mut self) { self.session.revoke(); } }

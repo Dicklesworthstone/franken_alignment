@@ -24,20 +24,20 @@ const CHILD: &str = "workflow::actor_service::learned::tests::evaluation_tests::
 const CHILD_ROOT: &str = "FA_LEARNED_LIVE_EVALUATOR_ROOT";
 const CHILD_MODE: &str = "FA_LEARNED_LIVE_EVALUATOR_MODE";
 
-fn field<'a>(value: &'a Json, path: &[&str]) -> &'a Json {
+pub(super) fn field<'a>(value: &'a Json, path: &[&str]) -> &'a Json {
     path.iter()
         .fold(value, |value, key| &value.as_object().unwrap()[*key])
 }
 
-fn number(value: &Json, path: &[&str]) -> u64 {
+pub(super) fn number(value: &Json, path: &[&str]) -> u64 {
     field(value, path).as_str().unwrap().parse().unwrap()
 }
 
-fn read_json(path: &Path) -> Json {
+pub(super) fn read_json(path: &Path) -> Json {
     strict_json::parse(&fs::read(path).unwrap(), KNOWLEDGE_JSON_LIMITS).unwrap()
 }
 
-fn wait_for(path: &Path) {
+pub(super) fn wait_for(path: &Path) {
     let started = Instant::now();
     while !path.exists() {
         assert!(
@@ -88,7 +88,7 @@ impl Drop for EvaluatorChild {
     }
 }
 
-fn accounting_file(root: &Root) -> PathBuf {
+pub(super) fn accounting_file(root: &Root) -> PathBuf {
     let path = root.0.join("andon.json");
     let end = crate::workflow::clock().0.checked_add(60_000).unwrap();
     let content = include_str!(concat!(
@@ -101,7 +101,7 @@ fn accounting_file(root: &Root) -> PathBuf {
     path
 }
 
-fn peer_file(root: &Root, actor: &Profile, evaluator_pid: u32) -> PathBuf {
+pub(super) fn peer_file(root: &Root, actor: &Profile, evaluator_pid: u32) -> PathBuf {
     let path = root.0.join("evaluator.json");
     let scope = actor.scope;
     let identity = actor.supervisor;

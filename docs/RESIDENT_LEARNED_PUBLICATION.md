@@ -15,6 +15,56 @@ renewed. Every scheduled actor/reviewer/Stop path and retained output is checked
 for collision before startup. Operator traffic cannot approve or advance a
 release, and independent Stop retains priority.
 
+## Independent evaluation and Andon accounting
+
+Fresh resident creation can select one separately authenticated evaluator and
+the original false-stop accounting profile:
+
+```text
+supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/new-resident-anchor
+```
+
+Both profiles and a new independent history output are required together. The
+original atomic learned constructor installs the complete numerical recipe,
+guards, native evaluation, Andon windows and terminal recovery reserve in its
+first acknowledged image. No provisional unaccounted owner is created.
+
+One evaluator role, listener and original finite time/candidate/I/O/byte allowance
+remain attached to that owner through Message and Finish handoffs. Successful
+intermediate requests service the evaluator during their bounded actor-reply and
+helper-retirement windows. The original invocation lifetime includes generation
+and review; no message boundary renews it. Each release still requires its exact
+source, original native or process helper review and separate human approval.
+
+After the final request, an early Hold or human rejection, remaining evaluation
+time can discover and assess the already completed cases. This phase performs
+no new generation, source acquisition, helper review or publication. The final
+request's accepted deadline also bounds assessment. A late actor transport
+failure keeps its original error and ends succession while the healthy original
+evaluator retains its independent remaining opportunity. Stop and operator Fence
+precede evaluation; control failure never becomes permission to keep labeling.
+Evaluator authority ends before terminal reply-only grace and retained-history
+capture. The final anchor therefore includes acknowledged late labels and costs.
+
+The closed creation grammar admits the existing optional operator/generation
+pair and per-entry version-two prechecks. Plain and simple checked publication
+retain their existing guards. All scheduled role/socket/profile/recipe paths
+are checked before numerical assets are loaded, including future entry paths;
+recursive assets and delayed witness, identity and credential inputs cannot
+overlap endpoints, authority storage or the retained output. This composition
+does not admit recovery, a governor, topology, campaigns, generation checkpoints,
+raw/owned predictors, held-out joint recipes or credibility activation. Such
+selections refuse before work instead of dropping a requested contract.
+
+Use the original [evaluator-case and evaluator-assess commands](LIVE_ANDON_EVALUATION.md)
+against that same endpoint. An independent label supplies no effect key and
+cannot release a held message. Required RCH compilation and runtime qualification
+remain pending; source review and parser checks are separate evidence.
+
+## Other resident governance selections
+
 A new nonpredictive sequence with at least two Messages can also
 select `--governor-profile GOVERNOR_PROFILE` together with `--campaign-profile`
 and that same operator pair. The original first-image governor remains separate
