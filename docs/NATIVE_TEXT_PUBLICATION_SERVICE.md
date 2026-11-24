@@ -109,8 +109,9 @@ A pending generation, explicit next Message or Finish can resume under their
 original lifecycle requirements. Already recorded actor requests refuse live
 evaluation and retain their acknowledged recovery successor. Every new effect
 still needs fresh source, helper review and independent human approval.
-Resident native recovery with evaluation and stronger publication compositions
-remain separate work. The new live recovery implementation and regressions are
+Resident native recovery with evaluation uses its
+[explicit remaining-sequence contract](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix).
+Stronger publication compositions remain separate work. The live recovery implementation and regressions are
 source reviewed; required remote compilation and runtime qualification remain
 pending.
 

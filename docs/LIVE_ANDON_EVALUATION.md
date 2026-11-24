@@ -99,15 +99,19 @@ this option. The live recovery path below reuses the original
 [anchored accounting cursor](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
 Learned generation uses its separate commands below.
 
-Fresh [resident native generated sequences](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
+[Resident native generated sequences](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
 use their separate `serve-native-generated` command with paired `--andon
 ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE` and a required
 `--retain-history-anchor NEW_OUTPUT`. The original evaluator and finite
 allowances persist across Message/Finish handoffs, including a bounded labeling
-opportunity after a final helper Hold. This resident creation path accepts the
-marginal `/1` accounting profile and optional simple witnesses/operator Ledger;
-recovery, joint profiles, governance, topology and selected prechecks remain
-separate. Its compilation and runtime qualification remain pending required RCH.
+opportunity after a final helper Hold. Creation and
+[explicitly anchored suffix recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
+accept the marginal `/1` accounting profile and optional simple witnesses/operator
+Ledger. Recovery selects `--after-message`, an independent input anchor and the
+same explicit evaluation recovery requirements used below; one fresh evaluator
+serves the recovered suffix without renewing its allowance at handoffs. Joint
+profiles, governance, topology and selected prechecks remain separate. Required
+RCH compilation and runtime qualification remain pending.
 
 ## Recover an evaluated native generated service
 
@@ -191,8 +195,9 @@ grace retain their creation-path contracts. A new invocation cannot replenish
 the original native numerical budget or erase prior accounting.
 
 This composition covers single-request plain or simple checked publication.
-Resident native sequence recovery, topology, governors and stronger
-feed/snapshot/held-out qualification remain separate selections; unsupported
+Resident native sequence recovery uses its
+[explicit suffix composition](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix).
+Topology, governors and stronger feed/snapshot/held-out qualification remain separate selections; unsupported
 combinations refuse without dropping a selected guard. Joint Andon accounting
 does not imply held-out joint publication qualification.
 

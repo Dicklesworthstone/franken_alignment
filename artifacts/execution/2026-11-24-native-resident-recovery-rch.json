@@ -1,0 +1,27 @@
+{
+  "utc": "2026-11-24T20:22:26.652933+00:00",
+  "base_head": "fd00c0c39701799bc30d76e3927708f0c706b66f",
+  "source_manifest": "/workspace/scratch/df8f11d29567/verification/native-resident-final-source-checks.json",
+  "source_manifest_sha256": "9d7e7b8062028bca270fa7705abe69cd473036d8760cb5962c7782b7d87af3ef",
+  "raw_log": "/workspace/scratch/df8f11d29567/verification/rch-required-gate-native-resident-final.log",
+  "raw_log_sha256": "0694d2bd7985a9aa672b71078b8d3bc0d9ad58db494524b81c8a8c06f46d54f1",
+  "command": [
+    "/workspace/scratch/df8f11d29567/tooling/rch/rch",
+    "exec",
+    "--",
+    "cargo",
+    "+nightly-2026-09-08",
+    "run",
+    "--locked",
+    "-p",
+    "xtask",
+    "--",
+    "check"
+  ],
+  "environment": {
+    "RCH_REQUIRE_REMOTE": "1",
+    "RCH_CANONICAL_PROJECT_ROOT": "/workspace/scratch/df8f11d29567"
+  },
+  "exit_code": 103,
+  "result": "RCH refused before Cargo; daemon unavailable and no configured workers; local fallback prohibited. No compilation or tests executed."
+}

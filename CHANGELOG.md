@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-24: recover accounted resident native publication
+
+- Resume a confirmed native Message's remaining resident suffix under explicit
+  history, accounting and recovery requirements. Preserve original numerical
+  work and liabilities through later Messages and singleton Finish.
+- Share the original checked native replay driver between single-request and
+  resident recovery. Retain Stop priority, independent floors, complete current
+  windows, one recovery Fence and acknowledged failure history.
+- Keep one independently authenticated evaluator and its finite allowance
+  across recovered handoffs. Every new effect retains fresh source, helper
+  review and human approval; future inputs and endpoints retain separate custody.
+- Add actual-service recovery regressions and the operator contract. Required
+  remote compilation, runtime tests and canonical qualification remain pending.
+
 ## 2026-11-24: recover accounted native generated publication
 
 - Resume native plain or simple checked generated publication through the

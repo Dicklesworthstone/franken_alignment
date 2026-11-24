@@ -5,6 +5,8 @@
 mod anchors;
 #[path = "sequence/andon.rs"]
 mod andon;
+#[path = "sequence/evaluation.rs"]
+mod evaluation;
 #[path = "sequence/precheck.rs"]
 mod disclosure;
 #[path = "sequence/governor.rs"]
@@ -257,6 +259,7 @@ where
 /// accounting in its first acknowledged image. The sole evaluator endpoint,
 /// original grants and finite lifetime survive every Message/Finish handoff.
 /// Recovery and policy governance retain their separate admission contracts.
+#[cfg(test)]
 pub(super) fn run_with_andon<F>(
     config: Config,
     entries: Vec<Entry>,
@@ -272,24 +275,80 @@ pub(super) fn run_with_andon<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
-    let mut retention = anchors::Retention::new(Some(history));
-    let result = run_retained(
+    run_accounted(
         config,
         entries,
         reviewer_profile,
         publication,
         (None, selected_operator),
-        None,
-        Some(history),
-        None,
-        None,
-        Some(andon::Selection {
+        history,
+        andon::Selection {
             settings,
             evaluator,
-        }),
-        &mut retention,
+            recovery: None,
+            paths: None,
+        },
         time,
         output,
+    )
+}
+
+/// Recover one explicitly selected suffix through the SAME accounted cursor.
+/// Its fresh evaluator spans all remaining Messages/Finish and old pending cases;
+/// the original numerical work and accounting never acquire a replacement budget.
+#[cfg(test)]
+pub(super) fn run_with_andon_recovery<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (u64, Option<&operator::Selection>),
+    history: &anchors::Selection,
+    settings: &super::super::andon_settings::Settings,
+    evaluator: &super::super::evaluator::Settings,
+    recovery: &evaluation::Recovery,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_accounted(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        (Some(selection.0), selection.1),
+        history,
+        andon::Selection {
+            settings,
+            evaluator,
+            recovery: Some(recovery),
+            paths: None,
+        },
+        time,
+        output,
+    )
+}
+
+fn run_accounted<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Option<u64>, Option<&operator::Selection>),
+    history: &anchors::Selection,
+    accounting: andon::Selection<'_>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut retention = anchors::Retention::new(Some(history));
+    let result = run_retained(
+        config, entries, reviewer_profile, publication, selection, None,
+        Some(history), None, None, Some(accounting), &mut retention, time, output,
     );
     retention.finish(result)
 }
@@ -324,8 +383,8 @@ where
     requalification::check_mode(after, credibility)?;
     profile::validate_selected(&config, &entries, reviewer_profile, after)?;
     if let Some(accounting) = accounting {
-        if after.is_some()
-            || credibility.is_some()
+        accounting.check_mode(after)?;
+        if credibility.is_some()
             || selected_governor.is_some()
             || requirements.is_some()
             || entries.iter().any(|entry| entry.precheck.is_some())
@@ -339,15 +398,18 @@ where
             reviewer_profile,
             selected_operator,
         )?;
-        accounting.check_history(history.ok_or(andon::INVALID)?)?;
+        let history = history.ok_or(andon::INVALID)?;
+        accounting.check_history(history)?;
         if let Some(publication) = publication {
-            accounting.check_files(
-                &publication
-                    .input_paths()
-                    .iter()
-                    .map(|path| path.as_path())
-                    .collect::<Vec<_>>(),
+            let files = publication.input_paths().iter()
+                .map(|path| path.as_path()).collect::<Vec<_>>();
+            accounting.check_files(&files)?;
+            let endpoints = accounting.endpoints(
+                &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
+                reviewer_profile, selected_operator,
             )?;
+            andon::check_endpoint_files(&endpoints, &files)?;
+            history.check_files(&files)?;
         }
     }
     governor::check_recovery(
@@ -427,7 +489,24 @@ where
     let first_socket = BoundSocket::bind(&first.actor.socket, None)?;
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
-    let (host, reviewer, governor_role, evaluator_role) = if let Some(requirements) = requirements {
+    let (host, reviewer, governor_role, evaluator_role) = if let Some(accounting) = accounting {
+        let (host, reviewer, evaluator) = match accounting.recovery {
+            Some(recovery) => {
+                let mut stopped = None;
+                let opened = recovery.open(
+                    &config, &first.inputs, selected, accounting,
+                    history.ok_or(andon::INVALID)?, &mut control, &first_deadline,
+                    &mut time, &mut stopped,
+                );
+                retention.observe_stop(stopped);
+                opened?
+            }
+            None => bootstrap::prepare_andon(
+                &config, &first.inputs, selected, accounting.settings,
+            )?,
+        };
+        (host, reviewer, None, Some(evaluator))
+    } else if let Some(requirements) = requirements {
         let anchor = history
             .and_then(anchors::Selection::input)
             .ok_or("native governed recovery lost its independently selected anchor")?;
@@ -469,10 +548,6 @@ where
             settings.campaign_requirement(),
         )?;
         (host, reviewer, Some(governor), None)
-    } else if let Some(accounting) = accounting {
-        let (host, reviewer, evaluator) =
-            bootstrap::prepare_andon(&config, &first.inputs, selected, accounting.settings)?;
-        (host, reviewer, None, Some(evaluator))
     } else {
         let (host, reviewer) = bootstrap::prepare(&config, &first.inputs, selected, false)?;
         (host, reviewer, None, None)

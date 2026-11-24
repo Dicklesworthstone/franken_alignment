@@ -1,5 +1,49 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: recover accounted resident native Message/Finish suffixes
+
+`serve-native-generated` now connects an explicitly selected accounted suffix
+to the original sealed native recovery cursor. `--after-message` composes with
+paired Andon/evaluator profiles, an independently retained input anchor, a new
+output anchor and explicit `--evaluation-recovery` requirements. The same closed
+counter-floor schema and checked one-event replay driver serve both single and
+resident native recovery. Complete selected contracts, current accounting
+windows and evaluation floors remain independent of the journal being checked.
+
+The recovered owner retains original numerical spend, source custody, pending
+cases, false-stop accounting and unresolved liabilities through all subsequent
+Messages and Finish. A singleton Finish keeps its exact confirmed predecessor
+and recipe without new generation. One fresh evaluator follows the entire
+suffix under a finite invocation allowance; later handoffs do not replace its
+role or refill candidates, bytes or I/O. Every effect still needs a new actor
+submission, current source evidence, helper review and independent human approval.
+
+Original Stop and deadline checks precede replay, every event and Ready. Stop
+uses the original terminal cursor before an ordinary recovery Fence or live role
+issue. Normal recovery captures the acknowledged Fence before later suffix or
+listener failure. Complete future input/endpoint and retained-history custody
+checks precede live work; recursive asset checks guard their own reads. The
+marginal accounting composition keeps governor, topology, joint accounting,
+credibility activation and per-release prechecks explicitly unsupported.
+
+The [operator contract](docs/RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
+describes the required options and the retained lifecycle. Eight causal regression functions
+exercise actual recovered publication, independent labeling, singleton Finish,
+shared evaluator exhaustion, history/floor/window refusals and Stop boundaries.
+Source review and parser results are separate from required remote compilation
+and runtime qualification. FA-025, FA-026, FA-105 and FA-134 and Bead
+`franken_alignment-address-resolver-6w62.6.3.1` remain in progress until the
+required exact-source RCH gates execute successfully.
+
+Independent source review corrected a regression assertion that confused an old
+generation's retained text with the current global decoder counters. All nine
+changed Rust files passed scoped Rust 2024 parsing with qualified
+`nightly-2026-09-08` rustfmt; both new files passed full formatting checks and
+`git diff --check` passed. The [source receipt](artifacts/execution/2026-11-24-native-resident-recovery-source-checks.json)
+pins each source hash. The [required RCH attempt](artifacts/execution/2026-11-24-native-resident-recovery-rch.log)
+exited 103 before Cargo, with no configured worker and local fallback prohibited.
+No compilation, type checking, runtime or canonical qualification is claimed.
+
 ## 2026-11-24: native generated recovery with original live evaluation
 
 Native `serve-open` and `serve-open-checked` now compose paired Andon/evaluator

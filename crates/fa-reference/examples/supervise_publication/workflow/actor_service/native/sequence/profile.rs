@@ -4,7 +4,9 @@
 //! tokenizer inputs share the first recipe's retained allocations afterward.
 
 use super::super::{PublicationProfile, debug, exact_precheck, operator, recipe};
-use super::{Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, andon, governor};
+use super::{
+    Config, Entry, MAX_ENTRIES, PeerProfile, Profile, Release, anchors, andon, evaluation, governor,
+};
 use crate::config::read_regular;
 use crate::workflow::actor_service::{andon_settings, evaluator};
 use fa_reference::action::ElapsedTick;
@@ -14,7 +16,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries; fresh plain/simple-witness creation also accepts paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor, without recovery/governor/topology/activation/prechecks";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with --after-message] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 new remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor; evaluated --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; governor/topology/activation/joint/precheck compositions remain separate";
 
 struct Input {
     recipe: PathBuf,
@@ -153,10 +155,12 @@ where
     selected_files.extend(credibility.map(Path::to_path_buf));
     selected_files.extend(governor_path.iter().cloned());
     selected_files.extend(recovery_path.iter().cloned());
+    let mut history_files = selected_files.clone();
     if let Some(paths) = &accounting_paths {
-        selected_files.extend([paths.settings.clone(), paths.evaluator.clone()]);
+        history_files.extend([paths.settings.clone(), paths.evaluator.clone()]);
+        history_files.extend(paths.recovery.iter().cloned());
     }
-    history_options.check_files(&selected_files)?;
+    history_options.check_files(&history_files)?;
     let config = Config::read(Path::new(&args[1]))?;
     let peers = PeerProfile::read(Path::new(&args[3]))?;
     let accounting_settings = accounting_paths
@@ -167,10 +171,17 @@ where
         .as_ref()
         .map(|paths| evaluator::Settings::read(&paths.evaluator))
         .transpose()?;
+    let accounting_recovery = accounting_paths
+        .as_ref()
+        .and_then(|paths| paths.recovery.as_deref())
+        .map(|path| evaluation::Recovery::read(path, &config))
+        .transpose()?;
     let accounting = match (accounting_settings.as_ref(), evaluator_settings.as_ref()) {
         (Some(settings), Some(evaluator)) => Some(andon::Selection {
             settings,
             evaluator,
+            recovery: accounting_recovery.as_ref(),
+            paths: accounting_paths.as_ref(),
         }),
         (None, None) => None,
         _ => return Err(andon::INVALID.into()),
@@ -205,6 +216,7 @@ where
         .map(|path| governor::requirements::Selection::read(path, &config))
         .transpose()?;
     if let Some(accounting) = accounting {
+        accounting.check_mode(after)?;
         accounting.check_configuration(&config, publication.as_ref())?;
         let mut files = selected_files
             .iter()
@@ -220,25 +232,18 @@ where
             Path::new(&args[2]),
             &config,
             &peers,
-            None,
+            after,
             selected_operator.as_ref(),
             None,
             Some(history_options),
             None,
             None,
             Some(accounting),
+            &files,
         )?;
-        return super::run_with_andon(
-            config,
-            entries,
-            &peers,
-            publication.as_ref(),
-            selected_operator.as_ref(),
-            history.as_ref().ok_or(andon::INVALID)?,
-            accounting.settings,
-            accounting.evaluator,
-            time,
-            output,
+        return super::run_accounted(
+            config, entries, &peers, publication.as_ref(), (after, selected_operator.as_ref()),
+            history.as_ref().ok_or(andon::INVALID)?, accounting, time, output,
         );
     }
     if let Some(governor) = selected_governor.as_ref() {
@@ -532,6 +537,7 @@ fn load_with_recovery_services(
         selected_governor,
         recovery_path,
         None,
+        &[],
     )
 }
 
@@ -546,14 +552,13 @@ fn load_with_complete_services(
     selected_governor: Option<&governor::Settings>,
     recovery_path: Option<&Path>,
     accounting: Option<andon::Selection<'_>>,
+    accounting_inputs: &[&Path],
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
-    if accounting.is_some()
-        && (after.is_some()
-            || credibility.is_some()
-            || selected_governor.is_some()
-            || recovery_path.is_some())
-    {
-        return Err(andon::INVALID.into());
+    if let Some(accounting) = accounting {
+        accounting.check_mode(after)?;
+        if credibility.is_some() || selected_governor.is_some() || recovery_path.is_some() {
+            return Err(andon::INVALID.into());
+        }
     }
     governor::check_selected(
         selected_governor,
@@ -619,14 +624,24 @@ fn load_with_complete_services(
         .map(|entry| Profile::read(&entry.actor))
         .collect::<Result<Vec<_>, _>>()?;
     validate_actors(config, &actors.iter().collect::<Vec<_>>(), peers, after)?;
-    if let Some(accounting) = accounting {
+    let accounting_endpoints = accounting.map(|accounting| {
         accounting.check_actors(
-            config,
+            config, &actors.iter().collect::<Vec<_>>(), peers, selected_operator,
+        )?;
+        let endpoints = accounting.endpoints(
             &actors.iter().collect::<Vec<_>>(),
             peers,
             selected_operator,
         )?;
-    }
+        let mut files = accounting_inputs.to_vec();
+        files.extend([path, config.source.path()]);
+        for entry in &plan {
+            files.extend([entry.recipe.as_path(), entry.actor.as_path()]);
+            files.extend(entry.precheck.as_deref());
+        }
+        andon::check_endpoint_files(&endpoints, &files)?;
+        Ok::<_, String>(endpoints)
+    }).transpose()?;
     if let Some(selected) = selected_operator {
         for actor in &actors {
             selected.check(config, actor, peers)?;
@@ -724,7 +739,9 @@ fn load_with_complete_services(
         })
         .transpose()?;
     if let Some(accounting) = accounting {
-        accounting.check_history(history.as_ref().ok_or(andon::INVALID)?)?;
+        let history = history.as_ref().ok_or(andon::INVALID)?;
+        accounting.check_history(history)?;
+        history.check_files(accounting_inputs)?;
     }
     let mut entries: Vec<Entry> = Vec::with_capacity(plan.len());
     let mut tokenizer = None;
@@ -739,6 +756,12 @@ fn load_with_complete_services(
                 }
                 if let Some(accounting) = accounting {
                     accounting.check_files(&[path])?;
+                }
+                if let Some(endpoints) = &accounting_endpoints {
+                    andon::check_endpoint_files(endpoints, &[path])?;
+                }
+                if let Some(history) = &history {
+                    history.check_files(&[path])?;
                 }
                 Ok(())
             },

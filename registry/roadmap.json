@@ -823,7 +823,10 @@
         "docs/LIVE_ANDON_EVALUATION.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/recovery.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/recovery.rs",
-        "artifacts/execution/2026-11-24-native-accounted-recovery-source-review.log"
+        "artifacts/execution/2026-11-24-native-accounted-recovery-source-review.log",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs",
+        "artifacts/execution/2026-11-24-native-resident-recovery-source-checks.json"
       ]
     },
     {
@@ -916,7 +919,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/recovery.rs",
         "artifacts/execution/2026-11-24-native-accounted-recovery-source-review.log",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/recovery.rs",
-        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log"
+        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs",
+        "artifacts/execution/2026-11-24-native-resident-recovery-source-checks.json"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2779,7 +2785,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/recovery.rs",
         "artifacts/execution/2026-11-24-native-accounted-recovery-source-review.log",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/recovery.rs",
-        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log"
+        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs",
+        "artifacts/execution/2026-11-24-native-resident-recovery-source-checks.json"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3850,7 +3859,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/recovery.rs",
         "artifacts/execution/2026-11-24-native-accounted-recovery-source-review.log",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence/evaluation/recovery.rs",
-        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log"
+        "artifacts/execution/2026-11-24-resident-recovery-regression-integration.log",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs",
+        "artifacts/execution/2026-11-24-native-resident-recovery-source-checks.json"
       ],
       "founding_ideas": [
         "FI-A06"

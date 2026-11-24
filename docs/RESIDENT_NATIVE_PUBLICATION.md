@@ -678,13 +678,11 @@ original history anchor, so acknowledged assessment Time and label events are
 included and no evaluator mutation can follow that retained cut. Archive custody
 and export failures retain the [existing history contract](#independently-retained-history).
 
-This selection is creation-only. Recovery (`--after-message`, `--history-anchor`
-or recovery requirements), a policy governor, topology, credibility activation,
-joint publication or joint Andon `/2`, and non-null per-release prechecks require
+Creation and the explicitly anchored recovery below retain the marginal `/1`
+accounting contract. A policy governor, topology, credibility activation, joint
+publication or joint Andon `/2`, and non-null per-release prechecks require
 separate compositions and are refused. No selected guard is silently removed.
-Single-release native and learned modes keep their separate grammars. A new
-anchor records this original history; it does not authorize recovery of an
-accounted generated owner through an unaccounted opener.
+Single-release native and learned modes keep their separate grammars.
 
 Authored composition regressions cover actual fixture Message/Message/Finish
 generation, a separate evaluator process, original-case observation and labels,
@@ -694,6 +692,71 @@ aliases and the terminal reply barrier. They establish
 test intent, not executed results or detector quality. Compilation, runtime
 tests, Clippy and the required gate remain unqualified because remote-only RCH
 is unavailable.
+
+### Recover an accounted resident suffix
+
+Select a confirmed original Message and the remaining sequence explicitly:
+
+```sh
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor /absolute/independent/original-native.anchor \
+  --retain-history-anchor /absolute/independent/new-native.anchor \
+  --evaluation-recovery RECOVERY_REQUIREMENTS
+```
+
+The existing optional simple publication profile and independent operator pair
+can accompany this selection. Recovery requires all three explicit inputs:
+the predecessor, independent input anchor and requirements file, together with
+the paired accounting/evaluator profiles and a new independent retained output.
+The remaining sequence contains 1 through 16 new releases. It may consist only
+of Finish, using the confirmed predecessor's exact generation and recipe, with
+no new token generation.
+
+`RECOVERY_REQUIREMENTS` uses the same closed, 4 KiB
+[`fa.native-evaluation-recovery/1` schema](LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service)
+as the single-request service. The journal revision, control sequence and
+authority-epoch floors are mandatory independently retained expectations.
+`CURRENT_ANDON_PROFILE` separately supplies the original identity and protocol,
+initial windows, complete current window inventory and minimum evaluation
+revision. The current config, recipes and optional simple witness profile pin
+the complete supported source, decoder, tokenizer, stream, publication and
+unchanged policy contracts. Missing selected expectations cannot be inferred
+from the journal being checked.
+
+Single-request and resident accounted recovery share the same checked driver
+over `FileAndonGeneratedSourceRecovery`. The original Stop and invocation
+deadline are checked before open, at every one-event boundary and separately
+at Ready. An authenticated Stop consumes that verified cursor through its
+original terminal path before an ordinary Fence or fresh live role is issued.
+The resident history owner retains the acknowledged terminal cut. Normal
+recovery acknowledges one Fence and captures its successor before fallible
+suffix admission or listener startup.
+
+The recovered numerical owner, source custodian, pending evaluation cases,
+accounting windows and liabilities then survive every Message/Finish handoff.
+One fresh independent evaluator serves the entire suffix under its single
+finite candidate, I/O, byte and lifetime allowance. It can discover and label a
+retained historical case as well as a later review. A new invocation does not
+replenish native numerical work or erase accounting, and a later release does
+not issue another evaluator or renew its allowance.
+
+Every actor request must still be genuinely new, and each selected Message
+generation must be unused. The confirmed predecessor, remaining stream bounds
+and Finish recipe retain their original checks. Every new effect needs fresh
+source evidence, helper review and independent human approval. A post-Fence
+refusal retains acknowledged recovery history without emitting a new source
+reference or starting additional generation. The final retained archive includes
+acknowledged late labels after evaluator authority has retired.
+
+The requirements, accounting/evaluator profiles and frozen input anchor are
+reserved against the store, retained output, future service endpoints and
+selected recipe/model/source/witness inputs before numerical asset loading.
+This composition resumes a confirmed Message boundary. Interrupted resident
+generation retains the separate single-request recovery path. The authored
+positive and causal-negative regression cases still require remote RCH
+compilation and runtime qualification before acceptance can close.
 
 ## Independent policy governance during native creation
 
@@ -806,8 +869,10 @@ capsule option and a selected recovered suffix. The independent
 operator requires its explicit paired selection, and release-specific prechecks
 require explicit version-two manifest rows. Native governance requires the
 explicit creation or independently guarded recovery governor selection described above.
-Live evaluation and Andon accounting require their paired creation selection and
-new retained anchor; they do not imply recovery, governance or precheck support.
+Live evaluation and Andon accounting require their paired selection and new
+retained anchor. Accounted suffix recovery additionally requires the explicit
+predecessor, independent input anchor and evaluation recovery requirements above;
+it does not imply governance or precheck support.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

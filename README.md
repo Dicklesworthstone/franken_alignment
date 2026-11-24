@@ -41,16 +41,18 @@ new inference; Stop is live before recovery grants live custody. Regression sour
 actual fixture inference, cumulative frames, later rejection, Stop, source loss
 and final witness changes; required RCH execution qualification remains pending.
 
-Fresh native sequences can select [live independent evaluation and Andon
+Native creation and explicitly anchored remaining sequences can select [live independent evaluation and Andon
 accounting](docs/RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
 with paired `--andon` and `--evaluator-profile` profiles and a new
 `--retain-history-anchor` output. The same evaluator observes original cases and
 labels them across Message/Finish handoffs under one finite allowance; optional
 operator Ledger reads the original accounting. A held final review remains
 labelable under the remaining original budgets. Final intake retirement precedes
-the retained history cut. Each release still needs separate human approval;
-this creation-only composition remains pending required RCH compilation and
-runtime qualification.
+the retained history cut. Accounted recovery requires the original confirmed
+Message, independent input history and explicit recovery floors; singleton
+Finish preserves the original numerical work without new inference. Each
+release still needs separate human approval. This composition remains pending
+required RCH compilation and runtime qualification.
 
 Single-request native generated services also support
 [anchored recovery with live evaluation](docs/LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service).

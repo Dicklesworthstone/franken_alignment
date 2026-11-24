@@ -1,0 +1,90 @@
+{
+  "utc": "2026-11-24T20:22:07.077958+00:00",
+  "base_head": "fd00c0c39701799bc30d76e3927708f0c706b66f",
+  "tool": "rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)",
+  "distribution": "nightly-2026-09-08",
+  "rustfmt_archive_sha256": "d20583c1abaa6f77940a20eb9634a5bf05ba1df0ba5cfeb7b1b4347635ac3f53",
+  "shared_library_component_sha256": "411b2537745e40c8ccb625688de5e0869fca029a2e2f63f1a8fa6995bfc8b1e6",
+  "scope": "9 frozen Rust source/test files; Rust2024 scoped parse, no typecheck/build/test",
+  "format": "Changed ranges only in existing files, legacy layout/order preserved; both new files fully formatted",
+  "files": [
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation.rs",
+      "sha256": "1a9ca43c0a3a0c3da728594ede8d2d78f9f08cf84a2174cdbbc84da41d64355b",
+      "git_blob_sha1": "6621c80cc926f6bd1fb616e0ed453495bc7671be",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/recovery.rs",
+      "sha256": "e2201888a13a6b267f1c25b85f7af04e2d3c2da9053216f4771af246e58ccb68",
+      "git_blob_sha1": "2a5fe68fff4d6633f69b865e3b857286496de36a",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence.rs",
+      "sha256": "82a2c5093643453acc9688bfb59125d85b23b7f99ec90ad3e2adfdeef3a901a6",
+      "git_blob_sha1": "78b0723b9b7824e62134c61484ab2f29f9767a05",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/anchors.rs",
+      "sha256": "f3fbba70e2d3cece6fc1fa3411a4e0360631501e6eb07e913a3364fc9f9b75d0",
+      "git_blob_sha1": "e26ef6acc3bb670153405a0aec4753349272212e",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/andon.rs",
+      "sha256": "6d33534d746f50ab3f454ae7fc1d0553f33f5be62d306cf43af11d9b729f844c",
+      "git_blob_sha1": "3629dc9a784188b4aeae7802a291a9fec7c7d159",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile.rs",
+      "sha256": "349323129e1c75ee8584d31bd54fc3c15ba468b70f29f5b42df67aeaa24424d3",
+      "git_blob_sha1": "59d33c3a63c19077d5ca6fe6aa14ba76bd4a7582",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+      "sha256": "68004441ff50ff1ab54d7d5bda54a57a9078cbbb3b97a4f92ada0f348e83c5d0",
+      "git_blob_sha1": "e0c8d14680a50c00f0c0546003e373934e557cdc",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon.rs",
+      "sha256": "4fd58c83d0e8851fcba6568b8851817b01d118bd5556cec69d8aa3f887abaf54",
+      "git_blob_sha1": "397faf36065e005242bdd028bd9ea09aaad72117",
+      "parse_exit": 0,
+      "stderr": ""
+    },
+    {
+      "path": "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs",
+      "sha256": "c9a1010444200b0fe7618277792589f22bb1aa1b44d255c627622242ebf2969d",
+      "git_blob_sha1": "549392575c0bf7a183f4ca85faed7ce61fee30fa",
+      "parse_exit": 0,
+      "stderr": ""
+    }
+  ],
+  "new_file_format_check": {
+    "files": [
+      "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/evaluation.rs",
+      "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/recovery.rs"
+    ],
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "git_diff_check": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "known_correction": "Regression assertion now distinguishes historical generation text from current global decoder numerical inspection; full numerical equality only for singleton Finish."
+}

@@ -1,0 +1,3 @@
+rustfmt --edition 2024 --config skip_children=true --file-lines JSON --emit stdout native/evaluation.rs
+Exit1 before source parse: Unstable option (`--file-lines`) used without `--unstable-features`
+No repository file modified. Retry adds the required explicit nightly opt-in.

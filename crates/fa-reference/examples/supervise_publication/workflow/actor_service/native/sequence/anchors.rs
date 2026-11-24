@@ -88,7 +88,8 @@ impl Options {
             .map(|path| operator::resolve(path))
             .collect::<Result<BTreeSet<_>, _>>()?;
         for path in files {
-            if selected.contains(&operator::resolve(path)?) {
+            let path = operator::resolve(path)?;
+            if selected.iter().any(|reserved| overlaps(reserved, &path)) {
                 return Err("native history custody aliases a selected input file".into());
             }
         }
@@ -161,12 +162,19 @@ impl Selection {
         if self
             .input
             .as_ref()
-            .is_some_and(|(path, _)| *path == endpoint)
-            || self.output.as_ref().is_some_and(|path| *path == endpoint)
+            .is_some_and(|(path, _)| overlaps(path, &endpoint))
+            || self.output.as_ref().is_some_and(|path| overlaps(path, &endpoint))
         {
             return Err(
-                "native history custody conflicts with the independent governor endpoint".into(),
+                "native history custody overlaps a selected input or service endpoint".into(),
             );
+        }
+        Ok(())
+    }
+
+    pub(super) fn check_files(&self, files: &[&Path]) -> Result<(), String> {
+        for path in files {
+            self.check_endpoint(path)?;
         }
         Ok(())
     }
@@ -195,6 +203,10 @@ impl Selection {
         }
         Ok(())
     }
+}
+
+fn overlaps(left: &Path, right: &Path) -> bool {
+    left.starts_with(right) || right.starts_with(left)
 }
 
 fn check_paths(
@@ -226,12 +238,16 @@ fn check_paths(
     if let Some(selected) = selected_operator {
         reserved.insert(operator::resolve(&selected.settings.socket)?);
     }
-    let mut selected = BTreeSet::new();
+    let mut selected: BTreeSet<PathBuf> = BTreeSet::new();
     for path in [input, output].into_iter().flatten() {
         let path = operator::resolve(path)?;
-        if path.starts_with(&store) || reserved.contains(&path) || !selected.insert(path) {
+        if overlaps(&path, &store)
+            || reserved.iter().any(|reserved| overlaps(reserved, &path))
+            || selected.iter().any(|previous| overlaps(previous, &path))
+        {
             return Err("native history custody must be distinct from source, store, selected inputs and every scheduled endpoint".into());
         }
+        selected.insert(path);
     }
     Ok(())
 }

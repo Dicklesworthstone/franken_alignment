@@ -2,7 +2,7 @@
 //! Creation and anchored recovery select the whole accounting contract before
 //! source or token work. Recovery never restores old evaluator or human brands.
 #[path = "evaluation/recovery.rs"]
-mod recovery;
+pub(super) mod recovery;
 use super::{
     Config, FileHumanReviewer, FileOversight, Inputs, PeerProfile, Profile,
     PublicationProfile, anchors, debug, exact_precheck, operator,
