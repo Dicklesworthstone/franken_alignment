@@ -134,6 +134,15 @@ impl Service {
         })
     }
 
+    /// Honor a later narrowing of the original actor request deadline. Neither
+    /// a new phase nor a longer supplied deadline can renew this service lease.
+    pub(super) fn narrow_deadline(&mut self, deadline: &Deadline) {
+        self.logical = self.logical.min(deadline.logical);
+        let wall = deadline.started.checked_add(deadline.wall)
+            .map_or(Duration::ZERO, |end| end.saturating_duration_since(self.started));
+        self.wall = self.wall.min(wall);
+    }
+
     /// Call only AFTER the original independent Stop checkpoint. Kernel-peer
     /// verification precedes every read. One bounded turn never sleeps or waits.
     pub(super) fn checkpoint_driver(&mut self, driver: &mut FileSupervisedDriver) {

@@ -1,0 +1,43 @@
+Learned live independent evaluation: source checks only.
+rustfmt 1.10.0-nightly (cea272fa35 2026-09-07)
+Qualified nightly-2026-09-08; Rust edition 2024.
+Formatter/runtime components restored from the official dated manifest after environment reset; no compiler was invoked.
+
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --emit stdout crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation.rs
+
+
+exit_code=0
+$ /tmp/fa-qualified-nightly-2026-09-08/bin/rustfmt --edition 2024 --config skip_children=true --check crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation.rs
+
+
+exit_code=0
+$ git diff --check
+
+
+exit_code=0
+Roadmap JSON: only FA-105/134 artifact paths changed. Beads: exactly one appended note and timestamp; status/acceptance unchanged.
+
+$ RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check
+
+/bin/bash: line 1: rch: command not found
+exit_code=127
+RCH unavailable. No compiler, runtime test, Clippy or canonical qualification executed. No local fallback was attempted.
+Parsed 6 changed Rust files and checked formatting of two new modules.

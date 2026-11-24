@@ -3,10 +3,11 @@
 The Linux `supervise_publication` service can provision native helper credibility
 and Andon accounting in an ordinary publication owner and accept independent
 assessment while that same owner retains the journal lock. An operator can read
-the acknowledged results through the existing [Tower Ledger](TOWER_GOVERNANCE_LEDGER.md).
+the acknowledged results through [Tower Ledger](TOWER_GOVERNANCE_LEDGER.md)
+and [Findings](TOWER_GOVERNANCE_FINDINGS.md).
 The actor still needs original source admission, helper review, independent human
 approval and publication checks for every new effect. Native generated creation
-also supports the explicit composition below.
+and learned generated creation also support the explicit compositions below.
 
 This connects FA-105/049/134, plan §§9.9, 13.4, 17.1, 22.3–22.4 and
 FI-A08/A13/A18. It is a bounded reference composition; execution qualification
@@ -92,10 +93,11 @@ and permits only an already acknowledged reply to drain. Final retained history
 includes any acknowledged assessments and accounting.
 
 This single-request selection supports native creation, plain or simple checked.
-Native live open/continuation, learned-generated execution, topology, governor
+Native live open/continuation, topology, governor
 and held-out qualification selections need their own complete composition and
 refuse this option. The separately guarded native API already supports
 [anchored accounting recovery](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
+Learned generation uses its separate fresh-creation command below.
 
 Fresh [resident native generated sequences](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
 use their separate `serve-native-generated` command with paired `--andon
@@ -106,6 +108,72 @@ opportunity after a final helper Hold. This resident creation path accepts the
 marginal `/1` accounting profile and optional simple witnesses/operator Ledger;
 recovery, joint profiles, governance, topology and selected prechecks remain
 separate. Its compilation and runtime qualification remain pending required RCH.
+
+## Create an evaluated learned service
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE \
+  --actor-profile ACTOR_PROFILE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/new-learned-anchor
+```
+
+This is fresh single-request creation with the original learned numerical recipe,
+native or explicitly selected process helpers, actor ingress and independent
+human reviewer. Plain and simple checked publication are supported. Both
+accounting and evaluator profiles, the actor profile and a new independent
+history output are required together. Select the marginal
+`fa.native-andon-operator/1` accounting profile with its unchanged initial
+windows and evaluation revision zero.
+
+The [atomic learned constructor](LEARNED_ANDON_BOOTSTRAP.md) installs the exact
+recipe, complete guards, evaluation, Andon accounting and terminal recovery
+reserve before its sole first-image publication. The separately held evaluator
+stays with that same owner. Role separation, audience, profile/source/witness
+paths, endpoint aliases and retained-history custody are checked before clocks,
+listeners or owner work. No provisional unaccounted store is created.
+
+**Evaluation is scheduled after the original request workflow.** The evaluator
+socket is bound before generation, and its original finite lifetime includes
+generation, helper review and human review. Case discovery and assessment are
+served only after those operations end, using the remaining allowance. If the
+allowance expires during the original work, the case remains pending. A final
+native Hold can be discovered and independently labeled without rerunning
+generation or helpers. A benign Hold charges the original Andon window; a label
+cannot approve publication, resample output or release a held effect.
+
+The existing `evaluator-case` and `evaluator-assess` commands below use the same
+independently authenticated endpoint. A discovery and assessment consume two
+original candidate slots. Stop precedes every evaluation quantum, including
+after an optional operator command. A shorter deadline accepted from the actor
+also narrows the evaluator's own assessment-time clock check. Logical/wall time,
+candidate, I/O and byte allowances never renew. A failed actor reply during this
+final phase retires that transport and retains its error while independent
+evaluation can use its remaining allowance. Earlier workflow failure, original
+Stop or storage failure ends new evaluation. Evaluator authority retires before
+terminal actor-reply grace and retained-anchor capture, so the anchor includes
+acknowledged labels and accounting from the same owner.
+
+Optional `--precheck-profile` and paired `--operator-profile` /
+`--tower-generation` preserve their existing contracts. A separately installed
+operator Ledger grant can read accounting and calibration Findings. Required
+raw/owned predictors, held-out joint recipes, joint accounting, stronger witness
+compositions, topology, campaigns, checkpoints, credibility activation,
+continuation, recovery and resident learned sequences refuse this opt-in. They
+require separately complete role and recovery contracts. In particular, an
+accounted learned journal cannot use the narrower evaluated-only recovery wrapper.
+
+Six substantive learned-service regression functions use the original numerical
+and helper paths with an independent evaluator subprocess: human approval and
+rejection, final Hold accounting, Stop over an incomplete frame, actual outer
+service orchestration, grammar refusal and pre-clock custody/role refusal. They
+check original draw counts, unchanged source ownership, complete endpoint
+retirement and a final anchor including the assessment. A separate regression
+checks deadline narrowing without a Time event, label or budget renewal. The
+test-only accounting harness retains the original live owner for inspection;
+it does not recover or replace it. Qualified scoped parsing/format and whitespace
+checks passed; RCH compilation, runtime tests, Clippy and canonical qualification
+remain unexecuted because the runner is unavailable.
 
 ## Discover the original case before labeling
 

@@ -872,3 +872,37 @@ mod case_service;
 
 #[path = "tests/case_client.rs"]
 mod case_client;
+
+#[test]
+fn narrowed_actor_deadline_refuses_a_late_label_and_cannot_renew_the_original_service() {
+    let mut fixture = Fixture::new();
+    let mut service = fixture.start();
+    let narrowed = Deadline {
+        logical: ElapsedTick(10),
+        started: service.started,
+        wall: Duration::from_secs(5),
+    };
+    service.narrow_deadline(&narrowed);
+    assert_eq!(service.logical, ElapsedTick(10));
+    assert_eq!(service.wall, Duration::from_secs(5));
+    service.narrow_deadline(&deadline());
+    assert_eq!(service.logical, ElapsedTick(10));
+    assert_eq!(service.wall, Duration::from_secs(5));
+
+    fixture.review(1);
+    let request = fixture.request(1);
+    let image = fixture.image();
+    let reply = fixture.exchange(&mut service, &request.wire, &mut || Ok(ElapsedTick(10)));
+    assert_eq!(protocol::validate(&request, &reply).unwrap(), Outcome::Refused);
+    assert_eq!(fixture.image(), image, "expired labeling must not append Time or truth");
+    let host = fixture.driver.supervisor().host().unwrap();
+    assert_eq!(host.credibility_report().unwrap().pending_cases, 1);
+    assert_eq!(host.andon_ledger().unwrap().windows()[&1].false_stops, 0);
+    let spent = (service.candidates, service.io_calls, service.transferred);
+    assert_eq!(spent.0, 1);
+    assert!(spent.1 > 0 && spent.2 > 0);
+    service.narrow_deadline(&deadline());
+    assert_eq!((service.candidates, service.io_calls, service.transferred), spent);
+    assert_eq!(service.logical, ElapsedTick(10));
+    assert_eq!(service.wall, Duration::from_secs(5));
+}

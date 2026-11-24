@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-23: evaluate the original learned owner after live review
+
+- Add explicit paired Andon/evaluator selection to fresh learned creation with
+  original actor ingress, complete native startup and independent history output.
+- Serve discovery and assessment after the original numerical/helper/human work,
+  retaining one evaluator and the remaining original time/candidate/I/O budget.
+- Keep final Hold labeling on the same owner without source reload, generation,
+  helper or effect retries; preserve original Andon costs and human approval.
+- Narrow the evaluator's own deadline when actor acceptance selects an earlier
+  due time, and retire label authority before reply grace and history capture.
+- Refuse unsupported recovery, resident, predictive, joint, topology, campaign
+  and checkpoint compositions before clock or owner work.
+- Add six substantive learned-service regressions, one independent-process
+  harness and one deadline regression. Scoped qualified syntax/format and
+  whitespace checks pass; required RCH compilation/execution remains pending.
+
 ## 2026-11-23: expose original calibration incidents through Findings
 
 - Connect the registered Findings verb to the original native credibility/Andon

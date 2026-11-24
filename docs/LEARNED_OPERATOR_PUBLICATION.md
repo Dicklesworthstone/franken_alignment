@@ -87,6 +87,33 @@ argument. Explicit continuation and finish can independently requalify their
 helpers as described below. There is no unchecked reviewer mode. The receipt-only form accepts `--resume` in that argument's place
 and contacts no reviewer.
 
+### Independently evaluate the original learned review
+
+Fresh single-request creation can explicitly select native credibility and
+Andon accounting with a separately authenticated evaluator:
+
+```text
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE \
+  --actor-profile ACTOR_PROFILE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor NEW_OUTPUT
+```
+
+The original numerical, helper and human publication paths remain required.
+The evaluator starts with the same owner and finite lifetime; case discovery
+and labeling run after the original request using its remaining allowance. A
+final Hold therefore remains assessable without retrying generation or review,
+and an independent benign label charges the original Andon ledger. Evaluator
+authority retires before final history capture and cannot supply the human key.
+
+This selection supports plain and simple checked creation, optional precheck
+and paired operator/generation flags. Predictors, joint recipes/accounting,
+topology, campaigns, checkpoints, credibility activation, continuation,
+recovery and resident sequences require their separate complete compositions.
+See [live learned evaluation](LIVE_ANDON_EVALUATION.md#create-an-evaluated-learned-service)
+for exact profiles, custody checks, Stop/deadline behavior and pending execution
+qualification.
+
 ### Enforce topology during learned publication
 
 For authenticated learned actor ingress, `--actor-profile ACTOR_PROFILE` and
@@ -960,6 +987,13 @@ finish has its own form and receipt lookup described above. Neither operation
 is implied by loading a checkpoint source or replaying a recorded receipt.
 
 ## Verification status
+
+The new live independent-evaluation composition has six substantive learned
+service regression functions, one independent-process harness and a shared
+evaluator deadline regression. Scoped qualified nightly-2026-09-08 Rust parsing,
+format and whitespace checks passed. Its compilation, runtime tests, Clippy and
+canonical gate remain unexecuted because RCH is unavailable; the historical
+execution record below does not qualify this new selection.
 
 The last executed learned-command selection predates recipe version 5. It was
 independently reviewed and executed with qualified `nightly-2026-09-08`.

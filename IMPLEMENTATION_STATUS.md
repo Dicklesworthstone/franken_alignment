@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-23: independently assess completed learned publication reviews
+
+Fresh single-request learned creation now accepts paired Andon and evaluator
+profiles with an actor profile and required independent history output. The
+original reserved native constructor installs complete numerical/guard bindings
+and accounting in one acknowledged first image. Plain and simple checked
+publication retain their original generation, native/process helper review and
+separate human effect key. Unsupported continuation, recovery, resident,
+predictive, joint, topology, campaign and checkpoint selections refuse before
+clock or owner work; no selected role is silently dropped.
+
+The same separately authenticated evaluator is provisioned before generation.
+Its finite lifetime includes original numerical work and helper/human review;
+case discovery and assessment are served after the original request completes,
+using only the remaining allowance. A final Hold remains independently
+assessable without reopening the journal, acquiring fresh source/model/helper
+inputs, resampling output or retrying review/publication. A benign Hold charges
+the original native Andon window and can open its calibration incident.
+
+Original Stop precedes each evaluation quantum. A shorter accepted actor deadline
+also narrows the evaluator's own clock check; wall/logical time and transport
+budgets cannot renew. During this final phase an actor reply failure retires only
+that transport and retains its error. Evaluator authority retires before reply
+grace and final anchor capture. Existing direct/resident wrappers preserve their
+signatures and opt out by forwarding no evaluator selection.
+
+Six substantive learned regressions and one independent-process harness exercise
+real native generation/review, both human decisions, held-case labeling and cost,
+Stop over an incomplete frame, outer product orchestration, closed grammar and
+pre-clock role/custody refusals. The accounting assertions inspect the retained
+original live owner; they do not recover a replacement. A seventh substantive
+regression checks deadline narrowing without a late Time/label or renewed budget.
+See [the live learned contract](docs/LIVE_ANDON_EVALUATION.md#create-an-evaluated-learned-service).
+
+Independent source review and qualified nightly-2026-09-08 scoped Rust
+parsing/format and whitespace checks passed. Required RCH compilation, runtime
+tests, Clippy and canonical qualification remain unexecuted because the runner
+is unavailable. Existing FA-105/134 roadmap and live-evaluation bead acceptance
+remain in progress; no deployment gate is closed.
+
 ## 2026-11-23: observe original calibration findings through live Tower
 
 The existing Findings verb now reaches the original acknowledged credibility

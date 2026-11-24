@@ -202,3 +202,5 @@ fn executed(wire: &mut Wire, request: u64) -> bool {
 #[path = "tests/situation.rs"] mod situation;
 
 #[path = "tests/operator.rs"] mod operator_tests;
+
+#[path = "tests/evaluation.rs"] mod evaluation_tests;

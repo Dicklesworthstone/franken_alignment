@@ -41,6 +41,9 @@ Andon ledger. Pending, censored and violation outcomes remain distinct. An exact
 assessment retry cannot duplicate the charge. Labels do not provide the separate
 human key or restart a held effect. Accounting windows and costs remain native
 history; this constructor adds no recovery protocol or live endpoint by itself.
+The separate [fresh learned service composition](LIVE_ANDON_EVALUATION.md#create-an-evaluated-learned-service)
+retains this evaluator for bounded case discovery and assessment after the
+original request workflow on the same live owner.
 
 The narrower evaluated-only learned recovery profile rejects histories containing
 Andon configuration or registered windows before numerical replay, cleanup or

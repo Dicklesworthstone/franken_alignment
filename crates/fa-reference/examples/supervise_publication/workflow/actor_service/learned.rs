@@ -17,6 +17,7 @@
 #[path = "learned/ingress.rs"] mod ingress;
 #[path = "learned/precheck.rs"] mod precheck;
 #[path = "learned/operator.rs"] mod operator;
+#[path = "learned/evaluation.rs"] mod evaluation;
 #[path = "learned/finish.rs"] mod finish;
 #[path = "learned/continuation.rs"] mod continuation;
 #[path = "learned/qualification.rs"] mod qualification;
@@ -61,7 +62,7 @@ use fa_reference::action::consequence::oversight::{
 use fa_reference::Error;
 use std::{io::Write, path::Path, rc::Rc};
 
-const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]";
+const USAGE: &str = "create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE [--continue-generation | --after-message PREVIOUS_REQUEST | --finish-after-message PREVIOUS_REQUEST] [--actor-profile ACTOR_PROFILE [--precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE --tower-generation GENERATION] [--andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE --retain-history-anchor NEW_OUTPUT]] [--campaign-profile PATH] [--checkpoint-before-generation PROFILE] [--credibility-activation CAPSULE] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE --resume [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor NEW_OUTPUT] | create-learned-generated CONFIG LEARNED_RECIPE (--recover-stop | --stop-admission | --drain-stopped) OPERATION [--topology-profile PATH] [--history-anchor INPUT] [--retain-history-anchor OUTPUT] [--retain-topology-checkpoint NEW_OUTPUT] [--recover-terminal-checkpoint] | create-learned-generated CONFIG LEARNED_RECIPE --audit-review ROUND HISTORY_ANCHOR | create-learned-generated CONFIG LEARNED_RECIPE --resume (--receipts-only | --reconcile-receipts) [--finish-after-message PREVIOUS_REQUEST] [--topology-profile PATH] [--history-anchor INPUT] | create-learned-generated CONFIG LEARNED_RECIPE --prepare-stream-checkpoint CHECKPOINT_PROFILE --retain-history-anchor NEW_OUTPUT [--campaign-profile PATH] [--topology-profile CREATE_PROFILE]";
 
 /// The shared fleet coordinator owns the complete create/recover/resume grammar.
 pub(super) fn fleet_command(args: &[String], output: &mut impl Write) -> Result<(), String> {
@@ -85,6 +86,9 @@ pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(),
 // selection and workflow; a test clock supplies no publication or reviewer key.
 fn command_with_clock<F>(args: &[String], credibility: Option<&Path>, time: F) -> Result<(), String>
 where F: FnMut() -> ElapsedTick {
+    // Independent evaluation owns its fresh-only grammar before any stripper.
+    let (args, evaluation_options) = evaluation::take_options(args, credibility)?;
+    let args = args.as_slice();
     // Operator selection owns the whole argv before an offline mode or another
     // option parser can discard it and silently omit its endpoint.
     let (args, operator_path) = operator::take_option(args)?;
@@ -205,7 +209,15 @@ where F: FnMut() -> ElapsedTick {
     loaded.checkpoint_on_generation = checkpoint_path.map(checkpoint_on_generation::Selection::read).transpose()?;
     let operator = operator_path.map(|(path, generation)| operator::Selection::read(&path, generation))
         .transpose()?;
-    let result = if let Some(operator) = operator.as_ref() {
+    let evaluation = evaluation_options.map(evaluation::Options::read).transpose()?;
+    if let Some(selected) = evaluation.as_ref() {
+        selected.check_inputs(&[Path::new(&args[1]), Path::new(&args[2]), Path::new(&args[3])])?;
+    }
+    let result = if let Some(evaluation) = evaluation.as_ref() {
+        run_with_actor_services_evaluated(config, loaded, &peers, live_continuation, finishing,
+            after_message, credibility, actor.as_ref(), precheck.as_ref(), operator.as_ref(),
+            Some(evaluation), time)?
+    } else if let Some(operator) = operator.as_ref() {
         run_with_actor_services(config, loaded, &peers, live_continuation, finishing,
             after_message, credibility, actor.as_ref(), precheck.as_ref(), Some(operator), time)?
     } else {
@@ -328,10 +340,20 @@ where F: FnMut() -> ElapsedTick {
         credibility, actor, precheck, None, time)
 }
 
-fn run_with_actor_services<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+fn run_with_actor_services<F>(config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
     finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
     actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>,
-    selected_operator: Option<&operator::Selection>, mut time: F) -> Result<RunResult, String>
+    selected_operator: Option<&operator::Selection>, time: F) -> Result<RunResult, String>
+where F: FnMut() -> ElapsedTick {
+    run_with_actor_services_evaluated(config, loaded, peers, continuing, finishing, after_message,
+        credibility, actor, precheck, selected_operator, None, time)
+}
+
+fn run_with_actor_services_evaluated<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
+    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
+    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>,
+    selected_operator: Option<&operator::Selection>, selected_evaluation: Option<&evaluation::Selection>,
+    mut time: F) -> Result<RunResult, String>
 where F: FnMut() -> ElapsedTick {
     if credibility.is_some() && !continuing {
         return Err(
@@ -360,6 +382,10 @@ where F: FnMut() -> ElapsedTick {
         }
     }
     checked::check_selection(&config, &loaded)?;
+    if let Some(selected) = selected_evaluation {
+        selected.check(&config, &loaded, actor, peers, (selected_operator, precheck),
+            continuing, finishing, after_message, credibility)?;
+    }
     let start = time();
     let lifetime = loaded.ttl_ms.min(config.timing.runtime_ms);
     let lifetime = actor.map_or(lifetime, |actor| lifetime.min(actor.runtime_ms));
@@ -373,9 +399,16 @@ where F: FnMut() -> ElapsedTick {
     // The same service and deadline cover replay, generation, review and dispatch.
     let mut control = Control::new(&config, loaded.request, Some(peers))?;
     let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
-    let topology::Started { custody: (host, reviewer, observer, identity_observer), source: topology_source,
-        output: topology_output } = topology::start(&config, &loaded, continuing,
-            &mut control, &deadline, &mut time)?;
+    let (started, evaluator_role) = match selected_evaluation {
+        Some(selected) => {
+            let (custody, evaluator) = selected.create(&config, &loaded)?;
+            (topology::Started { custody, source: None, output: None }, Some(evaluator))
+        }
+        None => (topology::start(&config, &loaded, continuing,
+            &mut control, &deadline, &mut time)?, None),
+    };
+    let topology::Started { custody: (host, reviewer, observer, identity_observer),
+        source: topology_source, output: topology_output } = started;
     // Capture the original acknowledged successor before consuming its owner.
     // Mediated recovery has already rebound its source, so both archives must
     // name that newer cut and preserve the same original source expenditure.
@@ -405,13 +438,22 @@ where F: FnMut() -> ElapsedTick {
     let mut operator = selected_operator.map(|selected| selected.start(
         actor.expect("operator actor was validated before startup"), port.clone(), &driver, &deadline))
         .transpose().map_err(retain_startup)?;
+    let mut evaluator = match (selected_evaluation, evaluator_role) {
+        (Some(selected), Some(role)) => Some(super::evaluator::Service::start(
+            &selected.peer, actor.expect("evaluation actor was validated before startup"),
+            role, &driver, &deadline,
+        ).map_err(retain_startup)?),
+        (None, None) => None,
+        _ => unreachable!("evaluated creation returns the independently held role"),
+    };
     let mut wire = ActorWire::new(port);
-    let RequestCycle { driver, response, failure, history, process } = execute_request(
+    let RequestCycle { driver, response, failure, history, process } = execute_request_with_evaluation(
         driver, &mut config, &loaded, RequestServices { peers, reviewer: &reviewer,
             prediction: &mut prediction, identity: &mut identity, credential: &mut credential,
             intake: &mut intake, wire: &mut wire, operator: &mut operator,
             finishing, message_continuation, credibility, stop_operation: loaded.request },
-        &mut control, &mut deadline, &mut time);
+        &mut control, &mut deadline, &mut time, evaluator.as_mut());
+    if let Some(service) = &mut evaluator { service.retire(); }
     if let Some(service) = &mut operator { service.retire(); }
     // The anchor exporter preserves incoming errors while still trying its own
     // output; retain source custody first so either output can survive the other.
@@ -506,9 +548,16 @@ struct RequestCycle {
 /// One original generation/review/two-key/publication cycle. Retain the same
 /// authority, topology and numerical owner for either final cleanup or the next
 /// independently selected request; this function never opens another store.
-fn execute_request<F>(mut driver: FileSupervisedDriver, config: &mut Config,
+fn execute_request<F>(driver: FileSupervisedDriver, config: &mut Config,
     loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
     deadline: &mut Deadline, time: &mut F) -> RequestCycle
+where F: FnMut() -> ElapsedTick {
+    execute_request_with_evaluation(driver, config, loaded, services, control, deadline, time, None)
+}
+
+fn execute_request_with_evaluation<F>(mut driver: FileSupervisedDriver, config: &mut Config,
+    loaded: &Loaded, services: RequestServices<'_>, control: &mut Control,
+    deadline: &mut Deadline, time: &mut F, evaluator: Option<&mut super::evaluator::Service>) -> RequestCycle
 where F: FnMut() -> ElapsedTick {
     let RequestServices { peers, reviewer, prediction, identity, credential, intake, wire, operator, finishing,
         message_continuation, credibility, stop_operation } = services;
@@ -685,6 +734,10 @@ where F: FnMut() -> ElapsedTick {
                 Ok(()) => error, Err(stopping) => format!("{error}; stop/drain: {stopping}"),
             }
         });
+    }
+    if let Some(evaluator) = evaluator {
+        evaluation::complete(evaluator, &mut driver, reviewer, control, deadline, time,
+            intake, operator, config.timing.poll_ms, &mut failure);
     }
     // Receipt delivery cannot restart generation, review, reconciliation or an
     // effect. Preserve transport failure alongside the original actor outcome.
