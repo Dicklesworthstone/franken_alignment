@@ -43,6 +43,38 @@ impl Selection {
     where
         F: FnMut() -> ElapsedTick,
     {
+        self.open_selected(config, loaded, control, deadline, time, None)
+    }
+
+    /// Historical assessment uses this same fully guarded cursor and Stop
+    /// arbitration, selecting the retained request before the sole Fence.
+    pub(in super::super) fn open_history<F>(
+        &self,
+        config: &Config,
+        loaded: &Loaded,
+        control: &mut Control,
+        deadline: &Deadline,
+        time: &mut F,
+        finish_after: Option<u64>,
+    ) -> Result<(learned_recovery::Custody, FileIndependentEvaluator), String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
+        self.open_selected(config, loaded, control, deadline, time, Some(finish_after))
+    }
+
+    fn open_selected<F>(
+        &self,
+        config: &Config,
+        loaded: &Loaded,
+        control: &mut Control,
+        deadline: &Deadline,
+        time: &mut F,
+        historical: Option<Option<u64>>,
+    ) -> Result<(learned_recovery::Custody, FileIndependentEvaluator), String>
+    where
+        F: FnMut() -> ElapsedTick,
+    {
         let expected = self.recovery_requirements(config, loaded)?;
         let anchor = loaded
             .recovery_anchor
@@ -76,6 +108,23 @@ impl Selection {
                 Ok,
             )?
         };
+        if !pending {
+            if let Some(finish_after) = historical {
+                match finish_after {
+                    Some(after) => recovery
+                        .learned_text_stream_finish_request(after, loaded.request)
+                        .map_err(debug)?,
+                    None => recovery
+                        .learned_text_stream_message_request(loaded.request)
+                        .map_err(debug)?,
+                };
+                // The pure historical selector may traverse the request book.
+                // Re-arbitrate its remaining lease and any newly queued Stop
+                // before acknowledging a Fence or issuing the evaluator role.
+                deadline.check(time())?;
+                pending = control.recovery_pending_peer()?;
+            }
+        }
         // Ready has its own checkpoint. A checked pending Stop reaches only
         // the native terminal target, before ordinary fencing or ANY live role.
         if pending {

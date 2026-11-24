@@ -1,5 +1,7 @@
 //! Actual restarted accounted generation, Message/Finish and late independent
 //! labels. Original native fixtures test authority/custody, not detector quality.
+#[path = "history.rs"]
+mod history_tests;
 use super::super::continuation as native;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::{

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-24: receive delayed independent labels on learned history
+
+- Add explicit evaluation-only reopening of an accounted learned Message or
+  recorded Finish, with independent input/output anchors and complete original
+  recovery requirements checked before the sole Fence.
+- Reuse the original finite evaluator and authenticated Stop while exposing
+  no actor or human-review listener. Preserve numerical spend and unresolved
+  effect charges without source refresh, helper work or effect retry.
+- Retain acknowledged labels in the final history and add positive and causal
+  regressions. Execution qualification remains pending remote RCH availability.
+
 ## 2026-11-24: continue interrupted accounted native resident generation
 
 - Add explicit `--continue-generation` to resume an original pending or

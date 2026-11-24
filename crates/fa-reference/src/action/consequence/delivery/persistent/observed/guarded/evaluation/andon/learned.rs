@@ -17,6 +17,7 @@ use crate::action::consequence::delivery::{
                 FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress,
                 FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent,
             },
+            stream::FileStreamProposal,
             shutdown::recovery::{
                 FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery,
             },
@@ -187,6 +188,30 @@ impl FileAndonLearnedRecovery {
             self.recipe_publication,
         )?;
         Ok(())
+    }
+
+    /// Bind an already recorded Message from the same complete original replay.
+    /// Accounting, evaluation and guard checks precede the historical selector;
+    /// no Fence, source refresh, numerical resume or live role is produced.
+    pub fn learned_text_stream_message_request(
+        &self,
+        request: u64,
+    ) -> Result<FileStreamProposal, JournalError> {
+        self.check_ready()?;
+        self.inner.learned_text_stream_message_request(request)
+    }
+
+    /// Bind an already recorded Finish and its exact accepted Message receipt
+    /// before any recovery Fence. Equal text or an unconfirmed predecessor does
+    /// not substitute for that original request's native historical binding.
+    pub fn learned_text_stream_finish_request(
+        &self,
+        after_request: u64,
+        request: u64,
+    ) -> Result<FileStreamProposal, JournalError> {
+        self.check_ready()?;
+        self.inner
+            .learned_text_stream_finish_request(after_request, request)
     }
 
     /// Publish the original recovery Fence, then issue fresh separate human,

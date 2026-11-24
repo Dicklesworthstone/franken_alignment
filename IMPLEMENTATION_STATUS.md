@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: delayed independent evaluation of learned history
+
+An explicit `--evaluate-only` selection on `create-learned-generated` reopens
+an independently anchored accounted learned history for case discovery and
+assessment after the original service has ended. It binds an already recorded
+Message, or an explicitly named recorded Finish and predecessor, through the
+same fully guarded numerical replay before its sole recovery Fence. Missing
+or mismatched historical requests cannot turn into new generation or effects.
+
+The service retains one authenticated Stop listener through replay and its
+finite evaluator lifetime. It creates no actor or human-review listener, performs
+no source refresh, helper review, numerical resume or effect reconciliation, and
+leaves unknown effects charged. Present publication evidence and helper assets
+are not required to label retained cases. Original learned/model contracts,
+complete accounting windows, independently held floors and the input anchor
+remain required. Evaluator retirement precedes the independently retained final
+anchor; existing typed evaluator replies carry the results.
+
+Source regressions cover delayed independent labels and the causal request,
+accounting, custody and Stop boundaries. This increment is source reviewed only.
+The execution workspace became unavailable; the required remote RCH attempt
+refused before Cargo with exit 103 because no worker was configured and local
+fallback was prohibited. These sources have not been parsed, compiled or run.
+FA-026, FA-105 and FA-134 and their existing evaluation/recovery Beads remain
+in progress. See the [operator contract](docs/LIVE_ANDON_EVALUATION.md#evaluate-recorded-learned-history).
+
 ## 2026-11-24: resume interrupted accounted native generation in a resident sequence
 
 `serve-native-generated --continue-generation` explicitly resumes the first

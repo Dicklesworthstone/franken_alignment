@@ -345,6 +345,60 @@ refusals, every replay deadline and authenticated Stop before live role release.
 They are authored regressions with independent source review. Required RCH
 compilation, execution, Clippy and canonical qualification remain pending.
 
+## Evaluate recorded learned history
+
+Independent assessments may arrive after the original generation and publication
+service has ended. Select an evaluation-only invocation explicitly:
+
+```text
+supervise_publication create-learned-generated CONFIG ORIGINAL_RECIPE REVIEWER_PROFILE \
+  --evaluate-only --actor-profile ORIGINAL_ACTOR_PROFILE \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor RETAINED_INPUT --retain-history-anchor NEW_OUTPUT
+```
+
+The recipe and actor profile identify an **already recorded** original Message.
+To bind an already recorded Finish instead, also supply
+`--finish-after-message PREVIOUS_REQUEST`; the selected recipe and actor request
+must match that Finish's original historical binding. A missing request refuses
+before the recovery Fence. This mode cannot create the Message or Finish being
+selected, resume an interrupted generation, or reconcile or resend an effect.
+
+The same [accounted learned recovery](LEARNED_ANDON_RECOVERY.md) verifies the
+independent input anchor, original numerical recipe and model, complete current
+guards, policy and counter floors, evaluation protocol, accounting identity and
+all current windows. The marginal accounting profile and plain or simple checked
+publication remain supported. Original model/codec inputs must still be available
+for verified replay; current source evidence, helper-model assets and human
+approval inputs are not opened for assessment. An evaluator's label does not
+relax those requirements for any later publication.
+
+Only the independent evaluator and authenticated Stop endpoints are served.
+The actor profile supplies original audience, request identity and finite service
+limits; its socket is never bound. The reviewer profile supplies the existing
+Stop credentials; no approval session is opened. `--continue-generation`,
+`--after-message`, operator/precheck service options, topology, campaigns,
+predictors, stronger qualification and checkpoint compositions are excluded.
+
+Stop and the invocation deadline are checked at every replay boundary, at Ready
+and again after historical selection before the sole Fence. One fresh finite
+assessment transport then accepts the existing `evaluator-case` and
+`evaluator-assess` operations against retained cases. A discovery consumes one
+candidate and its later assessment another. The new invocation does not reset
+original numerical work, liabilities, pending cases or Andon costs. Unknown
+effects remain charged. Stop precedes every assessment quantum, and no queued
+assessment can follow evaluator retirement or the retained final anchor.
+
+The command emits no new publication reference. Use the existing typed evaluator
+case and assessment replies to observe results. The new independent output anchor
+includes all acknowledged assessments and any acknowledged Stop. Input custody
+remains unchanged. A post-Fence startup failure retains the acknowledged recovery
+cut whenever the original healthy owner still supplies it.
+
+The implementation and positive/causal regression sources are source reviewed.
+They have not been compiled or executed in this session; required remote RCH
+qualification remains pending.
+
 ## Create an evaluated resident learned service
 
 Fresh `serve-learned-generated` can select the same paired accounting/evaluator

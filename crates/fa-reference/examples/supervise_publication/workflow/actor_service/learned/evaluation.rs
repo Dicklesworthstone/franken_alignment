@@ -3,6 +3,8 @@
 //! and review. A late label never reruns either or supplies an effect key.
 #[path = "evaluation/recovery.rs"]
 mod recovery;
+#[path = "evaluation/history.rs"]
+pub(super) mod history;
 use super::super::{Profile, andon_settings, evaluator};
 use super::{
     Config, Control, Deadline, ElapsedTick, FileHumanReviewer, FileOversight, FileSupervisedDriver,
@@ -15,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional precheck and paired operator/generation retain their original contracts";
+const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; --evaluate-only requires --history-anchor INPUT and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original live contracts";
 
 const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
 
@@ -23,6 +25,7 @@ pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
     history_input: Option<PathBuf>,
+    pub(super) evaluate_only: bool,
 }
 
 /// Own the complete opted-in grammar before another parser can discard a mode.
@@ -53,7 +56,7 @@ fn parse_options(
     };
     if !args
         .iter()
-        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile"))
+        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluate-only"))
     {
         return Ok((args.to_vec(), None));
     }
@@ -72,11 +75,17 @@ fn parse_options(
     let mut seen = BTreeSet::new();
     let mut remaining = args[..4].to_vec();
     let mut continuing = false;
+    let mut evaluate_only = false;
     let mut at = 4;
     while at < args.len() {
         let flag = args[at].as_str();
         if !seen.insert(flag) {
             return Err(usage.into());
+        }
+        if flag == "--evaluate-only" && !resident {
+            evaluate_only = true;
+            at += 1;
+            continue;
         }
         if matches!(flag, "--continue-generation" | "--after-message" | "--finish-after-message")
             && std::mem::replace(&mut continuing, true)
@@ -117,7 +126,17 @@ fn parse_options(
     if (!resident && !seen.contains("--actor-profile"))
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
-        || continuing != history_input.is_some()
+        || (continuing || evaluate_only) != history_input.is_some()
+        || (evaluate_only
+            && [
+                "--continue-generation",
+                "--after-message",
+                "--precheck-profile",
+                "--operator-profile",
+                "--tower-generation",
+            ]
+            .iter()
+            .any(|flag| seen.contains(flag)))
     {
         return Err(usage.into());
     }
@@ -127,6 +146,7 @@ fn parse_options(
             accounting: accounting.ok_or(usage)?,
             peer: peer.ok_or(usage)?,
             history_input,
+            evaluate_only,
         }),
     ))
 }
