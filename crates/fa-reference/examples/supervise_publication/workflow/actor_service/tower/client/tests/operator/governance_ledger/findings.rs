@@ -300,3 +300,39 @@ fn invalid_or_foreign_findings_emit_nothing_and_prevent_later_requests() {
         server.join().unwrap();
     }
 }
+
+#[test]
+fn findings_enforces_global_support_across_incidents_without_charging_unshown_windows() {
+    let mut native = NativeLedger::new(1, Fixture::AdjacentWindows);
+    let query = findings_request();
+    let original = native.response(&query, true);
+    let parsed = accepted_findings(&original, &query);
+    let value = field(ledger(&parsed), &["andon_incidents", "value"]);
+    assert_eq!(field(value, &["inspected_windows"]).as_str(), Some("3"));
+    assert_eq!(field(value, &["incidents"]).as_array().unwrap().len(), 2);
+
+    // Move only a non-opening round into the other incident's support. Both
+    // per-window lists stay ordered, with the correct length and opening round.
+    for (from, to) in [
+        (
+            r#""support_rounds":["101","102"]"#,
+            r#""support_rounds":["101","103"]"#,
+        ),
+        (r#""start":"2""#, r#""start":"1""#),
+        (
+            r#""lifetime_false_stops":"4""#,
+            r#""lifetime_false_stops":"2""#,
+        ),
+        (
+            r#""lifetime_false_stops":"4""#,
+            r#""lifetime_false_stops":"513""#,
+        ),
+    ] {
+        let changed = original.replacen(from, to, 1);
+        assert_ne!(original, changed);
+        assert!(
+            parse_response(changed.as_bytes(), &query).is_err(),
+            "accepted {to}"
+        );
+    }
+}

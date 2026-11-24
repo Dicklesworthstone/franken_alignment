@@ -145,7 +145,11 @@ The existing client authenticates the supervisor's kernel credentials and
 checks the complete configured audience before printing the result. It
 validates the closed schema, registration, exact nested basis, decimal widths,
 member and origin bounds, protocol thresholds, ordered qualification failures,
-incident counts and full `u128` cost arithmetic. Failure comparisons use the
+incident counts and full `u128` cost arithmetic. Window IDs are ordered and
+their half-open occurrence intervals must be disjoint. Adjacent windows may
+have IDs in either chronological order. Each incident has its own opening
+round, and the combined stop count must fit both native confirmation capacity
+and the accompanying lifetime false-stop count. Failure comparisons use the
 original zero-denominator semantics and `u128` fraction products. An erased
 failure or internally inconsistent report stops the client before output or
 another supplied request. This validates consistency of the declared native

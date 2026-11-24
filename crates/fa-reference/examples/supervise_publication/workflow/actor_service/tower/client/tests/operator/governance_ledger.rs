@@ -22,6 +22,7 @@ enum Fixture {
     Pending,
     Censored,
     Labelled,
+    AdjacentWindows,
     Qualified,
 }
 
@@ -54,18 +55,43 @@ impl NativeLedger {
                 };
             }
             let evaluator = host.enable_credibility(host.revision(), protocol).unwrap();
+            let default_budget = AndonBudget {
+                window: 1,
+                start: 0,
+                end: 100,
+                false_stops_allowed: 2,
+                cost_per_stop: u64::MAX,
+            };
+            let windows = if matches!(fixture, Fixture::AdjacentWindows) {
+                vec![
+                    AndonBudget {
+                        window: 2,
+                        end: 2,
+                        false_stops_allowed: 0,
+                        cost_per_stop: 0,
+                        ..default_budget
+                    },
+                    AndonBudget {
+                        start: 2,
+                        end: 3,
+                        false_stops_allowed: 1,
+                        ..default_budget
+                    },
+                    AndonBudget {
+                        window: 3,
+                        start: 3,
+                        ..default_budget
+                    },
+                ]
+            } else {
+                vec![default_budget]
+            };
             let andon = FileAndonConfig::new(
                 LedgerIdentity {
                     deployment: 101,
                     evaluator: 202,
                 },
-                vec![AndonBudget {
-                    window: 1,
-                    start: 0,
-                    end: 100,
-                    false_stops_allowed: 2,
-                    cost_per_stop: u64::MAX,
-                }],
+                windows,
             )
             .unwrap();
             host.enable_andon(host.revision(), &andon).unwrap();
@@ -83,6 +109,31 @@ impl NativeLedger {
                     id,
                     id,
                     GroundTruth::Benign,
+                ));
+            }
+        } else if matches!(fixture, Fixture::AdjacentWindows) {
+            let evaluator = evaluator.as_ref().unwrap();
+            for (id, now) in [(1, 1), (2, 1), (3, 2), (4, 3)] {
+                if now > 1 {
+                    host.observe_time(host.revision(), ElapsedTick(now))
+                        .unwrap();
+                }
+                evaluated::review(&mut host, id, Verdict::Hold);
+                if id == 1 {
+                    assert!(evaluated::label(
+                        &mut host,
+                        evaluator,
+                        id,
+                        id,
+                        GroundTruth::Censored
+                    ));
+                }
+                assert!(evaluated::label(
+                    &mut host,
+                    evaluator,
+                    id,
+                    id,
+                    GroundTruth::Benign
                 ));
             }
         } else if matches!(fixture, Fixture::Qualified) {
@@ -879,5 +930,39 @@ fn invalid_or_foreign_accounting_emits_nothing_and_blocks_the_next_document() {
         );
         assert!(output.is_empty());
         server.join().unwrap();
+    }
+}
+
+#[test]
+fn ledger_enforces_interval_opening_round_and_count_across_actual_windows() {
+    let mut native = NativeLedger::new(1, Fixture::AdjacentWindows);
+    let query = request();
+    let original = native.response(&query, true);
+    let parsed = accepted(&original, &query);
+    let windows = field(ledger(&parsed), &["andon", "value", "windows"])
+        .as_array()
+        .unwrap();
+    assert_eq!(windows.len(), 3);
+    assert_eq!(field(&windows[0], &["start"]).as_str(), Some("2"));
+    assert_eq!(
+        field(&windows[1], &["false_stops_allowed"]).as_str(),
+        Some("0")
+    );
+    assert!(field(&windows[2], &["calibration_incident"]).is_null());
+
+    for (from, to) in [
+        (r#""start":"2""#, r#""start":"1""#),
+        (r#""opened_by_round":"103""#, r#""opened_by_round":"101""#),
+        (
+            r#""lifetime_false_stops":"4""#,
+            r#""lifetime_false_stops":"3""#,
+        ),
+    ] {
+        let changed = original.replacen(from, to, 1);
+        assert_ne!(original, changed);
+        assert!(
+            parse_response(changed.as_bytes(), &query).is_err(),
+            "accepted {to}"
+        );
     }
 }

@@ -77,7 +77,11 @@ failure cannot truncate supports or refund the entered query.
 The sealed native result binds its original registration, exact request address,
 operation ID and idempotency key. The wire encoder and authenticated client
 check the closed schema, original basis, canonical decimal widths, complete
-support sets, incident thresholds and full-width cost arithmetic. The client
+support sets, incident thresholds and full-width cost arithmetic. Reported
+occurrence intervals must be disjoint, and a support round can belong to only
+one incident. The combined support count must fit the accompanying lifetime
+false-stop count and native confirmation capacity. Windows that have yet to
+open an incident can account for additional lifetime stops. The client
 also checks the native status, reason, retry declaration and exact outer
 `missing`/`would_change_this` arrays. A changed response stops output and any
 subsequent supplied request. No automatic follow-up or effect is dispatched.

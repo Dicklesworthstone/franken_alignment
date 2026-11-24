@@ -6,8 +6,11 @@ use super::{Json, ReadArguments, Scope, TowerRequest, Verb};
 use fa_reference::action::Purpose;
 use fa_reference::action::consequence::oversight::credibility::{Fraction, MAX_EVALUATION_CASES};
 use fa_reference::address_resolver::Noun;
-use fa_reference::round::review::andon::{MAX_FALSE_HOLDS, MAX_WINDOWS};
+use fa_reference::round::review::andon::{
+    AndonBudget, AndonLedger, LedgerIdentity, MAX_FALSE_HOLDS, MAX_WINDOWS,
+};
 use fa_reference::round::{MAX_FIELD_LEN, MAX_MEMBERS};
+use std::collections::BTreeSet;
 
 pub(super) fn matches(value: &Json, request: &TowerRequest, envelope: &Json) -> bool {
     let Some((_, reason)) = validate(value, request) else {
@@ -191,7 +194,7 @@ fn validate(value: &Json, request: &TowerRequest) -> Option<(Option<Scope>, Opti
                     report.get("andon")?,
                     basis,
                     "original_owner_andon_ledger",
-                    andon,
+                    |value| andon(value, report.get("credibility")?),
                 )
                 || (report.get("andon")?.get("state")?.as_str()? == "known"
                     && report.get("credibility")?.get("state")?.as_str()? != "known")
@@ -277,7 +280,12 @@ pub(super) fn read_basis(basis: &Json, request: &TowerRequest) -> Option<Scope> 
     Some(scope)
 }
 
-fn section(value: &Json, basis: &Json, domain: &str, check: fn(&Json) -> Option<()>) -> bool {
+fn section(
+    value: &Json,
+    basis: &Json,
+    domain: &str,
+    check: impl FnOnce(&Json) -> Option<()>,
+) -> bool {
     if value.get("basis") != Some(basis) {
         return false;
     }
@@ -459,18 +467,68 @@ fn credibility(value: &Json) -> Option<()> {
     Some(())
 }
 
-fn andon(value: &Json) -> Option<()> {
-    if !exact(value, &["deployment", "evaluator", "windows"])
-        || decimal(value.get("deployment")?)? == 0
-        || decimal(value.get("evaluator")?)? == 0
-    {
+/// Constraints visible across a single file-backed Andon observation. Reuse
+/// the native registration law without fabricating undisclosed confirmations.
+pub(super) struct ReportedWindows {
+    ledger: AndonLedger,
+    remaining_stops: u64,
+    rounds: BTreeSet<u64>,
+}
+
+impl ReportedWindows {
+    pub(super) fn new(value: &Json, credibility: &Json) -> Option<Self> {
+        let identity = LedgerIdentity {
+            deployment: decimal(value.get("deployment")?)?,
+            evaluator: decimal(value.get("evaluator")?)?,
+        };
+        // This file owner starts with no confirmations. Only a final benign
+        // assessment of an eligible stopped case can charge its window.
+        let lifetime = decimal(credibility.get("value")?.get("lifetime_false_stops")?)?;
+        Some(Self {
+            ledger: AndonLedger::new(identity).ok()?,
+            remaining_stops: lifetime.min(MAX_FALSE_HOLDS as u64),
+            rounds: BTreeSet::new(),
+        })
+    }
+
+    pub(super) fn window(&mut self, value: &Json) -> Option<(AndonBudget, u64)> {
+        let budget = AndonBudget {
+            window: decimal(value.get("window")?)?,
+            start: decimal(value.get("start")?)?,
+            end: decimal(value.get("end")?)?,
+            false_stops_allowed: decimal(value.get("false_stops_allowed")?)?,
+            cost_per_stop: decimal(value.get("cost_per_stop")?)?,
+        };
+        let count = decimal(value.get("false_stops")?)?;
+        if self
+            .ledger
+            .windows()
+            .last_key_value()
+            .is_some_and(|(id, _)| *id >= budget.window)
+            || !self.ledger.register_window(budget).ok()?
+            || decimal128(value.get("total_cost")?)?
+                != u128::from(count) * u128::from(budget.cost_per_stop)
+        {
+            return None;
+        }
+        self.remaining_stops = self.remaining_stops.checked_sub(count)?;
+        Some((budget, count))
+    }
+
+    pub(super) fn round(&mut self, round: u64) -> bool {
+        round != 0 && self.rounds.insert(round)
+    }
+}
+
+fn andon(value: &Json, credibility: &Json) -> Option<()> {
+    if !exact(value, &["deployment", "evaluator", "windows"]) {
         return None;
     }
+    let mut observed = ReportedWindows::new(value, credibility)?;
     let windows = value.get("windows")?.as_array()?;
     if windows.is_empty() || windows.len() > MAX_WINDOWS {
         return None;
     }
-    let mut previous = 0;
     for window in windows {
         if !exact(
             window,
@@ -487,31 +545,20 @@ fn andon(value: &Json) -> Option<()> {
         ) {
             return None;
         }
-        let id = decimal(window.get("window")?)?;
-        let count = decimal(window.get("false_stops")?)?;
-        let allowed = decimal(window.get("false_stops_allowed")?)?;
-        let price = decimal(window.get("cost_per_stop")?)?;
-        if id <= previous
-            || decimal(window.get("start")?)? >= decimal(window.get("end")?)?
-            || count > MAX_FALSE_HOLDS as u64
-            || decimal128(window.get("total_cost")?)? != u128::from(count) * u128::from(price)
-        {
-            return None;
-        }
-        previous = id;
+        let (budget, count) = observed.window(window)?;
         let incident = window.get("calibration_incident")?;
         if incident.is_null() {
-            if count > 0 && count >= allowed {
+            if count > 0 && count >= budget.false_stops_allowed {
                 return None;
             }
         } else if !exact(
             incident,
             &["window", "opened_by_round", "contributing_rounds"],
-        ) || decimal(incident.get("window")?)? != id
-            || decimal(incident.get("opened_by_round")?)? == 0
+        ) || decimal(incident.get("window")?)? != budget.window
+            || !observed.round(decimal(incident.get("opened_by_round")?)?)
             || decimal(incident.get("contributing_rounds")?)? == 0
             || decimal(incident.get("contributing_rounds")?)? != count
-            || count < allowed
+            || count < budget.false_stops_allowed
         {
             return None;
         }

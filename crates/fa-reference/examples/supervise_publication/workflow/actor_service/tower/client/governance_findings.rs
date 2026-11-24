@@ -1,12 +1,13 @@
 //! Check complete native incident observations without mistaking missing
 //! standing-query inputs for a clean control plane.
 
-use super::governance_ledger::{decimal128, read_basis, refused_matches};
+use super::governance_ledger::{ReportedWindows, read_basis, refused_matches};
 use super::hold_diagnosis::{decimal, decimal_text, exact};
 use super::{Json, ReadArguments, Scope, TowerRequest, Verb};
 use fa_reference::action::Purpose;
+use fa_reference::action::consequence::oversight::credibility::MAX_EVALUATION_CASES;
 use fa_reference::address_resolver::Noun;
-use fa_reference::round::review::andon::{MAX_FALSE_HOLDS, MAX_WINDOWS};
+use fa_reference::round::review::andon::MAX_WINDOWS;
 
 pub(super) fn matches(value: &Json, request: &TowerRequest, envelope: &Json) -> bool {
     let Some((_, reason)) = validate(value, request) else {
@@ -144,7 +145,9 @@ fn validate(value: &Json, request: &TowerRequest) -> Option<(Option<Scope>, Opti
                 report,
                 &["credibility_incident", "andon_incidents", "risk_theater"],
             ) || !section(report.get("credibility_incident")?, basis, credibility)
-                || !section(report.get("andon_incidents")?, basis, andon)
+                || !section(report.get("andon_incidents")?, basis, |value| {
+                    andon(value, report.get("credibility_incident")?)
+                })
                 || (report.get("andon_incidents")?.get("state")?.as_str()? == "known"
                     && report.get("credibility_incident")?.get("state")?.as_str()? != "known")
                 || !coverage(report.get("risk_theater")?)
@@ -170,7 +173,7 @@ fn validate(value: &Json, request: &TowerRequest) -> Option<(Option<Scope>, Opti
     }
 }
 
-fn section(value: &Json, basis: &Json, check: fn(&Json) -> Option<()>) -> bool {
+fn section(value: &Json, basis: &Json, check: impl FnOnce(&Json) -> Option<()>) -> bool {
     match value.get("state").and_then(Json::as_str) {
         Some("unknown") => {
             exact(value, &["state", "reason"])
@@ -236,17 +239,17 @@ fn credibility(value: &Json) -> Option<()> {
     decimal(value.get("policy_generation")?)?;
     let stops = decimal(value.get("lifetime_false_stops")?)?;
     let budget = decimal(value.get("false_stop_budget")?)?;
-    (budget != 0 && value.get("calibration_incident_open")?.as_bool()? == (stops >= budget))
+    (stops <= MAX_EVALUATION_CASES as u64
+        && budget != 0
+        && value.get("calibration_incident_open")?.as_bool()? == (stops >= budget))
         .then_some(())
 }
 
-fn andon(value: &Json) -> Option<()> {
+fn andon(value: &Json, credibility: &Json) -> Option<()> {
     if !exact(
         value,
         &["deployment", "evaluator", "inspected_windows", "incidents"],
-    ) || decimal(value.get("deployment")?)? == 0
-        || decimal(value.get("evaluator")?)? == 0
-    {
+    ) {
         return None;
     }
     let inspected = decimal(value.get("inspected_windows")?)?;
@@ -254,7 +257,7 @@ fn andon(value: &Json) -> Option<()> {
     if inspected == 0 || inspected > MAX_WINDOWS as u64 || incidents.len() as u64 > inspected {
         return None;
     }
-    let mut previous = 0;
+    let mut observed = ReportedWindows::new(value, credibility)?;
     for incident in incidents {
         if !exact(
             incident,
@@ -272,22 +275,11 @@ fn andon(value: &Json) -> Option<()> {
         ) {
             return None;
         }
-        let window = decimal(incident.get("window")?)?;
-        let count = decimal(incident.get("false_stops")?)?;
-        let allowed = decimal(incident.get("false_stops_allowed")?)?;
-        let price = decimal(incident.get("cost_per_stop")?)?;
+        let (budget, count) = observed.window(incident)?;
         let opening = decimal(incident.get("opened_by_round")?)?;
-        if window <= previous
-            || decimal(incident.get("start")?)? >= decimal(incident.get("end")?)?
-            || count == 0
-            || count > MAX_FALSE_HOLDS as u64
-            || count < allowed
-            || decimal128(incident.get("total_cost")?)? != u128::from(count) * u128::from(price)
-            || opening == 0
-        {
+        if count == 0 || count < budget.false_stops_allowed {
             return None;
         }
-        previous = window;
         let rounds = incident.get("support_rounds")?.as_array()?;
         if rounds.len() as u64 != count {
             return None;
@@ -296,7 +288,7 @@ fn andon(value: &Json) -> Option<()> {
         let mut opened = false;
         for round in rounds {
             let round = decimal(round)?;
-            if round <= previous_round {
+            if round <= previous_round || !observed.round(round) {
                 return None;
             }
             previous_round = round;
