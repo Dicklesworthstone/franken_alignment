@@ -6,8 +6,8 @@ assessment while that same owner retains the journal lock. An operator can read
 the acknowledged results through [Tower Ledger](TOWER_GOVERNANCE_LEDGER.md)
 and [Findings](TOWER_GOVERNANCE_FINDINGS.md).
 The actor still needs original source admission, helper review, independent human
-approval and publication checks for every new effect. Native generated creation
-and learned generated creation also support the explicit compositions below.
+approval and publication checks for every new effect. Native and learned
+generated services also support the explicit compositions below.
 
 This connects FA-105/049/134, plan §§9.9, 13.4, 17.1, 22.3–22.4 and
 FI-A08/A13/A18. It is a bounded reference composition; execution qualification
@@ -92,12 +92,12 @@ Stop ends new evaluation. Terminal reply grace then drops evaluator authority
 and permits only an already acknowledged reply to drain. Final retained history
 includes any acknowledged assessments and accounting.
 
-This single-request selection supports native creation, plain or simple checked.
-Native live open/continuation, topology, governor
-and held-out qualification selections need their own complete composition and
-refuse this option. The separately guarded native API already supports
-[anchored accounting recovery](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
-Learned generation uses its separate fresh-creation command below.
+This single-request selection supports native creation and explicit anchored
+recovery, plain or simple checked. Native topology, governor and held-out
+qualification selections still need their own complete composition and refuse
+this option. The live recovery path below reuses the original
+[anchored accounting cursor](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
+Learned generation uses its separate commands below.
 
 Fresh [resident native generated sequences](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
 use their separate `serve-native-generated` command with paired `--andon
@@ -108,6 +108,100 @@ opportunity after a final helper Hold. This resident creation path accepts the
 marginal `/1` accounting profile and optional simple witnesses/operator Ledger;
 recovery, joint profiles, governance, topology and selected prechecks remain
 separate. Its compilation and runtime qualification remain pending required RCH.
+
+## Recover an evaluated native generated service
+
+An interrupted accounted native generation can return to the live service with
+the original numerical spend, pending evaluation cases, liabilities and complete
+accounting windows. Select all current contracts independently before opening
+the journal:
+
+```text
+supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text RECIPE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor /absolute/independent/original-native-anchor \
+  --retain-history-anchor /absolute/independent/new-native-anchor \
+  --evaluation-recovery RECOVERY_REQUIREMENTS
+```
+
+For simple checked publication, use `serve-open-checked CONFIG ACTOR_PROFILE
+REVIEWER_PROFILE WITNESS_PROFILE` followed by the same options. Both accounting
+and evaluator profiles, the retained input anchor, a new output anchor and the
+recovery requirements file are required together.
+
+The requirements file has the following closed schema. Choose every floor from
+independently retained expectations for this original history; the values shown
+illustrate the format:
+
+```json
+{
+  "schema": "fa.native-evaluation-recovery/1",
+  "minimum": {
+    "journal_revision": 17,
+    "control_sequence": 3,
+    "authority_epoch": 1
+  }
+}
+```
+
+The file is bounded to 4 KiB. All three floor fields are required; unknown,
+duplicate, missing or malformed fields refuse. The service does not infer a
+floor from the journal being checked. The input history anchor separately pins
+the independently acknowledged history cut.
+
+`ANDON_PROFILE` supplies the original evaluation identity and protocol, initial
+windows, the complete current window inventory and the independent minimum
+evaluation revision. If the original owner has the supported joint accounting
+policy, that policy must also be supplied. Omitting a registered window or
+changing a selected contract cannot create a fresh unaccounted owner.
+`CONFIG` and `RECIPE` independently select the original source, decoder,
+tokenizer, stream, publication limits, current unchanged policy and complete
+supported guard inventory, including required guard absences. The live path
+consumes `FileAndonGeneratedSourceRecovery`; it does not add a replay reducer.
+
+Without an explicit predecessor option, the service resumes the selected
+pending generation or a completed generation that has not yet been submitted.
+Use `--after-message PREVIOUS_REQUEST` for the next Message or
+`--finish-after-message PREVIOUS_REQUEST` for Finish. These retain the original
+confirmed-predecessor, distinct-new-request, stream and recipe requirements.
+Finish performs no new token generation. Every new publication still needs
+fresh source evidence, current helper review and independent human approval.
+
+The original Stop control is available before replay for every evaluated open.
+The original deadline and Stop are checked before recovery, at every one-event
+replay boundary and separately at Ready. Stop terminalizes the original owner
+before normal recovery can release live human or evaluator roles, and the new
+output retains the acknowledged terminal history. Normal recovery acknowledges
+its original Fence before provisioning fresh live roles.
+
+A recorded actor request is receipt-only under the existing native recovery
+contract. Paired live evaluation explicitly refuses that mode, retains the
+acknowledged recovery successor and starts no evaluator listener or new actor
+reference. Fresh-source failure after a successful Fence uses the original
+failure Stop cleanup and likewise retains the acknowledged successor. Neither
+case permits replaying an effect as a new generation.
+
+The input anchor, requirements, accounting/evaluator profiles, recipes and
+source/witness inputs must remain disjoint from authority storage, retained
+output and every selected service endpoint. The new output must be independently
+held and distinct from the input. Original evaluator separation, finite endpoint
+and invocation budgets, pending-case discovery, late labeling and terminal reply
+grace retain their creation-path contracts. A new invocation cannot replenish
+the original native numerical budget or erase prior accounting.
+
+This composition covers single-request plain or simple checked publication.
+Resident native sequence recovery, topology, governors and stronger
+feed/snapshot/held-out qualification remain separate selections; unsupported
+combinations refuse without dropping a selected guard. Joint Andon accounting
+does not imply held-out joint publication qualification.
+
+Seven integration regressions and strict requirements-parser tests are authored.
+They cover positive continuation and fresh human approval/rejection, independent
+late labels, accounting-window and protocol retention, each independent floor,
+foreign anchors, Ready Stop, source failure, receipt-only refusal and exact
+simple-checked guards. Compilation and runtime qualification remain pending the
+required remote RCH gate.
 
 ## Create an evaluated learned service
 

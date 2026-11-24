@@ -52,6 +52,17 @@ the retained history cut. Each release still needs separate human approval;
 this creation-only composition remains pending required RCH compilation and
 runtime qualification.
 
+Single-request native generated services also support
+[anchored recovery with live evaluation](docs/LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service).
+An independent history anchor, explicit journal/control/authority floors and
+the complete current accounting contract retain original numerical work,
+pending cases and liabilities. Original Stop is live through every replay
+boundary and Ready; a recovery Fence precedes fresh human/evaluator roles.
+Pending generation, the next Message and Finish retain their original guards
+and require fresh source, helper review and human approval for any new effect.
+Source and regression work is present; required remote compilation and runtime
+qualification remain pending.
+
 Fresh [resident learned sequences](docs/RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
 also accept paired Andon/evaluator profiles and a new independent history output.
 One original evaluator follows Message/Finish handoffs under cumulative limits.

@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: native generated recovery with original live evaluation
+
+Native `serve-open` and `serve-open-checked` now compose paired Andon/evaluator
+profiles with an independent input history anchor, new retained output and
+explicit `fa.native-evaluation-recovery/1` requirements. The service consumes
+the existing sealed accounted native cursor and preserves the original source,
+decoder/tokenizer, stream/publication guards, numerical spend, evaluation
+cases, complete accounting windows, liabilities and supported joint accounting.
+The current contracts and journal/control/authority/evaluation floors remain
+independently supplied. Pending generation, subsequent Message and Finish retain
+their original lifecycle and predecessor requirements.
+
+The original Stop and deadline are serviced before open, after each replay event
+and separately at Ready. Normal recovery acknowledges its original Fence before
+fresh live human/evaluator roles. Stop retains the acknowledged terminal cut.
+A previously recorded actor request explicitly refuses live evaluated service
+while retaining its Fence successor; a missing fresh source uses the original
+failure Stop cleanup. Every new effect continues to require fresh source, helper
+review and separate human approval. Unsupported stronger compositions refuse.
+
+The operator command, strict requirements schema and lifecycle limits are in
+[live Andon evaluation](docs/LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service).
+Seven integration tests plus strict parser tests cover actual sampled-prefix
+continuation, human approval/rejection, independent late labels, complete current
+window retention, foreign anchors, all independent floors, protocol mismatch,
+Ready Stop, source failure, recorded-request refusal and exact simple guards.
+
+This is authored and independently source-reviewed implementation. The final
+sources have not been compiled or executed. The required RCH gate exited 103
+before Cargo because no remote worker was configured and local fallback was
+prohibited. FA025, FA026, FA105 and FA134 remain in progress until required
+remote qualification.
+
 ## 2026-11-24: accounted resident recovery regression integration
 
 The resident learned recovery implementation now has eight additional causal

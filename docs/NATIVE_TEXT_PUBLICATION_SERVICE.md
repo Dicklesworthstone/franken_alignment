@@ -90,10 +90,29 @@ cannot publish an effect or replace the separate human key.
 
 See [the executable evaluator workflow](LIVE_ANDON_EVALUATION.md#create-an-evaluated-native-generated-service)
 for the exact invocation, disjoint credentials, optional precheck/operator
-composition and lifetime. Live creation supports plain and simple checked
-publication. Live open, resident, learned-generated and stronger publication
-combinations remain explicit separate work; the native API has its own
-[anchored evaluation recovery](NATIVE_GENERATED_EVALUATION.md).
+composition and lifetime. Plain and simple checked services also support
+[explicit anchored recovery](LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service)
+through `serve-open` or `serve-open-checked`. Select the paired accounting and
+evaluator profiles, an independent `--history-anchor INPUT`, a distinct
+`--retain-history-anchor NEW_OUTPUT` and `--evaluation-recovery REQUIREMENTS`.
+
+The closed `fa.native-evaluation-recovery/1` requirements explicitly supply
+journal, control-sequence and authority-epoch floors. The Andon profile supplies
+the original accounting identity/protocol, complete current windows and
+evaluation floor; the current native recipe and config independently pin the
+original supported guards and unchanged policy. Recovery consumes the existing
+[accounted native cursor](NATIVE_GENERATED_EVALUATION.md), preserving numerical
+work and pending cases. Original Stop and deadline cover every replay boundary
+and Ready before the recovery Fence releases fresh live roles.
+
+A pending generation, explicit next Message or Finish can resume under their
+original lifecycle requirements. Already recorded actor requests refuse live
+evaluation and retain their acknowledged recovery successor. Every new effect
+still needs fresh source, helper review and independent human approval.
+Resident native recovery with evaluation and stronger publication compositions
+remain separate work. The new live recovery implementation and regressions are
+source reviewed; required remote compilation and runtime qualification remain
+pending.
 
 ## Exact policy prechecks before submission
 

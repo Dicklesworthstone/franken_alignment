@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-24: recover accounted native generated publication
+
+- Resume native plain or simple checked generated publication through the
+  original accounted recovery cursor, using independent history and explicit
+  journal/control/authority floors. Retain original numerical work, evaluation
+  cases, accounting windows and liabilities.
+- Service original Stop and deadline through every replay boundary and Ready;
+  fence before fresh live roles, and retain acknowledged history on Stop,
+  receipt-only refusal or source failure. Every new effect still needs fresh
+  source, helpers and independent human approval.
+- Add seven recovery integration regressions and strict bounded requirements
+  parsing tests. Source review is complete; required remote compilation and
+  runtime qualification remain pending.
+
 ## 2026-11-24: exercise accounted resident recovery across its full suffix
 
 - Add eight causal regressions to the resident learned recovery integration:

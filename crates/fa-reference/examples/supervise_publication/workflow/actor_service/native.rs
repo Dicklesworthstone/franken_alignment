@@ -43,7 +43,7 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT; single native create/plain-simple-checked services additionally accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with required --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT; single native plain/simple-checked services additionally accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with required --retain-history-anchor NEW_OUTPUT; evaluated open also requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS";
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
@@ -112,7 +112,10 @@ where
     } else {
         None
     };
-    let evaluation = evaluation_options.map(evaluation::Options::read).transpose()?;
+    let evaluation = evaluation_options.map(|options| options.read(
+        (&config, &actor, &reviewer),
+        (operator.as_ref(), precheck.as_ref(), history.as_ref()),
+    )).transpose()?;
     if let Some(evaluation) = &evaluation {
         evaluation.check(
             &config, &actor, &reviewer,
@@ -123,10 +126,19 @@ where
         paths.push(Path::new(&args[option + 1]));
         evaluation.check_inputs(&paths)?;
     }
-    let inputs = recipe::load(
+    let inputs = recipe::load_with_path_check(
         Path::new(&args[option + 1]),
         config.profile.delivery.scope.tenant,
         config.profile.delivery.limits.bytes,
+        |path| {
+            if let Some(history) = &history {
+                history.check_files(&[path.to_path_buf()])?;
+            }
+            if let Some(evaluation) = &evaluation {
+                evaluation.check_inputs(&[path])?;
+            }
+            Ok(())
+        },
     )?;
     if operator.is_some() || precheck.is_some() || history.is_some() {
         let mode = match (finishing, after) {
@@ -506,10 +518,12 @@ where
     // Exclusive listener ownership precedes the durable owner. No stale path is removed.
     let socket = BoundSocket::bind(&actor.socket, None)?;
     actor.secure_socket()?;
-    // Explicit continuation requests new work, so its original Stop transport
-    // must exist while historical numerical work is replayed. Other opens can
-    // be receipt-only; they do not gain a control listener before classification.
-    let mut recovery_control = if open && matches!(mode, finish::Intent::Continue(_)) {
+    // Explicit continuation and evaluated recovery request live work. Their
+    // original Stop transport exists throughout replay, including Ready, and is
+    // transferred into the same service without renewing its candidate quota.
+    let mut recovery_control = if open
+        && (matches!(mode, finish::Intent::Continue(_)) || evaluation_selection.is_some())
+    {
         Some(Control::new(
             &config,
             actor.request,
@@ -519,7 +533,16 @@ where
         None
     };
     let (host, reviewer, evaluator_role) = if let Some(evaluation) = evaluation_selection {
-        let (host, reviewer, role) = evaluation.create(&config, &inputs, selected)?;
+        let (host, reviewer, role) = if open {
+            evaluation.open(
+                &config, &inputs, selected,
+                history_selection.ok_or("evaluated native recovery requires history custody")?,
+                recovery_control.as_mut().ok_or("evaluated native recovery requires Stop custody")?,
+                &deadline, &mut time,
+            )?
+        } else {
+            evaluation.create(&config, &inputs, selected)?
+        };
         (host, reviewer, Some(role))
     } else if open {
         let (host, reviewer) = bootstrap::open_with_history(
@@ -568,6 +591,9 @@ where
             _ => None,
         };
         let recorded = recovered.is_some();
+        if recorded && evaluation_selection.is_some() {
+            return Err("recorded native requests are observation-only; evaluated recovery requires pending generation or an explicit new message/finish".into());
+        }
         if recorded && precheck_selection.is_some() {
             return Err("recorded native requests are observation-only and cannot acquire a new precheck disclosure".into());
         }
@@ -645,7 +671,7 @@ where
             .transpose()?;
         let mut evaluator = match (evaluation_selection, evaluator_role) {
             (Some(selected), Some(role)) => {
-                if control.as_mut().expect("evaluated creation owns Stop")
+                if control.as_mut().expect("evaluated live service owns Stop")
                     .checkpoint(&mut driver, &reviewer, &deadline, &mut time)?
                 {
                     return Ok(());

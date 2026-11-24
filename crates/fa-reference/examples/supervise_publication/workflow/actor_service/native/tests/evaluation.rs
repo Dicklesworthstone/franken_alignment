@@ -137,9 +137,13 @@ fn selected(
     let accounting = accounting_file(root);
     let peer = peer_file(root, actor, evaluator_pid);
     let (remaining, options) = evaluation::take_options(&args(root, &accounting, &peer)).unwrap();
-    let evaluation = options.unwrap().read().unwrap();
     let (_, history) = anchors::take_options(&remaining).unwrap();
-    (evaluation, history.admit(config, false).unwrap().unwrap(), accounting)
+    let history = history.admit(config, false).unwrap().unwrap();
+    let (_, reviewer) = profiles(root, config);
+    let evaluation = options.unwrap().read(
+        (config, actor, &reviewer), (None, None, Some(&history)),
+    ).unwrap();
+    (evaluation, history, accounting)
 }
 
 #[test]
@@ -467,3 +471,6 @@ fn evaluator_audience_roles_and_custody_aliases_refuse_before_owner_work() {
         assert_eq!(fs::read(root.0.join("evidence.json")).unwrap(), source);
     }
 }
+
+#[path = "evaluation/recovery.rs"]
+mod recovery;

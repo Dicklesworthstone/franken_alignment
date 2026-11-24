@@ -1,0 +1,56 @@
+Native accounted generated recovery — source review receipt, 2026-11-24
+======================================================================
+
+Implementation
+--------------
+The single-request native generated service now accepts anchored evaluated
+open, explicit subsequent Message and Finish, using the original sealed
+FileAndonGeneratedSourceRecovery cursor. Independent requirements pin all
+journal/control/authority floors; the selected Andon contract pins original
+identity/protocol, complete current windows, evaluation floor and supported
+joint accounting. Current recipe/config pin the complete supported guard set
+and unchanged effective policy.
+
+Original Stop and deadline are checked before recovery, each one-event replay
+quantum, and separately at Ready. Stop retains the acknowledged terminal cut.
+Normal recovery acknowledges the original Fence before releasing fresh live
+roles. Recorded actor requests refuse live evaluation while retaining their
+successor; source failure uses the original Stop cleanup and exact retention.
+Original numerical spend, pending evaluation cases and liabilities survive.
+
+Source and regression review
+----------------------------
+A second reviewer examined production paths, module visibility, imports,
+updated call sites and final regression designs and found no blocking source
+issue. Seven integration functions cover actual sampled-prefix continuation,
+fresh human approval/rejection, independent subprocess late labels, complete
+current windows, foreign anchors, all independent floors, changed protocol,
+Ready Stop, missing source, receipt-only refusal and exact simple checked
+publication guards. Strict bounded JSON-parser tests reject incomplete or
+changed requirements.
+
+Final authored file blobs, relative to actor_service/
+----------------------------------------------------
+native.rs: 47f2afe072a9ffcfd7fc34bc06d81934776236cc
+native/evaluation.rs: dc2d2eb68a8cea30ccb8243b997e1a77f03f03bf
+native/evaluation/recovery.rs: 3dee2ebe435637b975c4cfc42e00c12b534f6bd6
+native/tests/evaluation.rs: 8df1b3678234875e7fdbee8b8c699100011f2359
+native/tests/evaluation/recovery.rs: 57f79b73b02acbf7082fcc2622d95af1a119e4a2
+
+Qualification boundary
+----------------------
+No compilation, Clippy, runtime tests or canonical gate success is claimed.
+The native final files have not been parsed/formatted locally after the
+execution environment became unavailable. Source review does not substitute
+for compiler or runtime qualification.
+
+The required gate was attempted with checksum-verified RCH 2.1.37:
+  cwd: /workspace/scratch/df8f11d29567/franken_alignment
+  timeout 20 env RCH_REQUIRE_REMOTE=1 \
+    RCH_CANONICAL_PROJECT_ROOT=/workspace/scratch/df8f11d29567 \
+    /workspace/scratch/df8f11d29567/tooling/rch/rch exec -- \
+    cargo +nightly-2026-09-08 run --locked -p xtask -- check
+
+Result: exit 103 before Cargo. No remote workers were configured; daemon/socket
+startup failed with local_fallback_allowed=false. Required qualification is
+still pending. FA025, FA026, FA105 and FA134 remain in progress.
