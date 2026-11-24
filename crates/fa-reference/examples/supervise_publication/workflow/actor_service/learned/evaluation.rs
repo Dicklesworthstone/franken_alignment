@@ -17,7 +17,7 @@ use std::{
 
 const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional precheck and paired operator/generation retain their original contracts";
 
-const SEQUENCE_USAGE: &str = "resident learned evaluation requires fresh serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; an optional operator/generation pair retains its original contracts; recovery, governor, predictive, joint, topology and campaign selections need their own composition";
+const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
 
 pub(super) struct Options {
     accounting: PathBuf,
@@ -31,6 +31,26 @@ pub(super) fn take_options(
     args: &[String],
     credibility: Option<&Path>,
 ) -> Result<(Vec<String>, Option<Options>), String> {
+    parse_options(args, credibility, false)
+}
+
+pub(super) fn take_sequence_options(
+    args: &[String],
+    credibility: Option<&Path>,
+) -> Result<(Vec<String>, Option<Options>), String> {
+    parse_options(args, credibility, true)
+}
+
+fn parse_options(
+    args: &[String],
+    credibility: Option<&Path>,
+    resident: bool,
+) -> Result<(Vec<String>, Option<Options>), String> {
+    let (command, usage) = if resident {
+        ("serve-learned-generated", SEQUENCE_USAGE)
+    } else {
+        ("create-learned-generated", USAGE)
+    };
     if !args
         .iter()
         .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile"))
@@ -38,13 +58,13 @@ pub(super) fn take_options(
         return Ok((args.to_vec(), None));
     }
     if credibility.is_some()
-        || args.first().map(String::as_str) != Some("create-learned-generated")
-        || args.len() < 12
+        || args.first().map(String::as_str) != Some(command)
+        || args.len() < 4
         || args[1..4]
             .iter()
             .any(|arg| arg.is_empty() || arg.starts_with("--"))
     {
-        return Err(USAGE.into());
+        return Err(usage.into());
     }
     let mut accounting = None;
     let mut peer = None;
@@ -56,21 +76,21 @@ pub(super) fn take_options(
     while at < args.len() {
         let flag = args[at].as_str();
         if !seen.insert(flag) {
-            return Err(USAGE.into());
+            return Err(usage.into());
         }
         if matches!(flag, "--continue-generation" | "--after-message" | "--finish-after-message")
             && std::mem::replace(&mut continuing, true)
         {
-            return Err(USAGE.into());
+            return Err(usage.into());
         }
         if flag == "--continue-generation" {
             remaining.push(args[at].clone());
             at += 1;
             continue;
         }
-        let value = args.get(at + 1).ok_or(USAGE)?;
+        let value = args.get(at + 1).ok_or(usage)?;
         if value.is_empty() || value.starts_with("--") {
-            return Err(USAGE.into());
+            return Err(usage.into());
         }
         match flag {
             "--andon" => accounting = Some(PathBuf::from(value)),
@@ -79,94 +99,43 @@ pub(super) fn take_options(
                 history_input = Some(PathBuf::from(value));
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--after-message" | "--finish-after-message" => {
-                let predecessor = value.parse::<u64>().map_err(|_| USAGE)?;
+            "--after-message" | "--finish-after-message" if !resident || flag == "--after-message" => {
+                let predecessor = value.parse::<u64>().map_err(|_| usage)?;
                 if predecessor == 0 || predecessor.to_string() != *value {
-                    return Err(USAGE.into());
+                    return Err(usage.into());
                 }
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--actor-profile"
-            | "--retain-history-anchor"
-            | "--precheck-profile"
+            "--actor-profile" | "--precheck-profile" if !resident => remaining.extend_from_slice(&args[at..at + 2]),
+            "--retain-history-anchor"
             | "--operator-profile"
             | "--tower-generation" => remaining.extend_from_slice(&args[at..at + 2]),
-            _ => return Err(USAGE.into()),
+            _ => return Err(usage.into()),
         }
         at += 2;
     }
-    if !seen.contains("--actor-profile")
+    if (!resident && !seen.contains("--actor-profile"))
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
         || continuing != history_input.is_some()
     {
-        return Err(USAGE.into());
+        return Err(usage.into());
     }
     Ok((
         remaining,
         Some(Options {
-            accounting: accounting.ok_or(USAGE)?,
-            peer: peer.ok_or(USAGE)?,
+            accounting: accounting.ok_or(usage)?,
+            peer: peer.ok_or(usage)?,
             history_input,
         }),
     ))
-}
-
-/// The opted-in resident grammar is owned before any other parser can erase a
-/// conflicting lifecycle or service selection. Absence keeps existing argv.
-pub(super) fn take_sequence_options(
-    args: &[String],
-    credibility: Option<&Path>,
-) -> Result<(Vec<String>, Option<Options>), String> {
-    if !args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile"))
-    {
-        return Ok((args.to_vec(), None));
-    }
-    if credibility.is_some()
-        || !matches!(args.len(), 10 | 14)
-        || args.first().map(String::as_str) != Some("serve-learned-generated")
-        || args[1..4]
-            .iter()
-            .any(|arg| arg.is_empty() || arg.starts_with("--"))
-    {
-        return Err(SEQUENCE_USAGE.into());
-    }
-    let mut accounting = None;
-    let mut peer = None;
-    let mut seen = BTreeSet::new();
-    let mut remaining = args[..4].to_vec();
-    for pair in args[4..].chunks_exact(2) {
-        if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(pair[0].as_str()) {
-            return Err(SEQUENCE_USAGE.into());
-        }
-        match pair[0].as_str() {
-            "--andon" => accounting = Some(PathBuf::from(&pair[1])),
-            "--evaluator-profile" => peer = Some(PathBuf::from(&pair[1])),
-            "--retain-history-anchor" | "--operator-profile" | "--tower-generation" => {
-                remaining.extend_from_slice(pair);
-            }
-            _ => return Err(SEQUENCE_USAGE.into()),
-        }
-    }
-    if !seen.contains("--retain-history-anchor")
-        || seen.contains("--operator-profile") != seen.contains("--tower-generation")
-    {
-        return Err(SEQUENCE_USAGE.into());
-    }
-    Ok((remaining, Some(Options {
-        accounting: accounting.ok_or(SEQUENCE_USAGE)?,
-        peer: peer.ok_or(SEQUENCE_USAGE)?,
-        history_input: None,
-    })))
 }
 
 pub(super) struct Selection {
     settings: andon_settings::Settings,
     pub(super) peer: evaluator::Settings,
     inputs: [PathBuf; 2],
-    history_input: Option<PathBuf>,
+    pub(super) history_input: Option<PathBuf>,
 }
 
 impl Options {
@@ -190,6 +159,12 @@ impl Options {
     }
 }
 
+// An archive or socket cannot occupy a directory needed by another file.
+// Resolve existing ancestors first so this holds for offline witnesses too.
+fn overlaps(left: &Path, right: &Path) -> bool {
+    left.starts_with(right) || right.starts_with(left)
+}
+
 impl Selection {
     /// Admit the entire finite resident schedule without acquiring an owner,
     /// reading a clock or issuing a new role for any later request.
@@ -203,6 +178,13 @@ impl Selection {
         let first = entries.first().ok_or(SEQUENCE_USAGE)?;
         let history = first.loaded.anchor_output.as_deref().ok_or(SEQUENCE_USAGE)?;
         self.check_sequence_inputs(history, &[config.source.path()])?;
+        if self.history_input.is_some() != first.loaded.recovery_anchor.is_some() {
+            return Err(SEQUENCE_USAGE.into());
+        }
+        if let Some(path) = self.history_input.as_deref() {
+            self.check_sequence_inputs(history, &[path])?;
+            self.recovery_requirements(config, &first.loaded)?;
+        }
         let actors = entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>();
         self.check_sequence_actors(config, &actors, reviewer, selected_operator)?;
         let mut endpoints = vec![self.peer.socket_path().to_path_buf()];
@@ -210,9 +192,10 @@ impl Selection {
         if let Some(selected) = selected_operator {
             endpoints.push(selected.settings.socket.clone());
         }
-        for entry in entries {
+        inputs.extend(self.history_input.iter().cloned());
+        for (index, entry) in entries.iter().enumerate() {
             let loaded = &entry.loaded;
-            if loaded.recovery_anchor.is_some()
+            if (index != 0 && loaded.recovery_anchor.is_some())
                 || loaded.topology.is_some()
                 || loaded.checkpoint_on_generation.is_some()
                 || loaded.creation_campaigns.is_some()
@@ -223,8 +206,12 @@ impl Selection {
             {
                 return Err(SEQUENCE_USAGE.into());
             }
-            super::recipe::check_creation(config, loaded)?;
-            super::credential::check_creation(loaded)?;
+            if self.history_input.is_some() {
+                super::credential::check_selection(loaded)?;
+            } else {
+                super::recipe::check_creation(config, loaded)?;
+                super::credential::check_creation(loaded)?;
+            }
             if let Some(publication) = &loaded.publication {
                 publication.simple_limits()?;
                 self.check_sequence_inputs(history, &publication.input_paths()
@@ -261,7 +248,9 @@ impl Selection {
         reviewer: &PeerProfile,
         selected_operator: Option<&operator::Selection>,
     ) -> Result<(), String> {
-        self.settings.creation()?;
+        if self.history_input.is_none() {
+            self.settings.creation()?;
+        }
         if self.settings.joint.is_some()
             || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
             || selected_operator.is_some_and(|selected| selected.settings.policy_promotion.is_some())
@@ -283,24 +272,26 @@ impl Selection {
     pub(super) fn check_sequence_inputs(&self, history: &Path, paths: &[&Path])
         -> Result<(), String>
     {
-        self.peer.check_custody_paths(paths)?;
         let history = fields::resolve_root(history)?;
+        let evaluator = fields::resolve_root(self.peer.socket_path())?;
         for path in paths.iter().copied().chain(self.inputs.iter().map(PathBuf::as_path)) {
-            if history == fields::resolve_root(path)? {
+            let input = fields::resolve_root(path)?;
+            if overlaps(&history, &input) {
                 return Err("learned evaluation history output conflicts with a selected input".into());
             }
+            if overlaps(&evaluator, &input) {
+                return Err("learned evaluator endpoint conflicts with a selected input".into());
+            }
         }
-        self.peer.check_custody_paths(&[self.inputs[0].as_path(), self.inputs[1].as_path()])?;
         Ok(())
     }
 
     pub(super) fn check_history_endpoints(&self, history: &Path, endpoints: &[PathBuf])
         -> Result<(), String>
     {
-        self.peer.check_custody_paths(&[history])?;
         let history = fields::resolve_root(history)?;
         for endpoint in endpoints {
-            if history == fields::resolve_root(endpoint)? {
+            if overlaps(&history, &fields::resolve_root(endpoint)?) {
                 return Err("learned evaluation history output conflicts with a service endpoint".into());
             }
         }
@@ -315,9 +306,10 @@ impl Selection {
         paths: &[PathBuf],
     ) -> Result<(), String> {
         let endpoints = endpoints.iter().map(|path| fields::resolve_root(path))
-            .collect::<Result<BTreeSet<_>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?;
         for path in paths.iter().chain(self.inputs.iter()) {
-            if endpoints.contains(&fields::resolve_root(path)?) {
+            let input = fields::resolve_root(path)?;
+            if endpoints.iter().any(|endpoint| overlaps(endpoint, &input)) {
                 return Err("learned service endpoint conflicts with a selected input".into());
             }
         }

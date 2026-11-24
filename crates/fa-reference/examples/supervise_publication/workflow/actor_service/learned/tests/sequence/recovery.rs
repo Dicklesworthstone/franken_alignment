@@ -9,7 +9,7 @@ use fa_reference::action::consequence::delivery::{
     persistent::{Reconciliation, observed::driver::FileDriverEvent},
 };
 
-fn inputs(root: &Root, config: &Config, paths: &[PathBuf], entries: &[resident::Entry])
+pub(super) fn inputs(root: &Root, config: &Config, paths: &[PathBuf], entries: &[resident::Entry])
     -> Vec<String>
 {
     assert_eq!(paths.len(), entries.len());
@@ -36,7 +36,7 @@ fn inputs(root: &Root, config: &Config, paths: &[PathBuf], entries: &[resident::
     ]
 }
 
-fn recovery_args(mut args: Vec<String>, anchor: &Path) -> Vec<String> {
+pub(super) fn recovery_args(mut args: Vec<String>, anchor: &Path) -> Vec<String> {
     args.extend([
         "--after-message".into(), "1".into(),
         "--history-anchor".into(), anchor.display().to_string(),
@@ -65,9 +65,18 @@ fn prepared(root: &Root)
 fn prepared_with_unknown(root: &Root, published_unknown: bool)
     -> (Config, Vec<PathBuf>, Vec<resident::Entry>, PathBuf, FileDeliverySnapshot)
 {
-    let (mut config, paths, entries) = selected(root, None, None);
-    let (host, reviewer, _, _) =
-        recovery::create_selected(&config, &entries[0].loaded).unwrap();
+    prepared_with_owner(root, published_unknown, |config, entries| {
+        recovery::create_selected(config, &entries[0].loaded).unwrap()
+    })
+}
+
+pub(super) fn prepared_with_owner(
+    root: &Root,
+    published_unknown: bool,
+    create: impl FnOnce(&Config, &mut [resident::Entry]) -> recovery::Custody,
+) -> (Config, Vec<PathBuf>, Vec<resident::Entry>, PathBuf, FileDeliverySnapshot) {
+    let (mut config, paths, mut entries) = selected(root, None, None);
+    let (host, reviewer, _, _) = create(&config, &mut entries);
     let (port, supervisor) = host.into_learned_text_stream_actor_gateway().unwrap();
     let mut driver = FileSupervisedDriver::new(supervisor);
     let mut wire = ActorWire::new(port);

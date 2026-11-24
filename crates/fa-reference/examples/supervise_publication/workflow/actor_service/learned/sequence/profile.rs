@@ -119,11 +119,12 @@ pub(super) fn load_evaluated(
     peers: &super::PeerProfile,
     selected_operator: Option<&super::super::operator::Selection>,
     evaluation: &super::super::evaluation::Selection,
+    recovery: Option<Recovery>,
     history: &Path,
     selected_inputs: &[PathBuf],
 ) -> Result<Vec<Entry>, String> {
     evaluation.check_sequence_inputs(history, &[path, config.source.path()])?;
-    let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, None, false)?;
+    let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, recovery, false)?;
     let mut inputs = selected_inputs.to_vec();
     inputs.extend([path.to_path_buf(), config.source.path().to_path_buf()]);
     for input in &plan {
@@ -136,7 +137,7 @@ pub(super) fn load_evaluated(
         let actor = Profile::read(&input.actor)?;
         let precheck = input.precheck.as_deref()
             .map(super::super::precheck::Settings::read).transpose()?;
-        let recipe = recipe::EvaluatedRecipe::read(&input.recipe, config)?;
+        let recipe = recipe::EvaluatedRecipe::read(&input.recipe, config, recovery.is_some())?;
         evaluation.check_sequence_inputs(history, &recipe.input_paths())?;
         Ok((input.release, recipe, actor, precheck))
     }).collect::<Result<Vec<_>, String>>()?;
@@ -162,6 +163,7 @@ pub(super) fn load_evaluated(
     evaluation.check_sequence_endpoint_inputs(&endpoints, &inputs)?;
     let mut protected = endpoints;
     protected.push(history.to_path_buf());
+    protected.extend(evaluation.history_input.iter().cloned());
     protected.push(config.store.clone());
     let mut entries: Vec<Entry> = Vec::with_capacity(prepared.len());
     for (release, recipe, actor, precheck) in prepared {

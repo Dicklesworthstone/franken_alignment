@@ -574,6 +574,15 @@ fn evaluated_resident_grammar_and_future_custody_refuse_before_owner_or_clock_wo
     let root = Root::new();
     let valid = arguments(&root, Path::new("missing-andon"), Path::new("missing-peer"));
     assert!(selected_evaluation::take_sequence_options(&valid, None).is_ok());
+    for mode in [vec!["--continue-generation"], vec!["--after-message", "1"]] {
+        let mut args = valid.clone();
+        args.splice(4..4, mode.iter().map(|flag| (*flag).to_owned()));
+        assert!(selected_evaluation::take_sequence_options(&args, None).is_err());
+        args.extend(["--history-anchor".into(), "independent-input".into()]);
+        assert!(selected_evaluation::take_sequence_options(&args, None).is_ok());
+        args.extend(["--after-message".into(), "2".into()]);
+        assert!(selected_evaluation::take_sequence_options(&args, None).is_err());
+    }
     for option in [
         "--continue-generation",
         "--after-message",
@@ -628,4 +637,110 @@ fn evaluated_resident_grammar_and_future_custody_refuse_before_owner_or_clock_wo
         assert!(!root.0.join("store").exists());
         assert!(!selection.peer.socket_path().exists());
     }
+}
+
+#[test]
+fn restored_resident_suffix_retains_prior_and_final_evaluation_on_one_fenced_owner() {
+    let root = Root::new();
+    let (config, paths, entries, anchor, before) =
+        super::anchored_recovery::prepared_with_owner(&root, false, |config, entries| {
+            let selection = select_evaluation(&root, config, entries,
+                std::process::id().checked_add(100_000).unwrap(), 2);
+            selection.create(config, &entries[0].loaded).unwrap().0
+        });
+    let reader = Reader::new(&root, &paths[0]);
+    let original = fs::read(&anchor).unwrap();
+    let journal = config.store.join("delivery.bin");
+    let bytes = fs::read(&journal).unwrap();
+    let accounting = root.0.join("andon.json");
+    let settings = fs::read_to_string(&accounting).unwrap();
+    assert!(settings.contains(r#""minimum_evaluation_revision": 0"#));
+    evidence(&root, &config, 2, true, false);
+    let mut args = super::anchored_recovery::recovery_args(
+        super::anchored_recovery::inputs(&root, &config, &paths[1..], &entries[1..]), &anchor,
+    );
+    let peer = root.0.join("evaluator.json");
+    args.extend(["--andon".into(), accounting.display().to_string(),
+        "--evaluator-profile".into(), peer.display().to_string()]);
+
+    // The original first Message is the only completed round. A floor from
+    // even one round later cannot fence or release a new evaluator.
+    fs::write(&accounting, settings.replace(r#""minimum_evaluation_revision": 0"#,
+        r#""minimum_evaluation_revision": 2"#)).unwrap();
+    assert!(resident::command_with_clock(&args, None, crate::workflow::clock).is_err());
+    assert_eq!(fs::read(&journal).unwrap(), bytes);
+    assert!(!root.0.join("final.anchor").exists());
+    quiescent(&root);
+
+    fs::write(&accounting, settings.replace(r#""minimum_evaluation_revision": 0"#,
+        r#""minimum_evaluation_revision": 1"#)).unwrap();
+    let mut child = EvaluatorChild::start(&root, "both");
+    let peer = peer_file(&root, &entries[1].actor, child.0.id());
+    let profile = fs::read_to_string(&peer).unwrap();
+    fs::write(&peer, profile.replace(r#""candidate_limit":2"#, r#""candidate_limit":4"#)
+        .replace(r#""runtime_ms":15000"#, r#""runtime_ms":45000"#)).unwrap();
+    let mut peers = Peers::new(&root, &config, &entries);
+    let result = resident::command_with_clock(&args, None, || {
+        poll(&mut peers, &root, [None, Some(ReviewDecision::Approve), Some(ReviewDecision::Approve)]);
+        crate::workflow::clock()
+    });
+    fs::write(root.0.join("service.finished"), b"recovered service retired").unwrap();
+    assert!(result.is_ok(), "{result:?}");
+    child.finish();
+    assert_eq!(peers.seen_actor, [false, true, true]);
+    assert_eq!(peers.seen_human, [false, true, true]);
+    let (responses, packets) = peers.join();
+    assert!(responses[1..].iter().all(|response| confirmed(response.as_ref().unwrap())));
+    assert_ne!(packets[1].as_ref().unwrap().binding().session,
+        packets[2].as_ref().unwrap().binding().session);
+    let state = reader.snapshot();
+    assert_eq!((state.executions, state.payload.as_slice()), (3, b"AA".as_slice()));
+    assert_eq!(state.control.ledger.epoch, before.control.ledger.epoch + 1);
+    assert_eq!(state.control.ledger.reserved, 0);
+    let first = read_json(&root.0.join("receipt-first.json"));
+    let last = read_json(&root.0.join("receipt-final.json"));
+    assert_eq!(number(&last, &["before", "evaluation_revision"]),
+        number(&first, &["after", "evaluation_revision"]));
+    assert_eq!(archive::load(&root.0.join("final.anchor")).unwrap().revision(), state.revision);
+    assert!(state.revision >= number(&last, &["after", "journal_revision"]));
+    assert_eq!(fs::read(&anchor).unwrap(), original);
+    quiescent(&root);
+}
+
+#[test]
+fn delayed_witness_directory_stays_available_after_resident_service_admission() {
+    let root = Root::new();
+    let (config, paths, mut entries) = selected(&root, None, None);
+    // The final request selects a witness which is still offline, below a
+    // directory alias. Earlier requests use independent sibling inputs.
+    let alias = root.0.join("alias");
+    std::os::unix::fs::symlink(&root.0, &alias).unwrap();
+    for (index, (path, entry)) in paths.iter().zip(&mut entries).enumerate() {
+        let profile = root.0.join(format!("publication-{index}.json"));
+        let current = if index == 2 {
+            alias.join("future/current.bin")
+        } else {
+            root.0.join("early-current.bin")
+        };
+        fs::write(&profile, format!(r#"{{
+            "schema":"fa.supervised-witnesses/1","source":91,
+            "original":"{}/original.bin","current":"{}",
+            "limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},
+            "requests":[{{"kind":"absent_key","key":1}}]}}"#, root.0.display(), current.display())).unwrap();
+        let original = fs::read_to_string(path).unwrap();
+        fs::write(path, format!(r#"{{"schema":"fa.learned-checked-publication/1",
+            "publication":"{}","recipe":{original}}}"#, profile.display())).unwrap();
+        entry.loaded = recipe::load(path, &config, true).unwrap();
+    }
+    let selection = select_evaluation(&root, &config, &mut entries,
+        std::process::id().checked_add(100_000).unwrap(), 2);
+    let reviewer = fixture::peers(&root, &config);
+    entries[0].loaded.anchor_output = Some(root.0.join("future-anchor"));
+    selection.check_sequence(&config, &entries, &reviewer, None).unwrap();
+    entries[0].loaded.anchor_output = Some(root.0.join("future"));
+    let error = resident::run_with_evaluation(config, entries, &reviewer, None, &selection,
+        || panic!("custody collision reached the clock")).err().unwrap();
+    assert!(error.contains("history output conflicts with a selected input"), "{error}");
+    assert!(!root.0.join("store").exists());
+    assert!(!root.0.join("future").exists());
 }

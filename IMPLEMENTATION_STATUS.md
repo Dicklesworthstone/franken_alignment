@@ -1,5 +1,22 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24 · Resume resident publication with independent evaluation
+
+An operator can resume a resident learned generation or its remaining Message
+and Finish requests from an independently retained anchor. Recovery consumes
+the original accounted cursor, checks the evaluation revision floor and all
+selected accounting windows, then fences once before issuing fresh roles. The
+same evaluator serves the remaining requests and may assess a historical case
+within its finite invocation allowance. Each new effect still requires its
+source, helper and human review. The operator contract and supported options
+are in [resident learned publication](docs/RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting).
+
+The command regressions pair an accepted anchored suffix with an unsatisfied
+evaluation floor and check that delayed evidence paths remain available after
+startup. Rust source parsing was checked. The required remote runner was
+unavailable, so compilation, runtime behavior and the full qualification gate
+for this change remain unverified.
+
 ## 2026-11-23: continue accounted learned publication through fresh review and evaluation
 
 The paired Andon/evaluator selection now supports explicit single-request

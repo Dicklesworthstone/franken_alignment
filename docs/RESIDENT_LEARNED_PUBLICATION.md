@@ -48,13 +48,34 @@ precede evaluation; control failure never becomes permission to keep labeling.
 Evaluator authority ends before terminal reply-only grace and retained-history
 capture. The final anchor therefore includes acknowledged late labels and costs.
 
-The closed creation grammar admits the existing optional operator/generation
+The evaluated service also accepts an independently anchored restart:
+
+```text
+supervise_publication serve-learned-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --history-anchor RETAINED_INPUT \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor NEW_OUTPUT
+```
+
+Use `--continue-generation` for interrupted generation before the first request,
+or `--after-message` with the original confirmed Message for a remaining Message
+or Finish. A suffix may contain a single release. Supply the complete original
+and current Andon window inventories and the minimum evaluation revision.
+The native cursor checks the independent anchor, numerical recipe and guards,
+services Stop and the deadline before open and at each replay boundary, and
+acknowledges one recovery fence before it issues fresh roles. The same owner
+serves every remaining release. Its finite generation budget and pending cases
+survive the restart. The new evaluator can assess historical and final cases
+within its single invocation allowance.
+
+Creation and recovery admit the existing optional operator/generation
 pair and per-entry version-two prechecks. Plain and simple checked publication
 retain their existing guards. All scheduled role/socket/profile/recipe paths
 are checked before numerical assets are loaded, including future entry paths;
 recursive assets and delayed witness, identity and credential inputs cannot
-overlap endpoints, authority storage or the retained output. This composition
-does not admit recovery, a governor, topology, campaigns, generation checkpoints,
+overlap endpoints, authority storage or the retained output. An archive or
+socket name must also leave the directory tree for a future witness available. This composition
+does not admit a governor, topology, campaigns, generation checkpoints,
 raw/owned predictors, held-out joint recipes or credibility activation. Such
 selections refuse before work instead of dropping a requested contract.
 

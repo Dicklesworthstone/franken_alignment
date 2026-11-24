@@ -149,14 +149,14 @@ pub(super) struct GovernedRecipe(Recipe);
 pub(super) struct EvaluatedRecipe(Recipe);
 
 impl EvaluatedRecipe {
-    pub(super) fn read(file: &Path, config: &Config) -> Result<Self, String> {
+    pub(super) fn read(file: &Path, config: &Config, recovering: bool) -> Result<Self, String> {
         let recipe = Recipe::decode(&read_regular(file, MAX_RECIPE_BYTES)?)?;
         if !recipe.continuation || recipe.files.forecast.is_some() || recipe.joint.is_some()
             || recipe.expected_campaigns.is_some()
-            || recipe.expected_policy.as_ref()
-                .is_some_and(|policy| policy != &config.profile.delivery.policy)
+            || (!recovering && recipe.expected_policy.as_ref()
+                .is_some_and(|policy| policy != &config.profile.delivery.policy))
         {
-            return Err("resident learned evaluation requires an original nonpredictive, non-joint creation recipe without campaign recovery expectations".into());
+            return Err("resident learned evaluation requires an original nonpredictive, non-joint recipe without campaign recovery expectations".into());
         }
         Ok(Self(recipe))
     }

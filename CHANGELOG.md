@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-24 · Resident recovery, checkpoint custody and source admission
+
+- Resume an evaluated resident learned sequence from an independent history
+  anchor. Remaining releases share the recovered owner and one evaluator
+  allowance. The final anchor includes acknowledged late assessments.
+- Preserve future witness, credential and topology paths when selecting
+  checkpoint outputs. Resolve the reserved review module in the operator.
+- Validate window intervals, false-stop totals and disclosed round ownership
+  across each Tower Ledger or Findings report.
+- Bind Cargo target and manifest paths to the verified snapshot, include
+  workspace Cargo configuration, and keep native review tests within the
+  existing inventory depth ceiling.
+
 ## 2026-11-23: continue accounted learned work with independently anchored recovery
 
 - Extend paired live Andon/evaluator selection to explicit unfinished generation,

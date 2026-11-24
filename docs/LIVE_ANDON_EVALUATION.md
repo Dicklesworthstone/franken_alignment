@@ -230,10 +230,11 @@ only the remaining allowance and can label still-pending historical cases on the
 same recovered owner. It cannot rerun generation/review or supply an effect key.
 The new output anchor includes acknowledged late labels and Andon changes.
 
-Resident recovery, receipt-only/effect-retry modes, offline terminal modes,
+Receipt-only/effect-retry modes, offline terminal modes,
 predictors, joint accounting, topology, campaigns, checkpoints and credibility
-activation remain outside this paired live recovery grammar. Fresh resident
-creation retains the separate composition below.
+activation remain outside this paired live recovery grammar. The resident
+service also accepts an explicitly anchored remaining sequence under the
+complete accounting and evaluation requirements described below.
 
 The new `learned/tests/evaluation/recovery.rs` sources exercise actual partial
 generation continuation, recovered Message and Finish, deferred historical labels,
@@ -252,6 +253,9 @@ role. The accepted final request deadline cannot renew or outlive the original
 invocation lease. Final Hold and human rejection remain labelable without
 restarting numerical or helper work. A late intermediate actor reply failure
 ends succession but preserves the healthy evaluator's independent opportunity.
+The resident command also supports `--continue-generation` and `--after-message`
+with a retained input anchor, a new output, the current accounting profile and
+a remaining sequence. One recovery fence precedes the entire suffix.
 See the full [resident learned contract](RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
 for the closed supported grammar, complete future input/endpoint custody,
 Stop precedence and source-only verification boundary.

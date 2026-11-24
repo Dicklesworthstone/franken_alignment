@@ -68,12 +68,12 @@ where
     let mut selected_inputs = args.iter().skip(1).take(3)
         .map(std::path::PathBuf::from).collect::<Vec<_>>();
     let evaluated_history = if evaluation_options.is_some() {
-        for pair in args[4..].chunks_exact(2) {
-            if pair[0] == "--operator-profile" {
+        for pair in args[4..].windows(2) {
+            if matches!(pair[0].as_str(), "--operator-profile" | "--history-anchor") {
                 selected_inputs.push(std::path::PathBuf::from(&pair[1]));
             }
         }
-        let selected = args[4..].chunks_exact(2)
+        let selected = args[4..].windows(2)
             .find(|pair| pair[0] == "--retain-history-anchor")
             .expect("evaluation grammar requires its retained output");
         Some(super::fields::path(&selected[1])?)
@@ -135,7 +135,7 @@ where
     };
     let mut entries = if let Some(selected) = evaluation.as_ref() {
         profile::load_evaluated(Path::new(&args[2]), &config, &peers,
-            operator.as_ref(), selected,
+            operator.as_ref(), selected, recovery,
             evaluated_history.as_deref().expect("explicit evaluation output"), &selected_inputs)?
     } else if let Some(governor) = governor.as_ref() {
         profile::load_governed(
@@ -183,14 +183,8 @@ where
             topology::Mode::Create
         },
     )?;
-    let result = if let Some(evaluation) = evaluation.as_ref() {
-        run_with_evaluation(config, entries, &peers, operator.as_ref(), evaluation, time)?
-    } else {
-        run_with_services(
-            config, entries, &peers, continuing, after, credibility,
-            operator.as_ref(), governor.as_ref(), time,
-        )?
-    };
+    let result = run_with_selected_services(config, entries, &peers, continuing, after, credibility,
+        operator.as_ref(), governor.as_ref(), evaluation.as_ref(), time)?;
     emit(result, &mut std::io::stdout().lock())
 }
 
@@ -455,6 +449,7 @@ where
 /// One independently provisioned operator session follows the original owner,
 /// including every helper handoff. New messages never reissue its grants or
 /// replenish its query, connection, framing or elapsed allowance.
+#[cfg(test)]
 pub(super) fn run_with_operator<F>(
     config: Config,
     entries: Vec<Entry>,
@@ -483,6 +478,7 @@ where
 
 /// Retain the same explicitly issued governor and numerical operator for every
 /// message in the original finite sequence; no later entry can provision one.
+#[cfg(test)]
 pub(super) fn run_with_services<F>(
     config: Config,
     entries: Vec<Entry>,
@@ -503,6 +499,7 @@ where
 
 /// Explicit fresh accounting binds one evaluator to the same resident owner.
 /// No later entry may provision a replacement role or service allowance.
+#[cfg(test)]
 pub(super) fn run_with_evaluation<F>(
     config: Config,
     entries: Vec<Entry>,
@@ -542,8 +539,8 @@ where F: FnMut() -> ElapsedTick {
         validate(&config, &entries, peers)?;
     }
     if let Some(selected) = selected_evaluation {
-        if continuing || after_message.is_some() || credibility.is_some() || selected_governor.is_some() {
-            return Err("resident learned evaluation requires its original fresh creation profile".into());
+        if continuing != selected.history_input.is_some() || credibility.is_some() || selected_governor.is_some() {
+            return Err("resident learned recovery requires explicit anchored evaluator custody".into());
         }
         selected.check_sequence(&config, &entries, peers, selected_operator)?;
     }
@@ -625,7 +622,11 @@ where F: FnMut() -> ElapsedTick {
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
     let (started, governor_role, evaluator_role) = if let Some(selected) = selected_evaluation {
-        let (custody, evaluator) = selected.create(&config, &first.loaded)?;
+        let (custody, evaluator) = if continuing {
+            selected.open(&config, &first.loaded, &mut control, &deadline, &mut time)?
+        } else {
+            selected.create(&config, &first.loaded)?
+        };
         (topology::Started { custody, source: None, output: None }, None, Some(evaluator))
     } else if selected_governor.is_some() {
         let (started, role) = topology::start_governed(
@@ -719,7 +720,7 @@ where F: FnMut() -> ElapsedTick {
                 &selected.peer, &first.actor, role, &driver, &global,
             )?),
             (None, None) => None,
-            _ => return Err("resident learned creation lost its independent evaluator custody".into()),
+            _ => return Err("resident learned service lost its independent evaluator custody".into()),
         };
         Ok::<_, String>((reviewer, prediction, identity, continuation, port, driver, operator, evaluator))
     })();
