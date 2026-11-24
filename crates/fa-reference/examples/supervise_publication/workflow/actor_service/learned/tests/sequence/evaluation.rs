@@ -16,6 +16,8 @@ use std::{
 
 #[path = "evaluation/transport.rs"]
 mod transport;
+#[path = "evaluation/recovery.rs"]
+mod recovered_sequence;
 
 const CHILD: &str =
     "workflow::actor_service::learned::tests::resident_sequence::evaluation::evaluator_process";
@@ -180,9 +182,11 @@ fn evaluator_process() {
     };
     let root = PathBuf::from(root);
     let mode = std::env::var(CHILD_MODE).unwrap();
-    let first = mode == "exhausted";
+    let first = matches!(mode.as_str(), "exhausted" | "recovered-exhausted");
     let early = matches!(mode.as_str(), "transport" | "early-hold");
-    wait_for(&root.join(if first || early {
+    wait_for(&root.join(if mode == "recovered-exhausted" {
+        "actor-2.finished"
+    } else if first || early {
         "actor-1.finished"
     } else {
         "actor-3.finished"

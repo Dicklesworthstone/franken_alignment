@@ -1,0 +1,56 @@
+Accounted resident recovery regression integration — 2026-11-24
+================================================================
+
+Scope
+-----
+Eight causal regressions cover interrupted generation, a remaining Message/Finish
+suffix, a singleton Finish with fresh human approval or rejection and no new
+draws, old pending-case labels, evaluator candidate exhaustion across handoffs,
+independent rollback/window/revision requirements, Stop at preopen/per-event/
+Ready, closed option grammar, and canonical future input/endpoint custody.
+
+Integration base: b6fba84ce63bf2fbe4170ded8682b1cb43412104.
+A concurrent main update supplied resident recovery production changes while
+this work was in progress. Those production changes and their tests are
+preserved. This change adds the independently authored causal regression module
+and its bounded evaluator-child mode to that current implementation.
+
+Source review
+-------------
+A second reviewer reviewed the production paths and test designs. Review found
+and corrected a singleton-Finish fixture that had published only the first of
+two Messages. The final fixture publishes both Messages, retires each completed
+helper cohort through the production retirement method under a finite cleanup
+bound, and resumes after Message 2 at position 6 with four sampled draws. Finish
+must retain that original spend; only two final applied reviews advance the
+evaluation revision.
+
+Qualification boundary
+----------------------
+No Rust compilation or runtime test was executed. Earlier candidate sources
+were parsed and scoped-formatted with the available unqualified
+nightly-2026-08-31 rustfmt. The final fixture edits and integration with incoming
+main have not been parsed by that formatter because the execution environment
+became unavailable. Earlier candidate parsing does not qualify this final
+candidate.
+
+The required gate was attempted with the checksum-verified RCH 2.1.37:
+  cwd: /workspace/scratch/df8f11d29567/franken_alignment
+  timeout 20 env RCH_REQUIRE_REMOTE=1 \
+    RCH_CANONICAL_PROJECT_ROOT=/workspace/scratch/df8f11d29567 \
+    /workspace/scratch/df8f11d29567/tooling/rch/rch exec -- \
+    cargo +nightly-2026-09-08 run --locked -p xtask -- check
+
+Result: exit 103 before Cargo. No remote workers were configured; daemon/socket
+startup failed and local_fallback_allowed=false. No compiler, Clippy, runtime,
+or canonical gate success is claimed. This feature remains in progress pending
+required remote qualification.
+
+Final integrated source blobs
+-----------------------------
+learned/tests/sequence/evaluation.rs: 2809af315a58c02d7ade71abf5635c5ab331f5af
+learned/tests/sequence/evaluation/recovery.rs: 3d5a2a751fb5c4e1197212d2a66860eade9592a1
+The parent test file was reconstructed to the exact incoming blob
+a00eca59efc67e05c09105ef6a78f5ec1dea3644 before the three harness changes.
+The positive recovered suffix explicitly supplies fresh source generation 2;
+this changes external evidence only, retaining the archived numerical spend.

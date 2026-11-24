@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-24: exercise accounted resident recovery across its full suffix
+
+- Add eight causal regressions to the resident learned recovery integration:
+  interrupted generation, Message/Finish succession, singleton Finish without
+  new draws, historical evaluation cases, shared evaluator candidate limits,
+  independent rollback/window/revision requirements, Stop during replay, and
+  future input/endpoint custody.
+- Preserve the concurrently landed resident recovery implementation and its
+  existing tests. Exercise the final singleton fixture through two actual
+  published Messages and bounded helper retirement before recovering Finish.
+- Source review is complete. Final integrated sources have not been compiled or
+  executed; the required RCH gate could not dispatch to a remote worker.
+
 ## 2026-11-24 · Resident recovery, checkpoint custody and source admission
 
 - Resume an evaluated resident learned sequence from an independent history

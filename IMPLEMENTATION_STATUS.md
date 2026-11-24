@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: accounted resident recovery regression integration
+
+The resident learned recovery implementation now has eight additional causal
+regressions for interrupted generation, a remaining Message/Finish suffix,
+singleton Finish with fresh human approval or rejection and no new numerical
+draws, historical pending-case labels, evaluator candidate exhaustion across
+handoffs, independent rollback/window/revision requirements, Stop before open
+and during replay including Ready, and complete future input/endpoint custody.
+
+The test fixture reaches the actual two-Message prefix before recovering Finish:
+both original Messages pass generation, native review, fresh human approval and
+publication; each completed helper cohort is retired under the production
+cleanup bound. Finish must preserve position six, four sampled draws, and the
+original accounting. These tests extend, rather than replace, the independently
+landed recovery implementation and its existing positive and refusal tests.
+
+This is authored and independently source-reviewed coverage, not runtime
+qualification. The final integrated test files were not parsed or compiled
+after the execution environment became unavailable. The required RCH 2.1.37
+remote gate exited 103 before Cargo: no configured remote worker was available
+and local fallback was prohibited. FA026, FA105 and FA134 remain in progress.
+The exact integration and qualification boundary is recorded in
+[the source review receipt](artifacts/execution/2026-11-24-resident-recovery-regression-integration.log).
+
 ## 2026-11-24 · Resume resident publication with independent evaluation
 
 An operator can resume a resident learned generation or its remaining Message
