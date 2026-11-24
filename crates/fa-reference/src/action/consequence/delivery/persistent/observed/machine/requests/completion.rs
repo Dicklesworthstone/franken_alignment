@@ -4,7 +4,7 @@ use super::super::super::super::JournalError;
 use super::super::super::super::requests::FileRequestDisposition;
 use super::super::super::credential::FileCredentialPermit;
 use super::super::super::publication::CheckedCompletion;
-use super::super::super::{FileHumanPermit, FileOversight, FilePermit};
+use super::super::super::{FileHumanPermit, FileOversight, FilePermit, Machine};
 use crate::Error;
 use crate::action::consequence::delivery::{EndpointOutcome, EndpointReceipt};
 use crate::action::{ActionState, FrozenAction};
@@ -28,48 +28,10 @@ impl FileOversight {
         &self,
         request: u64,
     ) -> Result<Option<EndpointOutcome>, JournalError> {
-        let FileRequestDisposition::Admitted { attempt, stage } =
-            self.request_status(request)?.disposition
-        else {
-            return Ok(None);
-        };
-        match stage {
-            ActionState::Proposed
-            | ActionState::Prepared
-            | ActionState::Reviewing
-            | ActionState::Authorized
-            | ActionState::Denied
-            | ActionState::Cancelled => Ok(None),
-            ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown => {
-                // Even an endpoint-visible execution remains unaccepted here
-                // until the original broker's reconciliation transition commits.
-                Ok(self
-                    .machine
-                    .broker
-                    .resolution(attempt)?
-                    .map(EndpointReceipt::outcome))
-            }
-            ActionState::Confirmed | ActionState::ConfirmedNotExecuted => {
-                let outcome = self
-                    .machine
-                    .broker
-                    .resolution(attempt)?
-                    .map(EndpointReceipt::outcome)
-                    .ok_or(Error::Incomplete)?;
-                let compatible = matches!(
-                    (stage, outcome),
-                    (ActionState::Confirmed, EndpointOutcome::Executed { .. })
-                        | (
-                            ActionState::ConfirmedNotExecuted,
-                            EndpointOutcome::NotExecuted { .. }
-                        )
-                );
-                if !compatible {
-                    return Err(Error::Binding.into());
-                }
-                Ok(Some(outcome))
-            }
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
         }
+        self.machine.request_resolution(request)
     }
 
     /// Complete an already authorized durable request through the original
@@ -152,5 +114,56 @@ impl FileOversight {
         }
         self.check_action(attempt, action)?;
         Ok(stage)
+    }
+}
+
+impl Machine {
+    // Share the original receipt projection with sealed recovery selectors.
+    // This reads only the reconstructed request book and accepted evidence.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn request_resolution(
+        &self,
+        request: u64,
+    ) -> Result<Option<EndpointOutcome>, JournalError> {
+        let FileRequestDisposition::Admitted { attempt, stage } =
+            self.requests.status(request)?.disposition
+        else {
+            return Ok(None);
+        };
+        match stage {
+            ActionState::Proposed
+            | ActionState::Prepared
+            | ActionState::Reviewing
+            | ActionState::Authorized
+            | ActionState::Denied
+            | ActionState::Cancelled => Ok(None),
+            ActionState::Dispatching | ActionState::Unknown | ActionState::IrrecoverablyUnknown => {
+                // Even an endpoint-visible execution remains unaccepted here
+                // until the original broker's reconciliation transition commits.
+                Ok(self
+                    .broker
+                    .resolution(attempt)?
+                    .map(EndpointReceipt::outcome))
+            }
+            ActionState::Confirmed | ActionState::ConfirmedNotExecuted => {
+                let outcome = self
+                    .broker
+                    .resolution(attempt)?
+                    .map(EndpointReceipt::outcome)
+                    .ok_or(Error::Incomplete)?;
+                let compatible = matches!(
+                    (stage, outcome),
+                    (ActionState::Confirmed, EndpointOutcome::Executed { .. })
+                        | (
+                            ActionState::ConfirmedNotExecuted,
+                            EndpointOutcome::NotExecuted { .. }
+                        )
+                );
+                if !compatible {
+                    return Err(Error::Binding.into());
+                }
+                Ok(Some(outcome))
+            }
+        }
     }
 }

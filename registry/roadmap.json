@@ -928,7 +928,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/continuation.rs",
         "artifacts/execution/2026-11-24-native-resident-continuation-source-checks.json",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/history.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2798,7 +2800,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/continuation.rs",
         "artifacts/execution/2026-11-24-native-resident-continuation-source-checks.json",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/history.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3876,7 +3880,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/continuation.rs",
         "artifacts/execution/2026-11-24-native-resident-continuation-source-checks.json",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/history.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs"
       ],
       "founding_ideas": [
         "FI-A06"

@@ -7,12 +7,16 @@ use super::{
     Path, journal, storage,
 };
 use crate::Error;
+use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
+    GenerationFinish, text::TextGenerationRequest,
+};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::{
     MAX_JOURNAL_EVENTS,
     observed::{
         decoder::text::{check_text_config, check_text_machine},
         machine::Transition,
+        stream::generated::text_message_request,
         shutdown::{
             FileShutdownDrain,
             recovery::{FileAdmissionStoppedHistory, FileStopRecovery},
@@ -304,6 +308,59 @@ impl FileGeneratedSourceRecovery {
             _ => return Err(Error::Incomplete.into()),
         }
         self.check_machine()?;
+        Ok(())
+    }
+
+    /// Check one recorded native Message against its exact original raw intent.
+    /// This selector requires complete Ready reconstruction and returns no
+    /// payload, owner, role or effect right. Later messages, numerical work and
+    /// changed epochs cannot erase the original request's historical identity.
+    /// Missing or unsubmitted generations refuse without cleanup or a Fence.
+    pub fn recorded_message(
+        &self,
+        request: u64,
+        generation: u64,
+        expected: &TextGenerationRequest,
+    ) -> Result<(), JournalError> {
+        self.check_ready()?;
+        if request == 0 || generation == 0 {
+            return Err(Error::InvalidInput.into());
+        }
+        let source = text_message_request(&self.events, request).ok_or(Error::Missing)?;
+        self.machine.requests.status(request)?;
+        if source.generation != generation {
+            return Err(Error::Binding.into());
+        }
+        let command = self.machine.decoder_text_command(generation).ok_or(Error::Missing)?;
+        let progress = self.machine.decoder_generation_progress(generation)?;
+        if command.request() != expected
+            || progress.generation_revision() != source.generation_revision
+            || progress.finish() != Some(Ok(GenerationFinish::StopToken))
+        {
+            return Err(Error::Binding.into());
+        }
+        Ok(())
+    }
+
+    /// Check a recorded Finish against an explicitly selected original native
+    /// Message and that Message's exact recipe. The shared historical validator
+    /// pins the complete cumulative prefix and accepted Executed target receipt.
+    /// It never infers a predecessor, prepares a new Finish, reconciles an effect,
+    /// samples time or requires the old numerical result to be current.
+    pub fn recorded_finish(
+        &self,
+        after_request: u64,
+        request: u64,
+        generation: u64,
+        expected: &TextGenerationRequest,
+    ) -> Result<(), JournalError> {
+        self.recorded_message(after_request, generation, expected)?;
+        self.machine.recorded_decoder_text_finish_request(
+            &self.profile,
+            &self.events,
+            after_request,
+            request,
+        )?;
         Ok(())
     }
 

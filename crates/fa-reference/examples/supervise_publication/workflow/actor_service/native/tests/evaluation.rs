@@ -474,3 +474,6 @@ fn evaluator_audience_roles_and_custody_aliases_refuse_before_owner_work() {
 
 #[path = "evaluation/recovery.rs"]
 mod recovery;
+
+#[path = "evaluation/history.rs"]
+mod history;

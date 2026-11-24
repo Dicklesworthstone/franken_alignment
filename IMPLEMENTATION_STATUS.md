@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-24: delayed independent evaluation of native Message and Finish history
+
+Native `serve-open` and `serve-open-checked` accept an explicit
+`--evaluate-only` mode with original recipes, independent input/output history,
+complete accounting expectations and recovery floors. Read-only original-cursor
+selectors bind a recorded Message, or a recorded Finish with its exact confirmed
+Message predecessor, before the sole recovery Fence. The shared live Finish
+validator keeps the complete prefix and accepted target receipt; old recorded
+requests remain selectable after later numerical work.
+
+Only independent evaluator and authenticated Stop endpoints are served. The
+original source, numerical work, evaluation cases and uncertain effect charges
+survive recovery. This path performs no actor submission, source refresh,
+helper/human review, generation resume or effect reconciliation. Stop wins at
+every original replay boundary and immediately before fencing; evaluator
+retirement precedes the retained final anchor, including acknowledged labels
+or terminal Stop. Startup failures retain the healthy acknowledged successor.
+
+Four service regressions cover actual Message, held Message, Finish and earlier
+Message labels; exact request/recipe refusals before Fence; complete option
+grammar; and authenticated Ready Stop paired with deadline expiry. Two core
+regressions check immutable original Message/Finish selection, including a
+recorded Finish after later numerical work. The subprocess evaluator supplies
+independent credentials. Fixtures establish custody and accounting boundaries,
+not real-world detector quality.
+
+The final sources were independently reviewed and scoped tracked-file whitespace
+checks passed. No formatter or compiler ran: the workspace disconnected twice,
+and remote-only RCH could not dispatch without a configured worker. Compilation,
+runtime tests, Clippy and canonical qualification remain pending; FA-026, FA-105,
+FA-134 and existing evaluation/recovery Beads remain in progress.
+See the [operator contract](docs/LIVE_ANDON_EVALUATION.md#evaluate-recorded-native-history).
+
 ## 2026-11-24: delayed independent evaluation of learned history
 
 An explicit `--evaluate-only` selection on `create-learned-generated` reopens

@@ -633,3 +633,75 @@ fn terminal_stop_keeps_original_reconstruction_and_exact_retries_without_ordinar
     assert_eq!(retried.snapshot(), stopped.snapshot());
     assert_eq!(bytes(&root), canonical);
 }
+
+#[test]
+fn recorded_selectors_require_ready_and_exact_original_native_admission_without_writes() {
+    use crate::action::consequence::delivery::persistent::observed::stream::generated::FileTextMessageRequest;
+
+    for recorded in [false, true] {
+        let root = Directory::new();
+        let (mut host, _) = seeded(&root, false, false);
+        let captured = host
+            .refresh_file_source(host.revision(), &mut evidence(&root), ElapsedTick(2))
+            .unwrap();
+        for revision in 1..4 {
+            host.advance_decoder_text(host.revision(), 7, revision).unwrap();
+        }
+        let original_request = request(b"ab", 2);
+        assert_eq!(
+            host.decoder_text_progress(7).unwrap().finish(),
+            Some(Ok(GenerationFinish::StopToken))
+        );
+        if recorded {
+            let source = FileTextMessageRequest {
+                request: 91,
+                generation: 7,
+                generation_revision: 4,
+                target: host.inspect().target,
+                policy_epoch: host.inspect().control.ledger.epoch,
+                deadline: ElapsedTick(100),
+            };
+            host.submit_decoder_text_message(
+                host.revision(),
+                source,
+                captured.snapshot().clone(),
+            )
+            .unwrap();
+        }
+        let expected = requirements(&host, false, false);
+        let anchor = host.history_anchor().unwrap();
+        let canonical = bytes(&root);
+        drop(host);
+        let pending = root.store().join("delivery.pending");
+        std::fs::write(&pending, b"original unacknowledged staging").unwrap();
+        let mut run = begin(&root, false, &expected, &anchor).unwrap();
+        assert_eq!(
+            run.recorded_message(91, 7, &original_request),
+            Err(Error::Incomplete.into())
+        );
+        assert_eq!(
+            run.recorded_finish(91, 92, 7, &original_request),
+            Err(Error::Incomplete.into())
+        );
+        ready(&mut run);
+        let progress = run.progress();
+        assert_eq!(
+            run.recorded_message(91, 7, &original_request),
+            if recorded { Ok(()) } else { Err(Error::Missing.into()) }
+        );
+        assert!(run.recorded_message(92, 7, &original_request).is_err());
+        assert!(run.recorded_message(91, 8, &original_request).is_err());
+        assert!(run.recorded_message(91, 7, &request(b"changed", 2)).is_err());
+        assert!(run.recorded_finish(91, 91, 7, &original_request).is_err());
+        assert!(run.recorded_finish(91, 92, 7, &original_request).is_err());
+        assert_eq!(run.progress(), progress);
+        assert_eq!(bytes(&root), canonical);
+        assert_eq!(
+            std::fs::read(&pending).unwrap(),
+            b"original unacknowledged staging"
+        );
+        assert_eq!(run.cancel().status, FileGeneratedSourceRecoveryStatus::Cancelled);
+        assert_eq!(bytes(&root), canonical);
+        assert!(pending.exists());
+    }
+}

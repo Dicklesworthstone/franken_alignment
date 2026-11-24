@@ -106,9 +106,13 @@ work and pending cases. Original Stop and deadline cover every replay boundary
 and Ready before the recovery Fence releases fresh live roles.
 
 A pending generation, explicit next Message or Finish can resume under their
-original lifecycle requirements. Already recorded actor requests refuse live
-evaluation and retain their acknowledged recovery successor. Every new effect
-still needs fresh source, helper review and independent human approval.
+original lifecycle requirements. Already recorded actor requests require the separate explicit
+[`--evaluate-only` mode](LIVE_ANDON_EVALUATION.md#evaluate-recorded-native-history)
+to receive delayed independent labels. That mode verifies the exact recorded
+Message or Finish before the recovery Fence, serves only evaluator and Stop,
+and preserves original work and effect charges. Ordinary evaluated recovery
+retains its recorded-request refusal and acknowledged successor. Every new
+effect still needs fresh source, helper review and independent human approval.
 Resident native recovery with evaluation uses its
 [explicit remaining-sequence contract](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
 at a confirmed Message boundary, or

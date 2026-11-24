@@ -467,3 +467,98 @@ fn native_finish_with_exhausted_context_needs_no_additional_numerical_position()
     );
     assert_eq!(state.publication.executions, 5);
 }
+
+#[test]
+fn source_recovery_selects_recorded_finish_after_later_numerical_work_without_fencing() {
+    use crate::action::consequence::delivery::persistent::RecoveryReserve;
+    use crate::action::consequence::delivery::persistent::observed::{
+        source::FileSourcePolicy,
+        stream::generated::checked::source::{
+            FileGeneratedSourceRecoveryStatus, GeneratedSourceProfile, GeneratedSourcePublication,
+        },
+    };
+    use crate::action::consequence::oversight::{
+        evidence_source::FileEvidenceSource,
+        policy_state::{StateFreshness, StateLimits, StateSource},
+    };
+
+    let root = Directory::new();
+    let profile = profile(4096);
+    let selected = GeneratedSourceProfile {
+        source: FileSourcePolicy {
+            source: StateSource {
+                scope: profile.delivery.scope,
+                source: 7,
+                generation: 1,
+            },
+            limits: StateLimits { events: 64, retained_bytes: 65536 },
+            freshness: StateFreshness::new(50).unwrap(),
+        },
+        publication: GeneratedSourcePublication::Stream {
+            stream: stream(false),
+            reserve: Some(RecoveryReserve::terminal()),
+        },
+    };
+    let (mut host, reviewer) = FileOversight::create_generated_text_stream_from_source(
+        root.store(), profile.clone(), fixtures::decoder(), tokenizer(false), selected,
+    )
+    .unwrap();
+    let evidence = EvidenceSnapshot::new(
+        EvidenceIdentity { scope: profile.delivery.scope, source: 7, generation: 1 },
+        snapshot(),
+        BTreeMap::from([("reviewer".into(), b"context".to_vec())]),
+    )
+    .unwrap();
+    let source_path = root.store().parent().unwrap().join("finish-source.json");
+    std::fs::write(&source_path, evidence.encode()).unwrap();
+    let mut source = FileEvidenceSource::new(
+        source_path.clone(), 7, profile.delivery.scope, 1048576,
+    )
+    .unwrap();
+    host.refresh_file_source(host.revision(), &mut source, ElapsedTick(1)).unwrap();
+    generate(&mut host, 7, 91);
+    publish(&mut host, &reviewer, 91, true);
+    let intent = submit_finish(&mut host, 91, 92);
+    host.cancel_request(host.revision(), 92).unwrap();
+    let numerical = host.decoder_inspection().unwrap().numerical;
+    host.advance_decoder_forced(
+        host.revision(), numerical.actor_revision, numerical.position, 257,
+        DecoderBudget { scalar_products: MAX_DECODER_PRODUCTS },
+    )
+    .unwrap()
+    .unwrap();
+    // A new Finish can no longer use this numerical predecessor. The recorded
+    // Finish must still identify its original complete prefix and exact receipt.
+    assert!(host.prepare_decoder_text_finish(91, 93, ElapsedTick(100)).is_err());
+    assert_eq!(host.decoder_text_finish_request(91, 92).unwrap(), intent);
+    let anchor = host.history_anchor().unwrap();
+    let canonical = bytes(&host);
+    drop(host);
+    std::fs::remove_file(source_path).unwrap();
+    let pending = root.store().join("delivery.pending");
+    std::fs::write(&pending, b"retain historical staging").unwrap();
+    let mut run = FileOversight::begin_open_generated_text_stream_from_source_anchored(
+        root.store(), profile, &fixtures::decoder(), &tokenizer(false), selected, &anchor,
+    )
+    .unwrap();
+    assert_eq!(
+        run.recorded_finish(91, 92, 7, &request(b"ab", 2)),
+        Err(Error::Incomplete.into())
+    );
+    while run.progress().status == FileGeneratedSourceRecoveryStatus::Replaying {
+        run.advance(run.progress().replayed_events, 1).unwrap();
+    }
+    let ready = run.progress();
+    assert_eq!(ready.status, FileGeneratedSourceRecoveryStatus::Ready);
+    assert_eq!(run.recorded_message(91, 7, &request(b"ab", 2)), Ok(()));
+    assert_eq!(run.recorded_finish(91, 92, 7, &request(b"ab", 2)), Ok(()));
+    assert!(run.recorded_finish(92, 91, 7, &request(b"ab", 2)).is_err());
+    assert!(run.recorded_finish(91, 92, 8, &request(b"ab", 2)).is_err());
+    assert!(run.recorded_finish(91, 92, 7, &request(b"other", 2)).is_err());
+    assert_eq!(run.progress(), ready);
+    assert_eq!(std::fs::read(root.store().join("delivery.bin")).unwrap(), canonical);
+    assert_eq!(std::fs::read(&pending).unwrap(), b"retain historical staging");
+    assert_eq!(run.cancel().status, FileGeneratedSourceRecoveryStatus::Cancelled);
+    assert_eq!(std::fs::read(root.store().join("delivery.bin")).unwrap(), canonical);
+    assert!(pending.exists());
+}

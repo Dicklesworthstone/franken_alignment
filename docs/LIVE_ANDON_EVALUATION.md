@@ -211,6 +211,72 @@ foreign anchors, Ready Stop, source failure, receipt-only refusal and exact
 simple-checked guards. Compilation and runtime qualification remain pending the
 required remote RCH gate.
 
+## Evaluate recorded native history
+
+Use an explicit historical mode when independent truth arrives after the original
+native service has ended:
+
+```text
+supervise_publication serve-open CONFIG ORIGINAL_ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text ORIGINAL_RECIPE --evaluate-only \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor RETAINED_INPUT --retain-history-anchor NEW_OUTPUT \
+  --evaluation-recovery RECOVERY_REQUIREMENTS
+```
+
+For an original simple checked owner, use `serve-open-checked` with its original
+`WITNESS_PROFILE` positional argument. To select an already recorded Finish,
+place `--finish-after-message PREVIOUS_REQUEST` last. The actor profile then
+identifies the original Finish request, and the recipe identifies its explicitly
+named original Message predecessor.
+
+This mode requires the same complete
+[accounted recovery inputs](#recover-an-evaluated-native-generated-service):
+the independent input archive, explicit journal/control/authority floors,
+original source/stream/publication/model/tokenizer contracts, original evaluation
+protocol and accounting identity, all current windows and the independently
+retained evaluation floor. Original numerical assets remain necessary for
+verified replay. Current publication evidence and helper invocations are not
+needed to evaluate historical cases. Plain and simple checked publication retain
+their existing supported accounting choices.
+
+The original sealed cursor reaches Ready before immutable historical selection.
+A Message must match its retained source event, generation, generation revision
+and exact raw request. A Finish must additionally match the named Message's
+accepted Executed receipt, resulting target version and complete cumulative
+prefix. These checks reuse the live historical validator. An earlier recorded
+request remains valid after later native work; an unsubmitted result, changed
+recipe or missing request cannot become a new publication through this mode.
+Historical selection itself changes no canonical or staging bytes.
+
+Authenticated Stop is bound before replay and checked at every event, at Ready
+and again immediately before the sole Fence. It takes the original terminal path
+before any ordinary role issue when already pending. After recovery, the same
+Stop service precedes every evaluation quantum. One finite evaluator accepts
+the existing `evaluator-case` and `evaluator-assess` operations on retained
+cases; its independent credentials, candidate/I/O/byte limits and original
+invocation deadline remain in force.
+
+No actor socket or human-review listener is bound. The command creates no
+publication reference, does not resume generation, read current source evidence,
+invoke helpers, reconcile an uncertain effect or retry dispatch. The actor
+profile selects the original request and audience; the reviewer profile supplies
+the existing Stop credentials. Operator/precheck services and new-message
+continuation are excluded. Independent labels cannot provide a human approval
+key, reset numerical work or refund an unknown effect.
+
+Evaluator authority retires before final archive capture. The new output retains
+acknowledged labels and any acknowledged Stop from that same owner. A startup
+failure after the recovery Fence attempts to retain its exact healthy successor;
+the input archive remains unchanged. Existing typed evaluator responses carry
+the observations and assessment receipts; this command adds no output schema.
+
+Four service and two core regression tests are authored, including real delayed
+Message/Hold/Finish labels, old cases after later work, wrong-recipe/request
+refusals, authenticated Ready Stop and expiry, and unchanged staged bytes before
+fencing. Source review is complete; formatter, compilation and runtime execution
+were unavailable in this session.
+
 ## Create an evaluated learned service
 
 ```text

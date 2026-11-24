@@ -43,7 +43,7 @@ use fa_reference::action::consequence::oversight::actor_wire::{Command, encode_c
 use std::io::Write;
 use recipe::Inputs;
 
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT; single native plain/simple-checked services additionally accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with required --retain-history-anchor NEW_OUTPUT; evaluated open also requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --native-text RECIPE; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --native-text RECIPE; native open also accepts a final --after-message PREVIOUS_REQUEST OR --finish-after-message PREVIOUS_REQUEST; native services optionally accept paired --operator-profile PATH --tower-generation NONZERO, --history-anchor INPUT on open, and --retain-history-anchor NEW_OUTPUT; single native plain/simple-checked services additionally accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with required --retain-history-anchor NEW_OUTPUT; evaluated open also requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; explicit --evaluate-only reopens a recorded native Message or Finish only for independent assessment";
 
 pub(super) fn sequence_command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     sequence::command(args, credibility)
@@ -140,6 +140,13 @@ where
             Ok(())
         },
     )?;
+    if let Some(selected) = evaluation.as_ref().filter(|selected| selected.evaluate_only()) {
+        return selected.serve_history(
+            config, (&actor, &reviewer), inputs, publication.as_ref(),
+            history.as_ref().ok_or("historical evaluation requires independent history custody")?,
+            finishing, time,
+        );
+    }
     if operator.is_some() || precheck.is_some() || history.is_some() {
         let mode = match (finishing, after) {
             (Some(previous), _) => finish::Intent::Finish(previous),
@@ -496,6 +503,9 @@ where
         selected.check(&config, &[(actor, precheck_selection)], reviewer_profile, operator_selection, open)?;
     }
     if let Some(selected) = evaluation_selection {
+        if selected.evaluate_only() {
+            return Err("historical native evaluation requires the evaluation-only service".into());
+        }
         selected.check(
             &config, actor, reviewer_profile,
             (operator_selection, precheck_selection, history_selection),

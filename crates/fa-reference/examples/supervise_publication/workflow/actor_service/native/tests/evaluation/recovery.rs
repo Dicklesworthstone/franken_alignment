@@ -6,19 +6,19 @@ use fa_reference::round::review::andon::AndonBudget;
 
 const LATER_WINDOW: &str = r#"{"window":2,"start":100,"end":200,"false_stops_allowed":2,"cost_per_stop":9},"#;
 
-struct Original {
-    config: Config,
-    native: Inputs,
-    accounting: PathBuf,
-    anchor: PathBuf,
-    before: FileDeliverySnapshot,
+pub(super) struct Original {
+    pub(super) config: Config,
+    pub(super) native: Inputs,
+    pub(super) accounting: PathBuf,
+    pub(super) anchor: PathBuf,
+    pub(super) before: FileDeliverySnapshot,
 }
 
 fn prepared(root: &Root) -> Original {
     prepared_selected(root, false, None)
 }
 
-fn prepared_selected(root: &Root, recorded: bool, publication: Option<&PublicationProfile>) -> Original {
+pub(super) fn prepared_selected(root: &Root, recorded: bool, publication: Option<&PublicationProfile>) -> Original {
     let mut config = configured(root);
     let native = inputs(root, &config);
     let (actor, _) = profiles(root, &config);
@@ -79,7 +79,7 @@ fn prepared_selected(root: &Root, recorded: bool, publication: Option<&Publicati
     Original { config, native, accounting, anchor, before }
 }
 
-fn recovery_args(root: &Root, original: &Original, evaluator_pid: u32) -> Vec<String> {
+pub(super) fn recovery_args(root: &Root, original: &Original, evaluator_pid: u32) -> Vec<String> {
     let (actor, _) = profiles(root, &original.config);
     let peer = peer_file(root, &actor, evaluator_pid);
     let requirements = root.0.join("recovery-requirements.json");
@@ -126,7 +126,7 @@ fn limit() -> Deadline {
     }
 }
 
-fn stopping(reviewer: &PeerProfile) -> std::thread::JoinHandle<StopControlReceipt> {
+pub(super) fn stopping(reviewer: &PeerProfile) -> std::thread::JoinHandle<StopControlReceipt> {
     let mut client = reviewer.connect_stop_client(91).unwrap();
     std::thread::spawn(move || {
         let started = Instant::now();

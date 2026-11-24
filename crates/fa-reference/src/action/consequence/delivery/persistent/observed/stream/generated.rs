@@ -106,11 +106,18 @@ impl FileOversight {
     }
 
     fn text_message_request(&self, request: u64) -> Option<&FileTextMessageRequest> {
-        self.events.iter().find_map(|event| match event {
-            Event::TextMessage(source, _) if source.request == request => Some(source.as_ref()),
-            _ => None,
-        })
+        text_message_request(&self.events, request)
     }
+}
+
+// One historical source projection for the live owner and sealed recovery.
+// The caller must first validate the complete image; no event is imported.
+pub(in crate::action::consequence::delivery::persistent::observed)
+fn text_message_request(events: &[Event], request: u64) -> Option<&FileTextMessageRequest> {
+    events.iter().find_map(|event| match event {
+        Event::TextMessage(source, _) if source.request == request => Some(source.as_ref()),
+        _ => None,
+    })
 }
 
 impl Machine {

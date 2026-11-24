@@ -206,6 +206,9 @@ impl Selection {
     where
         F: FnMut() -> ElapsedTick,
     {
+        if self.evaluate_only {
+            return Err("historical native evaluation requires the evaluation-only service".into());
+        }
         let expected = self.recovery_requirements(config, inputs, &selected)?;
         let anchor = history.input().ok_or(super::USAGE)?;
         let (recovery, pending) = ready(

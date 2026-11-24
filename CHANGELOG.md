@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-24: receive delayed independent labels on native history
+
+- Add explicit evaluation-only reopening for recorded native Messages and
+  Finish requests, with the complete independent anchor/accounting contract.
+- Share immutable original Message and Finish selectors between live history
+  and sealed recovery. Bind exact recipes, prefixes and accepted target receipts
+  before fencing, including historical requests after later numerical work.
+- Keep authenticated Stop and one finite evaluator without actor/human-review
+  listeners, source/helper acquisition, generation resume or effect retries.
+  Preserve original work and charges and retain the final acknowledged anchor.
+- Add four service and two core regression tests. Source review and scoped
+  whitespace checks are complete; remote compilation/runtime qualification is pending.
+
 ## 2026-11-24: receive delayed independent labels on learned history
 
 - Add explicit evaluation-only reopening of an accounted learned Message or

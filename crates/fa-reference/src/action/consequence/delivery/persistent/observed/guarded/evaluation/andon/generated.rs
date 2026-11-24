@@ -7,7 +7,9 @@ use super::super::super::{
 };
 use super::FileAndonRecoveryRequirements;
 use crate::Error;
-use crate::action::consequence::activation::monitor::decoder::sampled::generation::tokenizer::ByteBpe;
+use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
+    text::TextGenerationRequest, tokenizer::ByteBpe,
+};
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::MAX_JOURNAL_EVENTS;
 use crate::action::consequence::delivery::persistent::observed::{
@@ -186,6 +188,35 @@ impl FileAndonGeneratedSourceRecovery {
         self.expected
             .check_replayed(profile, machine, events, &self.protocol)?;
         Ok(())
+    }
+
+    /// Select a recorded native Message only after the complete independent
+    /// anchor, guard, policy, accounting and floor checks. This immutable check
+    /// issues no live role and writes no Fence; later work does not invalidate
+    /// the original historical Message and its exact raw generation request.
+    pub fn recorded_message(
+        &self,
+        request: u64,
+        generation: u64,
+        expected: &TextGenerationRequest,
+    ) -> Result<(), JournalError> {
+        self.check_ready()?;
+        self.inner.recorded_message(request, generation, expected)
+    }
+
+    /// Select a recorded native Finish with its explicitly named native Message
+    /// predecessor, original Executed receipt and complete cumulative prefix.
+    /// All independently selected recovery contracts pass before this lookup.
+    /// No proposal, reconciliation, numerical work or effect right is produced.
+    pub fn recorded_finish(
+        &self,
+        after_request: u64,
+        request: u64,
+        generation: u64,
+        expected: &TextGenerationRequest,
+    ) -> Result<(), JournalError> {
+        self.check_ready()?;
+        self.inner.recorded_finish(after_request, request, generation, expected)
     }
 
     /// Publish exactly the original recovery Fence over the already verified

@@ -3,6 +3,8 @@
 //! source or token work. Recovery never restores old evaluator or human brands.
 #[path = "evaluation/recovery.rs"]
 pub(super) mod recovery;
+#[path = "evaluation/history.rs"]
+mod history;
 use super::{
     Config, FileHumanReviewer, FileOversight, Inputs, PeerProfile, Profile,
     PublicationProfile, anchors, debug, exact_precheck, operator,
@@ -16,19 +18,20 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use std::{collections::BTreeSet, path::{Path, PathBuf}};
 
-const USAGE: &str = "native evaluation requires serve-create, serve-open or their -checked forms with --native-text RECIPE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; open additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS and may select --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original contracts";
+const USAGE: &str = "native evaluation requires serve-create, serve-open or their -checked forms with --native-text RECIPE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; open additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS and may select --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original contracts; --evaluate-only selects an existing Message or Finish on open and excludes continuation, precheck and operator services";
 
 pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
     recovery: Option<PathBuf>,
+    evaluate_only: bool,
 }
 
 /// Own the entire opted-in grammar before other parsers can hide a conflicting
 /// mode. Recovery and resident paths cannot silently discard evaluation.
 pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Options>), String> {
     if !args.iter().any(|arg| matches!(
-        arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluation-recovery"
+        arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluation-recovery" | "--evaluate-only"
     )) {
         return Ok((args.to_vec(), None));
     }
@@ -40,7 +43,6 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
         _ => return Err(USAGE.into()),
     };
     if args.len() < positional + 8
-        || (args.len() - positional) % 2 != 0
         || args[1..positional].iter().any(|arg| arg.is_empty() || arg.starts_with("--"))
     {
         return Err(USAGE.into());
@@ -50,8 +52,18 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
     let mut recovery = None;
     let mut seen = BTreeSet::new();
     let mut continuing = false;
+    let mut evaluate_only = false;
     let mut remaining = args[..positional].to_vec();
-    for pair in args[positional..].chunks_exact(2) {
+    let mut index = positional;
+    while index < args.len() {
+        if args[index] == "--evaluate-only" {
+            if !open || std::mem::replace(&mut evaluate_only, true) {
+                return Err(USAGE.into());
+            }
+            index += 1;
+            continue;
+        }
+        let pair = args.get(index..index + 2).ok_or(USAGE)?;
         if pair[1].is_empty() || pair[1].starts_with("--") || !seen.insert(pair[0].as_str()) {
             return Err(USAGE.into());
         }
@@ -74,12 +86,15 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
             | "--operator-profile" | "--tower-generation" => remaining.extend_from_slice(pair),
             _ => return Err(USAGE.into()),
         }
+        index += 2;
     }
     if !seen.contains("--native-text")
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
         || open != seen.contains("--history-anchor")
         || open != recovery.is_some()
+        || (evaluate_only && ["--after-message", "--precheck-profile", "--operator-profile", "--tower-generation"]
+            .iter().any(|flag| seen.contains(flag)))
     {
         return Err(USAGE.into());
     }
@@ -87,6 +102,7 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
         accounting: accounting.ok_or(USAGE)?,
         peer: peer.ok_or(USAGE)?,
         recovery,
+        evaluate_only,
     })))
 }
 
@@ -95,6 +111,7 @@ pub(super) struct Selection {
     pub(super) peer: evaluator::Settings,
     inputs: Vec<PathBuf>,
     recovery: Option<recovery::Requirements>,
+    evaluate_only: bool,
 }
 
 impl Options {
@@ -112,7 +129,7 @@ impl Options {
             settings.creation()?;
         }
         let recovery = self.recovery.as_deref().map(recovery::Requirements::read).transpose()?;
-        Ok(Selection { settings, peer, inputs, recovery })
+        Ok(Selection { settings, peer, inputs, recovery, evaluate_only: self.evaluate_only })
     }
 }
 
@@ -151,6 +168,10 @@ fn check_contract_paths(
 }
 
 impl Selection {
+    pub(super) fn evaluate_only(&self) -> bool {
+        self.evaluate_only
+    }
+
     /// All audiences, credentials, paths and declared modes are checked before
     /// a clock, exclusive listener, store creation or native numerical operation.
     pub(super) fn check(
@@ -176,7 +197,9 @@ impl Selection {
         if history.output().is_none() || history.input().is_some() != open {
             return Err(USAGE.into());
         }
-        if operator.is_some_and(operator::Selection::is_governed) {
+        if operator.is_some_and(operator::Selection::is_governed)
+            || (self.evaluate_only && (!open || operator.is_some() || precheck.is_some()))
+        {
             return Err(USAGE.into());
         }
         check_contract_paths((config, actor, reviewer), services, &self.peer, &self.inputs)?;
@@ -216,7 +239,7 @@ impl Selection {
         inputs: &Inputs,
         selected: GeneratedSourceProfile,
     ) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String> {
-        if self.recovery.is_some() { return Err(USAGE.into()); }
+        if self.recovery.is_some() || self.evaluate_only { return Err(USAGE.into()); }
         self.settings.creation()?;
         let mut evaluation = FileGeneratedEvaluationConfig::new(self.settings.protocol.clone());
         if let Some(joint) = self.settings.joint {

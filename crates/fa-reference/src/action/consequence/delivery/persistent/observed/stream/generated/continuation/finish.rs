@@ -1,6 +1,9 @@
 //! Explicit closure of a confirmed native prefix, never an inferred EOS or Stop.
 use super::{EndpointOutcome, Error, FileOversight, JournalError, ReleaseFrame, confirmed_cut};
-use crate::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
+use crate::action::consequence::delivery::persistent::observed::{
+    Event, FileOversightProfile, Machine, stream::FileStreamProposal,
+};
+use crate::action::consequence::delivery::persistent::requests::FileRequestDisposition;
 use crate::action::{ElapsedTick, VERSION};
 
 impl FileOversight {
@@ -61,28 +64,54 @@ impl FileOversight {
         if self.fault.is_some() {
             return Err(JournalError::Unavailable);
         }
+        self.machine.recorded_decoder_text_finish_request(
+            &self.profile,
+            &self.events,
+            after_request,
+            request,
+        )
+    }
+}
+
+impl Machine {
+    // One immutable native Finish validator shared by the acknowledged live
+    // owner and its fully checked original recovery cursor. No current source,
+    // clock, numerical cursor or new actor proposal participates in this lookup.
+    pub(in crate::action::consequence::delivery::persistent::observed)
+    fn recorded_decoder_text_finish_request(
+        &self,
+        profile: &FileOversightProfile,
+        events: &[Event],
+        after_request: u64,
+        request: u64,
+    ) -> Result<FileStreamProposal, JournalError> {
         if request == 0 || after_request == 0 {
             return Err(Error::InvalidInput.into());
         }
-        if !self.generated_text_stream_required()? {
+        if !self.generated_text_only {
             return Err(Error::Binding.into());
         }
         let original = self
-            .machine
             .requests
             .original_spec(request)
             .ok_or(Error::Missing)?;
         let finish = ReleaseFrame::decode(&original.payload)?;
         if !finish.is_finish()
             || original.version != VERSION
-            || original.scope != self.profile.delivery.scope
+            || original.scope != profile.delivery.scope
             || !original.required_witnesses.is_empty()
             || original.units != original.payload.len() as u64
         {
             return Err(Error::Binding.into());
         }
-        let source = self.decoder_text_message_request(after_request)?;
-        let previous = self.request_action(after_request)?;
+        let source = super::super::text_message_request(events, after_request)
+            .ok_or(Error::Missing)?;
+        let previous = match self.requests.status(after_request)?.disposition {
+            FileRequestDisposition::NotAdmitted(_) => return Err(Error::WrongState.into()),
+            FileRequestDisposition::Admitted { attempt, .. } => {
+                self.actions.get(&attempt).ok_or(Error::Missing)?
+            }
+        };
         let message = ReleaseFrame::decode(&previous.spec().payload)?;
         let resulting_version = match self.request_resolution(after_request)? {
             Some(EndpointOutcome::Executed { resulting_version }) => resulting_version,
@@ -92,7 +121,7 @@ impl FileOversight {
         expected_target.expected_version = resulting_version;
         if message.is_finish()
             || finish.profile() != message.profile()
-            || finish.profile() != self.stream_snapshot()?.confirmed.profile()
+            || finish.profile() != self.stream_snapshot(events.len())?.confirmed.profile()
             || original.target != Some(expected_target)
             || !message
                 .prior_messages()
