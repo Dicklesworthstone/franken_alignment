@@ -486,6 +486,7 @@ fn explicit_successor_spends_the_original_remaining_poll_allowance() {
     assert_eq!(run.supervisor().host().unwrap().inspect().executions, 0);
 }
 
+#[path = "reserved_convening_boundaries.rs"]
 mod boundaries;
 #[path = "reserved_rounds.rs"]
 mod reserved_rounds;

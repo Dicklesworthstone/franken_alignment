@@ -1,6 +1,7 @@
 {
   "schema": "fa.source_snapshot/1",
   "files": {
+    ".cargo/config.toml": "5efb3f91a7cfe537646b92cec0b9e4e90fff539ebb03cc7f5cc46bc35447404c",
     "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md": "8ec294f36d0742f31bec17726d75c0ccb6198c0967177e173ca853ff1d26f4eb",
     "Cargo.lock": "81e54ed6d3c459ff6b4f9baa5d899bd23916f1ed7b5a260c0c6b765a09f936e5",
     "Cargo.toml": "478f63db5be768dcf165f43fb7fb3735060d6db63d1d6ca06d199801eedda526",

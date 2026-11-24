@@ -49,6 +49,7 @@ const EMBEDDED_INPUTS: &[&str] = &[
 ];
 
 const SNAPSHOT_PATHS: &[&str] = &[
+    ".cargo/config.toml",
     "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md",
     "Cargo.lock",
     "Cargo.toml",
@@ -112,6 +113,7 @@ impl Sandbox {
 
     fn write_baseline(&self) {
         for (path, contents) in [
+            (".cargo/config.toml", "[env]\nTMPDIR = \"/tmp\"\n"),
             (
                 "COMPREHENSIVE_PLAN_FOR_THE_DESIGN_OF_FRANKENALIGNMENT.md",
                 "## 2. Test plan contract\n",
@@ -318,6 +320,29 @@ fn unlisted_new_rust_source_is_a_discovery_refusal() {
         &verify_sandbox(&sandbox, &manifest),
         "unlisted_file",
         "xtask/src/unlisted.rs",
+    );
+}
+
+#[test]
+fn workspace_cargo_configuration_is_bound_under_both_supported_names() {
+    let sandbox = Sandbox::new();
+    let manifest = sandbox.manifest_bytes();
+    assert!(verify_sandbox(&sandbox, &manifest).is_verified());
+
+    let changed = "[env]\nTMPDIR = \"/other\"\n";
+    sandbox.write(".cargo/config", changed);
+    assert_refusal(
+        &verify_sandbox(&sandbox, &manifest),
+        "unlisted_file",
+        ".cargo/config",
+    );
+
+    fs::remove_file(sandbox.root.join(".cargo/config")).unwrap();
+    sandbox.write(".cargo/config.toml", changed);
+    assert_refusal(
+        &verify_sandbox(&sandbox, &manifest),
+        "digest_mismatch",
+        ".cargo/config.toml",
     );
 }
 

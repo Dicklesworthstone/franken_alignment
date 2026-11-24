@@ -35,7 +35,10 @@ use crate::json::{Json, Limits as JsonLimits, parse};
 pub const SNAPSHOT_SCHEMA: &str = "fa.source_snapshot/1";
 
 /// Directories whose every regular file is reviewed source.
-pub const SCAN_ROOTS: [&str; 8] = [
+pub const SCAN_ROOTS: [&str; 9] = [
+    // The driver invokes Cargo from the workspace root. Both config.toml and
+    // the legacy config name here can affect its metadata and build commands.
+    ".cargo",
     "crates/fa-reference/src",
     "crates/fa-reference/tests",
     "crates/fa-reference/examples",
