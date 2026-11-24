@@ -453,7 +453,7 @@ pub fn parse_manifest(bytes: &[u8], limits: Limits) -> Result<Manifest, String> 
 }
 
 /// Convert an absolute path inside `root` to its repo-relative form.
-fn repo_relative(path: &Path, root: &Path) -> Option<String> {
+pub(crate) fn repo_relative(path: &Path, root: &Path) -> Option<String> {
     let rest = path.strip_prefix(root).ok()?;
     let mut parts = Vec::new();
     for component in rest.components() {

@@ -128,7 +128,12 @@ fn run(root: &Path, program: &str, arguments: &[&str]) -> Result<(), String> {
     Ok(())
 }
 
-fn contained_file(root: &Path, value: &json::Json) -> Result<(), String> {
+fn reviewed_metadata_file(
+    root: &Path,
+    metadata_root: &Path,
+    value: &json::Json,
+    snapshot: &source_snapshot::Manifest,
+) -> Result<(), String> {
     let path = value
         .as_str()
         .ok_or("Metadata file path must be a string")?;
@@ -139,13 +144,32 @@ fn contained_file(root: &Path, value: &json::Json) -> Result<(), String> {
             "Metadata file escapes workspace or is not a file: {path}"
         ));
     }
+    // Check the spelling reported by Cargo as well as the resolved file. A
+    // link under an unreviewed directory must not borrow a reviewed target's
+    // identity. The workspace root itself may be a platform path alias.
+    let relative = source_snapshot::repo_relative(Path::new(path), metadata_root)
+        .ok_or_else(|| format!("Metadata file has no normal workspace-relative path: {path}"))?;
+    if resolved != root.join(&relative) {
+        return Err(format!(
+            "Metadata file resolves through a path alias: {path}"
+        ));
+    }
+    if snapshot.digest(&relative).is_none() {
+        return Err(format!(
+            "Metadata file is outside the verified source snapshot: {relative}"
+        ));
+    }
     Ok(())
 }
 
 // This checks real filesystem identities at collection time. It does not claim
 // a complete Rust include/module closure or protect against concurrent mutation;
 // the outer operator source freeze is still required.
-fn check_metadata_paths(root: &Path, bytes: &[u8]) -> Result<(), String> {
+fn check_metadata_paths(
+    root: &Path,
+    bytes: &[u8],
+    snapshot: &source_snapshot::Manifest,
+) -> Result<(), String> {
     let root = fs::canonicalize(root).map_err(|error| error.to_string())?;
     let document = json::parse(bytes, json::Limits::default())
         .map_err(|error| format!("Metadata parse failed: {error}"))?;
@@ -153,6 +177,7 @@ fn check_metadata_paths(root: &Path, bytes: &[u8]) -> Result<(), String> {
         .get("workspace_root")
         .and_then(json::Json::as_str)
         .ok_or("Metadata workspace root missing")?;
+    let metadata_root = Path::new(metadata_root);
     if fs::canonicalize(metadata_root).map_err(|error| error.to_string())? != root {
         return Err("Metadata belongs to a different workspace".into());
     }
@@ -161,20 +186,24 @@ fn check_metadata_paths(root: &Path, bytes: &[u8]) -> Result<(), String> {
         .and_then(json::Json::as_array)
         .ok_or("Metadata packages missing")?;
     for package in packages {
-        contained_file(
+        reviewed_metadata_file(
             &root,
+            metadata_root,
             package
                 .get("manifest_path")
                 .ok_or("Manifest path missing")?,
+            snapshot,
         )?;
         let targets = package
             .get("targets")
             .and_then(json::Json::as_array)
             .ok_or("Metadata target list missing")?;
         for target in targets {
-            contained_file(
+            reviewed_metadata_file(
                 &root,
+                metadata_root,
                 target.get("src_path").ok_or("Target source path missing")?,
+                snapshot,
             )?;
         }
     }
@@ -228,7 +257,7 @@ fn collect_metadata_using(
     Ok(output.stdout)
 }
 
-fn check_admission(root: &Path) -> Result<(), String> {
+fn check_admission(root: &Path, snapshot: &source_snapshot::Manifest) -> Result<(), String> {
     let bytes = fs::read(root.join("registry/dependency_policy.json"))
         .map_err(|error| format!("Cannot read dependency policy: {error}"))?;
     let policy = admission::parse_policy(&bytes)?;
@@ -240,10 +269,10 @@ fn check_admission(root: &Path) -> Result<(), String> {
             print!("{}", report.render());
             return Err(format!("Dependency admission refused for {target}"));
         }
-        check_metadata_paths(root, &metadata)?;
+        check_metadata_paths(root, &metadata, snapshot)?;
         print!("{}", report.render());
         println!(
-            "PASS collected_metadata_paths[{target}]: actual workspace, manifests and target source files"
+            "PASS collected_metadata_paths[{target}]: workspace manifests and target sources bound to the verified snapshot"
         );
     }
     Ok(())
@@ -646,7 +675,7 @@ fn execute() -> Result<(), String> {
             check_source(&root)?;
             check_toolchain(&root)?;
             let manifest = check_source_snapshot(&root)?;
-            check_admission(&root)?;
+            check_admission(&root, &manifest)?;
             check_registries(&root)?;
             check_concordance(&root, &manifest)?;
             check_system_map(&root)?;

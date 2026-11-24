@@ -3,7 +3,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::check_metadata_paths;
+use super::{check_metadata_paths, source_snapshot};
 
 static NEXT_TEMPORARY_DIRECTORY: AtomicU64 = AtomicU64::new(0);
 
@@ -21,6 +21,17 @@ impl TemporaryWorkspace {
         // Refuse a pre-existing path; Drop may remove only our own directory.
         fs::create_dir(&path).unwrap();
         Self { path }
+    }
+
+    fn snapshot(&self) -> source_snapshot::Manifest {
+        let digest = |path| source_snapshot::operator_file_digest(&self.path, path).unwrap();
+        let text = format!(
+            r#"{{"schema":"fa.source_snapshot/1","files":{{"Cargo.toml":"{}","src/lib.rs":"{}"}}}}"#,
+            digest("Cargo.toml"),
+            digest("src/lib.rs"),
+        );
+        source_snapshot::parse_manifest(text.as_bytes(), source_snapshot::Limits::default())
+            .unwrap()
     }
 
     fn create_file(&self, relative: &str) -> PathBuf {
@@ -87,7 +98,8 @@ fn metadata_paths_accept_real_workspace_manifest_and_target() {
     assert_eq!(
         check_metadata_paths(
             &workspace.path,
-            &metadata(&workspace.path, &manifest, &source)
+            &metadata(&workspace.path, &manifest, &source),
+            &workspace.snapshot(),
         ),
         Ok(())
     );
@@ -105,6 +117,7 @@ fn metadata_paths_refuse_target_symlink_escaping_workspace() {
     let error = check_metadata_paths(
         &workspace.path,
         &metadata(&workspace.path, &manifest, &escaped_target),
+        &workspace.snapshot(),
     )
     .unwrap_err();
 
@@ -119,6 +132,7 @@ fn metadata_paths_refuse_missing_target_file() {
     let error = check_metadata_paths(
         &workspace.path,
         &metadata(&workspace.path, &manifest, &missing_target),
+        &workspace.snapshot(),
     )
     .unwrap_err();
 
@@ -134,7 +148,75 @@ fn metadata_paths_refuse_metadata_from_different_workspace() {
         check_metadata_paths(
             &workspace.path,
             &metadata(&other_workspace.path, &other_manifest, &other_source),
+            &workspace.snapshot(),
         ),
         Err("Metadata belongs to a different workspace".into())
+    );
+}
+
+#[test]
+fn metadata_paths_require_reviewed_package_manifests_and_target_sources() {
+    let (workspace, manifest, source) = create_workspace("unlisted");
+    let snapshot = workspace.snapshot();
+    let unlisted_manifest = workspace.create_file("other/Cargo.toml");
+    let unlisted_target = workspace.create_file("benches/extra.rs");
+    for (reported_manifest, reported_target, expected) in [
+        (&unlisted_manifest, &source, "other/Cargo.toml"),
+        (&manifest, &unlisted_target, "benches/extra.rs"),
+    ] {
+        assert_eq!(
+            check_metadata_paths(
+                &workspace.path,
+                &metadata(&workspace.path, reported_manifest, reported_target),
+                &snapshot,
+            ),
+            Err(format!(
+                "Metadata file is outside the verified source snapshot: {expected}"
+            ))
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn metadata_paths_refuse_unreviewed_alias_to_reviewed_source() {
+    let (workspace, manifest, source) = create_workspace("reviewed-alias");
+    let snapshot = workspace.snapshot();
+    let alias = workspace.path.join("alias");
+    std::os::unix::fs::symlink(source.parent().unwrap(), &alias).unwrap();
+    let error = check_metadata_paths(
+        &workspace.path,
+        &metadata(&workspace.path, &manifest, &alias.join("lib.rs")),
+        &snapshot,
+    )
+    .unwrap_err();
+    assert!(
+        error.starts_with("Metadata file resolves through a path alias:"),
+        "{error}"
+    );
+}
+
+#[test]
+fn cargo_auto_discovered_bench_must_belong_to_the_reviewed_snapshot() {
+    let (workspace, manifest, _) = create_workspace("auto-bench");
+    fs::write(
+        manifest,
+        "[package]\nname = \"snapshot-fixture\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
+    )
+    .unwrap();
+    fs::write(
+        workspace.path.join("Cargo.lock"),
+        "version = 4\n\n[[package]]\nname = \"snapshot-fixture\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+    let snapshot = workspace.snapshot();
+    let collect = || super::collect_metadata(&workspace.path, "x86_64-unknown-linux-gnu").unwrap();
+    check_metadata_paths(&workspace.path, &collect(), &snapshot).unwrap();
+
+    let bench = workspace.create_file("benches/extra.rs");
+    fs::write(bench, b"fn main() {}\n").unwrap();
+    assert_eq!(
+        check_metadata_paths(&workspace.path, &collect(), &snapshot),
+        Err("Metadata file is outside the verified source snapshot: benches/extra.rs".into())
     );
 }
