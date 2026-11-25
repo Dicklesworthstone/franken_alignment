@@ -29,6 +29,14 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
+with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
+for evaluation only. Fixed sixteen-case pages retain original case identities,
+censored outcomes, explicit unfinished-review counts and revision-bound
+continuation. Every page uses the original evaluator authority and finite
+service allowance; discovery grants no publication key. Source and regression
+work is present, with required remote execution qualification pending.
+
 The [resident native publication service](docs/RESIDENT_NATIVE_PUBLICATION.md)
 now connects multiple generated Messages and an optional explicit Finish through
 one original decoder, stream, source custodian and journal. Each release needs

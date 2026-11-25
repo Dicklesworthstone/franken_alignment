@@ -1,5 +1,53 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: bounded discovery of original pending evaluation cases
+
+The independently held `FileIndependentEvaluator` now enumerates retained
+unassessed and censored applied reviews across policy generations in fixed
+16-case pages. Minimal original identities, the complete pending count and the
+separate unfinished-review count come from one immutable original owner. No
+verdict, assessment evidence, native ticket, evaluator role or effect key is
+copied. An empty applied inventory does not claim unfinished reviews are safe.
+
+The live `evaluator-case EVALUATOR_PROFILE --pending` adapter uses the same
+authenticated endpoint, original candidate/I/O/byte/time budgets and Stop-first
+service path as exact-round lookup and assessment. Explicit continuation binds
+the global evaluation revision and a pending round boundary. New applied cases
+or changed labels invalidate the cursor; clock-only changes and exact retries
+do not. A stale or invalid same-owner cursor yields explicit Unknown; foreign,
+recovered-old or faulted custody refuses before disclosure. The existing
+exact-round command and wire schemas remain compatible.
+
+Native and learned `--evaluate-only` services use this same evaluator service.
+Discovery needs no operator endpoint, current publication source or guessed
+round ID. Every page is a separate finite candidate; no automatic pagination,
+assessment or retry is added. The [operator contract](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
+documents the new closed schemas and the precise applied-suffix completeness.
+
+Six public core and fifteen protocol/service/client regression definitions cover
+real review and separate human publication keys, pagination, censored labels,
+older policy cases, guarded recovery, stale cursors, immutable journal bytes,
+credential/owner refusal, EOF/Stop and finite transport work. The existing native
+historical Message/Hold/Finish regression now gives the recovered evaluator no
+round ID: it discovers the pending inventory and constructs its independent
+assessment entirely from the returned case and evaluation revision, retaining
+the original two-candidate allowance and source/numerical/effect assertions.
+
+Independent source review found no blocker. An initial combined formatter
+attempt lost its execution connection before returning a result. After workspace
+recovery and integration of concurrent main changes, all sixteen changed Rust
+files passed scoped parsing/format checks with rustfmt 1.10.0-nightly
+(2026-09-07); whitespace and registry JSON checks also passed. A pending-specific
+2 KiB request cap preserves space for sixteen full-width case identities within
+the unchanged 24 KiB response bound, with boundary and maximum-page regressions.
+Required remote RCH compilation, runtime tests, Clippy and canonical qualification
+remain pending; the runner was absent before Cargo could start. The concurrently
+added all-case native enumeration and authenticated `--list` command retain
+their stricter journal-and-evaluation cursor; pending-only enumeration fixes the
+applied inventory revision and returns a fresh per-page journal basis. FA-105/134
+and the scoped discovery bead remain in progress. Source review, formatter
+parsing and authored regressions do not establish execution.
+
 ## 2026-11-25: derive risk-theater findings from typed control history
 
 The bounded FA-125 reference query engine now derives roster-churn, autonomy

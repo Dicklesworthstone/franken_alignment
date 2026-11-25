@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-25: discover pending independent evaluations without known round IDs
+
+- Extend `evaluator-case` with explicit `--pending` discovery through the original
+  authenticated evaluator endpoint and the same finite transport allowance.
+- Return up to sixteen minimal unassessed/censored case identities per page across
+  policy generations. Separate unfinished reviews from labelable applied cases.
+- Pin continuation to the original evaluation revision; changed cases or labels
+  require explicit rediscovery. Preserve original role custody, Stop, response
+  limits and independent assessment without new clock, source or effect work.
+- Add native, protocol, service and client regressions and extend actual recovered
+  evaluation-only history coverage. Preserve the exact-round command and schemas.
+  Remote compilation and execution qualification remain pending.
+
 ## 2026-11-25: derive governance findings from declared typed facts
 
 - Add immutable, scoped reference queries for helper retirement after confirmed

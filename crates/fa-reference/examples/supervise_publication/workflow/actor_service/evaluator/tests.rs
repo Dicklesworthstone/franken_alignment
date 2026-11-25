@@ -52,6 +52,10 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        Self::with_case_capacity(8)
+    }
+
+    fn with_case_capacity(capacity: usize) -> Self {
         let root = Directory::new();
         let (socket, _) = UnixStream::pair().unwrap();
         let credentials = PeerCredentials::observe(&socket).unwrap();
@@ -73,6 +77,10 @@ impl Fixture {
         .unwrap();
         config.store = root.0.join("store");
         config.profile = credibility::profile();
+        config.profile.delivery.max_attempts = capacity;
+        if capacity > 8 {
+            config.profile.delivery.total = capacity as u64 * 16;
+        }
         config.profile.delivery.clock_domain = crate::config::CLOCK_DOMAIN;
         let actor = Profile {
             request: 7,
@@ -873,6 +881,12 @@ mod cases_service;
 
 #[path = "tests/cases_client.rs"]
 mod cases_client;
+
+#[path = "tests/pending_service.rs"]
+mod pending_service;
+
+#[path = "tests/pending_client.rs"]
+mod pending_client;
 
 #[test]
 fn narrowed_actor_deadline_refuses_a_late_label_and_cannot_renew_the_original_service() {

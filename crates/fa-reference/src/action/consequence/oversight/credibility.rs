@@ -5,9 +5,14 @@
 //! or institutional independence. No consensus-to-ground-truth conversion exists.
 
 mod cases;
+mod discovery;
 pub mod native_andon;
 pub(crate) use cases::CasePage;
 pub use cases::{EvaluationCaseStatus, EvaluationCaseSummary, MAX_EVALUATION_CASE_PAGE};
+pub use discovery::{
+    MAX_PENDING_EVALUATION_PAGE, PendingEvaluationCase, PendingEvaluationPage,
+    PendingEvaluationStatus,
+};
 
 use super::CommitteeContract;
 use crate::Error;

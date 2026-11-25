@@ -10,7 +10,7 @@ use crate::round::review::andon::{AndonBudget, AndonLedger};
 use super::super::credibility::{
     Assessment, CasePage, CredibilityLedger, CredibilityPromotion, CredibilityReport,
     EvaluationCase, EvaluationProtocol, EvaluationTicket, IndependentEvaluator, PendingCase,
-    QualificationFailure, SealedAssessment,
+    PendingEvaluationPage, QualificationFailure, SealedAssessment,
 };
 use super::super::joint_credibility::{
     self, JointPromotionPolicy, JointPromotionReport, ReplayBasis,
@@ -282,6 +282,20 @@ impl OversightBroker {
         }
         Ok(page)
     }
+
+    /// Enumerate original applied cases still awaiting final independent truth.
+    /// This bounded read retains all policy strata and names unapplied reviews
+    /// separately; it neither creates a case nor seals an assessment.
+    pub fn pending_evaluation_cases(
+        &self,
+        continuation: Option<(u64, u64)>,
+    ) -> Result<PendingEvaluationPage, Error> {
+        let state = self.credibility.as_ref().ok_or(Error::Incomplete)?;
+        state
+            .ledger
+            .pending_cases(continuation, state.unfinished.len())
+    }
+
     pub fn record_evaluation(&mut self, label: SealedAssessment) -> Result<bool, Error> {
         let observed_at = self.inspect().ledger.elapsed;
         let ledger = &mut self.credibility.as_mut().ok_or(Error::Incomplete)?.ledger;

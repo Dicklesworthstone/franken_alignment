@@ -2822,7 +2822,13 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs",
+        "crates/fa-reference/src/action/consequence/oversight/credibility/discovery.rs",
+        "crates/fa-reference/tests/file_evaluation_discovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/protocol/pending.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_protocol.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_client.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3906,7 +3912,13 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs",
+        "crates/fa-reference/src/action/consequence/oversight/credibility/discovery.rs",
+        "crates/fa-reference/tests/file_evaluation_discovery.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/protocol/pending.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_protocol.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_service.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_client.rs"
       ],
       "founding_ideas": [
         "FI-A06"

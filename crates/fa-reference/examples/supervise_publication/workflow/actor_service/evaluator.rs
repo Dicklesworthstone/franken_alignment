@@ -18,7 +18,9 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     FileOversight, credibility::FileIndependentEvaluator,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor;
-use protocol::{Basis, Outcome, Request, case::CaseRequest, cases::CasesRequest};
+use protocol::{
+    Basis, Outcome, Request, case::CaseRequest, cases::CasesRequest, pending::PendingRequest,
+};
 use std::{
     fs,
     io::{self, Read, Write},
@@ -43,6 +45,7 @@ enum Operation {
     Assess(Request),
     Case(CaseRequest),
     Cases(CasesRequest),
+    Pending(PendingRequest),
 }
 
 impl Operation {
@@ -53,6 +56,7 @@ impl Operation {
             .map(Self::Assess)
             .or_else(|_| CaseRequest::accept(settings, bytes).map(Self::Case))
             .or_else(|_| CasesRequest::accept(settings, bytes).map(Self::Cases))
+            .or_else(|_| PendingRequest::accept(settings, bytes).map(Self::Pending))
     }
 }
 
@@ -344,6 +348,16 @@ impl Service {
                 )
             }
             Operation::Cases(request) => {
+                let host = supervisor.host().map_err(debug)?;
+                if host.inspect().stop.is_some() || self.started.elapsed() >= self.wall {
+                    return Err("original evaluator owner is stopped or expired".into());
+                }
+                request.observe(
+                    &host,
+                    self.evaluator.as_ref().ok_or("evaluator role retired")?,
+                )
+            }
+            Operation::Pending(request) => {
                 let host = supervisor.host().map_err(debug)?;
                 if host.inspect().stop.is_some() || self.started.elapsed() >= self.wall {
                     return Err("original evaluator owner is stopped or expired".into());

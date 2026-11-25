@@ -6,6 +6,7 @@ use super::{
         self, Request,
         case::{self, CaseRequest},
         cases::{self, CasesRequest},
+        pending::{self, PendingRequest},
     },
 };
 use crate::config::{debug, read_regular};
@@ -25,7 +26,7 @@ use std::{
 mod transport;
 
 pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
-    const USAGE: &str = "usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND | evaluator-case EVALUATOR_PROFILE --list LIMIT [--after ROUND --at-journal REV --at-evaluation REV]";
+    const USAGE: &str = "usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND | evaluator-case EVALUATOR_PROFILE --list LIMIT [--after ROUND --at-journal REV --at-evaluation REV] | evaluator-case EVALUATOR_PROFILE --pending [--evaluation-revision REVISION --after-round ROUND]";
     if args.len() < 3
         || !matches!(args[0].as_str(), "evaluator-assess" | "evaluator-case")
         || args[1].is_empty()
@@ -62,6 +63,19 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
             after_round,
             expected_basis,
         }
+    } else if args[0] == "evaluator-case" && args[2] == "--pending" {
+        if !matches!(args.len(), 3 | 7) {
+            return Err(USAGE.into());
+        }
+        let continuation = if args.len() == 3 {
+            None
+        } else {
+            if args[3] != "--evaluation-revision" || args[5] != "--after-round" {
+                return Err(USAGE.into());
+            }
+            Some((integer(&args[4], false)?, integer(&args[6], false)?))
+        };
+        Input::Pending(continuation)
     } else {
         if args.len() != 3 || args[2].is_empty() || args[2].starts_with("--") {
             return Err(USAGE.into());
@@ -90,6 +104,7 @@ fn integer(value: &str, zero: bool) -> Result<u64, String> {
 enum Input<'a> {
     Assessment(&'a Path),
     Case(u64),
+    Pending(Option<(u64, u64)>),
     Cases {
         limit: usize,
         after_round: Option<u64>,
@@ -101,6 +116,7 @@ enum Outbound {
     Assessment(Request),
     Case(CaseRequest),
     Cases(CasesRequest),
+    Pending(PendingRequest),
 }
 
 impl Outbound {
@@ -109,6 +125,7 @@ impl Outbound {
             Self::Assessment(request) => &request.wire,
             Self::Case(request) => &request.wire,
             Self::Cases(request) => &request.wire,
+            Self::Pending(request) => &request.wire,
         }
     }
 
@@ -119,6 +136,7 @@ impl Outbound {
             }
             Self::Case(request) => case::validate(request, wire),
             Self::Cases(request) => cases::validate(request, wire),
+            Self::Pending(request) => pending::validate(request, wire),
         }
     }
 
@@ -132,6 +150,9 @@ impl Outbound {
             }
             Self::Cases(_) => {
                 "original evaluation case listing is unknown; the pinned history or cursor is unavailable; start an explicit new listing before continuing"
+            }
+            Self::Pending(_) => {
+                "pending evaluation cursor is stale or invalid; explicitly rediscover before selecting another page or label"
             }
         }
     }
@@ -159,6 +180,9 @@ fn send(profile: &Path, input: Input<'_>, output: &mut impl Write) -> Result<(),
             &read_regular(path, MAX_ASSESSMENT_BYTES)?,
         )?),
         Input::Case(round) => Outbound::Case(CaseRequest::prepare(&settings, round)?),
+        Input::Pending(continuation) => {
+            Outbound::Pending(PendingRequest::prepare(&settings, continuation)?)
+        }
         Input::Cases {
             limit,
             after_round,

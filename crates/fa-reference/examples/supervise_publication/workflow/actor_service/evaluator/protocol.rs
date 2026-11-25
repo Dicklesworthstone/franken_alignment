@@ -4,6 +4,8 @@
 pub(crate) mod case;
 #[path = "protocol/cases.rs"]
 pub(crate) mod cases;
+#[path = "protocol/pending.rs"]
+pub(crate) mod pending;
 
 use super::{
     Settings,

@@ -17,6 +17,10 @@ use crate::Error;
 use crate::action::consequence::oversight::credibility::{
     Assessment, CredibilityPromotion, CredibilityReport, EvaluationCase, EvaluationProtocol,
 };
+pub use crate::action::consequence::oversight::credibility::{
+    MAX_PENDING_EVALUATION_PAGE, PendingEvaluationCase, PendingEvaluationPage,
+    PendingEvaluationStatus,
+};
 use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -102,6 +106,28 @@ impl FileIndependentEvaluator {
     ) -> Result<FileEvaluationTicket, JournalError> {
         self.check_owner(host)?;
         host.evaluation_ticket(round)
+    }
+
+    /// Discover pending and censored original applied cases without knowing
+    /// round IDs in advance. The initial query uses None; an explicit next page
+    /// uses the prior page's `(evaluation_revision, next_after_round)`.
+    ///
+    /// Every read checks this exact original evaluator brand before observing
+    /// any owner state. A changed evaluation revision refuses continuation
+    /// rather than silently skipping a newly applied or changed earlier case.
+    /// This copies only minimal evidence, not native tickets or evaluator,
+    /// helper, human, clock, source, replay or effect authority. It writes no
+    /// journal event and does not refresh eligibility.
+    pub fn pending_evaluation_cases(
+        &self,
+        host: &FileOversight,
+        continuation: Option<(u64, u64)>,
+    ) -> Result<PendingEvaluationPage, JournalError> {
+        self.check_owner(host)?;
+        host.machine
+            .broker
+            .pending_evaluation_cases(continuation)
+            .map_err(Into::into)
     }
 
     /// Exact repeats return false without another journal record. A censored

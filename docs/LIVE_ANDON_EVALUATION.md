@@ -484,6 +484,72 @@ Stop precedence and source-only verification boundary.
 
 ## Discover the original case before labeling
 
+### Discover pending cases without a round ID
+
+Use the same independent evaluator endpoint to find original reviews that still
+need a final assessment, including retained history reopened with
+`--evaluate-only`:
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  evaluator-case EVALUATOR_PROFILE --pending
+```
+
+The response contains at most 16 original applied cases in ascending round
+order. Each entry carries the same minimal case identity as exact-round lookup
+and a status of `unassessed` or `censored`. Final benign/violation labels are
+excluded. Older policy generations remain discoverable. `total_pending` counts
+the complete retained applied pending/censored inventory; `unfinished_reviews`
+separately counts reviews that have no successfully applied case and cannot yet
+be labeled. An empty applied inventory does not say unfinished reviews passed.
+
+The `fa.native-evaluator-pending-request/1` request binds the original audience
+and optional continuation. The `fa.live-evaluator-pending/1` response wraps the
+page in `Knowledge` with one immutable original-owner basis. Identity fields,
+counts and revision coordinates are canonical decimal strings; a fresh empty
+inventory may have evaluation revision zero. Pending requests have a 2 KiB
+limit so the complete echoed request and sixteen descriptors fit the existing
+24 KiB response bound. No request enlarges the native 512-case inventory.
+
+If `knowledge.value.next_after_round` is non-null, explicitly request the next
+page using it and `knowledge.basis.evaluation_revision`:
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  evaluator-case EVALUATOR_PROFILE --pending \
+  --evaluation-revision REVISION --after-round ROUND
+```
+
+Both cursor options are required together in that order and take nonzero
+canonical decimal integers. `complete:true` closes only the applied pending-case
+suffix strictly after the requested boundary at the reported evaluation cut.
+It does not authenticate an external history, close unfinished reviews or make
+claims about future cases. The original owner supplies the enumeration; wire
+checks validate the declared page and its request binding.
+
+A new applied review or changed assessment invalidates an older continuation,
+including changes to a round before its boundary. The response then reports
+explicit `Unknown` with no invented current basis or cases; start a new discovery
+explicitly. A clock-only event, exact assessment retry or newly started but
+unapplied review does not change the applied-case revision. Each page and each
+later assessment spends a separate candidate from the original finite service
+allowance. The client never paginates, retries or labels automatically.
+
+Pending discovery pins only the applied evaluation inventory, unlike `--list`,
+which pins both the journal and evaluation revisions across all retained cases.
+Every pending page returns its current journal, control and authority basis;
+clock-only changes between pages therefore do not imply a single journal cut.
+
+Use a returned case identity and evaluation revision to prepare the existing
+independent assessment. Origin, evidence and truth still come from the
+independent evaluator. Discovery does not reserve that revision, supply a native
+ticket or approve an effect. Original owner/fault checks, kernel credentials,
+EOF sealing, Stop priority and finite I/O/byte/deadline budgets apply unchanged.
+No source refresh, native clock event, generation, helper work or journal write
+is performed by discovery.
+
+### Read one exact original case
+
 The same independently configured evaluator can read one exact applied case
 without reopening the live journal:
 
@@ -658,6 +724,14 @@ and healthy storage before disclosure. Equal numeric scope or case IDs cannot
 transfer custody; recovery does not restore an old role. The read does not
 observe Time, label a case or change the journal.
 
+`pending_evaluation_cases(&host, None)` returns the initial bounded inventory
+page. Continue with `Some((page.evaluation_revision(), next_after_round))`.
+The sealed page contains read-only minimal case observations, total pending and
+unfinished counts, and an optional next boundary. It contains no evaluator role,
+member verdicts, assessment origins/evidence, human key or native ticket. The
+same original-issuer and healthy-owner checks precede every page, including a
+stale or malformed continuation.
+
 The shared assessment adapter performs the same check before case lookup or a
 benign assessment's Time event. A foreign role therefore cannot partially
 timestamp a replacement owner before the final native label guard refuses it.
@@ -771,11 +845,4 @@ new functions have received independent source review; their compilation,
 formatting and runtime execution remain unverified because RCH is unavailable.
 
 Authored regressions cover actual scheduled publication and anchored recovery,
-live native assessments and Ledger observations, original later two-key
-publication, wrong case/audience/revision, exact retry, finite reconnects,
-partial frames, Stop, lost replies, uncertain persistence, receipt tampering,
-source independence and custody collisions. These are test definitions, not
-executed evidence. Scoped syntax/format checks and independent source review
-were performed. Compilation, runtime tests, Clippy and the canonical gate remain
-pending because required remote-only RCH is unavailable. No packet or production
-qualification is closed by this integration.
+l
