@@ -1,5 +1,33 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: derive risk-theater findings from typed control history
+
+The bounded FA-125 reference query engine now derives roster-churn, autonomy
+and audit-funding findings from typed records rather than caller-authored family
+scores. Its immutable policy binds the exact run scope, evaluation owner,
+generation, retirement window and minimum dwell. Exact support changes feed the
+existing checked score/retraction kernel while family completeness stays explicit.
+
+The profile declares one control-sequence domain and admits every consecutive
+boundary, including empty ones. New facts cannot be backdated. Exact retractions
+retain lifetime identity and history accounting, and failed updates preserve the
+preceding snapshot. Report evidence distinguishes unavailable inputs, named
+reports and explicitly closed absence. A report must bind the exact transition
+and precede it; later labels cannot retrospectively authorize an action.
+
+This is an L8 reference capability serving FI-A18/A13 and the existing FS-08
+concordance. The live native Findings surface continues to report missing
+standing-query inputs as Unknown. No policy, effect authority, authentication
+claim or durable native incident is created by this projection.
+
+Eighteen public regression functions cover the first three predicates and their
+causal boundaries. Independent source review and GitHub content verification are
+separate from execution: no Rust/RCH tooling was installed, and the execution
+workspace disconnected before implementation. Formatting, compilation, Clippy,
+runtime tests and the canonical remote gate have not run. FA-125 and its
+existing bead remain in progress with their original acceptance conditions.
+See [the typed query contract](docs/RISK_THEATER_QUERIES.md).
+
 ## 2026-11-25: discover cases through the original authenticated evaluator service
 
 `evaluator-case EVALUATOR_PROFILE --list LIMIT` now exposes the native bounded

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-25: derive governance findings from declared typed facts
+
+- Add immutable, scoped reference queries for helper retirement after confirmed
+  holds, autonomy dwell/report violations and unfunded scheduled audits.
+- Distinguish closed report absence from unavailable evidence; retain exact
+  support and lifetime record identity through atomic history corrections.
+- Feed derived changes into the existing checked detector and keep per-family
+  completeness alongside the result.
+- Add positive and causal regression sources. Native ingestion and qualification
+  remain open; no compilation or runtime execution is claimed.
+
 ## 2026-11-25: list historical cases through the authenticated live evaluator
 
 - Extend `evaluator-case` with bounded listing and explicit revision-pinned

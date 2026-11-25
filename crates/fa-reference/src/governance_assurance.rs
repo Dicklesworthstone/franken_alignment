@@ -4,6 +4,8 @@
 //! & witness-cached `fa precheck` (plan §4.3, §6.7, §7.6, §8.3, §14.1, §15.8, §16.6, §17.1,
 //! §18.1; FI-A06, FI-A09, FI-A13, FI-A16, FI-A17, FI-I15).
 
+pub mod risk_theater_queries;
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::action::consequence::Consequence;

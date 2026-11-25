@@ -3510,6 +3510,10 @@
       "result_artifacts": [
         "crates/fa-reference/src/governance_assurance.rs",
         "crates/fa-reference/tests/risk_theater.rs",
+        "crates/fa-reference/src/governance_assurance/risk_theater_queries.rs",
+        "crates/fa-reference/src/governance_assurance/risk_theater_queries/basic.rs",
+        "crates/fa-reference/tests/risk_theater_queries.rs",
+        "docs/RISK_THEATER_QUERIES.md",
         "docs/RISK_THEATER_REFERENCE.md",
         "docs/TOWER_GOVERNANCE_FINDINGS.md",
         "crates/fa-reference/src/action/consequence/delivery/persistent/requests/actor/governance_ledger/findings.rs",
