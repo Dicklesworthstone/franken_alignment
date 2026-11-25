@@ -1,5 +1,44 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: delayed independent evaluation of ordinary Tower history
+
+Ordinary Tower `serve-open` and `serve-open-checked` now accept an explicit
+`--evaluate-only` selection. The original guarded Andon cursor verifies the
+complete immutable history and selected recorded request IDs before its sole
+Fence. Recovery requires the original protocol, complete accounting windows,
+evaluation floor, independently retained input anchor and a new successor anchor.
+Plain and simple-witness checked publication retain their original marginal or
+joint accounting contract.
+
+The service binds only the independently authenticated evaluator and original
+Stop endpoint. It performs no actor intake, source or witness acquisition,
+helper/human review, generation resume, effect retry or Time/Sweep reconciliation.
+Original held, refused and uncertain requests remain historical cases; existing
+charges remain in force. Stop is checked through every replay boundary, Ready
+and immediately before fencing. A previously stopped owner refuses evaluation
+after retaining its one Fence, without automatically resuming old cleanup.
+Evaluator retirement precedes final history retention, including acknowledged
+labels, terminal Stop and healthy startup refusals.
+
+Eleven service regression functions cover real prior publication and delayed
+independent case discovery/labeling, original Hold cost, exhausted evaluator
+allowances, exact rollback/accounting/custody refusals, Ready and final pre-Fence
+Stop, incomplete frames, endpoint aliases, healthy startup refusal and stopped
+owner retention. A profile matrix covers checked marginal, plain joint and
+checked joint history with individually changed original guards. Two parser
+regressions cover the unary option at every complete option boundary, unsupported
+combinations and dispatch before file reads. Fixtures establish original custody
+and accounting boundaries, not real-world detector quality.
+
+Independent source review, blob integrity checks and tracked whitespace checks
+are complete. The core request selector in the preceding commit passed its scoped
+syntax/format checks. The final service/parser/test batch remains unformatted and
+uncompiled: the execution environment disconnected, and the restored checkout has
+no Rust or remote RCH tools. Compilation, runtime tests, Clippy and canonical
+qualification remain pending. FA-105/134 and existing evaluation/recovery Beads
+remain in progress. See the
+[operator contract](docs/LIVE_ANDON_EVALUATION.md#evaluate-recorded-ordinary-tower-history).
+
 ## 2026-11-25: bounded discovery of original pending evaluation cases
 
 The independently held `FileIndependentEvaluator` now enumerates retained

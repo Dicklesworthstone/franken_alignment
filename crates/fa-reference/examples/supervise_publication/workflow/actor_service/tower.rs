@@ -26,7 +26,8 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, but reject governor, topology, standalone prechecks and credibility activation; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
+const HISTORY_USAGE: &str = "--evaluate-only requires serve-open or serve-open-checked with --tower-generation, --requests, --andon, --evaluator-profile and --guarded; select an independently retained input history and new retain_history_anchor in the guarded profile; operator, precheck, topology, governance and credibility selections are not supported";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, but reject governor, topology, standalone prechecks and credibility activation; ordinary Andon open modes accept --evaluate-only with --evaluator-profile and explicit recorded --requests, retaining independent input/output history in --guarded; this mode rejects operator, precheck, topology, governance and credibility selections; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -45,6 +46,7 @@ struct Arguments<'a> {
     andon: Option<&'a Path>,
     retain_history: Option<&'a Path>,
     evaluator: Option<&'a Path>,
+    evaluate_only: bool,
 }
 
 impl<'a> Arguments<'a> {
@@ -58,8 +60,7 @@ impl<'a> Arguments<'a> {
         };
         let positional = if checked { 5 } else { 4 };
         if args.len() < positional + 2
-            || args.len() > positional + 20
-            || !(args.len() - positional).is_multiple_of(2)
+            || args.len() > positional + 21
             || args[1..positional]
                 .iter()
                 .any(|value| value.is_empty() || value.starts_with("--"))
@@ -77,9 +78,22 @@ impl<'a> Arguments<'a> {
         let mut andon = None;
         let mut retain_history = None;
         let mut evaluator = None;
+        let mut evaluate_only = false;
         // Each opt-in owns one complete pair. Operator read custody is separate
         // from admission-time precheck disclosure and cannot widen actor grants.
-        for pair in args[positional..].chunks_exact(2) {
+        // Historical evaluation is an explicit unary mode, never a value that
+        // another option or a different service grammar may silently consume.
+        let mut index = positional;
+        while index < args.len() {
+            if args[index] == "--evaluate-only" {
+                if evaluate_only {
+                    return Err(HISTORY_USAGE.into());
+                }
+                evaluate_only = true;
+                index += 1;
+                continue;
+            }
+            let pair = args.get(index..index + 2).ok_or(USAGE)?;
             match pair[0].as_str() {
                 FLAG if generation.is_none() => {
                     let value = &pair[1];
@@ -158,6 +172,22 @@ impl<'a> Arguments<'a> {
                 }
                 _ => return Err(USAGE.into()),
             }
+            index += 2;
+        }
+        if evaluate_only
+            && (!open
+                || andon.is_none()
+                || evaluator.is_none()
+                || guarded.is_none()
+                || requests.is_none()
+                || retain_history.is_some()
+                || operator.is_some()
+                || precheck.is_some()
+                || precheck_schedule.is_some()
+                || topology.is_some()
+                || governor.is_some())
+        {
+            return Err(HISTORY_USAGE.into());
         }
         if (precheck_schedule.is_some()
             && (requests.is_none() || (open && guarded.is_none()) || precheck.is_some()))
@@ -209,6 +239,7 @@ impl<'a> Arguments<'a> {
             andon,
             retain_history,
             evaluator,
+            evaluate_only,
         })
     }
 }
@@ -274,30 +305,42 @@ where
         inputs.extend(selected.operator);
         inputs.extend(selected.evaluator);
         inputs.extend(selected.guarded);
-        return super::andon::serve(
-            config,
-            &actor,
-            &reviewer,
-            publication.as_ref(),
-            super::andon::Selection {
-                settings: &settings,
-                mode: match recovery.as_ref() {
-                    Some(profile) => super::andon::Mode::Existing(profile),
-                    None => super::andon::Mode::Create(
-                        selected
-                            .retain_history
-                            .expect("Andon creation custody checked before reads"),
-                    ),
-                },
-                requests,
-                generation: selected.generation,
-                operator: operator.as_ref(),
-                evaluator: evaluator.as_ref(),
-                prechecks: prechecks.as_ref(),
-                inputs: &inputs,
+        let selection = super::andon::Selection {
+            settings: &settings,
+            mode: match recovery.as_ref() {
+                Some(profile) => super::andon::Mode::Existing(profile),
+                None => super::andon::Mode::Create(
+                    selected
+                        .retain_history
+                        .expect("Andon creation custody checked before reads"),
+                ),
             },
-            time,
-        );
+            requests,
+            generation: selected.generation,
+            operator: operator.as_ref(),
+            evaluator: evaluator.as_ref(),
+            prechecks: prechecks.as_ref(),
+            inputs: &inputs,
+        };
+        return if selected.evaluate_only {
+            super::andon::serve_history(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                selection,
+                time,
+            )
+        } else {
+            super::andon::serve(
+                config,
+                &actor,
+                &reviewer,
+                publication.as_ref(),
+                selection,
+                time,
+            )
+        };
     }
     let recovery_prechecks = if selected.open {
         selected

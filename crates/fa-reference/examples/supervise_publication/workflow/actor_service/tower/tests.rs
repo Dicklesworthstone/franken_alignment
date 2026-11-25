@@ -12,6 +12,9 @@ mod recovery;
 #[path = "tests/governor.rs"]
 mod governor;
 
+#[path = "tests/history.rs"]
+mod history;
+
 #[test]
 fn explicit_generation_selects_only_the_four_ordinary_service_profiles() {
     for (mode, count, open) in [

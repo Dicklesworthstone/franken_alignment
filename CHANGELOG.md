@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-11-25: evaluate ordinary Tower history without publication re-entry
+
+- Add explicit `--evaluate-only` to ordinary Tower `serve-open` and
+  `serve-open-checked`, requiring recorded request IDs, the original Andon
+  contract, an independently held evaluator, and guarded input/output history.
+- Select exact original requests before the sole Fence. Bind only the evaluator
+  and authenticated Stop endpoints; preserve cases, marginal/joint accounting
+  and uncertain effect charges without source/helper acquisition or retries.
+- Preserve Stop priority through replay and Ready, finite evaluator allowances,
+  endpoint/input custody, and final acknowledged history. Refuse a previously
+  stopped owner without resuming its old cleanup.
+- Add eleven service regressions and two parser regressions, including delayed
+  labels, original Hold, exhausted allowances, checked/joint profiles, exact
+  recovery guards, partial frames, startup failure and stopped-owner retention.
+- Independent source review and scoped text checks are complete. Final scoped
+  formatting, required RCH compilation, runtime tests and canonical qualification
+  remain pending because the required Rust/RCH tooling is unavailable.
+
 ## 2026-11-25: discover pending independent evaluations without known round IDs
 
 - Extend `evaluator-case` with explicit `--pending` discovery through the original

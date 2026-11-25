@@ -832,6 +832,72 @@ recovery command does not select native/learned generated modes, topology, polic
 governor, standalone `--precheck-profile` or credibility-activation capsules.
 Native generated creation uses the separate composition documented above.
 
+## Evaluate recorded ordinary Tower history
+
+Use this explicit mode when independent labels arrive after an ordinary accounted
+publication service has exited:
+
+```text
+supervise_publication serve-open CONFIG ORIGINAL_ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 --evaluate-only \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --guarded RECOVERY_PROFILE
+```
+
+For the corresponding simple checked owner, use `serve-open-checked` and its
+original `WITNESS_PROFILE` positional argument. The guarded v1 profile must select
+an independently retained input history, explicit journal/control/authority floors
+and a new `retain_history_anchor` output. The Andon profile must supply the original
+evaluator protocol and accounting identity, complete current window inventory and
+independent evaluation revision floor. Original marginal or joint accounting and
+simple checked publication keep their exact existing contracts. No contract is
+inferred from the journal being checked.
+
+The original actor profile selects the request audience and first request; the
+finite unique `--requests` list must consist entirely of recorded original IDs.
+The sealed original cursor verifies the complete history before each ID is read
+through `recorded_request`. Held, denied and uncertain requests remain their
+original historical statuses. A missing ID refuses before the Fence and cannot
+turn into a new proposal. The evaluator retains its original independently
+selected run-scoped protocol and credential audience; this list is a historical
+startup check, not a newly granted publication schedule.
+
+Only the independent evaluator and original authenticated Stop listeners are
+opened. The actor and human-review paths are reserved against custody collisions
+but never bound. Current source evidence and helper executable contents are not
+needed. Recovery performs one original Fence without the live service's Time/Sweep
+reconciliation. The command does not select another actor request, refresh source
+evidence, invoke helpers, publish, or retry an uncertain effect. Original charges,
+pending cases and accounting survive; a label cannot provide a publication key or
+refund an Unknown outcome.
+
+Stop is checked before each replay event, at Ready and again after request
+selection immediately before fencing. A pending Stop uses the same original
+terminal recovery path before fresh roles escape. After recovery, every evaluator
+quantum follows the original Stop checkpoint under one finite invocation deadline
+and the evaluator's original candidate, byte and I/O allowances. Reconnection does
+not replenish them. An authenticated new Stop still invokes its explicit original
+terminal handling. An owner whose history already records Stop is refused with
+its acknowledged successor retained; evaluation-only startup does not resume an
+old cleanup sweep.
+
+The existing `evaluator-case` and `evaluator-assess` commands return the original
+typed observations and assessment receipts. The evaluator retires before the new
+history archive is captured, including acknowledged labels or terminal Stop.
+A startup failure after the Fence attempts to retain the exact healthy successor,
+so correcting a listener conflict does not require rollback to an older anchor.
+The input archive is preserved. Output, source, configuration and every selected
+current or future endpoint must have distinct custody before recovery begins.
+
+The flag is unary and belongs only to the ordinary open grammar above. Creation,
+missing accounting/evaluator/recovery selections, duplicate flags, operator or
+precheck endpoints, topology, governance and credibility activation are rejected.
+Native and learned generated owners retain their separately documented historical
+modes. The new service and command regression sources cover delayed original
+labels, finite allowances, history and counter mismatches, Stop and deadline
+boundaries, and custody races. Required RCH compilation and runtime qualification
+remain pending.
+
 ## Verification boundary
 
 The generated composition adds five regression functions and two child-process

@@ -37,6 +37,16 @@ continuation. Every page uses the original evaluator authority and finite
 service allowance; discovery grants no publication key. Source and regression
 work is present, with required remote execution qualification pending.
 
+[Ordinary Tower publication history](docs/LIVE_ANDON_EVALUATION.md#evaluate-recorded-ordinary-tower-history)
+can now be reopened explicitly with `--evaluate-only` for delayed independent
+case discovery and assessment. Complete original accounting, independent history
+and counter floors are checked before one recovery Fence. The finite evaluator
+and authenticated Stop remain separate from publication: no actor or human-review
+listener, source refresh, helper invocation or uncertain-effect retry is started.
+Acknowledged labels are retained in a new independent archive. Source and
+regression coverage are present; required RCH compilation/runtime qualification
+remains pending.
+
 The [resident native publication service](docs/RESIDENT_NATIVE_PUBLICATION.md)
 now connects multiple generated Messages and an optional explicit Finish through
 one original decoder, stream, source custodian and journal. Each release needs

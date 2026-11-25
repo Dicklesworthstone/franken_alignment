@@ -1,5 +1,9 @@
 //! Live ordinary publication with native evaluation and Andon in the first image.
 //! One original owner spans the finite request schedule and independent evaluator.
+#[path = "andon/history.rs"]
+mod history;
+pub(super) use history::serve as serve_history;
+
 use super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, Instant, OwnerStart,
     PeerProfile, Profile, PublicationProfile, RecoveryReserve, andon_settings::Settings,
