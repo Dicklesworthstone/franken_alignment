@@ -1,4 +1,8 @@
-//! One explicit authenticated case read or assessment; no automatic retries.
+//! Explicit authenticated case reads and assessments; bounded inventory walks
+//! share one original invocation allowance and never restart or retry a cursor.
+#[path = "client/inventory.rs"]
+mod inventory;
+
 use super::{
     Settings,
     assessment::MAX_ASSESSMENT_BYTES,
@@ -13,6 +17,7 @@ use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::observed::credibility::{
     FileEvaluationCasesBasis, MAX_EVALUATION_CASE_PAGE,
 };
+use fa_reference::action::consequence::oversight::actor_peer::PeerCredentials;
 use std::{
     io::Write,
     net::Shutdown,
@@ -26,7 +31,7 @@ use std::{
 mod transport;
 
 pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
-    const USAGE: &str = "usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND | evaluator-case EVALUATOR_PROFILE --list LIMIT [--after ROUND --at-journal REV --at-evaluation REV] | evaluator-case EVALUATOR_PROFILE --pending [--evaluation-revision REVISION --after-round ROUND]";
+    const USAGE: &str = "usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND | evaluator-case EVALUATOR_PROFILE --list LIMIT [--after ROUND --at-journal REV --at-evaluation REV | --max-pages 1..512] | evaluator-case EVALUATOR_PROFILE --pending [--evaluation-revision REVISION --after-round ROUND | --max-pages 1..32]";
     if args.len() < 3
         || !matches!(args[0].as_str(), "evaluator-assess" | "evaluator-case")
         || args[1].is_empty()
@@ -34,8 +39,10 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
     {
         return Err(USAGE.into());
     }
+    let mut max_pages = None;
     let input = if args[0] == "evaluator-case" && args[2] == "--list" {
-        if !matches!(args.len(), 4 | 10)
+        if !matches!(args.len(), 4 | 6 | 10)
+            || (args.len() == 6 && args[4] != "--max-pages")
             || (args.len() == 10
                 && (args[4] != "--after"
                     || args[6] != "--at-journal"
@@ -46,6 +53,9 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
         let limit = integer(&args[3], false)?;
         if limit > MAX_EVALUATION_CASE_PAGE as u64 {
             return Err("case listing limit exceeds the finite page bound".into());
+        }
+        if args.len() == 6 {
+            max_pages = Some(inventory_pages(&args[5], inventory::MAX_CASE_PAGES)?);
         }
         let (after_round, expected_basis) = if args.len() == 10 {
             (
@@ -64,10 +74,15 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
             expected_basis,
         }
     } else if args[0] == "evaluator-case" && args[2] == "--pending" {
-        if !matches!(args.len(), 3 | 7) {
+        if !matches!(args.len(), 3 | 5 | 7)
+            || (args.len() == 5 && args[3] != "--max-pages")
+        {
             return Err(USAGE.into());
         }
-        let continuation = if args.len() == 3 {
+        if args.len() == 5 {
+            max_pages = Some(inventory_pages(&args[4], inventory::MAX_PENDING_PAGES)?);
+        }
+        let continuation = if args.len() != 7 {
             None
         } else {
             if args[3] != "--evaluation-revision" || args[5] != "--after-round" {
@@ -86,7 +101,15 @@ pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), St
             Input::Assessment(Path::new(&args[2]))
         }
     };
-    send(Path::new(&args[1]), input, output)
+    send(Path::new(&args[1]), input, max_pages, output)
+}
+
+fn inventory_pages(value: &str, maximum: usize) -> Result<usize, String> {
+    let pages = integer(value, false)?;
+    if pages > maximum as u64 {
+        return Err("evaluator inventory page bound exceeds its finite native inventory".into());
+    }
+    Ok(pages as usize)
 }
 
 fn integer(value: &str, zero: bool) -> Result<u64, String> {
@@ -158,7 +181,12 @@ impl Outbound {
     }
 }
 
-fn send(profile: &Path, input: Input<'_>, output: &mut impl Write) -> Result<(), String> {
+fn send(
+    profile: &Path,
+    input: Input<'_>,
+    max_pages: Option<usize>,
+    output: &mut impl Write,
+) -> Result<(), String> {
     let started = Instant::now();
     let settings = Settings::read(profile)?;
     let wall = Duration::from_millis(settings.runtime_ms);
@@ -195,24 +223,11 @@ fn send(profile: &Path, input: Input<'_>, output: &mut impl Write) -> Result<(),
         )?),
     };
     checkpoint()?;
-    let mut socket = UnixStream::connect(&settings.socket).map_err(debug)?;
-    checkpoint()?;
-    settings
-        .supervisor
-        .policy()?
-        .verify(&socket)
-        .map_err(|_| "unverified supervisor; no evaluator request bytes disclosed")?;
-    checkpoint()?;
-    let mut wait = || std::thread::sleep(Duration::from_millis(settings.poll_ms));
-    transport::write(&mut socket, request.wire(), &mut checkpoint, &mut wait)?;
-    checkpoint()?;
-    socket.shutdown(Shutdown::Write).map_err(debug)?;
-    let receipt = transport::read(
-        &mut socket,
-        protocol::RESPONSE_BYTES,
-        &mut checkpoint,
-        &mut wait,
-    )?;
+    if let Some(max_pages) = max_pages {
+        return inventory::send(&settings, request, max_pages, &mut checkpoint, output);
+    }
+    let mut original_peer = None;
+    let receipt = exchange(&settings, &request, &mut original_peer, &mut checkpoint)?;
     let completed = request.validate(&receipt)?;
     checkpoint()?;
     let reported = output
@@ -238,4 +253,38 @@ fn send(profile: &Path, input: Input<'_>, output: &mut impl Write) -> Result<(),
             errors.join("; ")
         ))
     }
+}
+
+/// One EOF-sealed exchange. An explicit inventory walk pins the first actual
+/// kernel peer, even when the configured policy permits more than one PID.
+/// No later process receives a continuation merely by sharing UID/GID.
+fn exchange(
+    settings: &Settings,
+    request: &Outbound,
+    original_peer: &mut Option<PeerCredentials>,
+    checkpoint: &mut impl FnMut() -> Result<(), String>,
+) -> Result<Vec<u8>, String> {
+    checkpoint()?;
+    let mut socket = UnixStream::connect(&settings.socket).map_err(debug)?;
+    checkpoint()?;
+    let observed = settings
+        .supervisor
+        .policy()?
+        .verify(&socket)
+        .map_err(|_| "unverified supervisor; no evaluator request bytes disclosed")?;
+    if original_peer.is_some_and(|original| original != observed) {
+        return Err("original evaluator supervisor changed between pages; no continuation bytes disclosed".into());
+    }
+    *original_peer = Some(observed);
+    checkpoint()?;
+    let mut wait = || std::thread::sleep(Duration::from_millis(settings.poll_ms));
+    transport::write(&mut socket, request.wire(), checkpoint, &mut wait)?;
+    checkpoint()?;
+    socket.shutdown(Shutdown::Write).map_err(debug)?;
+    transport::read(
+        &mut socket,
+        protocol::RESPONSE_BYTES,
+        checkpoint,
+        &mut wait,
+    )
 }

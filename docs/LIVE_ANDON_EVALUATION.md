@@ -536,7 +536,8 @@ explicit `Unknown` with no invented current basis or cases; start a new discover
 explicitly. A clock-only event, exact assessment retry or newly started but
 unapplied review does not change the applied-case revision. Each page and each
 later assessment spends a separate candidate from the original finite service
-allowance. The client never paginates, retries or labels automatically.
+allowance. The default client returns one page. Explicit bounded traversal is
+available below; it never retries, restarts or labels automatically.
 
 Pending discovery pins only the applied evaluation inventory, unlike `--list`,
 which pins both the journal and evaluation revisions across all retained cases.
@@ -666,6 +667,65 @@ authenticated list/continue/read/assess flow, finite shared allowances, stale
 history, private-data exclusions, sealed frames and client validation before
 output. They are authored tests; required remote compilation and execution
 remain pending.
+
+### Traverse an explicitly bounded inventory
+
+Opt into following the original continuation with `--max-pages`:
+
+```sh
+supervise_publication evaluator-case EVALUATOR_PROFILE --pending --max-pages 32
+supervise_publication evaluator-case EVALUATOR_PROFILE --list 16 --max-pages 32
+```
+
+Pending traversal accepts 1 through 32 pages, enough for the original 512-case
+inventory at sixteen cases per page. All-case traversal accepts 1 through 512
+pages because its independently selected `LIMIT` may be one. These are ceilings,
+not requests to issue every possible page: the first validated terminal page
+ends discovery. A zero, noncanonical or excessive bound refuses before reading
+the evaluator profile. Bounded traversal begins a fresh inventory and cannot be
+combined with supplied manual cursors, exact-round reads or assessment commands.
+Omitting `--max-pages` preserves the one-page interface.
+
+Each accepted response is emitted unchanged as one JSON line and flushed before
+another connection is attempted. A consumer must require successful command exit
+as well as a terminal page. If a late output/deadline check fails after a terminal
+page was flushed, the command still reports an incomplete operation. There is no
+synthetic completion summary, silent truncation, automatic restart or assessment.
+
+The client retains one profile, one elapsed-time origin, one cumulative work
+counter and a finite aggregate byte/candidate allowance for the whole traversal.
+Every page also spends the original live service's candidate allowance. Earlier
+use of that service may therefore stop discovery before the requested page cap.
+The first observed supervisor kernel UID/GID/PID is pinned; every reconnect must
+authenticate as that same peer before receiving continuation bytes. This binds
+the observed connection identity, not the server's executable or assessment truth.
+
+Pending traversal preserves the initial evaluation revision and total pending
+count, checks increasing round boundaries and exact cumulative cardinality, and
+refuses backward journal/control/authority coordinates. It permits unrelated
+Time or unfinished-review changes under the pending contract, retaining each
+page's fresh acknowledged basis. All-case traversal fixes both original revisions,
+the total cases and the unapplied-review count; even a Time-only journal change
+makes that traversal stale. Cross-page count checks reject apparently valid
+individual pages that skip cases, alter totals or falsely end the inventory.
+
+The client returns an explicit incomplete error on Unknown, changed history,
+peer/authentication or transport failure, failed output, original deadline/work
+exhaustion, candidate exhaustion or an outstanding continuation at the selected
+page cap. Previously flushed pages remain available. The next attempt requires
+an explicit operator decision and a fresh or manual command; the client never
+substitutes a newer cut. Original Stop remains authoritative in the service.
+
+Deadline checks surround connection, transport, validation and output work and
+use the same original deadline. Existing blocking connection and output APIs
+are checked for lateness; this does not add hard real-time syscall cancellation.
+Discovery still performs no native Time, source acquisition, generation,
+assessment, policy change or effect.
+
+Sixteen additional regression definitions pair actual native multi-page service
+flows with stale/changed histories, output failure, Stop, finite client and
+service allowances, per-connection authentication and cross-page wire mutations
+that remain valid in isolation. Required Rust/RCH execution remains pending.
 
 ## Assess a completed review while service continues
 

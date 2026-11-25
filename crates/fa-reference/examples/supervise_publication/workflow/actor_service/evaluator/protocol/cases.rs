@@ -187,6 +187,24 @@ struct Page {
 /// An authenticated, request-bound page is an observation. Its revisions can
 /// become stale immediately and its descriptors cannot authorize assessments.
 pub(crate) fn validate(request: &CasesRequest, wire: &[u8]) -> Result<bool, String> {
+    page_metadata(request, wire).map(|page| page.is_some())
+}
+
+/// Validated inventory coordinates, kept with their exact request and cut.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct PageMetadata {
+    pub(crate) basis: FileEvaluationCasesBasis,
+    pub(crate) total_cases: usize,
+    pub(crate) remaining_cases: usize,
+    pub(crate) unapplied_rounds: usize,
+    pub(crate) count: usize,
+    pub(crate) next_after: Option<u64>,
+}
+
+pub(crate) fn page_metadata(
+    request: &CasesRequest,
+    wire: &[u8],
+) -> Result<Option<PageMetadata>, String> {
     let parsed = parse(wire, RESPONSE_BYTES)?;
     let root = fields(
         &parsed,
@@ -291,7 +309,14 @@ pub(crate) fn validate(request: &CasesRequest, wire: &[u8]) -> Result<bool, Stri
                 // The retained cursor is itself an additional original case.
                 return Err("case listing total omits its retained continuation boundary".into());
             }
-            Ok(true)
+            Ok(Some(PageMetadata {
+                basis: observed_basis,
+                total_cases: total as usize,
+                remaining_cases: remaining as usize,
+                unapplied_rounds: unapplied as usize,
+                count: cases.len(),
+                next_after: next,
+            }))
         }
         Some("unknown") => {
             let unknown = fields(&root["knowledge"], &["state", "reason"])?;
@@ -303,7 +328,7 @@ pub(crate) fn validate(request: &CasesRequest, wire: &[u8]) -> Result<bool, Stri
             {
                 return Err("unsupported case listing uncertainty".into());
             }
-            Ok(false)
+            Ok(None)
         }
         _ => Err("unsupported case listing knowledge state".into()),
     }

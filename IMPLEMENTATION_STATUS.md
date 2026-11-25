@@ -1,5 +1,45 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: traverse independent evaluator inventories under one original budget
+
+The authenticated `evaluator-case` client now accepts explicit fresh bounded
+traversal: `--pending --max-pages 1..32` or `--list LIMIT --max-pages 1..512`.
+Default one-page reads and manual cursors remain compatible. Every complete
+original page is validated and flushed before following its exact continuation;
+no case is assessed and no cursor is retried or restarted.
+
+One original invocation clock, work counter and finite aggregate byte/candidate
+allowance span every EOF-framed connection. Each page still spends the live
+service's original allowance. Reconnection verifies the first observed supervisor
+kernel UID/GID/PID before disclosing continuation bytes. Pending traversal fixes
+the evaluation inventory while retaining each page's later acknowledged journal
+basis; all-case traversal fixes both revisions. Cumulative cardinality and exact
+cursor checks reject individually valid pages that skip cases, alter totals or
+prematurely claim completion.
+
+Stale/Unknown history, Stop, transport/peer failure, failed or late output, and
+exhausted budgets return explicit incomplete results with prior output retained.
+Successful command exit is required even if a terminal page was already flushed.
+Existing blocking connection/output APIs have shared deadline checks, not new
+hard real-time cancellation. Discovery grants no effect or assessment authority.
+
+Sixteen added regression definitions use actual native services and original
+history, plus cross-page wire negatives that remain valid in isolation. They
+cover multi-page pending/all-case discovery, allowed pending Time/unfinished
+changes, stale labels/applied cases, exact client page/candidate/deadline guards,
+Stop, authentication, output failure, default compatibility and closed grammar.
+Independent source review preserved every existing page-validator check and
+checked the relevant original transport, credential and test-fixture types.
+
+The initial working draft received scoped Tree-sitter parsing and whitespace
+checks before the workspace disconnected. Recovered final files were reviewed
+and preserved as exact GitHub blobs. Rust formatting, compilation, runtime tests,
+Clippy and the required RCH gate remain unexecuted: the runner was absent before
+the workspace failure. Source review and committed-content verification do not
+qualify execution, label truth or deployment isolation. FA-105/134 and existing
+discovery acceptance remain open. See the
+[bounded inventory contract](docs/LIVE_ANDON_EVALUATION.md#traverse-an-explicitly-bounded-inventory).
+
 ## 2026-11-25: compose resident native prechecks with independent accounting
 
 Accounted resident native creation, confirmed-Message suffix recovery and

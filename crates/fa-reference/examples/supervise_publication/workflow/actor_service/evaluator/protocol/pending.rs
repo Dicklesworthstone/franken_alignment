@@ -161,6 +161,27 @@ pub(crate) fn parse_response(wire: &[u8]) -> Result<Json, String> {
 /// Validate one declared, authenticated page and its explicit continuation.
 /// Successful discovery supplies neither a ticket nor a reserved predecessor.
 pub(crate) fn validate(request: &PendingRequest, wire: &[u8]) -> Result<bool, String> {
+    page_metadata(request, wire).map(|page| page.is_some())
+}
+
+/// Validated coordinates used only by an explicitly bounded inventory walk.
+/// Pending pages share an evaluation cut, but may observe later journal cuts.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct PageMetadata {
+    pub(crate) journal_revision: u64,
+    pub(crate) evaluation_revision: u64,
+    pub(crate) control_sequence: u64,
+    pub(crate) authority_epoch: u64,
+    pub(crate) total_pending: usize,
+    pub(crate) unfinished_reviews: usize,
+    pub(crate) count: usize,
+    pub(crate) next_after_round: Option<u64>,
+}
+
+pub(crate) fn page_metadata(
+    request: &PendingRequest,
+    wire: &[u8],
+) -> Result<Option<PageMetadata>, String> {
     let parsed = parse_response(wire)?;
     let root = fields(
         &parsed,
@@ -270,7 +291,16 @@ pub(crate) fn validate(request: &PendingRequest, wire: &[u8]) -> Result<bool, St
                     "initial pending-case page silently omits part of its inventory".into(),
                 );
             }
-            Ok(true)
+            Ok(Some(PageMetadata {
+                journal_revision: basis.journal,
+                evaluation_revision: basis.evaluation,
+                control_sequence: basis.control,
+                authority_epoch: basis.epoch,
+                total_pending: total as usize,
+                unfinished_reviews: unfinished as usize,
+                count: cases.len(),
+                next_after_round: next,
+            }))
         }
         Some("unknown") => {
             let unknown = fields(&root["knowledge"], &["state", "reason"])?;
@@ -282,7 +312,7 @@ pub(crate) fn validate(request: &PendingRequest, wire: &[u8]) -> Result<bool, St
             {
                 return Err("unsupported pending-case cursor observation".into());
             }
-            Ok(false)
+            Ok(None)
         }
         _ => Err("unsupported pending-case knowledge state".into()),
     }

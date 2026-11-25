@@ -888,6 +888,9 @@ mod pending_service;
 #[path = "tests/pending_client.rs"]
 mod pending_client;
 
+#[path = "tests/inventory_client.rs"]
+mod inventory_client;
+
 #[test]
 fn narrowed_actor_deadline_refuses_a_late_label_and_cannot_renew_the_original_service() {
     let mut fixture = Fixture::new();

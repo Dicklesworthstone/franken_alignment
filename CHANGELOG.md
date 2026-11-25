@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-25: traverse bounded independent evaluator inventories
+
+- Add explicit `--max-pages` to fresh pending and all-case evaluator listings,
+  retaining default one-page and manual-cursor behavior.
+- Follow exact original continuations with cross-page revision/count checks,
+  one original client clock/work/byte/candidate budget and pinned observed
+  supervisor credentials. Flush each complete JSON page before continuing.
+- Preserve partial output and report incomplete discovery on stale history,
+  Stop, output/transport/authentication failure or finite allowance exhaustion;
+  never retry, restart, label or approve an effect.
+- Add sixteen native-service and cross-page wire regression definitions with
+  direct client deadline/page/candidate guard assertions.
+- Update command help and the registered verb. Final source/blob review is
+  separate from unavailable Rust/RCH compilation and runtime qualification.
+
 ## 2026-11-25: compose accounted native sequences with exact actor prechecks
 
 - Admit explicit per-release exact prechecks during accounted native creation,

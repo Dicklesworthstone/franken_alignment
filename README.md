@@ -33,9 +33,13 @@ The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALU
 with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
 for evaluation only. Fixed sixteen-case pages retain original case identities,
 censored outcomes, explicit unfinished-review counts and revision-bound
-continuation. Every page uses the original evaluator authority and finite
-service allowance; discovery grants no publication key. Source and regression
-work is present, with required remote execution qualification pending.
+continuation. Explicit [bounded inventory traversal](docs/LIVE_ANDON_EVALUATION.md#traverse-an-explicitly-bounded-inventory)
+adds `--max-pages N` to pending or all-case listings. It validates and flushes
+each original page before following its exact cursor, retains one client
+deadline/work allowance, and reports partial results explicitly when history
+changes or a budget ends. Every page uses the original evaluator authority and
+finite service allowance; discovery grants no publication key. Source and
+regression work is present, with required remote execution qualification pending.
 
 [Ordinary Tower publication history](docs/LIVE_ANDON_EVALUATION.md#evaluate-recorded-ordinary-tower-history)
 can now be reopened explicitly with `--evaluate-only` for delayed independent

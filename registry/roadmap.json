@@ -2829,7 +2829,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_protocol.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_service.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_client.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/precheck.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/precheck.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/client/inventory.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client/wire.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3921,7 +3924,10 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/protocol/pending.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_protocol.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_service.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_client.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/pending_client.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/client/inventory.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client/wire.rs"
       ],
       "founding_ideas": [
         "FI-A06"
