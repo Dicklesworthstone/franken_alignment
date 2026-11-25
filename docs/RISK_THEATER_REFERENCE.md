@@ -69,8 +69,10 @@ operation; findings and supports are never silently truncated.
 ## Typed history queries
 
 The [typed history query projection](RISK_THEATER_QUERIES.md) now derives
-retirement, autonomy and audit-funding findings from bounded reference facts
-before updating this score/support kernel. It retains the complete query policy,
+all six semantic query families from bounded reference facts before updating
+this score/support kernel. The optional comparison profile binds rational drift
+thresholds, original Andon budgets and componentwise coverage transitions.
+It retains the complete query policy,
 exact record identities and family completeness; a zero score for an incomplete
 family is not observed absence. The new query source and regression definitions
 remain uncompiled and unexecuted pending the required RCH environment.

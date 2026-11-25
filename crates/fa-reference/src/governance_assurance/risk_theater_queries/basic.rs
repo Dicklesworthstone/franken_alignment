@@ -216,6 +216,9 @@ pub(super) fn validate_fact(record: &HistoryRecord, scope: &Address) -> Result<(
                 }
             }
         },
+        HistoryFact::Consequence(_) | HistoryFact::Andon(_) | HistoryFact::Coverage(_) => {
+            return Err(QueryError::InvalidRecord);
+        }
     }
     Ok(())
 }

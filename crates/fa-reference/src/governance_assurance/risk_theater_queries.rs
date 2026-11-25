@@ -32,7 +32,12 @@ use super::{
 };
 
 mod basic;
+mod extended;
 pub use basic::{AuditFact, AutonomyFact, HoldLabel, ReportReference, RosterFact};
+pub use extended::{
+    AndonFact, CanaryOutcome, CanarySource, ComparisonWindow, ConsequenceFact, CoverageFact,
+    ExtendedQueryPolicy, IncidentClosureMode, IncidentDisposition, MediationLevel, Rate,
+};
 
 pub const MAX_QUERY_RECORDS: usize = 128;
 pub const MAX_QUERY_FRONTIER_CHANGES: usize = 32;
@@ -50,6 +55,7 @@ pub struct QueryPolicy {
     evaluation_owner: Address,
     roster_window: u64,
     minimum_dwell: u64,
+    extended: Option<ExtendedQueryPolicy>,
 }
 
 impl QueryPolicy {
@@ -75,9 +81,20 @@ impl QueryPolicy {
             evaluation_owner,
             roster_window,
             minimum_dwell,
+            extended: None,
         })
     }
 
+    /// Select comparative predicates before constructing the engine. This is
+    /// immutable reference configuration, not a live governance transition.
+    pub fn with_extended(mut self, policy: ExtendedQueryPolicy) -> Result<Self, QueryError> {
+        extended::validate_policy(&policy)?;
+        self.extended = Some(policy);
+        Ok(self)
+    }
+    pub fn extended(&self) -> Option<&ExtendedQueryPolicy> {
+        self.extended.as_ref()
+    }
     pub fn scope(&self) -> &Address {
         &self.scope
     }
@@ -101,6 +118,9 @@ pub enum HistoryFact {
     Roster(RosterFact),
     Autonomy(AutonomyFact),
     Audit(AuditFact),
+    Consequence(ConsequenceFact),
+    Andon(AndonFact),
+    Coverage(CoverageFact),
 }
 
 /// Full source identity: a record address is permanently bound to this exact
@@ -323,7 +343,7 @@ impl QueryEngine {
             let record = match change {
                 HistoryChange::Insert(record) | HistoryChange::Retract(record) => record,
             };
-            validate_record(record, &self.policy.scope, frontier.sequence)?;
+            validate_record(record, &self.policy, frontier.sequence)?;
             if let HistoryChange::Insert(record) = change
                 && !self.identities.contains_key(&record.address)
                 && record.occurred_at != frontier.sequence
@@ -366,6 +386,11 @@ impl QueryEngine {
         }
         let records: Vec<_> = active.values().cloned().collect();
         let mut families = basic::evaluate(&self.policy, &records, frontier.sequence)?;
+        if let Some(policy) = self.policy.extended() {
+            families.extend(extended::evaluate(
+                policy, &records, frontier.sequence, self.policy.evaluation_owner(),
+            )?);
+        }
         for family in RiskTheaterFamily::ALL {
             if !families.iter().any(|evaluation| evaluation.family == family) {
                 families.push(FamilyEvaluation {
@@ -496,7 +521,12 @@ fn derive_relation(
     Ok(relation)
 }
 
-fn validate_record(record: &HistoryRecord, scope: &Address, sequence: u64) -> Result<(), QueryError> {
+fn validate_record(
+    record: &HistoryRecord,
+    policy: &QueryPolicy,
+    sequence: u64,
+) -> Result<(), QueryError> {
+    let scope = policy.scope();
     if &record.scope != scope {
         return Err(QueryError::ForeignScope);
     }
@@ -504,7 +534,17 @@ fn validate_record(record: &HistoryRecord, scope: &Address, sequence: u64) -> Re
     if record.occurred_at == 0 || record.occurred_at > sequence {
         return Err(QueryError::InvalidRecord);
     }
-    basic::validate_fact(record, scope)
+    match &record.fact {
+        HistoryFact::Roster(_) | HistoryFact::Autonomy(_) | HistoryFact::Audit(_) => {
+            basic::validate_fact(record, scope)
+        }
+        HistoryFact::Consequence(_) | HistoryFact::Andon(_) | HistoryFact::Coverage(_) => {
+            if policy.extended().is_none() {
+                return Err(QueryError::InvalidPolicy);
+            }
+            extended::validate_fact(record, scope)
+        }
+    }
 }
 
 pub(super) fn validate_address(address: &Address, scope: &Address) -> Result<(), QueryError> {

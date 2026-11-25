@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-25: derive the remaining three risk-theater query families
+
+- Add exact-rational consequence drift from original rounds, closed comparison
+  windows, distinct canary samples and independent outcomes.
+- Add repeated roster closure detection using predeclared original Andon
+  budgets, one charge per held round and exact incident/authorization history.
+- Add componentwise coverage erosion with active predecessor checks and
+  support for the complete earlier transition chain.
+- Preserve incomplete evidence, immutable optional configuration and causal
+  insert/retract behavior. Add 29 comparative and configuration regressions
+  alongside the 18 basic query regression definitions.
+- Keep native activation and FA-125 qualification open; source review does not
+  substitute for the unavailable remote compilation and runtime gate.
+
 ## 2026-11-25: evaluate ordinary Tower history without publication re-entry
 
 - Add explicit `--evaluate-only` to ordinary Tower `serve-open` and

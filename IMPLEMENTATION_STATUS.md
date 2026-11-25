@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: derive consequence drift, Andon closure modes and coverage erosion
+
+The FA-125 typed reference projection now supplies semantic predicates for all
+six registered families. An explicitly selected immutable comparison profile
+adds consequence drift from original round/window denominators and independent
+canary outcomes; repeated roster closure of exhausted original Andon windows;
+and separate mediation/capture coverage comparisons.
+
+Consequence thresholds use exact checked rational arithmetic. Original canary
+identity, sampling lineage and evaluator generation prevent duplicate or pooled
+samples; censoring and missing denominators stay incomplete. Andon budgets must
+predate their windows, charge each original held round once and preserve the
+first exhaustion cause, full-width cost and exact authorized closure chain.
+Coverage follows the active predecessor per effect family and retains the
+earlier chain as support; an improvement in one dimension cannot hide erosion
+in another. Incomparable capture contracts remain explicitly incomplete.
+
+The comparison profile is retained in sealed snapshots and cannot change in a
+running engine. Source retractions propagate through exact derived support, and
+missing evidence never becomes a policy permit. Forty-seven public regression
+definitions accompany all six families, including threshold equality, benign
+twins, identity isolation, missing-source correction and atomic refusal.
+
+Independent code review and committed-content checks are source verification.
+Formatting, compilation and execution remain unperformed in this session
+because the required Rust/RCH tooling remains unavailable. The
+semantic predicates are bounded batch reference evaluation; only their derived
+score/support relation has the existing independent arithmetic/retraction
+oracle. Native authenticated feeds, governed activation, durable incidents,
+deployment access control and independent whole-query qualification remain
+open. Native Findings still reports all six full families Unknown. FA-125 and
+its existing bead retain their original acceptance conditions and in-progress
+status. See [the query contract](docs/RISK_THEATER_QUERIES.md).
+
 ## 2026-11-25: delayed independent evaluation of ordinary Tower history
 
 Ordinary Tower `serve-open` and `serve-open-checked` now accept an explicit
