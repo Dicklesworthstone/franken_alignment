@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-25: select recorded ordinary requests before recovery authority
+
+- Add immutable original-request selection to the fully verified native Andon
+  recovery cursor, preserving exact held, refused and uncertain statuses.
+- Keep incomplete/failed histories unavailable and retain original canonical
+  and staging bytes without replay, reconciliation or another journal event.
+- Add three public regressions, including delayed independent labeling with
+  original Unknown charges preserved. Scoped syntax/format and whitespace
+  checks passed; required remote compilation/runtime qualification is pending.
+
 ## 2026-11-25: preserve standing oversight across rejected updates
 
 - Commit fact, support, frontier and sequence changes only after the independent

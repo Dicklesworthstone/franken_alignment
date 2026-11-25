@@ -7,6 +7,8 @@ use super::{
     FileOversight, FileOversightProfile, JournalError, MAX_JOURNAL_EVENTS, Machine,
     RecoveryReserve, storage,
 };
+use crate::Error;
+use crate::action::consequence::delivery::persistent::requests::FileRequestStatus;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use std::fmt;
 use std::path::Path;
@@ -96,6 +98,31 @@ impl FileAndonRecovery {
             .advance_checked_with(expected_events, max_events, Machine::apply, |run| {
                 expected.check_replayed(&run.profile, &run.machine, &run.events, protocol)
             })
+    }
+
+    /// Select an original actor request from the fully verified historical cut,
+    /// before committing the recovery Fence or issuing fresh evaluator roles.
+    /// A retained refusal, held request or unresolved effect remains historical
+    /// data; this lookup neither requires settlement nor grants publication.
+    ///
+    /// Ready was established by the ORIGINAL replay engine only after checking
+    /// the complete independent anchor, guard, policy, accounting and counter
+    /// requirements. The retained machine and requirements are immutable here,
+    /// so a finite request schedule needs only bounded request-book lookups,
+    /// not another replay or a full history scan for each request. `finish`
+    /// rechecks those contracts and the canonical bytes before its sole Fence.
+    ///
+    /// This is supervisor-only data, like `FileOversight::request_status`; a
+    /// transport must use its existing restricted observation projection. No
+    /// clock, source read, staging cleanup, label or reconciliation is performed.
+    pub fn recorded_request(&self, request: u64) -> Result<FileRequestStatus, JournalError> {
+        match self.inner.progress().status {
+            FileGuardedRecoveryStatus::Ready => {}
+            FileGuardedRecoveryStatus::Failed(error) => return Err(error.into()),
+            FileGuardedRecoveryStatus::Interrupted => return Err(JournalError::Unavailable),
+            _ => return Err(Error::Incomplete.into()),
+        }
+        Ok(self.inner.machine.requests.status(request)?)
     }
 
     pub fn cancel(self) -> FileGuardedRecoveryProgress {

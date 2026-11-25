@@ -1,5 +1,27 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: select original ordinary requests before the recovery Fence
+
+The original `FileAndonRecovery` now exposes a read-only `recorded_request`
+selector at its fully verified Ready cut. It returns the exact original request
+status, including refusal, Hold and Unknown, without replaying or scanning the
+history again. Incomplete and failed recovery cannot disclose a partial request
+book. Selection changes no journal, staging, clock, source or accounting state;
+the original `finish` still rechecks the complete contract before fencing.
+
+Three public regressions exercise complete-history selection at every event cut,
+unchanged staging and cancellation, exact missing-ID refusals, a failed independent
+evaluation floor, and delayed independent labeling after one Fence while original
+Unknown delivery remains charged. Old evaluator custody and unfresh clocks refuse;
+an exact repeated label does not charge another false stop.
+
+Scoped Rust 2024 parsing/formatting passed with the available November 24 nightly
+formatter, and Git whitespace checks passed. This is not execution qualification:
+the required RCH runner is absent, and compilation, runtime tests, Clippy and the
+canonical gate remain pending. FA-105/134 and existing evaluation/recovery Beads
+retain their original in-progress acceptance. See the
+[native recovery contract](docs/COOPERATIVE_NATIVE_ANDON_RECOVERY.md#select-recorded-ordinary-requests-before-fencing).
+
 ## 2026-11-25: atomic standing oversight boundaries
 
 The standing-oversight reference now stages each complete boundary through

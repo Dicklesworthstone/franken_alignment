@@ -44,6 +44,29 @@ preflight/final checks. Base guarded recovery retains its original checks throug
 closed internal composition. No public callback can substitute an accepting
 validator, and existing stopped/publication/reconciliation APIs are unchanged.
 
+## Select recorded ordinary requests before fencing
+
+`FileAndonRecovery::recorded_request(request)` reads the original request book
+only after the complete independently guarded replay reaches Ready. It returns
+the same `FileRequestStatus` as the original owner, including retained refusals,
+held attempts and uncertain deliveries. A missing request remains `Missing`;
+an incomplete prefix remains `Incomplete`, and a failed replay retains its
+original failure. A historical request cannot become a new proposal by selection.
+
+This supervisor-only lookup performs no replay, clock observation, source read,
+staging cleanup, label, reconciliation or journal write. Each lookup uses the
+original bounded request map; selecting several requests does not rescan the
+history. Ready already binds the complete accounting and guard requirements;
+`finish` independently rechecks them and the canonical bytes before its one Fence.
+Dropping or cancelling after selection leaves the original history unchanged.
+
+Three public regression tests cover every incomplete event cut, exact held,
+allowed and refused requests, missing IDs, staging preservation, failed independent
+evaluation floors, and delayed labels while an original Unknown remains charged.
+The added core and test sources passed scoped Rust 2024 parsing and formatting
+with the available November 24 nightly formatter and Git whitespace checks.
+Required RCH compilation and runtime qualification remain pending.
+
 ## Limits and verification
 
 The quantum bounds original event calls, not wall time or interruptible I/O.
