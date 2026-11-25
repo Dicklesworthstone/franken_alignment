@@ -1,5 +1,28 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: bounded discovery of original independent evaluation cases
+
+The original independently held evaluator can enumerate applied native cases in
+pages of at most 16 without knowing round IDs in advance. The read traverses
+the original bounded ledger, preserves policy generations and minimal case
+identities, and distinguishes pending, censored and resolved assessment progress
+without disclosing labels or helper verdicts. Begun but unapplied rounds remain
+a separate denominator and cannot acquire fabricated evaluation tickets.
+
+Continuation binds both the acknowledged journal revision and global evaluation
+revision. An intervening review, assessment or Time event refuses the stale
+continuation; a lower-ID insertion cannot be silently skipped. Original owner
+branding and storage-health checks precede disclosure. No new journal schema,
+replay, source/clock work, numerical work or authority is introduced.
+
+Eight native regression functions and the [operator contract](docs/LIVE_ANDON_EVALUATION.md#bounded-native-case-discovery)
+cover the positive discovery path and causal pagination, progress and custody
+boundaries. The six changed Rust inputs passed scoped Rust 2024 formatting with
+the qualified nightly-2026-09-08 formatter; independent source review and tracked
+whitespace checks passed. Required remote compilation and runtime qualification remain pending:
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` could not
+start because `rch` is absent in this environment. No bead or packet is closed.
+
 ## 2026-11-25: select original ordinary requests before the recovery Fence
 
 The original `FileAndonRecovery` now exposes a read-only `recorded_request`

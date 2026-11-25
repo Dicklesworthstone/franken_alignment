@@ -8,9 +8,9 @@ use super::super::credibility::native_andon::{NativeAndonBinding, NativeEvaluate
 use crate::round::review::andon::{AndonBudget, AndonLedger};
 
 use super::super::credibility::{
-    Assessment, CredibilityLedger, CredibilityPromotion, CredibilityReport, EvaluationCase,
-    EvaluationProtocol, EvaluationTicket, IndependentEvaluator, PendingCase, QualificationFailure,
-    SealedAssessment,
+    Assessment, CasePage, CredibilityLedger, CredibilityPromotion, CredibilityReport,
+    EvaluationCase, EvaluationProtocol, EvaluationTicket, IndependentEvaluator, PendingCase,
+    QualificationFailure, SealedAssessment,
 };
 use super::super::joint_credibility::{
     self, JointPromotionPolicy, JointPromotionReport, ReplayBasis,
@@ -260,6 +260,27 @@ impl OversightBroker {
             .ok_or(Error::Incomplete)?
             .ledger
             .ticket(round)
+    }
+    pub(crate) fn evaluation_cases(
+        &self,
+        after_round: Option<u64>,
+        expected_revision: Option<u64>,
+        limit: usize,
+    ) -> Result<CasePage, Error> {
+        let state = self.credibility.as_ref().ok_or(Error::Incomplete)?;
+        let mut page = state
+            .ledger
+            .case_page(after_round, expected_revision, limit)?;
+        page.unapplied_rounds = state.unfinished.len();
+        if page
+            .total_cases
+            .checked_add(page.unapplied_rounds)
+            .ok_or(Error::Overflow)?
+            > super::super::credibility::MAX_EVALUATION_CASES
+        {
+            return Err(Error::Limit);
+        }
+        Ok(page)
     }
     pub fn record_evaluation(&mut self, label: SealedAssessment) -> Result<bool, Error> {
         let observed_at = self.inspect().ledger.elapsed;

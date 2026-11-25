@@ -1,6 +1,11 @@
 //! Independent evaluation labels and weight-only promotion in the original journal.
 //! Native credibility accounting remains authoritative; no saved score is imported.
 pub mod andon;
+mod cases;
+pub use cases::{
+    FileEvaluationCasePage, FileEvaluationCaseStatus, FileEvaluationCaseSummary,
+    FileEvaluationCasesBasis, MAX_EVALUATION_CASE_PAGE,
+};
 mod codec;
 pub mod held_out_joint;
 pub mod joint;

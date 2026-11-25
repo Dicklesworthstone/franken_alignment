@@ -599,6 +599,46 @@ The shared assessment adapter performs the same check before case lookup or a
 benign assessment's Time event. A foreign role therefore cannot partially
 timestamp a replacement owner before the final native label guard refuses it.
 
+### Bounded native case discovery
+
+`FileIndependentEvaluator::evaluation_cases(&host, after_round, expected, limit)`
+discovers original applied cases without requiring their round IDs in advance.
+An initial page uses `None, None`; `limit` is explicitly selected from 1 through
+16. The sealed `FileEvaluationCasePage` returns minimal case identities in
+ascending round order, the count of all retained applied cases, the separate
+count of begun but unapplied rounds, and `remaining_cases` after the selected
+cursor. `next_after` appears only when that remaining count exceeds the returned
+page. The applied-case domain spans retained policy generations.
+
+Each identity has `Pending`, `Censored` or `Resolved` assessment progress.
+`Resolved` does not reveal whether the independent label is benign or a
+violation. Labels, origins, independent evidence, helper verdicts and native
+tickets are excluded. A begun or unsuccessfully applied review contributes to
+the unapplied count rather than becoming a labelable case. An empty applied
+page therefore does not imply that every begun review has an independent label.
+
+Continue with the prior page's `next_after` and its exact
+`FileEvaluationCasesBasis { journal_revision, evaluation_revision }`. Both
+coordinates must still match, and the cursor must name an actual applied case.
+New reviews, labels and even Time-only journal events make a continuation stale;
+an inserted lower round ID cannot silently disappear between pages. A caller
+may explicitly start a new enumeration but receives no automatic retry or
+reserved labeling predecessor.
+
+The original evaluator brand and storage health are checked before disclosure.
+Each page uses a bounded ordered-map range rather than constructing a full
+credibility report or copying raw verdicts. Counting the remaining domain scans
+at most the original 512-case bound; copying is limited to 16 summaries. There is
+no journal format change, source access, clock observation, numerical work or
+authority transition.
+Recovery retains the original cases but requires a fresh independently issued
+evaluator role; the former owner's handle cannot read the recovered owner.
+
+The native regression tests in `crates/fa-reference/tests/file_evaluation_cases.rs`
+exercise pagination, assessment progress, unfinished reviews, stale cursors and
+owner/storage boundaries. Compilation and execution remain pending the required
+remote RCH gate; authored tests are not execution evidence.
+
 ## Lifetime, Stop and custody
 
 Ordinary scheduled creation and guarded recovery retain the evaluator after

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-25: discover original native evaluation cases in bounded pages
+
+- Add independently role-bound enumeration of applied evaluation cases, with
+  minimal identities and pending/censored/resolved progress. Keep unapplied
+  reviews explicit without exposing labels, verdicts or native tickets.
+- Pin continuation to both original journal and evaluation revisions, refusing
+  changed history and nonexistent cursor boundaries without mutation.
+- Read at most one bounded page from the original ordered ledger rather than
+  recomputing a full credibility report. Preserve existing storage and recovery
+  custody; add native positive and causal regression sources.
+- Required remote compilation, runtime tests and canonical qualification remain
+  pending because RCH is unavailable. No production qualification is claimed.
+
 ## 2026-11-25: select recorded ordinary requests before recovery authority
 
 - Add immutable original-request selection to the fully verified native Andon

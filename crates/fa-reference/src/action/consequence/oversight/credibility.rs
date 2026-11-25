@@ -4,7 +4,10 @@
 //! The separate evaluator handle models role separation, not real authentication
 //! or institutional independence. No consensus-to-ground-truth conversion exists.
 
+mod cases;
 pub mod native_andon;
+pub(crate) use cases::CasePage;
+pub use cases::{EvaluationCaseStatus, EvaluationCaseSummary, MAX_EVALUATION_CASE_PAGE};
 
 use super::CommitteeContract;
 use crate::Error;
