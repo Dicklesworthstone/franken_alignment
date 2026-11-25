@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-25: preserve standing oversight across rejected updates
+
+- Commit fact, support, frontier and sequence changes only after the independent
+  batch comparison succeeds; preserve the previous engine after late failures.
+- Require the exact next closed boundary and exact fact identity for retractions
+  and replacements. Reject malformed public snapshots and support paths before
+  they can produce findings or apparent absence.
+- Keep antichain width failures and semantic-generation rebuilds atomic, with
+  causal regressions that continue successfully after a refused update.
+- Document the bounded reference contract. Required remote compilation,
+  runtime execution and canonical qualification remain pending.
+
 ## 2026-11-24: receive delayed independent labels on native history
 
 - Add explicit evaluation-only reopening for recorded native Messages and

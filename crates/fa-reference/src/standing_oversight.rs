@@ -105,16 +105,22 @@ impl SupportPath {
         positive_atoms: BTreeSet<u64>,
         negative_guards: BTreeSet<u64>,
     ) -> Result<Self, StandingOversightError> {
-        if positive_atoms.is_empty()
-            || positive_atoms.len() > MAX_SUPPORT_ATOMS_PER_PATH
-            || negative_guards.len() > MAX_SUPPORT_ATOMS_PER_PATH
+        let path = Self {
+            positive_atoms,
+            negative_guards,
+        };
+        path.validate()?;
+        Ok(path)
+    }
+
+    fn validate(&self) -> Result<(), StandingOversightError> {
+        if self.positive_atoms.is_empty()
+            || self.positive_atoms.len() > MAX_SUPPORT_ATOMS_PER_PATH
+            || self.negative_guards.len() > MAX_SUPPORT_ATOMS_PER_PATH
         {
             return Err(StandingOversightError::InvalidSupportPath);
         }
-        Ok(Self {
-            positive_atoms,
-            negative_guards,
-        })
+        Ok(())
     }
 
     /// Returns `true` if `self` is at least as general as `other` (`self ⊆ other`
@@ -204,6 +210,9 @@ impl SupportAntichain {
         delta_weight: i64,
         overflow_mode: AntichainOverflowMode,
     ) -> Result<(), StandingOversightError> {
+        // Public path fields are reference inputs, not proof that the
+        // constructor's size and nonempty-support contract was checked.
+        path.validate()?;
         if delta_weight == 0 {
             return Err(StandingOversightError::ZeroWeightDelta);
         }
@@ -214,12 +223,17 @@ impl SupportAntichain {
         if next < 0 {
             return Err(StandingOversightError::LostRetractionOrNegativeWeight);
         }
+        // A rejected width expansion must not leave a hidden support in the
+        // weight map which a later retraction could expose.
+        let mut candidate = self.clone();
         if next == 0 {
-            self.support_weights.remove(&path);
+            candidate.support_weights.remove(&path);
         } else {
-            self.support_weights.insert(path, next);
+            candidate.support_weights.insert(path, next);
         }
-        self.rebuild_minimal_antichain(overflow_mode)
+        candidate.rebuild_minimal_antichain(overflow_mode)?;
+        *self = candidate;
+        Ok(())
     }
 
     fn rebuild_minimal_antichain(
@@ -279,6 +293,9 @@ pub enum StandingOversightError {
     ZeroWeightDelta,
     WeightOverflow,
     LostRetractionOrNegativeWeight,
+    FactIdentityMismatch,
+    NonPositiveSnapshotWeight,
+    GenerationRebuildOverflow,
     UnclosedNegativeDomain,
     IncompleteProductFrontier,
     SnapshotLimitExceeded,
@@ -328,6 +345,16 @@ impl OversightSnapshot {
         if delta.weight == 0 {
             return Err(StandingOversightError::ZeroWeightDelta);
         }
+        self.validate_facts()?;
+        if self
+            .facts
+            .get(&delta.fact.fact_id)
+            .is_some_and(|(fact, _)| *fact != delta.fact)
+        {
+            // Replacing a tuple requires retracting its exact old value to
+            // zero before inserting the new one. Its ID alone is insufficient.
+            return Err(StandingOversightError::FactIdentityMismatch);
+        }
         let current = self
             .facts
             .get(&delta.fact.fact_id)
@@ -348,6 +375,21 @@ impl OversightSnapshot {
                 return Err(StandingOversightError::SnapshotLimitExceeded);
             }
             self.facts.insert(delta.fact.fact_id, (delta.fact, next));
+        }
+        Ok(())
+    }
+
+    fn validate_facts(&self) -> Result<(), StandingOversightError> {
+        if self.facts.len() > MAX_SNAPSHOT_FACTS {
+            return Err(StandingOversightError::SnapshotLimitExceeded);
+        }
+        for (&fact_id, &(fact, weight)) in &self.facts {
+            if fact_id != fact.fact_id {
+                return Err(StandingOversightError::FactIdentityMismatch);
+            }
+            if weight <= 0 {
+                return Err(StandingOversightError::NonPositiveSnapshotWeight);
+            }
         }
         Ok(())
     }
@@ -382,6 +424,12 @@ pub mod batch_oracle {
         query: StandingQueryFamily,
         max_antichain_width: usize,
     ) -> Result<BatchOracleArtifact, StandingOversightError> {
+        // The snapshot is publicly constructible. Validate its canonical map
+        // and resource bound before allocating or evaluating a quadratic join.
+        snapshot.validate_facts()?;
+        if max_antichain_width == 0 || max_antichain_width > MAX_SNAPSHOT_FACTS {
+            return Err(StandingOversightError::InvalidAntichainLimit);
+        }
         if !snapshot
             .frontiers
             .satisfies(snapshot.required_frontier)
@@ -721,16 +769,28 @@ impl IncrementalOversightEngine {
                 observed: new_generations,
             });
         }
-        self.snapshot.generations = new_generations;
-        self.maintained_antichains.clear();
-        self.generation_rebuilds += 1;
-        let _ = self.recompute_incremental_state()?;
+        if new_generations == self.snapshot.generations {
+            return Ok(());
+        }
+        let mut candidate = self.clone();
+        candidate.snapshot.generations = new_generations;
+        candidate.maintained_antichains.clear();
+        candidate.generation_rebuilds = candidate
+            .generation_rebuilds
+            .checked_add(1)
+            .ok_or(StandingOversightError::GenerationRebuildOverflow)?;
+        let _ = candidate.recompute_incremental_state()?;
+        *self = candidate;
         Ok(())
     }
 
-    /// Applies a canonical delta batch at `next_frontier_seq`, verifies against
+    /// Applies the next canonical delta batch at `next_frontier_seq`, verifies against
     /// the independent `FA-077` batch oracle at the closed frontier (`FA-INV-026`),
     /// and emits a `Knowledge<ViewReceipt>` (`FA-078`, `FA-079`, `FA-080`).
+    /// Each batch advances exactly one source position. Replayed, skipped or
+    /// unclosed positions are refused; the supplied closure booleans remain
+    /// caller-declared reference observations, not origin authentication.
+    /// Any refusal leaves the complete previously accepted engine unchanged.
     pub fn apply_delta_and_close_frontier(
         &mut self,
         delta_generations: SemanticGenerationVector,
@@ -752,7 +812,7 @@ impl IncrementalOversightEngine {
             });
         }
 
-        if !frontier_closed || next_frontier_seq < self.last_closed_seq {
+        if !frontier_closed || self.last_closed_seq.checked_add(1) != Some(next_frontier_seq) {
             return Err(StandingOversightError::IncompleteProductFrontier);
         }
 
@@ -765,35 +825,37 @@ impl IncrementalOversightEngine {
             return Err(StandingOversightError::UnclosedNegativeDomain);
         }
 
-        let mut candidate_snapshot = self.snapshot.clone();
-        candidate_snapshot.negative_domain_closed = negative_domain_closed;
-        let key = candidate_snapshot.required_frontier.key;
-        for seq in (self.last_closed_seq + 1)..=next_frontier_seq {
-            candidate_snapshot
-                .frontiers
-                .accept(key, FrontierStage::Captured, seq)
-                .map_err(|_| StandingOversightError::IncompleteProductFrontier)?;
-            candidate_snapshot
-                .frontiers
-                .accept(key, FrontierStage::Authenticated, seq)
-                .map_err(|_| StandingOversightError::IncompleteProductFrontier)?;
-        }
-        candidate_snapshot.required_frontier.through = next_frontier_seq;
+        let mut candidate = self.clone();
+        let receipt =
+            candidate.apply_closed_batch(deltas, next_frontier_seq, negative_domain_closed)?;
+        *self = candidate;
+        Ok(receipt)
+    }
+
+    fn apply_closed_batch(
+        &mut self,
+        deltas: &[SignedFactDelta],
+        next_frontier_seq: u64,
+        negative_domain_closed: bool,
+    ) -> Result<Knowledge<ViewReceipt>, StandingOversightError> {
+        self.snapshot.negative_domain_closed = negative_domain_closed;
+        let key = self.snapshot.required_frontier.key;
+        self.snapshot
+            .frontiers
+            .accept(key, FrontierStage::Captured, next_frontier_seq)
+            .map_err(|_| StandingOversightError::IncompleteProductFrontier)?;
+        self.snapshot
+            .frontiers
+            .accept(key, FrontierStage::Authenticated, next_frontier_seq)
+            .map_err(|_| StandingOversightError::IncompleteProductFrontier)?;
+        self.snapshot.required_frontier.through = next_frontier_seq;
 
         for &delta in deltas {
-            candidate_snapshot.apply_fact_delta(delta)?;
+            self.snapshot.apply_fact_delta(delta)?;
         }
 
-        let previous_snapshot = std::mem::replace(&mut self.snapshot, candidate_snapshot);
-        let recompute_res = self.recompute_incremental_state();
         let (findings, coarsened_findings, spilled_to_batch_recompute, work_units) =
-            match recompute_res {
-                Ok(v) => v,
-                Err(e) => {
-                    self.snapshot = previous_snapshot;
-                    return Err(e);
-                }
-            };
+            self.recompute_incremental_state()?;
 
         // FA-078 / FA-INV-026: Compare against the independent FA-077 batch oracle
         // at every closed frontier (using unbounded snapshot capacity when the

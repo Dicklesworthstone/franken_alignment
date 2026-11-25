@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: atomic standing oversight boundaries
+
+The standing-oversight reference now stages each complete boundary through
+incremental evaluation and independent batch comparison before committing any
+state. Duplicate, skipped and unclosed boundaries refuse; no loop invents missing
+source positions. Retractions require the exact original fact, while canonical
+`-old, +new` replacements and remaining independent supports remain usable.
+
+Public snapshot maps and support paths are validated at their consuming boundary.
+An antichain-width failure cannot leave a hidden weighted support, and a late
+oracle error cannot install rejected facts or frontiers. Semantic-generation
+rebuilds are atomic and unchanged generations do not consume a rebuild.
+
+The public regression source pairs valid continuation with replay, gap, extreme
+sequence, relabeled fact, malformed snapshot, width and late-oracle refusals.
+The [reference contract](docs/STANDING_OVERSIGHT_REFERENCE.md) states the precise
+scope: closure inputs remain caller declarations, findings remain observations,
+and no native authenticated feed or production permission is added.
+
+Eleven public regression definitions are present. Scoped parsing and format checks
+passed with rustfmt 1.10.0-nightly (2026-09-07), as did tracked-file whitespace
+checks. FA-076–080 remain in progress. Required `RCH_REQUIRE_REMOTE=1 rch exec --
+cargo run --locked -p xtask -- check` stopped before Cargo with exit 127 because
+RCH is absent. These source checks do not replace compilation, runtime tests or
+Clippy; canonical execution qualification remains pending.
+
 ## 2026-11-24: delayed independent evaluation of native Message and Finish history
 
 Native `serve-open` and `serve-open-checked` accept an explicit

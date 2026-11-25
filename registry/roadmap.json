@@ -2096,7 +2096,7 @@
       "id": "FA-076",
       "gate": "G2",
       "title": "Define standing finding support algebra",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-057",
         "FA-072"
@@ -2109,13 +2109,17 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/standing_oversight.rs",
+        "crates/fa-reference/tests/standing_oversight_boundaries.rs",
+        "docs/STANDING_OVERSIGHT_REFERENCE.md"
+      ]
     },
     {
       "id": "FA-077",
       "gate": "G2",
       "title": "Build batch oversight oracle",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-076"
       ],
@@ -2127,13 +2131,17 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/standing_oversight.rs",
+        "crates/fa-reference/tests/standing_oversight_boundaries.rs",
+        "docs/STANDING_OVERSIGHT_REFERENCE.md"
+      ]
     },
     {
       "id": "FA-078",
       "gate": "G2",
       "title": "Implement first incremental query family",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-077"
       ],
@@ -2145,13 +2153,17 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/standing_oversight.rs",
+        "crates/fa-reference/tests/standing_oversight_boundaries.rs",
+        "docs/STANDING_OVERSIGHT_REFERENCE.md"
+      ]
     },
     {
       "id": "FA-079",
       "gate": "G2",
       "title": "Bound support antichains",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-078"
       ],
@@ -2163,13 +2175,17 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/standing_oversight.rs",
+        "crates/fa-reference/tests/standing_oversight_boundaries.rs",
+        "docs/STANDING_OVERSIGHT_REFERENCE.md"
+      ]
     },
     {
       "id": "FA-080",
       "gate": "G2",
       "title": "Add model/policy-generation delta handling",
-      "status": "planned",
+      "status": "in_progress",
       "depends_on": [
         "FA-078"
       ],
@@ -2182,7 +2198,11 @@
         "Produce executed local evidence; source or prose alone does not close this packet."
       ],
       "owner_role": "systems",
-      "result_artifacts": []
+      "result_artifacts": [
+        "crates/fa-reference/src/standing_oversight.rs",
+        "crates/fa-reference/tests/standing_oversight_boundaries.rs",
+        "docs/STANDING_OVERSIGHT_REFERENCE.md"
+      ]
     },
     {
       "id": "FA-081",
