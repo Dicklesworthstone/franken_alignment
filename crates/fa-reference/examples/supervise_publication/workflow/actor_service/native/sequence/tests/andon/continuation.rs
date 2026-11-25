@@ -3,6 +3,7 @@
 //! survive one recovery Fence; no Message predecessor or new intent is invented.
 use super::super::super::evaluation::Recovery;
 use super::*;
+use super::super::precheck_tests;
 use crate::workflow::actor_service::learned::anchors as archive;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryFloor, FileRecoveryRequirements,
@@ -130,7 +131,7 @@ fn selections(root: &Root, pending: &Pending) -> (Recovery, anchors::Selection) 
             &pending
                 .entries
                 .iter()
-                .map(|entry| (&entry.actor, None))
+                .map(|entry| (&entry.actor, entry.precheck.as_ref()))
                 .collect::<Vec<_>>(),
             &pending.reviewer,
             None,
@@ -169,11 +170,26 @@ fn expected(pending: &Pending) -> FileAndonRecoveryRequirements {
 }
 
 fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: bool) {
+    run_pending_selected(steps, earlier_generation, singleton, approve, false);
+}
+
+fn run_pending_selected(
+    steps: u64,
+    earlier_generation: bool,
+    singleton: bool,
+    approve: bool,
+    prechecked: bool,
+) {
     let root = Root::new();
     let mut pending = prepared(&root, steps, earlier_generation);
     if singleton {
         pending.entries.truncate(1);
     }
+    let precheck_sockets = if prechecked {
+        precheck_tests::select(&root, &mut pending.entries, 1)
+    } else {
+        Vec::new()
+    };
     let (recovery, history) = selections(&root, &pending);
     let expected = expected(&pending);
     let old_anchor = fs::read(&pending.anchor).unwrap();
@@ -199,12 +215,19 @@ fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: b
     );
     let store = pending.reader.store.clone();
     let profile = pending.reader.profile.clone();
+    let retired_prechecks = precheck_sockets.clone();
     let independent = thread::spawn(move || {
         let mut inode = None;
         for (index, request) in requests.into_iter().enumerate() {
             let (actual, packet) = offers.recv_timeout(Duration::from_secs(20)).unwrap();
             assert_eq!(actual, request);
             assert_eq!(packet.action().spec().policy_epoch, 1);
+            if prechecked {
+                assert!(
+                    retired_prechecks[index].as_ref().is_none_or(|path| !path.exists()),
+                    "a release disclosure retained custody at the fresh human boundary"
+                );
+            }
             let current = fs::metadata(peer.selected.socket_path()).unwrap().ino();
             assert_eq!(*inode.get_or_insert(current), current);
             assert_eq!(
@@ -240,6 +263,13 @@ fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: b
     });
     let mut output = Output::new(&pending.entries);
     let profiles = output.profiles.clone();
+    let mut checked_output = prechecked.then(|| {
+        precheck_tests::CheckedOutput::live(&pending.entries, &pending.reader, &pending.reviewer, 1)
+    });
+    let mut writer: &mut dyn Write = match checked_output.as_mut() {
+        Some(checked) => checked,
+        None => &mut output,
+    };
     let mut saw_first = false;
     let offset = if earlier_generation { 4 } else { 0 };
     let prior_draws = if earlier_generation { 2 } else { 0 };
@@ -270,13 +300,16 @@ fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: b
             }
             crate::workflow::clock()
         },
-        &mut output,
+        &mut writer,
     );
     assert_eq!(result.is_ok(), approve, "{result:?}");
     assert!(saw_first);
     independent.join().unwrap();
     let packets = human.join().unwrap();
-    let replies = output.join();
+    let replies = match checked_output {
+        Some(checked) => checked.join(),
+        None => output.join(),
+    };
     let completed = if approve && !singleton { 3 } else { 1 };
     assert_eq!(packets.len(), completed);
     assert_eq!(replies.len(), completed);
@@ -360,6 +393,11 @@ fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: b
     assert_eq!(retained.revision(), current.publication.revision);
     assert_eq!(fs::read(&pending.anchor).unwrap(), old_anchor);
     assert!(!evaluator.socket_path().exists());
+    assert!(
+        precheck_sockets
+            .iter()
+            .all(|path| path.as_ref().is_none_or(|path| !path.exists()))
+    );
     closed(&profiles, &pending.reviewer);
 }
 
@@ -376,6 +414,13 @@ fn accounted_continuation_accepts_a_single_message_but_never_invents_its_human_k
     run_pending(3, false, false, false);
 }
 
+#[test]
+fn accounted_continuation_prechecks_retain_partial_and_completed_work_and_fresh_human_approval() {
+    run_pending_selected(3, false, false, true, true);
+    run_pending_selected(4, false, true, true, true);
+    run_pending_selected(3, false, false, false, true);
+}
+
 fn inactive_peer(root: &Root, entry: &Entry) -> evaluator::Settings {
     evaluator::Settings::decode(
         peer_profile(
@@ -387,6 +432,79 @@ fn inactive_peer(root: &Root, entry: &Entry) -> evaluator::Settings {
         .as_bytes(),
     )
     .unwrap()
+}
+
+#[test]
+fn accounted_pending_precheck_epoch_matches_the_recovered_owner_before_source_or_resume() {
+    for selected_epoch in [0, 2] {
+        let root = Root::new();
+        let mut pending = prepared(&root, 3, false);
+        let sockets = precheck_tests::select(&root, &mut pending.entries, selected_epoch);
+        let (recovery, history) = selections(&root, &pending);
+        let expected = expected(&pending);
+        let before = pending.reader.progress(7);
+        let old_anchor = fs::read(&pending.anchor).unwrap();
+        let evaluator = inactive_peer(&root, &pending.entries[0]);
+        let mut output = Output::new(&pending.entries);
+        let profiles = output.profiles.clone();
+        fs::remove_file(pending.config.source.path()).unwrap();
+        let error = run_with_andon_continuation(
+            pending.config,
+            pending.entries,
+            &pending.reviewer,
+            None,
+            None,
+            &history,
+            &pending.accounting,
+            &evaluator,
+            &recovery,
+            crate::workflow::clock,
+            &mut output,
+        )
+        .unwrap_err();
+        assert!(error.contains("policy epoch"), "{error}");
+        assert!(output.documents.is_empty());
+        assert!(output.join().is_empty());
+        let current = pending.reader.publication();
+        assert_eq!(current.revision, pending.before.revision + 1);
+        assert_eq!(
+            current.control.ledger.epoch,
+            pending.before.control.ledger.epoch + 1
+        );
+        assert_eq!(
+            current.control.ledger.elapsed,
+            pending.before.control.ledger.elapsed
+        );
+        assert_eq!(current.executions, 0);
+        assert_eq!(current.control.ledger.charged, 0);
+        assert!(current.stop.is_none());
+        let after = pending.reader.progress(7);
+        assert_eq!(after.text.command(), before.text.command());
+        assert_eq!(after.text.generation_revision(), 3);
+        assert_eq!(after.numerical.numerical, before.numerical.numerical);
+        pending.reader.no_generation(8);
+        let retained = archive::load(history.output_path().unwrap()).unwrap();
+        let saved = FileOversight::read_andon_guarded(
+            &pending.reader.store,
+            &pending.reader.profile,
+            &expected,
+            &pending.accounting.protocol,
+            &retained,
+        )
+        .unwrap();
+        assert_eq!(saved.credibility.report.revision, 0);
+        assert_eq!(saved.credibility.report.retained_cases, 0);
+        assert_eq!(saved.accounting.windows().len(), 2);
+        assert_eq!(retained.revision(), current.revision);
+        assert_eq!(fs::read(&pending.anchor).unwrap(), old_anchor);
+        assert!(!evaluator.socket_path().exists());
+        assert!(
+            sockets
+                .iter()
+                .all(|path| path.as_ref().is_none_or(|path| !path.exists()))
+        );
+        closed(&profiles, &pending.reviewer);
+    }
 }
 
 #[test]

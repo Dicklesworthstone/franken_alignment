@@ -17,10 +17,10 @@ use std::collections::BTreeSet;
 /// neither can infer that epoch from the selected predecessor or row number.
 pub(super) fn check_initial_epoch(
     first: Option<&exact_precheck::Selection>,
-    after: Option<u64>,
+    recovery: bool,
 ) -> Result<(), String> {
     if let Some(selected) = first {
-        selected.check_initial_epoch(after.is_some())?;
+        selected.check_initial_epoch(recovery)?;
     }
     Ok(())
 }

@@ -685,10 +685,26 @@ included and no evaluator mutation can follow that retained cut. Archive custody
 and export failures retain the [existing history contract](#independently-retained-history).
 
 Creation and the explicitly anchored recovery below retain the marginal `/1`
-accounting contract. A policy governor, topology, credibility activation, joint
-publication or joint Andon `/2`, and non-null per-release prechecks require
-separate compositions and are refused. No selected guard is silently removed.
-Single-release native and learned modes keep their separate grammars.
+accounting contract. Version-two sequence rows may independently select the
+existing exact-predicate precheck for each Message or Finish, or explicitly use
+`null`. The original evaluator role and finite allowance survive these actor
+disclosures and all later handoffs. Each disclosure keeps its own original query
+grant, shares it with any selected actor Tower precheck, and retires before helper
+and human review; a passing result supplies no publication key.
+
+The complete precheck endpoint inventory is admitted with the evaluator,
+actor, human, Stop and operator endpoints. Equality and ancestor/descendant
+aliases against those endpoints, the authority store, source, accounting and
+recovery inputs, selected profiles, recipe assets and retained histories refuse
+before live startup. Pending-generation recovery is explicitly a recovery mode,
+even without a confirmed Message predecessor. Its first selected disclosure
+binds the actual post-Fence owner epoch before source acquisition or numerical
+resume. Later stale expectations cannot initiate a successor.
+
+Policy governance, topology, credibility activation, joint publication and joint
+Andon `/2` still require separate compositions and are refused. No selected guard
+is silently removed. Single-release native and learned modes keep their separate
+grammars.
 
 Authored composition regressions cover actual fixture Message/Message/Finish
 generation, a separate evaluator process, original-case observation and labels,
@@ -781,9 +797,10 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
 This unary option takes no value and cannot be combined with `--after-message`.
 Both accounting/evaluator profiles, an independently retained input anchor, a
 new output anchor and the same closed recovery requirements are mandatory. The
-optional simple witness profile and independent operator pair remain available;
-governor, topology, joint accounting, credibility activation and non-null
-prechecks retain their separate composition requirements.
+optional simple witness profile, independent operator pair and explicit
+version-two per-release exact prechecks remain available. Governor, topology,
+joint accounting and credibility activation retain their separate composition
+requirements.
 
 The remaining sequence contains 1 through 16 entries and starts with a Message.
 Its first recipe must identify the exact original text intent: generation,
@@ -945,8 +962,9 @@ explicit creation or independently guarded recovery governor selection described
 Live evaluation and Andon accounting require their paired selection and new
 retained anchor. Accounted recovery additionally requires explicit
 `--after-message` or `--continue-generation`, an independent input anchor and
-the evaluation recovery requirements above; it does not imply governance or
-precheck support.
+the evaluation recovery requirements above. Exact prechecks still require their
+explicit version-two manifest selections; accounting does not imply governance
+or any additional disclosure.
 
 Regression sources exercise actual deterministic fixture inference, independently
 authenticated actor/human exchanges, cumulative Message/Finish publication,

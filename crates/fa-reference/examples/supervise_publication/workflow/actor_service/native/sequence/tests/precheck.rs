@@ -87,6 +87,7 @@ pub(super) struct CheckedOutput {
     reviewer: PeerProfile,
     journal: PathBuf,
     epoch: u64,
+    observed_after: Option<ElapsedTick>,
     expected: Vec<FilePrecheckOutcome>,
     change_source: Option<(usize, PathBuf, Vec<u8>)>,
     check_binding: bool,
@@ -116,6 +117,7 @@ impl CheckedOutput {
             reviewer: reviewer.clone(),
             journal: reader.store.join("delivery.bin"),
             epoch,
+            observed_after: None,
             expected: vec![FilePrecheckOutcome::PrecheckPassed; entries.len()],
             change_source: None,
             check_binding: false,
@@ -123,6 +125,20 @@ impl CheckedOutput {
             documents: Vec::new(),
             clients: Vec::new(),
         }
+    }
+
+    /// Recovery fixtures retain real elapsed ticks in their original journals.
+    /// Keep the exact-clock fixtures unchanged, and independently bound the
+    /// live disclosure's timestamp without substituting an earlier test clock.
+    pub(super) fn live(
+        entries: &[Entry],
+        reader: &Reader,
+        reviewer: &PeerProfile,
+        epoch: u64,
+    ) -> Self {
+        let mut output = Self::new(entries, reader, reviewer, epoch);
+        output.observed_after = Some(crate::workflow::clock());
+        output
     }
 
     pub(super) fn join(self) -> Vec<WireResponse> {
@@ -152,6 +168,7 @@ impl Write for CheckedOutput {
         let review = self.reviewer.socket(profile.request);
         let journal = self.journal.clone();
         let epoch = self.epoch;
+        let observed_after = self.observed_after;
         let expected = self.expected[index];
         let change = self
             .change_source
@@ -214,7 +231,12 @@ impl Write for CheckedOutput {
                     (basis.query, basis.disclosure, basis.policy_epoch),
                     (9, 81 + index as u64, epoch)
                 );
-                assert_eq!(basis.observed_at, ElapsedTick(1000));
+                if let Some(started) = observed_after {
+                    assert!(basis.observed_at >= started);
+                    assert!(basis.observed_at <= crate::workflow::clock());
+                } else {
+                    assert_eq!(basis.observed_at, ElapsedTick(1000));
+                }
                 assert_eq!(
                     fs::read(&journal).unwrap(),
                     before,

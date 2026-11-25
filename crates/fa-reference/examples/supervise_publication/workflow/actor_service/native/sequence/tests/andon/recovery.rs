@@ -3,6 +3,7 @@
 //! composition. Fixture weights and benign labels do not qualify a detector.
 use super::super::super::evaluation::Recovery;
 use super::*;
+use super::super::precheck_tests;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryFloor, FileRecoveryRequirements,
     evaluation::andon::FileAndonRecoveryRequirements,
@@ -163,7 +164,7 @@ fn recovered_history(root: &Root, seed: &Seed, entries: &[Entry]) -> anchors::Se
             &seed.config,
             &entries
                 .iter()
-                .map(|entry| (&entry.actor, None))
+                .map(|entry| (&entry.actor, entry.precheck.as_ref()))
                 .collect::<Vec<_>>(),
             &seed.reviewer,
             None,
@@ -217,9 +218,23 @@ fn number(value: &Json, path: &[&str]) -> u64 {
 }
 
 fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
+    recovered_suffix_selected(finish_only, approve, candidates, false);
+}
+
+fn recovered_suffix_selected(
+    finish_only: bool,
+    approve: bool,
+    candidates: u32,
+    prechecked: bool,
+) {
     let root = Root::new();
     let seed = seeded(&root, if finish_only { 2 } else { 4 });
-    let entries = suffix(&root, &seed, finish_only);
+    let mut entries = suffix(&root, &seed, finish_only);
+    let precheck_sockets = if prechecked {
+        precheck_tests::select(&root, &mut entries, 1)
+    } else {
+        Vec::new()
+    };
     let requests = entries
         .iter()
         .map(|entry| entry.actor.request)
@@ -240,12 +255,19 @@ fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
     let store = seed.reader.store.clone();
     let profile = seed.reader.profile.clone();
     let last = *requests.last().unwrap();
+    let retired_prechecks = precheck_sockets.clone();
     let independent = thread::spawn(move || {
         let mut inode = None;
         for (index, request) in requests.iter().copied().enumerate() {
             let (offered, packet) = offers.recv_timeout(Duration::from_secs(20)).unwrap();
             assert_eq!(offered, request);
             assert_eq!(packet.action().spec().policy_epoch, 1);
+            if prechecked {
+                assert!(
+                    retired_prechecks[index].as_ref().is_none_or(|path| !path.exists()),
+                    "a release disclosure retained custody at the fresh human boundary"
+                );
+            }
             let publication = || FileOversight::read_publication(&store, &profile).unwrap();
             assert_eq!(publication().executions, 2 + index as u64);
             if index == 0 {
@@ -319,6 +341,13 @@ fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
     });
     let mut output = Output::new(&entries);
     let profiles = output.profiles.clone();
+    let mut checked_output = prechecked.then(|| {
+        precheck_tests::CheckedOutput::live(&entries, &seed.reader, &seed.reviewer, 1)
+    });
+    let mut writer: &mut dyn Write = match checked_output.as_mut() {
+        Some(checked) => checked,
+        None => &mut output,
+    };
     let result = run_with_andon_recovery(
         seed.config,
         entries,
@@ -330,12 +359,15 @@ fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
         &evaluator,
         &requirements,
         crate::workflow::clock,
-        &mut output,
+        &mut writer,
     );
     assert_eq!(result.is_ok(), approve, "{result:?}");
     independent.join().unwrap();
     let packets = human.join().unwrap();
-    let replies = output.join();
+    let replies = match checked_output {
+        Some(checked) => checked.join(),
+        None => output.join(),
+    };
     assert_eq!(replies.len(), if finish_only { 1 } else { 2 });
     let mut sessions = seed
         .packets
@@ -428,6 +460,11 @@ fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
     assert_eq!(final_anchor.revision(), stream.publication.revision);
     assert_eq!(fs::read(&seed.anchor).unwrap(), original_anchor);
     assert!(!evaluator.socket_path().exists());
+    assert!(
+        precheck_sockets
+            .iter()
+            .all(|path| path.as_ref().is_none_or(|path| !path.exists()))
+    );
     closed(&profiles, &seed.reviewer);
 }
 
@@ -446,6 +483,13 @@ fn recovered_accounted_singleton_finish_spends_no_new_draws_and_needs_a_new_huma
 #[test]
 fn recovered_native_evaluator_cannot_replenish_candidates_at_the_finish_handoff() {
     recovered_suffix(false, true, 2);
+}
+
+#[test]
+fn recovered_accounted_prechecks_preserve_original_cases_finish_and_separate_human_keys() {
+    recovered_suffix_selected(false, true, 4, true);
+    recovered_suffix_selected(true, true, 2, true);
+    recovered_suffix_selected(false, false, 4, true);
 }
 
 fn inactive_peer(root: &Root, entry: &Entry) -> evaluator::Settings {

@@ -1,5 +1,38 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: compose resident native prechecks with independent accounting
+
+Accounted resident native creation, confirmed-Message suffix recovery and
+interrupted-generation continuation now admit explicitly selected version-two
+exact actor prechecks. The original disclosure implementation is reused: each
+release keeps its finite query grant, checks the actual owner epoch before source
+or numerical work, and retires the disclosure before independent helper and human
+review. One original evaluator and Andon owner remain resident across handoffs.
+
+The complete selected disclosure socket inventory joins the existing endpoint and
+input custody preflight, including ancestor/descendant collisions, future files,
+recipe assets and independently retained history. Pending-generation admission
+uses its explicit recovery mode rather than inferring creation from the absence
+of a confirmed Message predecessor. Stale or future disclosure epochs can retain
+the original recovery Fence but cannot begin fresh source or numerical work.
+
+Nine added service and manifest regression definitions cover actual Message/Finish generation
+and independent case labeling, null disclosures, exhausted grants, human rejection,
+endpoint aliases, later epoch mismatch, partial-frame Stop, recovered suffixes,
+singleton Finish, pending/completed generation and original accounting retention.
+Fixture weights and labels establish composition boundaries, not detector quality.
+
+Independent source review and scoped Tree-sitter parsing of the working draft
+were performed. The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+exited 127 because `rch` was absent. Rust formatting, compilation, Clippy and
+runtime tests have not run. The workspace then disconnected; the authored changes
+were recovered through pinned GitHub sources and exact edits before publication.
+Committed-source review and blob verification do not substitute for execution.
+FA-105/134/142 and their existing acceptance conditions remain in progress;
+the unavailable `br` tracker was not edited manually. See the
+[resident operator contract](docs/RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting).
+
 ## 2026-11-25: derive consequence drift, Andon closure modes and coverage erosion
 
 The FA-125 typed reference projection now supplies semantic predicates for all

@@ -72,8 +72,11 @@ Message; [`--continue-generation`](docs/RESIDENT_NATIVE_PUBLICATION.md#resume-in
 resumes the exact pending or completed-but-unsubmitted first Message before
 serving the remaining sequence. Both retain original numerical spend and the
 complete accounting inventory. A singleton Finish uses `--after-message` without
-new inference. Each release still needs separate human approval. This composition remains pending
-required RCH compilation and runtime qualification.
+new inference. Explicit version-two per-release exact prechecks now compose with
+these accounted creation and recovery modes: each finite actor disclosure binds
+the actual owner epoch and retires before independent review. Evaluator custody,
+original budgets, Stop and separate human approvals remain in force. This
+composition remains pending required RCH compilation and runtime qualification.
 
 Single-request native generated services also support
 [anchored recovery with live evaluation](docs/LIVE_ANDON_EVALUATION.md#recover-an-evaluated-native-generated-service).

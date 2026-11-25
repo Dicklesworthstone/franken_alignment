@@ -439,3 +439,156 @@ fn resident_native_disclosure_admission_protects_all_future_names_and_canonical_
     );
     assert!(entries.iter().all(|entry| !entry.actor.socket.exists()));
 }
+
+#[test]
+fn accounted_continuation_manifest_keeps_explicit_disclosures_at_the_recovered_epoch() {
+    use super::super::super::evaluation::Recovery;
+    use crate::workflow::actor_service::learned::anchors as archive;
+    use crate::workflow::actor_service::{andon_settings, evaluator};
+
+    let root = Root::new();
+    let (config, peers, entries) = selected(&root);
+    for (index, entry) in entries.iter().enumerate() {
+        save_actor(&root.0.join(format!("actor-{index}.json")), &entry.actor);
+    }
+    let recipe = fs::read_to_string(root.0.join("recipe.json")).unwrap();
+    fs::write(
+        root.0.join("second.json"),
+        recipe.replace("\"generation\":7", "\"generation\":8"),
+    )
+    .unwrap();
+    for (index, id) in [(0, 81), (2, 83)] {
+        let selected = settings(&root.0.join(format!("check-{index}.sock")), id, 1)
+            .replacen("\"expected_policy_epoch\":0", "\"expected_policy_epoch\":1", 1);
+        fs::write(root.0.join(format!("check-{index}.json")), selected).unwrap();
+    }
+    let path = root.0.join("sequence.json");
+    let manifest = checked_document(&[
+        checked_entry("recipe.json", "actor-0.json", "message", r#""check-0.json""#),
+        checked_entry("second.json", "actor-1.json", "message", "null"),
+        checked_entry("second.json", "actor-2.json", "finish", r#""check-2.json""#),
+    ]);
+    fs::write(&path, &manifest).unwrap();
+    let accounting = andon_settings::Settings::decode(include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/fixtures/native_andon_operator.json"
+    )))
+    .unwrap();
+    let selected = bootstrap::selection(&config, &entries[0].inputs, None).unwrap();
+    let (host, human, evaluation_role) =
+        bootstrap::prepare_andon(&config, &entries[0].inputs, selected, &accounting).unwrap();
+    let before = host.inspect();
+    let input = root.0.join("original.anchor");
+    archive::export_acknowledged(&host.history_anchor().unwrap(), &input).unwrap();
+    drop(evaluation_role);
+    drop(human);
+    drop(host);
+    let requirements_path = root.0.join("evaluation-recovery.json");
+    fs::write(
+        &requirements_path,
+        format!(
+            r#"{{"schema":"fa.native-evaluation-recovery/1","minimum":{{"journal_revision":{},"control_sequence":{},"authority_epoch":{}}}}}"#,
+            before.revision, before.control.sequence, before.control.ledger.epoch,
+        ),
+    )
+    .unwrap();
+    let recovery = Recovery::read(&requirements_path, &config).unwrap();
+    let actor = &entries[0].actor;
+    let scope = actor.scope;
+    let server = actor.supervisor;
+    let peer_pid = server.pid().unwrap().checked_add(100_000).unwrap();
+    let evaluator = evaluator::Settings::decode(
+        format!(
+            r#"{{"schema_version":"fa.native-evaluator-peer/1","socket":"{}/evaluator.sock",
+            "scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}},
+            "deployment":101,"evaluator":202,
+            "supervisor":{{"uid":{},"gid":{},"pid":{}}},
+            "peer":{{"uid":{},"gid":{},"pid":{peer_pid}}},
+            "candidate_limit":8,"runtime_ms":15000,"poll_ms":1}}"#,
+            root.0.display(),
+            scope.tenant,
+            scope.principal,
+            scope.run,
+            scope.branch,
+            scope.authority,
+            server.uid(),
+            server.gid(),
+            server.pid().unwrap(),
+            server.uid(),
+            server.gid(),
+        )
+        .as_bytes(),
+    )
+    .unwrap();
+    let output = root.0.join("continued.anchor");
+    let args = [
+        "serve-native-generated".into(),
+        "config".into(),
+        "sequence".into(),
+        "reviewer".into(),
+        "--history-anchor".into(),
+        input.display().to_string(),
+        "--retain-history-anchor".into(),
+        output.display().to_string(),
+    ];
+    let journal = fs::read(config.store.join("delivery.bin")).unwrap();
+    let source = fs::read(config.source.path()).unwrap();
+    let original = fs::read(&input).unwrap();
+    let admit = || {
+        load_with_complete_services(
+            &path,
+            &config,
+            &peers,
+            Mode::ContinueGeneration,
+            None,
+            None,
+            Some(anchors::take_options(&args).unwrap().1),
+            None,
+            None,
+            Some(andon::Selection {
+                settings: &accounting,
+                evaluator: &evaluator,
+                recovery: Some(&recovery),
+                paths: None,
+            }),
+            &[],
+        )
+    };
+    // This recovery mode has after=None. Its explicit epoch-one grant must
+    // survive the file loader instead of being treated as a new epoch-zero
+    // owner. The actual recovery Fence and epoch match remain runtime checks.
+    let (loaded, history) = admit().unwrap();
+    assert_eq!(loaded.len(), 3);
+    assert!(loaded[0].precheck.is_some());
+    assert!(loaded[1].precheck.is_none());
+    assert!(loaded[2].precheck.is_some());
+    assert_eq!(loaded[0].inputs.generation, 7);
+    assert_eq!(loaded[1].inputs.generation, loaded[2].inputs.generation);
+    assert!(matches!(loaded[2].release, Release::Finish));
+    assert_eq!(
+        history.as_ref().unwrap().input().unwrap().revision(),
+        before.revision
+    );
+
+    // Every selected disclosure still parses before the first model input.
+    // Accounting must never make a malformed future profile optional.
+    fs::write(root.0.join("check-2.json"), "{}").unwrap();
+    fs::write(
+        &path,
+        manifest.replace("recipe.json", "missing-model-recipe.json"),
+    )
+    .unwrap();
+    let error = admit().err().unwrap();
+    assert!(
+        error.contains("missing precheck field schema"),
+        "a malformed future disclosure reached the missing recipe: {error}"
+    );
+    assert_eq!(fs::read(config.store.join("delivery.bin")).unwrap(), journal);
+    assert_eq!(fs::read(config.source.path()).unwrap(), source);
+    assert_eq!(fs::read(&input).unwrap(), original);
+    assert!(!output.exists());
+    assert!(!evaluator.socket_path().exists());
+    assert!(entries.iter().all(|entry| !entry.actor.socket.exists()));
+    assert!(!root.0.join("check-0.sock").exists());
+    assert!(!root.0.join("check-2.sock").exists());
+}

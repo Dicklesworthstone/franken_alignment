@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-25: compose accounted native sequences with exact actor prechecks
+
+- Admit explicit per-release exact prechecks during accounted native creation,
+  confirmed-Message recovery and interrupted-generation continuation.
+- Preserve the original disclosure grants, evaluator, accounting windows,
+  numerical work, Stop/deadline and separate human publication keys.
+- Validate all future disclosure endpoints and selected inputs together before
+  live setup. Bind recovered disclosures to the actual post-Fence epoch.
+- Add nine service and manifest regression definitions for permitted publication, null
+  selection, human rejection, stale epochs, custody aliases, partial-frame Stop
+  and recovered numerical/accounting continuity.
+- Keep execution qualification open: the required RCH command could not start,
+  and the workspace disconnected after source and scoped syntax review.
+
 ## 2026-11-25: derive the remaining three risk-theater query families
 
 - Add exact-rational consequence drift from original rounds, closed comparison

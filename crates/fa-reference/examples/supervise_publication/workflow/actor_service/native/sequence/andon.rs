@@ -1,7 +1,7 @@
 //! Explicit creation or accounted recovery for one original native generated stream.
 //! Configuration and evaluator custody are selected before numerical assets,
 //! listeners or the first image; none is inferred from a later journal.
-use super::super::{Config, PeerProfile, Profile, PublicationProfile, operator};
+use super::super::{Config, PeerProfile, Profile, PublicationProfile, exact_precheck, operator};
 use super::{Mode, anchors, evaluation};
 use crate::workflow::actor_service::{andon_settings, evaluator};
 use std::{
@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; governance, topology, joint promotion, activation and precheck schedules require their own composition";
+pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; governance, topology, joint promotion and activation require their own composition";
 
 pub(super) struct Paths {
     pub settings: PathBuf,
@@ -294,6 +294,35 @@ impl Selection<'_> {
             }
             endpoints.push(canonical);
         }
+        Ok(endpoints)
+    }
+
+    /// Extend the same finite service namespace with every selected actor
+    /// disclosure. The actor credentials already checked against the evaluator
+    /// also own these sidecars; a disclosure never receives evaluator custody.
+    /// Validate future sockets against the complete accounting and recovery
+    /// inputs even if a selected input has since been removed from disk.
+    pub(super) fn endpoints_with_prechecks<'a>(
+        self,
+        config: &Config,
+        actors: &[&Profile],
+        reviewer: &PeerProfile,
+        selected_operator: Option<&operator::Selection>,
+        prechecks: impl IntoIterator<Item = &'a exact_precheck::Selection>,
+    ) -> Result<Vec<PathBuf>, String> {
+        let mut endpoints = self.endpoints(actors, reviewer, selected_operator)?;
+        let store = operator::resolve(&config.store)?;
+        for selected in prechecks {
+            let socket = operator::resolve(selected.settings.socket_path())?;
+            if overlaps(&socket, &store)
+                || endpoints.iter().any(|other| overlaps(&socket, other))
+            {
+                return Err("native evaluation precheck endpoints must be disjoint from the authority store and every scheduled service endpoint".into());
+            }
+            self.check_files(&[socket.as_path()])?;
+            endpoints.push(socket);
+        }
+        check_endpoint_files(&endpoints, &[config.source.path()])?;
         Ok(endpoints)
     }
 }

@@ -29,6 +29,8 @@ mod continuation;
 mod recovered;
 #[path = "andon/stop_failure.rs"]
 mod stop_failure;
+#[path = "andon/precheck.rs"]
+mod precheck;
 
 fn parse(bytes: &[u8]) -> Json {
     strict_json::parse(bytes, strict_json::Limits::default()).unwrap()
@@ -88,7 +90,7 @@ fn history(
             config,
             &entries
                 .iter()
-                .map(|entry| (&entry.actor, None))
+                .map(|entry| (&entry.actor, entry.precheck.as_ref()))
                 .collect::<Vec<_>>(),
             reviewer,
             operator,

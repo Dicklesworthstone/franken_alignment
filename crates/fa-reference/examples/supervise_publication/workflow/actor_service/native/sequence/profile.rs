@@ -17,7 +17,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint/precheck compositions remain separate";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor and optional per-release exact prechecks; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint compositions remain separate";
 
 struct Input {
     recipe: PathBuf,
@@ -606,14 +606,10 @@ fn load_with_complete_services(
         Mode::ContinueGeneration => decode_mode(&bytes, base, mode)?,
     };
     if let Some(accounting) = accounting {
-        // Precheck composition requires its own full disclosure lifetime and
-        // identity contract. Refuse it before loading the selected input files.
-        if plan.iter().any(|entry| entry.precheck.is_some()) {
-            return Err(andon::INVALID.into());
-        }
         let mut paths = vec![path];
         for entry in &plan {
             paths.extend([entry.recipe.as_path(), entry.actor.as_path()]);
+            paths.extend(entry.precheck.as_deref());
         }
         accounting.check_files(&paths)?;
     }
@@ -641,7 +637,7 @@ fn load_with_complete_services(
         .map(|entry| Profile::read(&entry.actor))
         .collect::<Result<Vec<_>, _>>()?;
     validate_actors(config, &actors.iter().collect::<Vec<_>>(), peers, after)?;
-    let accounting_endpoints = accounting.map(|accounting| {
+    if let Some(accounting) = accounting {
         accounting.check_actors(
             config, &actors.iter().collect::<Vec<_>>(), peers, selected_operator,
         )?;
@@ -657,8 +653,7 @@ fn load_with_complete_services(
             files.extend(entry.precheck.as_deref());
         }
         andon::check_endpoint_files(&endpoints, &files)?;
-        Ok::<_, String>(endpoints)
-    }).transpose()?;
+    }
     if let Some(selected) = selected_operator {
         for actor in &actors {
             selected.check(config, actor, peers)?;
@@ -674,7 +669,26 @@ fn load_with_complete_services(
                 .transpose()
         })
         .collect::<Result<Vec<_>, _>>()?;
-    super::disclosure::check_initial_epoch(prechecks[0].as_ref(), after)?;
+    // Pending-generation recovery has no confirmed Message predecessor,
+    // but still opens an existing owner at its actual post-Fence epoch.
+    super::disclosure::check_initial_epoch(prechecks[0].as_ref(), mode.is_recovery())?;
+    let accounting_endpoints = accounting.map(|accounting| {
+        let endpoints = accounting.endpoints_with_prechecks(
+            config,
+            &actors.iter().collect::<Vec<_>>(),
+            peers,
+            selected_operator,
+            prechecks.iter().filter_map(Option::as_ref),
+        )?;
+        let mut files = accounting_inputs.to_vec();
+        files.extend([path, config.source.path()]);
+        for entry in &plan {
+            files.extend([entry.recipe.as_path(), entry.actor.as_path()]);
+            files.extend(entry.precheck.as_deref());
+        }
+        andon::check_endpoint_files(&endpoints, &files)?;
+        Ok::<_, String>(endpoints)
+    }).transpose()?;
     if let Some(path) = recovery_path {
         governor::requirements::check_path(
             path,
@@ -841,7 +855,7 @@ pub(super) fn validate_mode(
 ) -> Result<(), String> {
     let after = mode.after();
     check_count(entries.len(), mode)?;
-    super::disclosure::check_initial_epoch(entries[0].precheck.as_ref(), after)?;
+    super::disclosure::check_initial_epoch(entries[0].precheck.as_ref(), mode.is_recovery())?;
     validate_actors(
         config,
         &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),

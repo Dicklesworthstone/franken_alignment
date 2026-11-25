@@ -112,9 +112,12 @@ Ledger. Recovery selects `--after-message` for a confirmed boundary or
 for the exact original pending or completed-but-unsubmitted first Message.
 Both require an independent input anchor and the same explicit evaluation
 recovery requirements used below; one fresh evaluator serves the recovered
-sequence without renewing its allowance at handoffs. Joint
-profiles, governance, topology and selected prechecks remain separate. Required
-RCH compilation and runtime qualification remain pending.
+sequence without renewing its allowance at handoffs. Explicit version-two
+per-release exact prechecks compose with both creation and recovered sequences,
+retaining their original actor grants, complete endpoint/input custody and
+actual owner epoch checks before source or numerical work. Joint profiles,
+governance and topology remain separate. Required RCH compilation and runtime
+qualification remain pending.
 
 ## Recover an evaluated native generated service
 

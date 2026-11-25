@@ -454,7 +454,6 @@ where
         if credibility.is_some()
             || selected_governor.is_some()
             || requirements.is_some()
-            || entries.iter().any(|entry| entry.precheck.is_some())
         {
             return Err(andon::INVALID.into());
         }
@@ -465,16 +464,19 @@ where
             reviewer_profile,
             selected_operator,
         )?;
+        let endpoints = accounting.endpoints_with_prechecks(
+            &config,
+            &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
+            reviewer_profile,
+            selected_operator,
+            entries.iter().filter_map(|entry| entry.precheck.as_ref()),
+        )?;
         let history = history.ok_or(andon::INVALID)?;
         accounting.check_history(history)?;
         if let Some(publication) = publication {
             let files = publication.input_paths().iter()
                 .map(|path| path.as_path()).collect::<Vec<_>>();
             accounting.check_files(&files)?;
-            let endpoints = accounting.endpoints(
-                &entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>(),
-                reviewer_profile, selected_operator,
-            )?;
             andon::check_endpoint_files(&endpoints, &files)?;
             history.check_files(&files)?;
         }
