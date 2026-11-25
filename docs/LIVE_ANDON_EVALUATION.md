@@ -535,6 +535,69 @@ The command is registered as an L8 read adapter. Generic actor/operator Tower
 requests remain unsupported; knowing a case identifier does not supply the
 separate evaluator role.
 
+### List retained cases without known round IDs
+
+An evaluator that does not already know the historical round IDs can discover
+them through the same endpoint:
+
+```text
+supervise_publication evaluator-case EVALUATOR_PROFILE --list 8
+```
+
+`LIMIT` is an explicit integer from 1 through 16. A successful page contains the
+original minimal case identities and their `pending`, `censored` or `resolved`
+assessment progress. `resolved` does not expose the actual truth label. The page
+also contains `total_cases`, `remaining_cases`, `unapplied_rounds` and
+`next_after`. `total_cases` counts all retained applied cases across policy
+generations; `remaining_cases` counts those strictly after the selected cursor,
+including the current page. Begun or unsuccessfully applied reviews remain in
+the separate unapplied count. Even an empty applied page may therefore have
+unfinished work.
+
+When `next_after` is nonnull, continue with that round and the exact journal and
+evaluation revisions from `knowledge.basis`, in this order:
+
+```text
+supervise_publication evaluator-case EVALUATOR_PROFILE --list 8 \
+  --after ROUND --at-journal JOURNAL_REVISION --at-evaluation EVALUATION_REVISION
+```
+
+All three continuation options are required together. IDs and counts use
+canonical decimal spelling. The journal revision and round are positive;
+evaluation revision zero is valid for an empty initial ledger. Listing copies at
+most 16 summaries and counts at most the original 512-case inventory. It does
+not calculate a full credibility report, read source evidence, sample Time,
+replay history or append any journal event.
+
+Each page pins one exact acknowledged history cut. A new label, new review or
+Time-only event invalidates a continuation. `Unknown{stale_basis}` and
+`Unknown{cursor_not_recorded}` contain no partial page or substituted current
+basis. The client prints the explicit Unknown and returns an error; it never
+silently restarts the enumeration. Explicitly start a new initial listing when
+the history changes. For labeling, use a currently observed evaluation revision;
+earlier pages do not reserve an assessment predecessor.
+
+The additive `fa.native-evaluator-cases-request/1` and
+`fa.live-evaluator-cases/1` formats keep the existing `evaluator-case` verb and
+socket. The listing request has a 2 KiB limit so its complete echoed frame and
+16 descriptors fit the unchanged 24 KiB response bound. A dedicated bounded
+parser leaves the exact-case and assessment grammars unchanged. Before output,
+the client verifies the complete request, closed schema, exact revision pair,
+case identities, ascending unique rounds, domain counts, status and continuation
+cardinality. In particular, a nonterminal page cannot silently omit its cursor.
+
+A listing consumes one candidate from the same original evaluator allowance.
+Continuation, exact-case reads and assessments consume their own subsequent
+candidates; reconnecting or paging does not refill any candidate, byte, I/O or
+lifetime budget. Both peers still authenticate before disclosing bytes. A
+partial request waits for EOF, yields to Stop and cannot disclose a page.
+
+Fifteen transport regression functions cover strict schemas, maximal pages,
+authenticated list/continue/read/assess flow, finite shared allowances, stale
+history, private-data exclusions, sealed frames and client validation before
+output. They are authored tests; required remote compilation and execution
+remain pending.
+
 ## Assess a completed review while service continues
 
 Run this command as the separately configured evaluator process:

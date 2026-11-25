@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: discover cases through the original authenticated evaluator service
+
+`evaluator-case EVALUATOR_PROFILE --list LIMIT` now exposes the native bounded
+case page through the same authenticated evaluator endpoint. Exact round reads
+remain compatible. Continuation explicitly supplies the last returned round and
+both acknowledged revisions; the client reports stale or missing boundaries as
+Unknown and never silently substitutes a fresh page.
+
+The closed request/response grammar validates minimal identities, assessment
+progress, sorted unique rounds, applied/unapplied counts and exact remaining
+cardinality. The 2 KiB listing request fits its echoed frame and up to 16 entries
+inside the original 24 KiB response limit. Original peer authentication, EOF
+sealing, Stop priority and cumulative candidate/I/O/byte/lifetime allowances
+remain unchanged. Reads invoke no clock, source, replay, label or effect work.
+
+Fifteen protocol, service and client regression functions include an actual
+authenticated list/continue/read/assess sequence and stale continuation, sharing
+one five-candidate allowance. Together with the eight native regression
+functions, the increment has independent source review. The eleven evaluator
+Rust inputs passed scoped Rust 2024 formatting with the qualified
+nightly-2026-09-08 formatter; both usage-bearing Rust inputs passed parsing and
+the change passed whitespace checks. The [operator contract](docs/LIVE_ANDON_EVALUATION.md#list-retained-cases-without-known-round-ids)
+and registered verb describe the complete explicit selection. Compilation,
+runtime tests, Clippy and canonical qualification remain pending because the
+required RCH runner is unavailable; no packet or production gate is closed.
+
 ## 2026-11-25: bounded discovery of original independent evaluation cases
 
 The original independently held evaluator can enumerate applied native cases in

@@ -33,7 +33,9 @@ impl CaseRequest {
         let root = fields(&parsed, &["schema_version", "audience", "round"])?;
         expected(root, "schema_version", "fa.native-evaluator-case-request/1")?;
         if root["audience"] != parse(audience(settings).as_bytes(), REQUEST_BYTES)? {
-            return Err("case request audience does not match this original evaluator owner".into());
+            return Err(
+                "case request audience does not match this original evaluator owner".into(),
+            );
         }
         let round = positive(&root["round"])?;
         Ok(Self {
@@ -78,10 +80,18 @@ impl CaseRequest {
     fn encode(&self, observation: &Knowledge<CaseIdentity, Basis>) -> Result<Vec<u8>, String> {
         let knowledge = match observation {
             Knowledge::Known { value, basis } => {
-                let root: String = value.root.iter().map(|byte| format!("{byte:02x}")).collect();
+                let root: String = value
+                    .root
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect();
                 format!(
                     "{{\"state\":\"known\",\"basis\":{},\"value\":{{\"round\":\"{}\",\"attempt\":\"{}\",\"policy_generation\":\"{}\",\"congress_generation\":\"{}\",\"case_evidence_root_hex\":\"{root}\"}}}}",
-                    basis.json(), value.round, value.attempt, value.policy, value.congress,
+                    basis.json(),
+                    value.round,
+                    value.attempt,
+                    value.policy,
+                    value.congress,
                 )
             }
             Knowledge::Unknown {
@@ -163,7 +173,7 @@ pub(crate) fn validate(request: &CaseRequest, wire: &[u8]) -> Result<bool, Strin
     }
 }
 
-fn positive(value: &Json) -> Result<u64, String> {
+pub(super) fn positive(value: &Json) -> Result<u64, String> {
     let value = decimal(value)?;
     if value == 0 {
         Err("case identities and generations must be nonzero".into())
@@ -172,7 +182,7 @@ fn positive(value: &Json) -> Result<u64, String> {
     }
 }
 
-fn digest(value: &Json) -> Result<[u8; 32], String> {
+pub(super) fn digest(value: &Json) -> Result<[u8; 32], String> {
     let value = value
         .as_str()
         .ok_or("case evidence identity must be lowercase hex")?;

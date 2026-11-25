@@ -2,6 +2,8 @@
 //! fabricated recovery Fence or an assertion that independent custody was saved.
 #[path = "protocol/case.rs"]
 pub(crate) mod case;
+#[path = "protocol/cases.rs"]
+pub(crate) mod cases;
 
 use super::{
     Settings,

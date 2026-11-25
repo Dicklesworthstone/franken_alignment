@@ -5,9 +5,13 @@ use super::{
     protocol::{
         self, Request,
         case::{self, CaseRequest},
+        cases::{self, CasesRequest},
     },
 };
 use crate::config::{debug, read_regular};
+use fa_reference::action::consequence::delivery::persistent::observed::credibility::{
+    FileEvaluationCasesBasis, MAX_EVALUATION_CASE_PAGE,
+};
 use std::{
     io::Write,
     net::Shutdown,
@@ -21,34 +25,82 @@ use std::{
 mod transport;
 
 pub(crate) fn command(args: &[String], output: &mut impl Write) -> Result<(), String> {
-    if args.len() != 3
+    const USAGE: &str = "usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND | evaluator-case EVALUATOR_PROFILE --list LIMIT [--after ROUND --at-journal REV --at-evaluation REV]";
+    if args.len() < 3
         || !matches!(args[0].as_str(), "evaluator-assess" | "evaluator-case")
-        || args[1..]
-            .iter()
-            .any(|arg| arg.is_empty() || arg.starts_with("--"))
+        || args[1].is_empty()
+        || args[1].starts_with("--")
     {
-        return Err("usage: evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON | evaluator-case EVALUATOR_PROFILE ROUND".into());
+        return Err(USAGE.into());
     }
-    let input = if args[0] == "evaluator-case" {
-        let round = &args[2];
-        if !round.bytes().all(|byte| byte.is_ascii_digit()) || round.starts_with('0') {
-            return Err("evaluation round must be a nonzero canonical decimal integer".into());
+    let input = if args[0] == "evaluator-case" && args[2] == "--list" {
+        if !matches!(args.len(), 4 | 10)
+            || (args.len() == 10
+                && (args[4] != "--after"
+                    || args[6] != "--at-journal"
+                    || args[8] != "--at-evaluation"))
+        {
+            return Err(USAGE.into());
         }
-        Input::Case(round.parse().map_err(debug)?)
+        let limit = integer(&args[3], false)?;
+        if limit > MAX_EVALUATION_CASE_PAGE as u64 {
+            return Err("case listing limit exceeds the finite page bound".into());
+        }
+        let (after_round, expected_basis) = if args.len() == 10 {
+            (
+                Some(integer(&args[5], false)?),
+                Some(FileEvaluationCasesBasis {
+                    journal_revision: integer(&args[7], false)?,
+                    evaluation_revision: integer(&args[9], true)?,
+                }),
+            )
+        } else {
+            (None, None)
+        };
+        Input::Cases {
+            limit: limit as usize,
+            after_round,
+            expected_basis,
+        }
     } else {
-        Input::Assessment(Path::new(&args[2]))
+        if args.len() != 3 || args[2].is_empty() || args[2].starts_with("--") {
+            return Err(USAGE.into());
+        }
+        if args[0] == "evaluator-case" {
+            Input::Case(integer(&args[2], false)?)
+        } else {
+            Input::Assessment(Path::new(&args[2]))
+        }
     };
     send(Path::new(&args[1]), input, output)
+}
+
+fn integer(value: &str, zero: bool) -> Result<u64, String> {
+    if value.is_empty()
+        || !value.bytes().all(|byte| byte.is_ascii_digit())
+        || (value.starts_with('0') && (value.len() > 1 || !zero))
+    {
+        return Err(
+            "evaluator arguments require canonical decimal integers in their stated bounds".into(),
+        );
+    }
+    value.parse().map_err(debug)
 }
 
 enum Input<'a> {
     Assessment(&'a Path),
     Case(u64),
+    Cases {
+        limit: usize,
+        after_round: Option<u64>,
+        expected_basis: Option<FileEvaluationCasesBasis>,
+    },
 }
 
 enum Outbound {
     Assessment(Request),
     Case(CaseRequest),
+    Cases(CasesRequest),
 }
 
 impl Outbound {
@@ -56,6 +108,7 @@ impl Outbound {
         match self {
             Self::Assessment(request) => &request.wire,
             Self::Case(request) => &request.wire,
+            Self::Cases(request) => &request.wire,
         }
     }
 
@@ -65,13 +118,21 @@ impl Outbound {
                 protocol::validate(request, wire).map(|outcome| outcome.completed())
             }
             Self::Case(request) => case::validate(request, wire),
+            Self::Cases(request) => cases::validate(request, wire),
         }
     }
 
     fn incomplete(&self) -> &'static str {
         match self {
-            Self::Assessment(_) => "assessment refused or completion unconfirmed; inspect the original owner before an explicit retry",
-            Self::Case(_) => "original evaluation case is unknown; no case identity or labeling authority was disclosed",
+            Self::Assessment(_) => {
+                "assessment refused or completion unconfirmed; inspect the original owner before an explicit retry"
+            }
+            Self::Case(_) => {
+                "original evaluation case is unknown; no case identity or labeling authority was disclosed"
+            }
+            Self::Cases(_) => {
+                "original evaluation case listing is unknown; the pinned history or cursor is unavailable; start an explicit new listing before continuing"
+            }
         }
     }
 }
@@ -98,6 +159,16 @@ fn send(profile: &Path, input: Input<'_>, output: &mut impl Write) -> Result<(),
             &read_regular(path, MAX_ASSESSMENT_BYTES)?,
         )?),
         Input::Case(round) => Outbound::Case(CaseRequest::prepare(&settings, round)?),
+        Input::Cases {
+            limit,
+            after_round,
+            expected_basis,
+        } => Outbound::Cases(CasesRequest::prepare(
+            &settings,
+            limit,
+            after_round,
+            expected_basis,
+        )?),
     };
     checkpoint()?;
     let mut socket = UnixStream::connect(&settings.socket).map_err(debug)?;

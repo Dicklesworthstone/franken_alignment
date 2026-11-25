@@ -357,8 +357,8 @@
       "authority": "separately configured kernel-authenticated independent evaluator holding the original native evaluator role",
       "idempotency": "explicit current observation; repeated reads consume the same original finite service allowance and never cache or reserve an evaluation predecessor",
       "cost_class": "bounded immutable original-owner observation and cumulative original transport allowance",
-      "response": "Knowledge<EvaluationCaseIdentity> with exact native journal, evaluation, control and authority basis; never a ticket or label",
-      "note": "Linux supervise_publication evaluator-case adapter on the same independent live evaluator endpoint. Generic actor/operator Tower dispatch remains unsupported. Missing cases are Unknown; foreign or faulted custody refuses. No Time, source, replay, label, policy or effect work."
+      "response": "Knowledge<EvaluationCaseIdentity> or Knowledge<EvaluationCasePage>; exact journal/evaluation basis, bounded minimal identities and assessment progress; never a ticket or label",
+      "note": "Linux supervise_publication evaluator-case adapter on the same independent live evaluator endpoint. Exact ROUND reads remain supported; --list LIMIT returns at most 16 applied cases and the separate unapplied count, with explicit --after ROUND --at-journal REV --at-evaluation REV continuation. Both revisions must match; stale or missing cursors are Unknown without automatic restart. Generic actor/operator Tower dispatch remains unsupported. Foreign or faulted custody refuses. No Time, source, replay, label, policy or effect work."
     },
     {
       "verb": "evaluator-assess",

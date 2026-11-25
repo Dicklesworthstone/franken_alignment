@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 /// A bounded test peer: no blocking accept/read can strand the test when the
 /// client refuses before transmission. Both directions retain finite byte/work
 /// bounds and one deadline; every successful request must terminate with EOF.
-fn peer(
+pub(super) fn peer(
     listener: UnixListener,
     expected_client: PeerPolicy,
     response: Option<Vec<u8>>,
@@ -194,11 +194,17 @@ fn case_client_rejects_request_round_numeric_authority_and_disclosure_mutations_
     let before = fixture.image();
     let mutations = [
         ("\"deployment\":101", "\"deployment\":999"),
-        ("\"value\":{\"round\":\"101\"", "\"value\":{\"round\":\"102\""),
+        (
+            "\"value\":{\"round\":\"101\"",
+            "\"value\":{\"round\":\"102\"",
+        ),
         ("\"attempt\":\"1\"", "\"attempt\":\"01\""),
         ("\"attempt\":\"1\"", "\"attempt\":\"0\""),
         ("\"effect_authority\":false", "\"effect_authority\":true"),
-        ("\"effect_authority\":false", "\"effect_authority\":false,\"payload\":\"private\""),
+        (
+            "\"effect_authority\":false",
+            "\"effect_authority\":false,\"payload\":\"private\"",
+        ),
         ("\"state\":\"known\"", "\"state\":\"absent\""),
         ("fa.live-evaluator-case/1", "fa.live-evaluator-case/2"),
     ];
@@ -230,7 +236,11 @@ fn unknown_case_client_prints_explicit_unknown_and_returns_failure_without_a_lab
     assert!(!case::validate(&request, &response).unwrap());
     let before = fixture.image();
     let (result, output, received) = exchange(&fixture, "unknown", 999, response.clone());
-    assert!(result.unwrap_err().contains("original evaluation case is unknown"));
+    assert!(
+        result
+            .unwrap_err()
+            .contains("original evaluation case is unknown")
+    );
     assert_eq!(received, request.wire);
     let mut expected = response;
     expected.push(b'\n');
@@ -269,7 +279,16 @@ fn case_client_checks_closed_canonical_arguments_before_profile_io() {
         missing_error,
     );
     for round in [
-        "", "0", "00", "01", "-1", "+1", "1.0", "1e2", " 1", "1 ",
+        "",
+        "0",
+        "00",
+        "01",
+        "-1",
+        "+1",
+        "1.0",
+        "1e2",
+        " 1",
+        "1 ",
         "18446744073709551616",
     ] {
         let error = client::command(
@@ -281,14 +300,21 @@ fn case_client_checks_closed_canonical_arguments_before_profile_io() {
             &mut output,
         )
         .unwrap_err();
-        assert_ne!(error, missing_error, "invalid round reached profile I/O: {round}");
+        assert_ne!(
+            error, missing_error,
+            "invalid round reached profile I/O: {round}"
+        );
     }
     for args in [
         Vec::new(),
         vec!["evaluator-case".to_owned(), profile.clone()],
         vec!["case".to_owned(), profile.clone(), "1".to_owned()],
         vec!["evaluator-case".to_owned(), String::new(), "1".to_owned()],
-        vec!["evaluator-case".to_owned(), "--profile".to_owned(), "1".to_owned()],
+        vec![
+            "evaluator-case".to_owned(),
+            "--profile".to_owned(),
+            "1".to_owned(),
+        ],
         vec![
             "evaluator-case".to_owned(),
             profile,
@@ -296,7 +322,11 @@ fn case_client_checks_closed_canonical_arguments_before_profile_io() {
             "extra".to_owned(),
         ],
     ] {
-        assert!(client::command(&args, &mut output).unwrap_err().starts_with("usage:"));
+        assert!(
+            client::command(&args, &mut output)
+                .unwrap_err()
+                .starts_with("usage:")
+        );
     }
     assert!(output.is_empty());
     assert!(!missing.exists());

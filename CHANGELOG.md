@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-25: list historical cases through the authenticated live evaluator
+
+- Extend `evaluator-case` with bounded listing and explicit revision-pinned
+  continuation, preserving the existing exact-round command and endpoint.
+- Validate complete response identity, inventory counts, assessment progress
+  and continuation metadata before output; return explicit stale/missing
+  observations without automatic retries or private label disclosure.
+- Retain original credential, Stop, EOF, candidate, byte, I/O and lifetime
+  boundaries. Add six protocol, four service and five client regression tests,
+  including discovery through independent native assessment on one owner.
+- Update the operator contract, command usage and existing vocabulary entry.
+  Required remote compilation and runtime qualification remain pending.
+
 ## 2026-11-25: discover original native evaluation cases in bounded pages
 
 - Add independently role-bound enumeration of applied evaluation cases, with

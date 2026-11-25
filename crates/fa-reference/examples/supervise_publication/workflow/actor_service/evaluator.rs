@@ -18,7 +18,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
     FileOversight, credibility::FileIndependentEvaluator,
 };
 use fa_reference::action::consequence::delivery::persistent::requests::actor::FileActorSupervisor;
-use protocol::{Basis, Outcome, Request, case::CaseRequest};
+use protocol::{Basis, Outcome, Request, case::CaseRequest, cases::CasesRequest};
 use std::{
     fs,
     io::{self, Read, Write},
@@ -42,15 +42,17 @@ struct Connection {
 enum Operation {
     Assess(Request),
     Case(CaseRequest),
+    Cases(CasesRequest),
 }
 
 impl Operation {
     fn accept(settings: &Settings, bytes: &[u8]) -> Result<Self, String> {
-        // Both schemas are closed and disjoint. Neither parser does owner work.
-        // The same authenticated connection and finite allowances cover both.
+        // All schemas are closed and disjoint. No parser does owner work.
+        // The same authenticated connection and finite allowances cover all.
         Request::accept(settings, bytes)
             .map(Self::Assess)
             .or_else(|_| CaseRequest::accept(settings, bytes).map(Self::Case))
+            .or_else(|_| CasesRequest::accept(settings, bytes).map(Self::Cases))
     }
 }
 
@@ -138,8 +140,12 @@ impl Service {
     /// a new phase nor a longer supplied deadline can renew this service lease.
     pub(super) fn narrow_deadline(&mut self, deadline: &Deadline) {
         self.logical = self.logical.min(deadline.logical);
-        let wall = deadline.started.checked_add(deadline.wall)
-            .map_or(Duration::ZERO, |end| end.saturating_duration_since(self.started));
+        let wall = deadline
+            .started
+            .checked_add(deadline.wall)
+            .map_or(Duration::ZERO, |end| {
+                end.saturating_duration_since(self.started)
+            });
         self.wall = self.wall.min(wall);
     }
 
@@ -328,6 +334,16 @@ impl Service {
                 // One immutable original-owner borrow supplies both the case
                 // and its evaluation predecessor. Observation reads no clock
                 // and acquires no helper, source, journal or effect authority.
+                let host = supervisor.host().map_err(debug)?;
+                if host.inspect().stop.is_some() || self.started.elapsed() >= self.wall {
+                    return Err("original evaluator owner is stopped or expired".into());
+                }
+                request.observe(
+                    &host,
+                    self.evaluator.as_ref().ok_or("evaluator role retired")?,
+                )
+            }
+            Operation::Cases(request) => {
                 let host = supervisor.host().map_err(debug)?;
                 if host.inspect().stop.is_some() || self.started.elapsed() >= self.wall {
                     return Err("original evaluator owner is stopped or expired".into());

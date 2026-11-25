@@ -18,7 +18,7 @@ fn parsed_case(bytes: &[u8]) -> fa_reference::strict_json::Json {
 
 /// Deliberately use ONLY the authenticated response to construct the case
 /// binding. Native fixture access cannot conceal an unusable disclosure.
-fn assessment_from_case(settings: &Settings, reply: &[u8], origin: u64) -> Request {
+pub(super) fn assessment_from_case(settings: &Settings, reply: &[u8], origin: u64) -> Request {
     let response = parsed_case(reply);
     let root = response.as_object().unwrap();
     let knowledge = root["knowledge"].as_object().unwrap();
@@ -81,7 +81,10 @@ fn authenticated_case_discovery_drives_assessment_with_one_shared_candidate_budg
     assert!(case::validate(&read, &refreshed).unwrap());
     assert_eq!(fixture.image(), after_label);
     let current_label = assessment_from_case(&fixture.settings, &refreshed, 1);
-    assert_eq!(current_label.assessment.expected_revision, original_revision + 1);
+    assert_eq!(
+        current_label.assessment.expected_revision,
+        original_revision + 1
+    );
     assert_eq!(current_label.assessment.root, label.assessment.root);
     assert_eq!(service.candidates, 3);
     {
@@ -259,7 +262,10 @@ fn wrong_case_audience_and_malformed_frames_spend_the_original_read_budget() {
     let malformed = &request.wire[..request.wire.len() - 1];
     let mut service = fixture.start();
     let before = fixture.image();
-    for (index, bytes) in [wrong_audience.as_bytes(), malformed].into_iter().enumerate() {
+    for (index, bytes) in [wrong_audience.as_bytes(), malformed]
+        .into_iter()
+        .enumerate()
+    {
         let reply = fixture.exchange(&mut service, bytes, &mut no_clock);
         assert!(reply.is_empty());
         assert_eq!(service.candidates, (index + 1) as u32);
