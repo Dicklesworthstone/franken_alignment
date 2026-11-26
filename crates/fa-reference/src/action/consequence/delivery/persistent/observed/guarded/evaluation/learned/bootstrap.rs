@@ -10,9 +10,55 @@ use super::{
 use crate::Error;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::action::consequence::delivery::persistent::observed::credibility::andon::FileAndonConfig;
+use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use std::path::Path;
 
 impl FileOversight {
+    /// Create one original learned owner with the exact joint promotion policy,
+    /// independent evaluation protocol, guards and native Andon accounting in
+    /// its first acknowledged image. Configuration and terminal event-capacity
+    /// checks precede storage creation; canonical byte admission and the sole
+    /// acknowledgment precede role release.
+    ///
+    /// Joint promotion replays this owner's original independently labelled
+    /// cases. It supplies neither labels nor effect authority. Recovery must
+    /// independently retain this exact joint policy through `require_joint`.
+    /// Recipe-owned held-out activation and pre-output prediction use distinct
+    /// role-preserving lanes and cannot be substituted into live evaluation.
+    pub fn create_joint_andon_guarded_with_learned_generation_reserved(
+        directory: impl AsRef<Path>,
+        profile: FileOversightProfile,
+        guards: &FileGuardSet,
+        registration: Option<FileCredentialRegistration<'_>>,
+        protocol: EvaluationProtocol,
+        joint: JointPromotionPolicy,
+        accounting: &FileAndonConfig,
+        config: FileLearnedConfig,
+        reserve: RecoveryReserve,
+    ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
+        if config.required_held_out_joint().is_some()
+            || config.required_pre_output_forecast().is_some()
+            || config.required_owned_pre_output_forecast().is_some()
+        {
+            return Err(Error::Binding.into());
+        }
+        let prepared = super::super::super::learned::prepare_reserved(
+            profile,
+            guards,
+            registration,
+            config,
+            reserve,
+        )?
+        .jointly_evaluated(protocol.clone(), joint)?
+        .with_andon(accounting)?
+        .checked_evaluated(guards, &protocol)?
+        .checked_event_capacity()?;
+        let store = storage::Store::create(directory.as_ref())?;
+        let (host, oversight) = prepared.publish(store)?;
+        let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
+        Ok((host, roles))
+    }
+
     /// Create one original learned, evaluated and Andon-accounted owner with
     /// terminal recovery capacity in its FIRST acknowledged image. Complete
     /// recipe-owned source and guard checks precede storage creation. Numerical

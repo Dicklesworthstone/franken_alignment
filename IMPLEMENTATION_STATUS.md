@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: atomic joint evaluation for original learned publication
+
+The learned Andon bootstrap now accepts an independently selected
+`JointPromotionPolicy` through a dedicated reserved constructor. The original
+prepared bootstrap installs numerical configuration, complete guards, native
+joint evaluation and Andon accounting before its sole first-image publication.
+Human and evaluator custody are returned only after that image acknowledges.
+The existing joint and marginal qualification rules govern later helper-weight
+promotions; configuring them is not evidence that a weight set is qualified.
+
+The complete accounted learned recovery cursor retains its exact independent
+joint-policy requirement. An omitted or changed policy cannot silently recover
+the history under marginal qualification. Recipe-owned held-out joint policies
+and separately required predictor roles remain distinct contracts. New core
+regressions pair original publication and independent labeling with malformed
+bootstrap, exact-policy recovery and stale-role refusals.
+
+The required command `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because `rch` is unavailable (exit 127). The execution workspace
+then disconnected before final Rust formatting checks. Compilation, runtime
+tests, Clippy and canonical qualification remain pending. Source review and
+authored regressions are not executed evidence; FA-105 and existing evaluation
+beads remain in progress. See [the constructor contract](docs/LEARNED_ANDON_BOOTSTRAP.md).
+
 ## 2026-11-25: traverse independent evaluator inventories under one original budget
 
 The authenticated `evaluator-case` client now accepts explicit fresh bounded

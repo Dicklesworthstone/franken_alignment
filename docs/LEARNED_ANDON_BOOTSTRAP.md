@@ -22,6 +22,30 @@ This is the FA-105 composition serving FI-A08, FI-A13 and FI-A18 under plan
 and Andon reducers, guarded bootstrap, reserve admission and canonical writer.
 It introduces no journal format or dependency.
 
+## Retain joint helper-credibility qualification
+
+Select `create_joint_andon_guarded_with_learned_generation_reserved` to install
+an independently supplied `JointPromotionPolicy` alongside the same evaluation
+protocol and Andon configuration. Its arguments match the constructor above,
+with `joint_policy` immediately after `evaluation_protocol`. The policy is part
+of the first acknowledged image; no marginal-only owner or evaluator is exposed
+while joint qualification is being installed.
+
+This policy governs the original credibility ledger's candidate helper-weight
+promotions. The existing joint replay and marginal qualification rules both
+remain applicable. Merely configuring the policy neither qualifies a candidate
+weight set nor supplies independent ground truth. The separate recipe-owned
+`HeldOutJointPolicy` is a different contract: combining it with this live
+evaluation ledger remains invalid, including through the new constructor.
+
+Complete accounted recovery must select the same policy through
+`FileAndonRecoveryRequirements::require_joint`. Every policy field, including
+replay-work bounds, must match. Omitting the policy requires its absence; it
+cannot recover a jointly evaluated history as a marginal one. A changed policy
+is not accepted by learning the on-disk value during recovery.
+
+## Preserve the original bootstrap and accounting boundaries
+
 Every declared guard and the complete learned recipe are checked before storage
 creation. A recipe-owned policy source must equal the independent declaration;
 the original learned Enable installs that source exactly once. Required raw or
@@ -74,3 +98,20 @@ formatting checks passed for the scoped sources, as did whitespace checks and
 independent source review. The required RCH command could not start because the
 runner was unavailable (exit 127); compilation, Clippy and runtime execution
 remain unexecuted. Roadmap FA-105 remains in progress.
+
+
+## Joint bootstrap verification boundary
+
+Five additional public regression definitions in `andon/joint.rs` exercise
+original learned publication requiring both keys, independent labeled cases
+feeding the native joint report, exact recovery of every joint-policy field,
+late false-stop accounting in the original occurrence window, stale role/ticket
+refusal, exhausted joint replay work and terminal-reserve admission. The joint
+fixture admits an actual weight change, so its work-bound cases reach the
+original joint reducer instead of stopping at an unchanged-weight refusal.
+
+Independent source review checked those native contracts and test API bindings.
+The execution workspace disconnected before the final sources could be formatted;
+RCH was already unavailable. Formatting, compilation, runtime tests and Clippy
+remain pending for this extension. These source cases neither establish detector
+quality nor close the FA-105 execution gate.

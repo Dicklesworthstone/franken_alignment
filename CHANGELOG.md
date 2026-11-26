@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-25: bootstrap jointly evaluated learned publication
+
+- Install the original learned recipe, independently selected joint credibility
+  policy, evaluation protocol, Andon accounting and terminal reserve in one
+  acknowledged first image, before returning any live role.
+- Preserve the original generation, helper/human approval and label-accounting
+  paths. Complete guarded recovery requires the exact joint policy; no marginal
+  fallback or separate held-out publication-policy substitution is introduced.
+- Add core regression sources for useful publication, original label charges,
+  exact recovery and failure before storage. Remote execution remains pending.
+
 ## 2026-11-25: traverse bounded independent evaluator inventories
 
 - Add explicit `--max-pages` to fresh pending and all-case evaluator listings,
