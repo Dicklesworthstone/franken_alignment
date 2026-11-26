@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 · Resident learned topology and independent evaluation
+
+- `serve-learned-generated` accepts a topology profile alongside the independent
+  evaluator and Andon profile for creation and anchored sequence recovery.
+- Both retained archives cover the same owner across entries. Every release
+  spends from the original source allowance and requires fresh review.
+- Check checkpoint destinations against future inputs and service sockets
+  before loading model assets or starting the service.
+
 ## 2026-11-26: compose live learned evaluation with topology and paired recovery custody
 
 - Support single-request learned Andon creation and anchored generation,

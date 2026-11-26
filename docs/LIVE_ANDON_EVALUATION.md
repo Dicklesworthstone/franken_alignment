@@ -456,11 +456,10 @@ The new output anchor includes acknowledged late labels and Andon changes.
 
 Receipt-only/effect-retry modes, offline terminal modes,
 predictors, campaigns, generation checkpoints and offline credibility activation
-remain outside this paired live recovery grammar. Single-request topology uses
-its complete paired source/history composition below; resident evaluated
-topology remains excluded. The resident
-service also accepts an explicitly anchored remaining sequence under the
-complete accounting and evaluation requirements described below.
+remain outside this paired live recovery grammar. Single-request and resident
+topology selections use the paired source/history contract below. A resident
+restart also selects the remaining sequence under the complete accounting and
+evaluation requirements.
 
 The new `learned/tests/evaluation/recovery.rs` sources exercise actual partial
 generation continuation, recovered Message and Finish, deferred historical labels,
@@ -471,7 +470,7 @@ compilation, execution, Clippy and canonical qualification remain pending.
 
 ## Evaluate a topology-supervised learned service
 
-Single-request creation and explicit continuation can pair `--topology-profile`
+Single-request and resident creation and explicit continuation can pair `--topology-profile`
 with the accounting/evaluator selection. The original numerical owner then
 retains its independent evaluator and original topology-source observer
 together. Both marginal Andon `/1` and explicit joint `/2` are supported.
@@ -498,11 +497,12 @@ failure retains that recoverable pair. A terminal Stop returns no live evaluator
 or observer and retains its original acknowledged pair.
 
 See [live mediated learned evaluation](MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service)
-for complete creation and continuation commands and the existing topology profile
-formats. This scoped composition supports `--continue-generation`,
-`--after-message` and `--finish-after-message`. Resident evaluated topology,
-topology with `--evaluate-only`, predictors, campaigns and separate held-out
-publication qualification remain excluded.
+for creation, continuation and the existing topology profile formats. Both
+commands support `--continue-generation` and `--after-message`. The
+single-request command accepts `--finish-after-message`. In a resident
+sequence, a final Finish is selected in the manifest. Topology with
+`--evaluate-only`, predictors, campaigns and separate held-out publication
+qualification remain excluded.
 
 ## Evaluate recorded learned history
 
@@ -570,7 +570,10 @@ restarting numerical or helper work. A late intermediate actor reply failure
 ends succession but preserves the healthy evaluator's independent opportunity.
 The resident command also supports `--continue-generation` and `--after-message`
 with a retained input anchor, a new output, the current accounting profile and
-a remaining sequence. One recovery fence precedes the entire suffix.
+a remaining sequence. One recovery fence precedes the entire suffix. To carry
+topology enforcement through every entry, select `--topology-profile` and a
+new source-checkpoint output. Anchored recovery requires the original matching
+source checkpoint. See the [resident topology commands](RESIDENT_LEARNED_PUBLICATION.md#retain-topology-through-a-resident-evaluated-sequence).
 See the full [resident learned contract](RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
 for the closed supported grammar, complete future input/endpoint custody,
 Stop precedence and source-only verification boundary.

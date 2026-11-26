@@ -96,15 +96,63 @@ retain their existing guards. All scheduled role/socket/profile/recipe paths
 are checked before numerical assets are loaded, including future entry paths;
 recursive assets and delayed witness, identity and credential inputs cannot
 overlap endpoints, authority storage or the retained output. An archive or
-socket name must also leave the directory tree for a future witness available. This composition
-does not admit a governor, topology, campaigns, generation checkpoints,
-raw/owned predictors, held-out joint recipes or credibility activation. Such
-selections refuse before work instead of dropping a requested contract.
+socket name must also leave the directory tree for a future witness available.
+Governor, campaign, generation-checkpoint, predictor, held-out publication
+and offline credibility-activation selections remain outside this grammar.
 
 Use the original [evaluator-case and evaluator-assess commands](LIVE_ANDON_EVALUATION.md)
 against that same endpoint. An independent label supplies no effect key and
 cannot release a held message. Required RCH compilation and runtime qualification
 remain pending; source review and parser checks are separate evidence.
+
+### Retain topology through a resident evaluated sequence
+
+Select the topology once for the whole sequence. The actor profiles and release
+order come from `SEQUENCE_PROFILE`. For creation, select a
+`fa.mediated-create/2` profile with the topology and inventory paths and a new
+`retain_checkpoint` destination.
+
+```sh
+supervise_publication serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --topology-profile CREATE_TOPOLOGY \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/first-history.anchor
+```
+
+The first acknowledged image installs the graph, generation and selected
+accounting policy together. Every entry uses the same source observer, driver
+and evaluator. A later Message or Finish requires a confirmed predecessor,
+fresh source checks, its own helper review and human approval. Each source
+check spends the same finite allowance. A handoff cannot replenish it.
+After the last assessment, the source checkpoint and history anchor describe
+the same acknowledged owner, including late labels and cumulative source work.
+
+To resume after a confirmed Message, identify that request and supply the
+remaining sequence. Use a `fa.mediated-submit/2` profile with the retained
+`source_checkpoint`, the next topology and inventory, and a new
+`retain_checkpoint` destination.
+
+```sh
+supervise_publication serve-learned-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --history-anchor /absolute/independent/first-history.anchor \
+  --topology-profile NEXT_TOPOLOGY \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/next-history.anchor
+```
+
+For interrupted generation, use `--continue-generation` in place of
+`--after-message PREVIOUS_REQUEST`. For a sole remaining Finish, keep the
+confirmed predecessor and put the Finish in the sequence profile. The source
+checkpoint's embedded anchor must equal the independent input anchor and
+cover the selected journal through its last event. Recovery checks the
+original guards, accounting windows, evaluation floor and any joint policy
+before issuing roles. It captures the recovery Fence before binding the
+fresh source. If that binding fails, the two selected outputs preserve the
+acknowledged recovery point. Choose separate new output paths outside the
+store and clear of every entry's inputs and endpoints, including future
+actor, reviewer and precheck paths.
+
+See [topology profiles and recovery custody](MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service).
 
 ## Other resident governance selections
 

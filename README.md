@@ -60,6 +60,12 @@ outputs before fresh source binding, so later failure preserves the recovery
 point. Original cut checks and both publication keys remain mandatory. This
 single-request composition remains pending required runtime qualification.
 
+The resident learned service can also keep the topology source and independent
+evaluator together across a finite sequence. Each Message and final Finish
+requires fresh review. Anchored recovery binds the retained source work to the
+same independent history. See the [resident commands and profile requirements](docs/RESIDENT_LEARNED_PUBLICATION.md).
+Runtime qualification for this composition is pending.
+
 The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
 with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
 for evaluation only. Fixed sixteen-case pages retain original case identities,

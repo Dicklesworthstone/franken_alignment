@@ -133,10 +133,14 @@ where
     } else {
         None
     };
+    let topology_mode = if continuing { topology::Mode::Live } else { topology::Mode::Create };
+    let selected_topology = topology_path.as_deref().filter(|_| evaluation.is_some())
+        .map(|path| topology::Selection::read(&config, path, topology_mode))
+        .transpose()?;
     let mut entries = if let Some(selected) = evaluation.as_ref() {
         profile::load_evaluated(Path::new(&args[2]), &config, &peers,
             operator.as_ref(), selected, recovery,
-            evaluated_history.as_deref().expect("explicit evaluation output"), &selected_inputs)?
+            evaluated_history.as_deref().expect("explicit evaluation output"), &selected_inputs, selected_topology.as_ref())?
     } else if let Some(governor) = governor.as_ref() {
         profile::load_governed(
             Path::new(&args[2]),
@@ -173,16 +177,11 @@ where
         .map(checkpoint_on_generation::Selection::read)
         .transpose()?;
     anchors.admit(&config, &mut entries[0].loaded, continuing)?;
-    topology::admit(
-        &config,
-        &mut entries[0].loaded,
-        topology_path.as_deref(),
-        if continuing {
-            topology::Mode::Live
-        } else {
-            topology::Mode::Create
-        },
-    )?;
+    if let Some(selected) = selected_topology {
+        selected.install(&mut entries[0].loaded)?;
+    } else {
+        topology::admit(&config, &mut entries[0].loaded, topology_path.as_deref(), topology_mode)?;
+    }
     let result = run_with_selected_services(config, entries, &peers, continuing, after, credibility,
         operator.as_ref(), governor.as_ref(), evaluation.as_ref(), time)?;
     emit(result, &mut std::io::stdout().lock())
@@ -622,12 +621,10 @@ where F: FnMut() -> ElapsedTick {
     let mut control = Control::new(&config, first.loaded.request, Some(peers))?;
     let mut initial_actor = Some(ingress::Bound::bind(&first.actor)?);
     let (started, governor_role, evaluator_role) = if let Some(selected) = selected_evaluation {
-        let (custody, evaluator) = if continuing {
-            selected.open(&config, &first.loaded, &mut control, &deadline, &mut time)?
-        } else {
-            selected.create(&config, &first.loaded)?
-        };
-        (topology::Started { custody, source: None, output: None }, None, Some(evaluator))
+        let (started, evaluator) = selected.start(
+            &config, &first.loaded, continuing, &mut control, &deadline, &mut time,
+        )?;
+        (started, None, Some(evaluator))
     } else if selected_governor.is_some() {
         let (started, role) = topology::start_governed(
             &config, &first.loaded, continuing, &mut control, &deadline, &mut time,

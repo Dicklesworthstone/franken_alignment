@@ -1,5 +1,25 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26 · Topology and independent evaluation across a resident learned sequence
+
+The resident learned service can now keep the original topology source and
+independent evaluator together across Messages and an optional final Finish.
+It uses the existing first-image constructors and anchored recovery cursor for
+marginal and joint Andon profiles. Each release certifies the current source
+and requires its own actor submission, helper review and human approval.
+
+The command checks the selected topology checkpoint destination against the
+entire sequence before numerical assets are loaded. This includes later actor,
+review, Stop and precheck sockets, delayed inputs and nested assets. Recovery
+requires the independently retained history and its matching v2 source
+checkpoint. The driver retains source expenditure, numerical work and later
+acknowledged assessments when it exports the next pair.
+
+Resident CLI regressions cover two Messages, a late label, recovery for Finish,
+changed joint-policy refusal before the Fence, and a future actor socket
+colliding with the checkpoint destination. Required RCH compilation and
+execution are pending. FA-026, FA-073 and FA-105 remain open for qualification.
+
 ## 2026-11-26: connect live learned evaluation to original topology custody
 
 Single-request learned publication now composes its independent evaluator and

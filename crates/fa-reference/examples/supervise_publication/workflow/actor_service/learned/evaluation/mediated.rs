@@ -11,7 +11,6 @@ use crate::workflow::continuation::{
     guarded::mediated::profile::{History, Selection as Continuation},
 };
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::evaluation::andon::learned::FileMediatedAndonLearnedRecovery;
-use std::path::Path;
 
 pub(super) fn check_selection(loaded: &Loaded, continuing: bool) -> Result<(), String> {
     match loaded.topology.as_ref() {
@@ -42,22 +41,6 @@ pub(super) fn check_selection(loaded: &Loaded, continuing: bool) -> Result<(), S
             }
             Ok(())
         }
-    }
-}
-
-pub(super) fn input_paths(loaded: &Loaded) -> Vec<&Path> {
-    match loaded.topology.as_ref() {
-        None => Vec::new(),
-        Some(topology::Selection::Create(selection)) => selection.input_paths().into(),
-        Some(topology::Selection::Recover { selection, .. }) => selection.input_paths(),
-    }
-}
-
-pub(super) fn output_path(loaded: &Loaded) -> Option<&Path> {
-    match loaded.topology.as_ref() {
-        None => None,
-        Some(topology::Selection::Create(selection)) => selection.acknowledged_output(),
-        Some(topology::Selection::Recover { selection, .. }) => selection.acknowledged_output(),
     }
 }
 

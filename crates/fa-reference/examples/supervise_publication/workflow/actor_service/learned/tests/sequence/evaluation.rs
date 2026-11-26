@@ -15,6 +15,8 @@ use std::{
     process::{Child, Command as ProcessCommand, Stdio},
 };
 
+#[path = "evaluation/mediated.rs"]
+mod mediated;
 #[path = "evaluation/joint.rs"]
 mod joint_tests;
 #[path = "evaluation/recovery.rs"]
@@ -202,7 +204,7 @@ fn evaluator_process() {
     let mode = std::env::var(CHILD_MODE).unwrap();
     let first = matches!(mode.as_str(), "exhausted" | "recovered-exhausted");
     let early = matches!(mode.as_str(), "transport" | "early-hold");
-    wait_for(&root.join(if mode == "recovered-exhausted" {
+    wait_for(&root.join(if matches!(mode.as_str(), "recovered-exhausted" | "messages") {
         "actor-2.finished"
     } else if first || early {
         "actor-1.finished"
@@ -212,7 +214,9 @@ fn evaluator_process() {
     let settings = evaluator::Settings::read(&root.join("evaluator.json")).unwrap();
     assert_eq!(settings.evaluator.pid, Some(std::process::id()));
     assert_ne!(settings.supervisor.pid, Some(std::process::id()));
-    if first {
+    if mode == "messages" {
+        label(&root, 23, "messages");
+    } else if first {
         // Discovery does not race a moving evaluation predecessor. Both reads
         // spend the same original candidate budget even if later reviews apply
         // before the second read; no assessment is silently retried.
@@ -655,11 +659,15 @@ fn evaluated_resident_grammar_and_future_custody_refuse_before_owner_or_clock_wo
         args.extend(["--after-message".into(), "2".into()]);
         assert!(selected_evaluation::take_sequence_options(&args, None).is_err());
     }
+    let mut topology = valid.clone();
+    topology.extend(["--topology-profile".into(), "topology".into()]);
+    assert!(selected_evaluation::take_sequence_options(&topology, None).is_ok());
+    topology.extend(["--topology-profile".into(), "duplicate".into()]);
+    assert!(resident::command_with_clock(&topology, None, || panic!("duplicate topology sampled time")).is_err());
     for option in [
         "--continue-generation",
         "--after-message",
         "--governor-profile",
-        "--topology-profile",
         "--campaign-profile",
         "--history-anchor",
         "--checkpoint-before-generation",

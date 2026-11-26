@@ -21,7 +21,7 @@ use std::{
 
 const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT, forbids topology and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original live contracts";
 
-const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
+const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; optional --topology-profile requires paired checkpoint output and exact v2 source custody on recovery; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
 
 pub(super) struct Options {
     accounting: PathBuf,
@@ -119,7 +119,7 @@ fn parse_options(
                 }
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--topology-profile" if !resident => {
+            "--topology-profile" => {
                 topology_input = Some(PathBuf::from(value));
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
@@ -211,6 +211,7 @@ impl Selection {
             self.check_sequence_inputs(history, &[path])?;
             self.recovery_requirements(config, &first.loaded)?;
         }
+        mediated::check_selection(&first.loaded, self.history_input.is_some())?;
         let actors = entries.iter().map(|entry| &entry.actor).collect::<Vec<_>>();
         self.check_sequence_actors(config, &actors, reviewer, selected_operator)?;
         let mut endpoints = vec![self.peer.socket_path().to_path_buf()];
@@ -221,8 +222,7 @@ impl Selection {
         inputs.extend(self.history_input.iter().cloned());
         for (index, entry) in entries.iter().enumerate() {
             let loaded = &entry.loaded;
-            if (index != 0 && loaded.recovery_anchor.is_some())
-                || loaded.topology.is_some()
+            if (index != 0 && (loaded.recovery_anchor.is_some() || loaded.topology.is_some()))
                 || loaded.checkpoint_on_generation.is_some()
                 || loaded.creation_campaigns.is_some()
                 || loaded.expected_campaigns.is_some()
@@ -262,8 +262,36 @@ impl Selection {
                 self.peer.check_custody_paths(&[precheck.socket_path()])?;
             }
         }
-        self.check_history_endpoints(history, &endpoints)?;
-        self.check_sequence_endpoint_inputs(&endpoints, &inputs)?;
+        self.check_resident_paths(config, first.loaded.topology.as_ref(), history, &inputs, &endpoints)
+    }
+
+    /// Check both retained outputs against the complete fixed schedule,
+    /// including paths first used after the original Message has executed.
+    pub(super) fn check_resident_paths(
+        &self,
+        config: &Config,
+        topology: Option<&super::topology::Selection>,
+        history: &Path,
+        inputs: &[PathBuf],
+        endpoints: &[PathBuf],
+    ) -> Result<(), String> {
+        self.check_history_endpoints(history, endpoints)?;
+        self.check_sequence_endpoint_inputs(endpoints, inputs)?;
+        if let Some(topology) = topology {
+            let output = topology.output_path().ok_or(
+                "evaluated learned topology requires a new paired source checkpoint",
+            )?;
+            let sources = topology.input_paths();
+            self.check_sequence_inputs(history, &sources)?;
+            self.check_sequence_inputs(output, &sources)?;
+            self.check_sequence_inputs(output, &inputs.iter().map(PathBuf::as_path).collect::<Vec<_>>())?;
+            self.check_history_endpoints(output, endpoints)?;
+            self.check_history_endpoints(history, &[output.to_path_buf()])?;
+            self.check_sequence_endpoint_inputs(
+                endpoints, &sources.into_iter().map(Path::to_path_buf).collect::<Vec<_>>(),
+            )?;
+            crate::workflow::continuation::checkpoint::AcknowledgedOutput::admit(config, output)?;
+        }
         Ok(())
     }
 
@@ -415,7 +443,9 @@ impl Selection {
         let history = loaded.anchor_output.as_deref().expect("required above");
         let mut custody = vec![config.source.path()];
         custody.extend(self.history_input.as_deref());
-        custody.extend(mediated::input_paths(loaded));
+        if let Some(topology) = &loaded.topology {
+            custody.extend(topology.input_paths());
+        }
         if let Some(precheck) = precheck {
             self.peer.check_custody_paths(&[precheck.socket_path()])?;
         }
@@ -446,7 +476,7 @@ impl Selection {
             endpoints.push(precheck.socket_path().to_path_buf());
         }
         self.check_history_endpoints(history, &endpoints)?;
-        if let Some(output) = mediated::output_path(loaded) {
+        if let Some(output) = loaded.topology.as_ref().and_then(super::topology::Selection::output_path) {
             self.check_sequence_inputs(output, &custody)?;
             self.check_history_endpoints(output, &endpoints)?;
             self.check_history_endpoints(history, &[output.to_path_buf()])?;
@@ -465,7 +495,7 @@ impl Selection {
         if let Some(path) = &self.history_input {
             self.check_sequence_inputs(history, &[path])?;
         }
-        if let Some(output) = mediated::output_path(loaded) {
+        if let Some(output) = loaded.topology.as_ref().and_then(super::topology::Selection::output_path) {
             self.check_sequence_inputs(output, paths)?;
             if let Some(path) = &self.history_input {
                 self.check_sequence_inputs(output, &[path])?;

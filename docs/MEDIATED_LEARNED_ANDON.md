@@ -179,9 +179,27 @@ All selected source/history destinations are checked against the accounting,
 topology, recipe, actor/reviewer and other profile inputs, the authority store
 and every service endpoint before the first clock or storage creation.
 Optional prechecks and the existing operator pair retain their original
-contracts. Resident mediated evaluation, topology with `--evaluate-only`,
-predictor/forecast requirements, campaign governance and held-out publication
-qualification remain outside this single-request composition.
+contracts. Historical `--evaluate-only`, required predictors, campaign governance
+and a separate held-out publication policy remain outside this mediated
+evaluation grammar.
+
+## Serve a resident learned sequence
+
+`serve-learned-generated` accepts the same topology, Andon and evaluator
+profiles with a resident sequence manifest. The first entry holds the single
+topology selection for the invocation. The same driver certifies each release, keeps
+the original observer's work counters across handoffs, and retains the
+evaluator through the final case. Both output destinations are checked against
+the scheduled role paths and direct inputs before loading numerical assets.
+Nested asset reads also check those destinations.
+
+For recovery, select the remaining manifest with `--after-message` or
+`--continue-generation`, the original history anchor, and the v2 topology
+profile naming its matching source checkpoint. A sole remaining Finish uses
+`--after-message` with that release in the manifest. One cooperative recovery
+Fence covers the suffix. Each remaining effect still requires fresh
+certification, helper review and human approval. See the
+[resident creation and recovery commands](RESIDENT_LEARNED_PUBLICATION.md#retain-topology-through-a-resident-evaluated-sequence).
 
 The graph remains an operator-declared model. This composition does not establish
 operating-system containment, authenticated completeness of that model, detector

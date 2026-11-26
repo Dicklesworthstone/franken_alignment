@@ -75,26 +75,57 @@ pub(super) fn admit(
     if loaded.topology.is_some() {
         return Err("learned topology is already selected".into());
     }
-    let selected = match mode {
-        Mode::Create => Selection::Create(Creation::read(path)?),
-        Mode::Live | Mode::Historical => {
-            let anchor = loaded
-                .recovery_anchor
-                .as_ref()
-                .ok_or("learned topology recovery requires an independent history anchor")?;
-            let selection = Continuation::read(path)?;
-            if matches!(mode, Mode::Historical) && selection.retention_requested() {
-                return Err(
-                    "historical recovery cannot export a fresh topology-source checkpoint".into(),
-                );
+    if !matches!(mode, Mode::Create) && loaded.recovery_anchor.is_none() {
+        return Err("learned topology recovery requires an independent history anchor".into());
+    }
+    Selection::read(config, path, mode)?.install(loaded)
+}
+
+impl Selection {
+    /// Freeze the profile once. The resident service checks these same source
+    /// paths and output against every entry before loading any model assets.
+    pub(super) fn read(config: &Config, path: &Path, mode: Mode) -> Result<Self, String> {
+        match mode {
+            Mode::Create => Ok(Self::Create(Creation::read(path)?)),
+            Mode::Live | Mode::Historical => {
+                let selection = Continuation::read(path)?;
+                if matches!(mode, Mode::Historical) && selection.retention_requested() {
+                    return Err(
+                        "historical recovery cannot export a fresh topology-source checkpoint".into(),
+                    );
+                }
+                let history = selection.history(config, &mut || Ok(()))?;
+                Ok(Self::Recover { selection, history })
             }
-            let history = selection.history(config, &mut || Ok(()))?;
-            loaded.floor = history.minimum(anchor, loaded.floor)?;
-            Selection::Recover { selection, history }
         }
-    };
-    loaded.topology = Some(selected);
-    Ok(())
+    }
+
+    pub(super) fn install(self, loaded: &mut Loaded) -> Result<(), String> {
+        if loaded.topology.is_some() {
+            return Err("learned topology is already selected".into());
+        }
+        if let Self::Recover { history, .. } = &self {
+            let anchor = loaded.recovery_anchor.as_ref()
+                .ok_or("learned topology recovery requires an independent history anchor")?;
+            loaded.floor = history.minimum(anchor, loaded.floor)?;
+        }
+        loaded.topology = Some(self);
+        Ok(())
+    }
+
+    pub(super) fn input_paths(&self) -> Vec<&Path> {
+        match self {
+            Self::Create(selection) => selection.input_paths().into(),
+            Self::Recover { selection, .. } => selection.input_paths(),
+        }
+    }
+
+    pub(super) fn output_path(&self) -> Option<&Path> {
+        match self {
+            Self::Create(selection) => selection.acknowledged_output(),
+            Self::Recover { selection, .. } => selection.acknowledged_output(),
+        }
+    }
 }
 
 pub(super) fn history(loaded: &Loaded) -> Result<Option<&History>, String> {

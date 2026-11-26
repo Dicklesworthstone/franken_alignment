@@ -46,16 +46,28 @@ pub(super) fn selected(root: &Root, mode: Option<bool>, bypass: bool) -> (Config
     let config = configured(root); let path = native::write(root);
     if let Some(owned) = mode { super::forecast::install(root, &path, owned, 60_000); }
     evidence(root, &config, 1, true, false);
+    let profile = creation_profile(root, bypass);
+    let mut loaded = recipe::load(&path, &config, true).unwrap();
+    loaded.anchor_output = Some(root.0.join("history-1.bin"));
+    custody::admit(&config, &mut loaded, Some(&profile), custody::Mode::Create).unwrap();
+    (config, path, loaded)
+}
+
+pub(super) fn creation_profile(root: &Root, bypass: bool) -> PathBuf {
     for name in ["initial.json", "live-1.json"] { fs::write(root.0.join(name), graph(1, bypass)).unwrap(); }
     for name in ["initial-inventory.json", "inventory-1.json"] { fs::write(root.0.join(name), INVENTORY).unwrap(); }
     let profile = root.0.join("create-topology.json");
     fs::write(&profile, format!(r#"{{"schema_version":"fa.mediated-create/2","topology_path":"{}","inventory_path":"{}","retain_checkpoint":"{}"}}"#,
         root.0.join("live-1.json").display(), root.0.join("inventory-1.json").display(),
         root.0.join("source-1.bin").display())).unwrap();
-    let mut loaded = recipe::load(&path, &config, true).unwrap();
-    loaded.anchor_output = Some(root.0.join("history-1.bin"));
-    custody::admit(&config, &mut loaded, Some(&profile), custody::Mode::Create).unwrap();
-    (config, path, loaded)
+    profile
+}
+
+pub(super) fn continuation_profile(root: &Root, saved: &TopologyCheckpoint, generation: u64) -> PathBuf {
+    let next = generation + 1;
+    fs::write(root.0.join(format!("live-{next}.json")), graph(next, false)).unwrap();
+    fs::write(root.0.join(format!("inventory-{next}.json")), INVENTORY).unwrap();
+    archived_selection(root, saved, generation, Some(next))
 }
 
 pub(super) fn checkpoint(root: &Root, generation: u64) -> TopologyCheckpoint {

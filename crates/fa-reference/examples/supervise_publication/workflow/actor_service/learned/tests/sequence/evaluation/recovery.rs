@@ -683,7 +683,7 @@ fn accounted_resident_recovery_admits_exact_modes_and_preserves_unary_option_bou
                 3 => invalid.extend(["--after-message".into(), "0".into()]),
                 4 => invalid.extend(["--after-message".into(), "01".into()]),
                 5 => invalid.extend(["--finish-after-message".into(), "7".into()]),
-                6 => invalid.extend(["--topology-profile".into(), "unsupported".into()]),
+                6 => invalid.push("--topology-profile".into()),
                 _ => invalid.extend(["--operator-profile".into(), "missing-generation".into()]),
             }
             assert!(

@@ -122,6 +122,7 @@ pub(super) fn load_evaluated(
     recovery: Option<Recovery>,
     history: &Path,
     selected_inputs: &[PathBuf],
+    topology: Option<&super::topology::Selection>,
 ) -> Result<Vec<Entry>, String> {
     evaluation.check_sequence_inputs(history, &[path, config.source.path()])?;
     let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, recovery, false)?;
@@ -156,13 +157,15 @@ pub(super) fn load_evaluated(
             endpoints.push(precheck.socket_path().to_path_buf());
         }
     }
-    evaluation.check_history_endpoints(history, &endpoints)?;
     for (_, recipe, _, _) in &prepared {
         inputs.extend(recipe.input_paths().into_iter().map(Path::to_path_buf));
     }
-    evaluation.check_sequence_endpoint_inputs(&endpoints, &inputs)?;
+    evaluation.check_resident_paths(config, topology, history, &inputs, &endpoints)?;
     let mut protected = endpoints;
     protected.push(history.to_path_buf());
+    if let Some(output) = topology.and_then(super::topology::Selection::output_path) {
+        protected.push(output.to_path_buf());
+    }
     protected.extend(evaluation.history_input.iter().cloned());
     protected.push(config.store.clone());
     let mut entries: Vec<Entry> = Vec::with_capacity(prepared.len());
