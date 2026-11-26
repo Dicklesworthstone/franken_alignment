@@ -276,8 +276,12 @@ new output. The complete recovery requirements pin every original joint-policy
 field before the sole Fence. Evaluation-only learned recovery accepts that same
 exact joint contract but does not start an operator or publication service.
 The Andon joint policy is separate from the learned recipe's held-out
-publication policy; existing forecast, topology, campaign and held-out
-composition exclusions remain in force for this evaluated service.
+publication policy. The complete
+[single-request topology composition](MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service)
+can retain the original source observer alongside this evaluator and operator.
+Its paired source/history custody, fresh certification and original source work
+remain mandatory. Resident evaluated topology, forecasts, campaigns and
+held-out publication qualification remain excluded.
 
 The original independent evaluator must still discover and label actual
 completed cases. A single learned request may supply insufficient independent

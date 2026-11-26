@@ -13,8 +13,8 @@ use fa_reference::Error;
 use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
     observed::{
-        driver::topology::FileDriverTopology, guarded::mediated::predictive::FileMediatedPredictor,
-        governance::campaigns::FilePolicyGovernor,
+        driver::topology::FileDriverTopology, governance::campaigns::FilePolicyGovernor,
+        guarded::mediated::predictive::FileMediatedPredictor, mediation::FileMediationObserver,
     },
 };
 use fa_reference::action::consequence::mediation::CutCheck;
@@ -305,27 +305,9 @@ where
     let ((mut host, human, forecast, identity), observer) = custody;
     retention.capture(&host, observer.as_ref())
         .map_err(|error| retention.retain_error(&host, error))?;
-    let bound = (|| {
-        match host.request_status(loaded.request) {
-            Err(JournalError::Contract(Error::Missing)) => {}
-            Ok(_) => {
-                return Err(
-                    "learned request already exists; use --resume for its original receipt".into(),
-                );
-            }
-            Err(error) => return Err(debug(error)),
-        }
-        let mut checkpoint = || {
-            deadline.check(time())?;
-            if control.pending_peer()? {
-                return Err("learned topology recovery interrupted before live source binding; no durable Stop applied or acknowledged".into());
-            }
-            Ok(())
-        };
-        let next = selection.next(config, history.clone(), &mut checkpoint)?;
-        let observer = observer.ok_or("recovered topology observer custody is missing")?;
-        next.bind(&mut host, observer)
-    })();
+    let bound = bind_recovered_source(
+        config, loaded, selection, history, &mut host, observer, control, deadline, time,
+    );
     let (source, output) = match bound {
         Ok(bound) => bound,
         Err(error) => return Err(retention.retain_error(&host, error)),
@@ -335,6 +317,44 @@ where
         source: Some(source),
         output,
     }, governor))
+}
+
+/// Bind the explicitly selected fresh source through the original observer.
+/// Both ordinary and independently evaluated recovery capture their complete
+/// acknowledged Fence custody before entering this fallible live-source step.
+pub(super) fn bind_recovered_source<F>(
+    config: &Config,
+    loaded: &Loaded,
+    selection: &Continuation,
+    history: &History,
+    host: &mut FileOversight,
+    observer: Option<FileMediationObserver>,
+    control: &mut Control,
+    deadline: &Deadline,
+    time: &mut F,
+) -> Result<(FileDriverTopology, Option<Output>), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    match host.request_status(loaded.request) {
+        Err(JournalError::Contract(Error::Missing)) => {}
+        Ok(_) => {
+            return Err(
+                "learned request already exists; use --resume for its original receipt".into(),
+            );
+        }
+        Err(error) => return Err(debug(error)),
+    }
+    let mut checkpoint = || {
+        deadline.check(time())?;
+        if control.pending_peer()? {
+            return Err("learned topology recovery interrupted before live source binding; no durable Stop applied or acknowledged".into());
+        }
+        Ok(())
+    };
+    let next = selection.next(config, history.clone(), &mut checkpoint)?;
+    let observer = observer.ok_or("recovered topology observer custody is missing")?;
+    next.bind(host, observer)
 }
 
 /// Install before any fallible preparation so selected custody cannot disappear.

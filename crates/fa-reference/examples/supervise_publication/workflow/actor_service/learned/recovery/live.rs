@@ -109,7 +109,7 @@ where F: FnMut() -> ElapsedTick {
     Err(terminal)
 }
 
-struct Retention<'a> {
+pub(in super::super) struct Retention<'a> {
     history: Option<&'a Path>,
     topology: Option<SourceRetention<'a>>,
 }
@@ -119,7 +119,7 @@ struct SourceRetention<'a> {
     identity: PathBuf,
 }
 impl<'a> Retention<'a> {
-    fn admit(config: &Config, loaded: &'a Loaded) -> Result<Self, String> {
+    pub(in super::super) fn admit(config: &Config, loaded: &'a Loaded) -> Result<Self, String> {
         let topology = match loaded.topology.as_ref() {
             Some(topology::Selection::Recover { selection, history }) => {
                 selection.acknowledged_output().map(|path| {
@@ -141,7 +141,11 @@ impl<'a> Retention<'a> {
         Ok(Self { history: loaded.anchor_output.as_deref(), topology })
     }
 
-    fn retain(&self, config: &Config, stopped: &FileAdmissionStoppedHistory) -> Result<(), String> {
+    pub(in super::super) fn retain(
+        &self,
+        config: &Config,
+        stopped: &FileAdmissionStoppedHistory,
+    ) -> Result<(), String> {
         let history = self.history.map(|path| {
             anchors::export_acknowledged(stopped.history_anchor(), path)
         }).transpose().map(|_| ()).map_err(|error| format!(

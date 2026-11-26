@@ -340,8 +340,9 @@ Optional `--precheck-profile` and paired `--operator-profile` /
 `--tower-generation` preserve their existing contracts. A separately installed
 operator Ledger grant can read accounting and calibration Findings. Required
 raw/owned predictors, held-out joint recipes, stronger witness compositions,
-topology, campaigns, checkpoints and credibility activation refuse
-this single-request opt-in. Explicit single-request continuation uses the complete
+campaigns, generation checkpoints and offline credibility activation remain
+excluded from this single-request opt-in. A separately selected topology
+profile uses the complete mediated composition below. Explicit single-request continuation uses the complete
 anchored recovery composition below. Fresh resident learned sequences use their
 separate composition. An accounted learned journal cannot use the narrower
 evaluated-only recovery wrapper.
@@ -454,8 +455,10 @@ same recovered owner. It cannot rerun generation/review or supply an effect key.
 The new output anchor includes acknowledged late labels and Andon changes.
 
 Receipt-only/effect-retry modes, offline terminal modes,
-predictors, topology, campaigns, checkpoints and credibility activation remain
-outside this paired live recovery grammar. The resident
+predictors, campaigns, generation checkpoints and offline credibility activation
+remain outside this paired live recovery grammar. Single-request topology uses
+its complete paired source/history composition below; resident evaluated
+topology remains excluded. The resident
 service also accepts an explicitly anchored remaining sequence under the
 complete accounting and evaluation requirements described below.
 
@@ -465,6 +468,41 @@ fresh human rejection, retained cuts on invalid predecessors, contract/floor
 refusals, every replay deadline and authenticated Stop before live role release.
 They are authored regressions with independent source review. Required RCH
 compilation, execution, Clippy and canonical qualification remain pending.
+
+## Evaluate a topology-supervised learned service
+
+Single-request creation and explicit continuation can pair `--topology-profile`
+with the accounting/evaluator selection. The original numerical owner then
+retains its independent evaluator and original topology-source observer
+together. Both marginal Andon `/1` and explicit joint `/2` are supported.
+
+Creation requires a new `retain_checkpoint` output in the selected topology
+profile as well as `--retain-history-anchor NEW_OUTPUT`. Recovery additionally
+requires the exact v2 `source_checkpoint` whose embedded history anchor matches
+the independent `--history-anchor`, and two new output destinations. The source
+checkpoint must cover the complete selected journal extent before replay begins.
+Legacy source minima or graph equality cannot replace this custody.
+
+The same original source is attached and certified before generation, then
+checked through native/process review and publication. Each effect still needs
+fresh identity, source, helper review and separate human approval. Independent
+labels run only after the original request workflow under its remaining
+deadline and evaluator allowance. Final retirement precedes capture of the
+paired source/history outputs.
+
+The complete sealed recovery cursor verifies accounting, optional joint policy,
+recipe, graph, source and rights/work floors. Per-event and Ready checkpoints
+retain authenticated Stop precedence. Ordinary recovery captures the newly
+acknowledged Fence pair before fresh source binding; a subsequent startup
+failure retains that recoverable pair. A terminal Stop returns no live evaluator
+or observer and retains its original acknowledged pair.
+
+See [live mediated learned evaluation](MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service)
+for complete creation and continuation commands and the existing topology profile
+formats. This scoped composition supports `--continue-generation`,
+`--after-message` and `--finish-after-message`. Resident evaluated topology,
+topology with `--evaluate-only`, predictors, campaigns and separate held-out
+publication qualification remain excluded.
 
 ## Evaluate recorded learned history
 

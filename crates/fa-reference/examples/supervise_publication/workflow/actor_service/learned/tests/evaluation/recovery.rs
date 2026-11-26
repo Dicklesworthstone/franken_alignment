@@ -1107,7 +1107,10 @@ fn accounted_recovery_grammar_requires_one_explicit_mode_and_both_independent_ar
                 2 => bad.push("--continue-generation".into()),
                 3 => bad.extend(["--after-message".into(), "0".into()]),
                 4 => bad.extend(["--finish-after-message".into(), "01".into()]),
-                5 => bad.extend(["--topology-profile".into(), "unsupported".into()]),
+                5 => bad.extend([
+                    "--topology-profile".into(), "topology.json".into(),
+                    "--topology-profile".into(), "other-topology.json".into(),
+                ]),
                 _ => bad[0] = "serve-learned-generated".into(),
             }
             let error = command_with_clock(&bad, None, || {

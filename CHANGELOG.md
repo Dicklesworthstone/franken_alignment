@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-26: compose live learned evaluation with topology and paired recovery custody
+
+- Support single-request learned Andon creation and anchored generation,
+  Message and Finish continuation with the original topology source.
+- Install the independent evaluator, optional joint policy, accounting and
+  original topology through the existing atomic native constructor.
+- Require exact paired v2 source/history checkpoints before replay; preserve
+  rights, numerical/source work and complete independent recovery expectations.
+- Retain both acknowledged outputs after recovery Fence or terminal Stop,
+  including fresh source-binding and later startup failures.
+- Add four substantive service regressions and an authenticated evaluator child
+  for real publication, late truth, exact recovery and causal failure/Stop cases.
+- Preserve resident/evaluation-only topology exclusions and the existing
+  predictor/governor/held-out boundaries. Scoped syntax and formatting passed;
+  required remote compilation and runtime qualification remain pending.
+
 ## 2026-11-26: connect resident native generation to original joint evaluation
 
 - Admit explicit joint Andon `/2` during resident native creation and anchored

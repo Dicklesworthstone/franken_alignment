@@ -3,6 +3,8 @@
 //! and review. A late label never reruns either or supplies an effect key.
 #[path = "evaluation/history.rs"]
 pub(super) mod history;
+#[path = "evaluation/mediated.rs"]
+mod mediated;
 #[path = "evaluation/recovery.rs"]
 mod recovery;
 use super::super::{Profile, andon_settings, evaluator};
@@ -17,7 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; --evaluate-only requires --history-anchor INPUT and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original live contracts";
+const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT, forbids topology and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original live contracts";
 
 const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
 
@@ -25,6 +27,7 @@ pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
     history_input: Option<PathBuf>,
+    topology_input: Option<PathBuf>,
     pub(super) evaluate_only: bool,
 }
 
@@ -54,12 +57,10 @@ fn parse_options(
     } else {
         ("create-learned-generated", USAGE)
     };
-    if !args.iter().any(|arg| {
-        matches!(
-            arg.as_str(),
-            "--andon" | "--evaluator-profile" | "--evaluate-only"
-        )
-    }) {
+    if !args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluate-only"))
+    {
         return Ok((args.to_vec(), None));
     }
     if credibility.is_some()
@@ -74,6 +75,7 @@ fn parse_options(
     let mut accounting = None;
     let mut peer = None;
     let mut history_input = None;
+    let mut topology_input = None;
     let mut seen = BTreeSet::new();
     let mut remaining = args[..4].to_vec();
     let mut continuing = false;
@@ -89,10 +91,8 @@ fn parse_options(
             at += 1;
             continue;
         }
-        if matches!(
-            flag,
-            "--continue-generation" | "--after-message" | "--finish-after-message"
-        ) && std::mem::replace(&mut continuing, true)
+        if matches!(flag, "--continue-generation" | "--after-message" | "--finish-after-message")
+            && std::mem::replace(&mut continuing, true)
         {
             return Err(usage.into());
         }
@@ -112,21 +112,21 @@ fn parse_options(
                 history_input = Some(PathBuf::from(value));
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--after-message" | "--finish-after-message"
-                if !resident || flag == "--after-message" =>
-            {
+            "--after-message" | "--finish-after-message" if !resident || flag == "--after-message" => {
                 let predecessor = value.parse::<u64>().map_err(|_| usage)?;
                 if predecessor == 0 || predecessor.to_string() != *value {
                     return Err(usage.into());
                 }
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--actor-profile" | "--precheck-profile" if !resident => {
-                remaining.extend_from_slice(&args[at..at + 2])
+            "--topology-profile" if !resident => {
+                topology_input = Some(PathBuf::from(value));
+                remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--retain-history-anchor" | "--operator-profile" | "--tower-generation" => {
-                remaining.extend_from_slice(&args[at..at + 2])
-            }
+            "--actor-profile" | "--precheck-profile" if !resident => remaining.extend_from_slice(&args[at..at + 2]),
+            "--retain-history-anchor"
+            | "--operator-profile"
+            | "--tower-generation" => remaining.extend_from_slice(&args[at..at + 2]),
             _ => return Err(usage.into()),
         }
         at += 2;
@@ -142,6 +142,7 @@ fn parse_options(
                 "--precheck-profile",
                 "--operator-profile",
                 "--tower-generation",
+                "--topology-profile",
             ]
             .iter()
             .any(|flag| seen.contains(flag)))
@@ -154,6 +155,7 @@ fn parse_options(
             accounting: accounting.ok_or(usage)?,
             peer: peer.ok_or(usage)?,
             history_input,
+            topology_input,
             evaluate_only,
         }),
     ))
@@ -162,7 +164,7 @@ fn parse_options(
 pub(super) struct Selection {
     settings: andon_settings::Settings,
     pub(super) peer: evaluator::Settings,
-    inputs: [PathBuf; 2],
+    inputs: Vec<PathBuf>,
     pub(super) history_input: Option<PathBuf>,
 }
 
@@ -176,7 +178,8 @@ impl Options {
         Ok(Selection {
             settings,
             peer,
-            inputs: [self.accounting, self.peer],
+            inputs: [self.accounting, self.peer]
+                .into_iter().chain(self.topology_input).collect(),
             history_input: self.history_input,
         })
     }
@@ -199,11 +202,7 @@ impl Selection {
         selected_operator: Option<&operator::Selection>,
     ) -> Result<(), String> {
         let first = entries.first().ok_or(SEQUENCE_USAGE)?;
-        let history = first
-            .loaded
-            .anchor_output
-            .as_deref()
-            .ok_or(SEQUENCE_USAGE)?;
+        let history = first.loaded.anchor_output.as_deref().ok_or(SEQUENCE_USAGE)?;
         self.check_sequence_inputs(history, &[config.source.path()])?;
         if self.history_input.is_some() != first.loaded.recovery_anchor.is_some() {
             return Err(SEQUENCE_USAGE.into());
@@ -228,10 +227,7 @@ impl Selection {
                 || loaded.creation_campaigns.is_some()
                 || loaded.expected_campaigns.is_some()
                 || loaded.generation.required_pre_output_forecast().is_some()
-                || loaded
-                    .generation
-                    .required_owned_pre_output_forecast()
-                    .is_some()
+                || loaded.generation.required_owned_pre_output_forecast().is_some()
                 || loaded.generation.required_held_out_joint().is_some()
             {
                 return Err(SEQUENCE_USAGE.into());
@@ -244,14 +240,8 @@ impl Selection {
             }
             if let Some(publication) = &loaded.publication {
                 publication.simple_limits()?;
-                self.check_sequence_inputs(
-                    history,
-                    &publication
-                        .input_paths()
-                        .iter()
-                        .map(PathBuf::as_path)
-                        .collect::<Vec<_>>(),
-                )?;
+                self.check_sequence_inputs(history, &publication.input_paths()
+                    .iter().map(PathBuf::as_path).collect::<Vec<_>>())?;
                 inputs.extend(publication.input_paths().iter().cloned());
             }
             if let Some(identity) = &loaded.identity {
@@ -289,21 +279,15 @@ impl Selection {
         }
         self.check_operator_joint(selected_operator)?;
         if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
-            || selected_operator
-                .is_some_and(|selected| selected.settings.policy_promotion.is_some())
+            || selected_operator.is_some_and(|selected| selected.settings.policy_promotion.is_some())
         {
             return Err(SEQUENCE_USAGE.into());
         }
         let requests = actors.iter().map(|actor| actor.request).collect::<Vec<_>>();
         for actor in actors {
-            self.peer.check_host(
-                config,
-                actor,
-                reviewer,
-                selected_operator.map(|selected| &selected.settings),
-                &requests,
-                self.settings.config.identity(),
-            )?;
+            self.peer.check_host(config, actor, reviewer,
+                selected_operator.map(|selected| &selected.settings), &requests,
+                self.settings.config.identity())?;
         }
         Ok(())
     }
@@ -326,23 +310,15 @@ impl Selection {
     /// Preserve selected input names even when a file has disappeared or will
     /// be read only by a later request. Existing-ancestor resolution catches
     /// canonical aliases before any listener or retained output can claim them.
-    pub(super) fn check_sequence_inputs(
-        &self,
-        history: &Path,
-        paths: &[&Path],
-    ) -> Result<(), String> {
+    pub(super) fn check_sequence_inputs(&self, history: &Path, paths: &[&Path])
+        -> Result<(), String>
+    {
         let history = fields::resolve_root(history)?;
         let evaluator = fields::resolve_root(self.peer.socket_path())?;
-        for path in paths
-            .iter()
-            .copied()
-            .chain(self.inputs.iter().map(PathBuf::as_path))
-        {
+        for path in paths.iter().copied().chain(self.inputs.iter().map(PathBuf::as_path)) {
             let input = fields::resolve_root(path)?;
             if overlaps(&history, &input) {
-                return Err(
-                    "learned evaluation history output conflicts with a selected input".into(),
-                );
+                return Err("learned evaluation history output conflicts with a selected input".into());
             }
             if overlaps(&evaluator, &input) {
                 return Err("learned evaluator endpoint conflicts with a selected input".into());
@@ -351,17 +327,13 @@ impl Selection {
         Ok(())
     }
 
-    pub(super) fn check_history_endpoints(
-        &self,
-        history: &Path,
-        endpoints: &[PathBuf],
-    ) -> Result<(), String> {
+    pub(super) fn check_history_endpoints(&self, history: &Path, endpoints: &[PathBuf])
+        -> Result<(), String>
+    {
         let history = fields::resolve_root(history)?;
         for endpoint in endpoints {
             if overlaps(&history, &fields::resolve_root(endpoint)?) {
-                return Err(
-                    "learned evaluation history output conflicts with a service endpoint".into(),
-                );
+                return Err("learned evaluation history output conflicts with a service endpoint".into());
             }
         }
         Ok(())
@@ -374,9 +346,7 @@ impl Selection {
         endpoints: &[PathBuf],
         paths: &[PathBuf],
     ) -> Result<(), String> {
-        let endpoints = endpoints
-            .iter()
-            .map(|path| fields::resolve_root(path))
+        let endpoints = endpoints.iter().map(|path| fields::resolve_root(path))
             .collect::<Result<Vec<_>, _>>()?;
         for path in paths.iter().chain(self.inputs.iter()) {
             let input = fields::resolve_root(path)?;
@@ -403,12 +373,12 @@ impl Selection {
     ) -> Result<(), String> {
         let actor = actor.ok_or(USAGE)?;
         self.check_operator_joint(services.0)?;
+        mediated::check_selection(loaded, continuing)?;
         if ((finishing.is_some() || after_message.is_some()) && !continuing)
             || continuing != loaded.recovery_anchor.is_some()
             || continuing != self.history_input.is_some()
             || credibility.is_some()
             || loaded.anchor_output.is_none()
-            || loaded.topology.is_some()
             || loaded.checkpoint_on_generation.is_some()
             || loaded.creation_campaigns.is_some()
             || loaded.expected_campaigns.is_some()
@@ -445,6 +415,7 @@ impl Selection {
         let history = loaded.anchor_output.as_deref().expect("required above");
         let mut custody = vec![config.source.path()];
         custody.extend(self.history_input.as_deref());
+        custody.extend(mediated::input_paths(loaded));
         if let Some(precheck) = precheck {
             self.peer.check_custody_paths(&[precheck.socket_path()])?;
         }
@@ -475,10 +446,15 @@ impl Selection {
             endpoints.push(precheck.socket_path().to_path_buf());
         }
         self.check_history_endpoints(history, &endpoints)?;
-        let custody = custody
-            .into_iter()
-            .map(Path::to_path_buf)
-            .collect::<Vec<_>>();
+        if let Some(output) = mediated::output_path(loaded) {
+            self.check_sequence_inputs(output, &custody)?;
+            self.check_history_endpoints(output, &endpoints)?;
+            self.check_history_endpoints(history, &[output.to_path_buf()])?;
+            let _ = crate::workflow::continuation::checkpoint::AcknowledgedOutput::admit(
+                config, output,
+            )?;
+        }
+        let custody = custody.into_iter().map(Path::to_path_buf).collect::<Vec<_>>();
         self.check_sequence_endpoint_inputs(&endpoints, &custody)?;
         Ok(())
     }
@@ -489,6 +465,12 @@ impl Selection {
         if let Some(path) = &self.history_input {
             self.check_sequence_inputs(history, &[path])?;
         }
+        if let Some(output) = mediated::output_path(loaded) {
+            self.check_sequence_inputs(output, paths)?;
+            if let Some(path) = &self.history_input {
+                self.check_sequence_inputs(output, &[path])?;
+            }
+        }
         Ok(())
     }
 
@@ -497,6 +479,11 @@ impl Selection {
         config: &Config,
         loaded: &Loaded,
     ) -> Result<(learned_recovery::Custody, FileIndependentEvaluator), String> {
+        if loaded.topology.is_some() {
+            return Err(
+                "mediated learned evaluation requires original topology startup custody".into(),
+            );
+        }
         self.settings.creation()?;
         let guards = learned_recovery::requirements(config, loaded).guards;
         let registration = super::credential::registration(loaded)?;

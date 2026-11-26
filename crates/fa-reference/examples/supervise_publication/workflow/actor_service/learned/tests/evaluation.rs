@@ -2,6 +2,8 @@
 //! Fixed weights exercise custody and two-key causality, not detector quality.
 #[path = "evaluation/live_credibility.rs"]
 mod live_credibility_tests;
+#[path = "evaluation/mediated.rs"]
+mod mediated_tests;
 #[path = "evaluation/recovery.rs"]
 mod recovery_tests;
 use super::super::anchors as archive;

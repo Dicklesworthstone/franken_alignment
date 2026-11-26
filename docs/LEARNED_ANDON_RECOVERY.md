@@ -134,6 +134,16 @@ floor. Version-one absence cannot recover a joint history. This applies to
 single continuations, evaluation-only history and resident Message/Finish
 suffixes; none substitutes the separate recipe-owned held-out publication policy.
 
+Single-request live continuation may additionally select the original topology
+profile. Its separate [mediated cursor and source workflow](MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service)
+require a v2 source checkpoint paired exactly to the independent history anchor,
+complete accounting/joint/graph requirements and two new output destinations.
+The source extent is checked before event zero. The sole Fence and terminal Stop
+both retain their acknowledged source/history pair; fresh source binding cannot
+discard that recovery point on failure. The ordinary cursor is never used as a
+fallback for a mediated history. Resident and evaluation-only topology remain
+outside this live composition.
+
 ## Verification boundary
 
 Eight public regression functions use the existing original numerical, native review and

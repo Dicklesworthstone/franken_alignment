@@ -354,12 +354,23 @@ where F: FnMut() -> ElapsedTick {
         credibility, actor, precheck, selected_operator, None, time)
 }
 
-fn run_with_actor_services_evaluated<F>(mut config: Config, loaded: Loaded, peers: &PeerProfile, continuing: bool,
-    finishing: Option<u64>, after_message: Option<u64>, credibility: Option<&Path>,
-    actor: Option<&super::Profile>, precheck: Option<&precheck::Settings>,
-    selected_operator: Option<&operator::Selection>, selected_evaluation: Option<&evaluation::Selection>,
-    mut time: F) -> Result<RunResult, String>
-where F: FnMut() -> ElapsedTick {
+fn run_with_actor_services_evaluated<F>(
+    mut config: Config,
+    loaded: Loaded,
+    peers: &PeerProfile,
+    continuing: bool,
+    finishing: Option<u64>,
+    after_message: Option<u64>,
+    credibility: Option<&Path>,
+    actor: Option<&super::Profile>,
+    precheck: Option<&precheck::Settings>,
+    selected_operator: Option<&operator::Selection>,
+    selected_evaluation: Option<&evaluation::Selection>,
+    mut time: F,
+) -> Result<RunResult, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     if credibility.is_some() && !continuing {
         return Err(
             "credibility activation requires explicit learned continuation or finish".into(),
@@ -406,12 +417,10 @@ where F: FnMut() -> ElapsedTick {
     let bound_actor = actor.map(ingress::Bound::bind).transpose()?;
     let (started, evaluator_role) = match selected_evaluation {
         Some(selected) => {
-            let (custody, evaluator) = if continuing {
-                selected.open(&config, &loaded, &mut control, &deadline, &mut time)?
-            } else {
-                selected.create(&config, &loaded)?
-            };
-            (topology::Started { custody, source: None, output: None }, Some(evaluator))
+            let (started, evaluator) = selected.start(
+                &config, &loaded, continuing, &mut control, &deadline, &mut time,
+            )?;
+            (started, Some(evaluator))
         }
         None => (topology::start(&config, &loaded, continuing,
             &mut control, &deadline, &mut time)?, None),

@@ -111,6 +111,78 @@ accounting remain authoritative. A stopped history and its matching source
 checkpoint are retained through the existing terminal checkpoint law; a lost
 reply cannot justify retrying an effect or replenishing either budget.
 
+## Use the live learned service
+
+The single-request learned command can retain this complete composition through
+actual generation, native or process review, independent human approval and
+later independent case assessment:
+
+```sh
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE \
+  --actor-profile ACTOR_PROFILE --topology-profile CREATE_TOPOLOGY \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/first-history.anchor
+```
+
+`CREATE_TOPOLOGY` uses the existing
+[topology creation profile](TOPOLOGY_SUPERVISED_CREATION.md), with an explicitly
+selected new `retain_checkpoint` destination. Both that source checkpoint and
+the independent history output are mandatory for this evaluated composition.
+The Andon profile may be marginal `/1` or explicit joint `/2`; a joint policy
+is installed in the original first image, separately from the topology graph.
+A recipe-owned held-out publication policy still requires its own composition.
+
+The original source is attached to the same supervised driver and certified
+before generation or request work. The original cut checks remain required
+through review and publication. Independent evaluation runs only under the
+remaining invocation and accepted-request deadlines after the original workflow,
+without obtaining a new source, rerunning helpers or supplying an effect key.
+Evaluator retirement precedes capture of the final source/history pair, so late
+acknowledged labels are retained in that pair.
+
+For an explicitly selected next Message:
+
+```sh
+supervise_publication create-learned-generated CONFIG NEXT_RECIPE REVIEWER_PROFILE \
+  --after-message PREVIOUS_REQUEST --actor-profile NEXT_ACTOR_PROFILE \
+  --topology-profile NEXT_TOPOLOGY \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor /absolute/independent/first-history.anchor \
+  --retain-history-anchor /absolute/independent/next-history.anchor
+```
+
+`NEXT_TOPOLOGY` uses the existing
+[continuation profile](TOPOLOGY_SUPERVISED_CONTINUATION.md). Its
+`source_checkpoint` must be the independently retained v2 checkpoint whose
+embedded history anchor exactly matches `--history-anchor`. It must also name
+a new `retain_checkpoint` output. A hand-entered graph or legacy source-work
+floor cannot replace this paired custody. The saved source checkpoint must
+cover the complete selected journal extent before event zero.
+
+The same complete route supports `--continue-generation` for original
+interrupted numerical work and `--finish-after-message PREVIOUS_REQUEST` for an
+explicit Finish. Original recipe, topology, rights/source work, accounting
+windows, evaluation floor and any joint policy remain exact requirements.
+Recovery does not renew numerical or source work. Fresh graph and inventory
+generations, source certification, identity, helper review and human approval
+still govern subsequent publication.
+
+Authenticated Stop and the invocation deadline are checked before open, at
+every replay boundary and at Ready. An admitted Stop uses the original terminal
+path, issues no evaluator or live observer and retains the acknowledged
+source/history pair. Ordinary recovery captures its new Fence pair before
+attempting fresh source binding. A missing next document, unavailable source or
+later startup failure therefore retains that acknowledged recovery point in
+the new selected outputs, while preserving the failure.
+
+All selected source/history destinations are checked against the accounting,
+topology, recipe, actor/reviewer and other profile inputs, the authority store
+and every service endpoint before the first clock or storage creation.
+Optional prechecks and the existing operator pair retain their original
+contracts. Resident mediated evaluation, topology with `--evaluate-only`,
+predictor/forecast requirements, campaign governance and held-out publication
+qualification remain outside this single-request composition.
+
 The graph remains an operator-declared model. This composition does not establish
 operating-system containment, authenticated completeness of that model, detector
 quality or production qualification. Required compilation and runtime evidence

@@ -31,11 +31,11 @@ pub(super) use cooperative::finish_replay;
 use fa_reference::action::consequence::delivery::persistent::observed::consistency::{
     FileConsistencyConfig, FileConsistencyObserver, learned::FileLearnedConsistencyConfig,
 };
+use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
 };
 use fa_reference::action::consequence::delivery::persistent::observed::identity::FileIdentityObserver;
-use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor;
 #[cfg(test)]
 use fa_reference::action::consequence::delivery::persistent::observed::shutdown::recovery::FileStoppedRecovery;
 use fa_reference::action::consequence::delivery::persistent::observed::stream::FileStreamProposal;
@@ -43,6 +43,7 @@ use fa_reference::action::consequence::delivery::persistent::{
     JournalError,
     observed::shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory},
 };
+pub(super) use live::Retention as StopRetention;
 
 pub(super) type Custody = (
     FileOversight,

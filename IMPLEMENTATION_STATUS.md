@@ -1,5 +1,50 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: connect live learned evaluation to original topology custody
+
+Single-request learned publication now composes its independent evaluator and
+Andon accounting with the original topology-source workflow. Creation accepts
+either marginal or joint evaluation, installs all contracts through the existing
+atomic mediated constructor, and retains the original observer for driver
+attachment and fresh cut certification. No replacement graph checker, source
+budget, numerical owner or journal format is introduced.
+
+Explicit generation continuation, next Message and Finish use the sealed
+mediated Andon cursor. The independently retained v2 source checkpoint must
+match the selected history anchor and cover its complete event extent before
+replay. Accounting windows, evaluation floor, optional joint policy, original
+recipe, graph, rights/source work and terminal reserve remain exact. Cooperative
+Stop/deadline checks precede live role release. The original terminal Stop
+retains both acknowledged archives; ordinary recovery captures its new Fence
+pair before the fallible next-source binding, preserving that recovery point on
+startup failure. Shared ordinary topology binding retains its existing behavior.
+
+Source/history output custody is checked against all selected inputs and service
+endpoints before clocks, listeners or owner creation. This increment supports
+single-request live creation and explicit anchored recovery. Resident evaluated
+topology, topology with evaluation-only history, predictors, campaign governance
+and separate held-out publication qualification remain excluded.
+
+Four substantive service regressions plus an independent evaluator-process
+entry exercise actual CLI generation/publication, late original labels,
+Message/Finish recovery with fresh approval and rejection, retained numerical
+and source work, five independent pre-Fence contract changes, acknowledged
+missing-source failure followed by corrected recovery, and Stop during an
+incomplete late evaluation frame. The existing grammar regression now checks
+duplicate topology selection; supported single selection has its positive
+workflow. Fixture graphs and judgments do not establish containment or detector
+quality.
+
+Independent source review found no identified API or custody blocker. All ten
+changed Rust paths passed syntax parsing; new modules and the test wrapper passed
+format checks, while existing production/grammar files passed modified-range
+format checks with the available 2026-08-30 rustfmt. Unrelated broad formatting
+was removed. Scoped whitespace and exact content checks passed. The required RCH
+gate still cannot start because the runner is absent (exit 127); compilation,
+runtime tests, Clippy and canonical qualification remain pending. Existing
+FA-026/073/105 acceptance is not closed by source-only evidence.
+See the [live commands and paired custody contract](docs/MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service).
+
 ## 2026-11-26: jointly evaluated resident native publication
 
 Resident native creation now accepts the independently selected joint Andon

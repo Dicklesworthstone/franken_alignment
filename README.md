@@ -50,6 +50,16 @@ publication after promotion requires fresh identity, source, helper review and
 human approval. New service and numerical regression definitions remain pending
 required remote compilation and execution.
 
+Single-request learned services also compose
+[topology enforcement with live independent evaluation](docs/MEDIATED_LEARNED_ANDON.md#use-the-live-learned-service).
+Creation retains the original source observer and evaluator beside the same
+numerical owner. Anchored continuation requires an exact v2 source checkpoint
+paired to the independent history anchor; original numerical work, source rights
+and accounting remain bound to that history. Recovery captures both acknowledged
+outputs before fresh source binding, so later failure preserves the recovery
+point. Original cut checks and both publication keys remain mandatory. This
+single-request composition remains pending required runtime qualification.
+
 The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
 with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
 for evaluation only. Fixed sixteen-case pages retain original case identities,

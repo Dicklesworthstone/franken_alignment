@@ -80,6 +80,11 @@ impl Selection {
     where
         F: FnMut() -> ElapsedTick,
     {
+        if loaded.topology.is_some() {
+            return Err(
+                "mediated learned evaluation requires original topology recovery custody".into(),
+            );
+        }
         let expected = self.recovery_requirements(config, loaded)?;
         let anchor = loaded
             .recovery_anchor
