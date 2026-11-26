@@ -27,10 +27,11 @@ pub enum OperatorCapabilityKind {
     PolicyReplay,
     PolicyPromotion,
     CredibilityPromotion,
+    AndonWindow,
 }
 
 impl OperatorCapabilityKind {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::Situation,
         Self::JournalTail,
         Self::RequestHistory,
@@ -47,6 +48,7 @@ impl OperatorCapabilityKind {
         Self::PolicyReplay,
         Self::PolicyPromotion,
         Self::CredibilityPromotion,
+        Self::AndonWindow,
     ];
 
     pub const fn as_str(self) -> &'static str {
@@ -67,6 +69,7 @@ impl OperatorCapabilityKind {
             Self::PolicyReplay => "policy_replay",
             Self::PolicyPromotion => "policy_promotion",
             Self::CredibilityPromotion => "credibility_promotion",
+            Self::AndonWindow => "andon_window",
         }
     }
 
@@ -86,6 +89,7 @@ impl OperatorCapabilityKind {
             Self::Fence => &[Verb::Fence],
             Self::PolicyReplay => &[Verb::PolicyReplay],
             Self::PolicyPromotion | Self::CredibilityPromotion => &[Verb::Next, Verb::Promote],
+            Self::AndonWindow => &[Verb::Next, Verb::RegisterAndonWindow],
         }
     }
 
@@ -98,7 +102,8 @@ impl OperatorCapabilityKind {
             | Self::Convening
             | Self::Fence
             | Self::PolicyPromotion
-            | Self::CredibilityPromotion => Some(PurposeTag::Permit),
+            | Self::CredibilityPromotion
+            | Self::AndonWindow => Some(PurposeTag::Permit),
             Self::PolicyReplay => Some(PurposeTag::Experiment),
             _ => None,
         }
@@ -122,6 +127,7 @@ impl OperatorCapabilityKind {
             Self::PolicyReplay => "supervisor_policy_replay",
             Self::PolicyPromotion => "supervisor_policy_promotion",
             Self::CredibilityPromotion => "supervisor_credibility_promotion",
+            Self::AndonWindow => "supervisor_andon_window",
         }
     }
 
@@ -131,7 +137,8 @@ impl OperatorCapabilityKind {
             | Self::Narrowing
             | Self::Convening
             | Self::PolicyPromotion
-            | Self::CredibilityPromotion => tower.control_operator,
+            | Self::CredibilityPromotion
+            | Self::AndonWindow => tower.control_operator,
             Self::Cancellation | Self::Fence => {
                 !tower.source_observer && (!tower.reconciliation_operator || tower.control_operator)
             }
@@ -178,7 +185,7 @@ pub struct LinkedOperatorCapabilities {
     query_address: Address,
     query_operation_id: String,
     query_idempotency_key: Option<String>,
-    entries: [OperatorCapabilityEntry; 16],
+    entries: [OperatorCapabilityEntry; 17],
 }
 
 impl LinkedOperatorCapabilities {
@@ -194,7 +201,7 @@ impl LinkedOperatorCapabilities {
     pub fn query_idempotency_key(&self) -> Option<&str> {
         self.query_idempotency_key.as_deref()
     }
-    pub fn entries(&self) -> &[OperatorCapabilityEntry; 16] {
+    pub fn entries(&self) -> &[OperatorCapabilityEntry; 17] {
         &self.entries
     }
 }
@@ -259,6 +266,9 @@ impl PublicationTower {
                 .as_ref()
                 .map(|port| port.capability_snapshot()),
             self.credibility_promotion
+                .as_ref()
+                .map(|port| port.capability_snapshot()),
+            self.andon_window
                 .as_ref()
                 .map(|port| port.capability_snapshot()),
         ];

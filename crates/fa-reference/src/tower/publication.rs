@@ -44,6 +44,8 @@ mod policy_replay;
 pub use policy_replay::{LinkedPolicyReplay, LinkedPolicyReplayPage};
 mod policy_promotion;
 pub use policy_promotion::{LinkedPolicyPromotion, LinkedPolicyPromotionNext};
+mod andon_window;
+pub use andon_window::{LinkedAndonWindowNext, LinkedAndonWindowRegistration};
 mod credibility_promotion;
 pub use credibility_promotion::{LinkedCredibilityPromotion, LinkedCredibilityPromotionNext};
 mod precheck;
@@ -57,7 +59,7 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileGeneratedTextActorPort,
     FileInspectionCursor, FileInspectionResult, FileJournalTailCursor,
     FileLearnedTextStreamActorPort, FilePolicyReplayCursor, FileSupervisorAbandonmentPort,
-    FileSupervisorCancellationPort, FileSupervisorConvenePort,
+    FileSupervisorAndonWindowPort, FileSupervisorCancellationPort, FileSupervisorConvenePort,
     FileSupervisorCredibilityPromotionPort, FileSupervisorExplanationPort, FileSupervisorFencePort,
     FileSupervisorGovernanceLedgerPort, FileSupervisorHoldDiagnosisPort,
     FileSupervisorInspectionPort, FileSupervisorJournalTailPort, FileSupervisorNarrowPort,
@@ -78,7 +80,7 @@ use crate::observation_algebra::{AuthorityKind, Knowledge, UnknownReason};
 use crate::typestate_cx::PurposeTag;
 use std::collections::BTreeMap;
 
-pub const CONNECTED_PUBLICATION_VERBS: [Verb; 18] = [
+pub const CONNECTED_PUBLICATION_VERBS: [Verb; 19] = [
     Verb::Propose,
     Verb::Get,
     Verb::Related,
@@ -95,6 +97,7 @@ pub const CONNECTED_PUBLICATION_VERBS: [Verb; 18] = [
     Verb::Fence,
     Verb::PolicyReplay,
     Verb::Promote,
+    Verb::RegisterAndonWindow,
     Verb::Ledger,
     Verb::Findings,
 ];
@@ -161,6 +164,8 @@ pub enum PublicationResult {
     PolicyReplayPage(LinkedPolicyReplayPage),
     PolicyPromotionNext(LinkedPolicyPromotionNext),
     PolicyPromotion(LinkedPolicyPromotion),
+    AndonWindowNext(LinkedAndonWindowNext),
+    AndonWindowRegistration(LinkedAndonWindowRegistration),
     CredibilityPromotionNext(LinkedCredibilityPromotionNext),
     CredibilityPromotion(LinkedCredibilityPromotion),
     Refused(Knowledge<()>),
@@ -214,6 +219,7 @@ pub struct PublicationTower {
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_promotion: Option<FileSupervisorPolicyPromotionPort>,
+    andon_window: Option<FileSupervisorAndonWindowPort>,
     credibility_promotion: Option<FileSupervisorCredibilityPromotionPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
     limits: PublicationLimits,
@@ -266,6 +272,7 @@ impl PublicationTower {
             review_explanation: None,
             policy_replay: None,
             policy_promotion: None,
+            andon_window: None,
             credibility_promotion: None,
             policy_replay_cursors: BTreeMap::new(),
             limits,
@@ -516,7 +523,11 @@ impl PublicationTower {
                 && !(self.control_operator
                     && matches!(
                         request.verb,
-                        Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote
+                        Verb::Fence
+                            | Verb::Narrow
+                            | Verb::Convene
+                            | Verb::Promote
+                            | Verb::RegisterAndonWindow
                     ))
             {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
@@ -543,6 +554,7 @@ impl PublicationTower {
                     | Verb::Narrow
                     | Verb::Convene
                     | Verb::Promote
+                    | Verb::RegisterAndonWindow
             ) && request.address.generation.is_none())
         {
             let mut response = self.refusal(&request, ReasonCode::StaleGeneration, false);
@@ -598,6 +610,16 @@ impl PublicationTower {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
             return self.dispatch_narrowing(access, request);
+        }
+
+        if request.verb == Verb::RegisterAndonWindow
+            || (request.verb == Verb::Next
+                && matches!(request.arguments, ReadArguments::AndonWindowNext { .. }))
+        {
+            if !self.control_operator {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+            return self.dispatch_andon_window(access, request);
         }
 
         if matches!(

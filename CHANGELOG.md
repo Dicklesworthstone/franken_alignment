@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-11-26: connect original Andon windows to the live operator
+
+- Add the registered L8 `register-andon-window` mutation and a bounded `next`
+  plan, both tied to the original owner, full predecessor and frozen budget.
+- Retain an optional finite `andon_window` grant across authenticated operator
+  connections; expose its unspent allowances through capability discovery.
+- Validate complete explicit document sequences before connection and bind
+  returned plans/receipts to the locally selected budget and exact native cut.
+- Add nine public Tower and twelve service/client regression definitions,
+  plus the profile, recovery and explicit command contract. Repair two existing
+  test-module resolution blockers and the new fixture's original clock binding.
+- Pass 48 selected native/Tower integration tests and full example type checking.
+  Two scoped example tests pass; ten socket cases are blocked by sandbox EPERM
+  and disabled escalation. The full example test build was killed by the host;
+  full canonical and remote RCH qualification remain open.
+
 ## 2026-11-26: register original Andon windows without replacing the live owner
 
 - Delegate one independently selected immutable accounting window through finite

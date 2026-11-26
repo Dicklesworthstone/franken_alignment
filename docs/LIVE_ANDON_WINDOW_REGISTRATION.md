@@ -137,3 +137,169 @@ No production activation, empirical helper calibration, cryptographic evaluator
 authentication or complete native risk-theater feed is established by this
 reference adapter.
 
+## Select the live operator capability
+
+The Linux operator service retains the native custodian across authenticated
+connections and scheduled handoffs. Add the optional `andon_window` object to
+the independently selected `fa.tower-operator-service/1` profile. Omission or
+`null` installs no registration grant and preserves existing profiles.
+
+For example, this profile selects only the new capability:
+
+```json
+{
+  "schema": "fa.tower-operator-service/1",
+  "scope": {"tenant": 1, "principal": 2, "run": 3, "branch": 4, "authority": 5},
+  "socket": "/run/fa/operator.sock",
+  "supervisor": {"uid": 1000, "gid": 1000, "pid": null},
+  "operator": {"uid": 1001, "gid": 1000, "pid": null},
+  "candidate_limit": 8,
+  "connection_limit": 4,
+  "exchange_limit": 32,
+  "runtime_ms": 60000,
+  "poll_ms": 5,
+  "inspection_queries": 0,
+  "explanation_queries": 0,
+  "explanation_replay_events": 0,
+  "explanation_disclosure": "none",
+  "andon_window": {
+    "budget": {
+      "window": 2,
+      "start": 10,
+      "end": 30,
+      "false_stops_allowed": 1,
+      "cost_per_stop": 7
+    },
+    "queries": 4,
+    "max_replay_events": 4096,
+    "authority": "register_original_andon_window"
+  }
+}
+```
+
+The numbers illustrate schema, not recommended operating thresholds. Replace
+scope, socket, kernel identities and accounting bounds with independently
+selected values. The owner must already have its original native evaluator and
+Andon accounting; this capability cannot activate an absent accounting lane.
+
+| Profile field | Contract |
+|---|---|
+| `budget` | Closed object containing all five original unsigned integer fields; nonzero window ID and start strictly before end |
+| `queries` | Positive cumulative allowance, at most `MAX_ANDON_WINDOW_QUERIES` |
+| `max_replay_events` | Positive bound for the complete journal plus the proposed event, at most `MAX_ANDON_WINDOW_REPLAY_EVENTS` |
+| `authority` | Exact string `"register_original_andon_window"` |
+| `numerical_replay_events` | Optional positive cumulative allowance no larger than `max_replay_events`; required whenever selected in a native/learned numerical service profile |
+
+The profile uses unsigned JSON integers. Tower requests and receipts use
+canonical decimal strings, retaining full `u64` values exactly. Unknown,
+duplicate, malformed or missing required fields refuse before service setup.
+There is no caller-selected operation-count override or mutable budget override.
+
+Use the existing [live evaluation creation and recovery commands](LIVE_ANDON_EVALUATION.md)
+with `--operator-profile OPERATOR_PROFILE` and the separately selected original
+Andon/evaluator profiles. For example, an ordinary creation retains the independent
+history output and distinct evaluator endpoint:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --andon ANDON_PROFILE \
+  --retain-history-anchor /absolute/independent/new-history-anchor \
+  --operator-profile OPERATOR_PROFILE \
+  --evaluator-profile EVALUATOR_PROFILE
+```
+
+Native and learned operator constructors use the same finite grant and require
+the explicit numerical allowance whenever this capability is selected, including
+an already-existing window. An existing-window acknowledgment still spends no
+numerical replay. The original supported
+bootstrap/recovery combinations remain authoritative. A registration allowance
+does not provide missing predictor, topology or evaluator custody.
+
+The unchanged 16,384-byte default response allowance covers the complete
+registration response. The Tower handler checks its conservative complete
+response bound before entering native mutation. A response or transport failure
+after an acknowledged transition does not roll back registration.
+
+## Inspect and explicitly submit the registered window
+
+Save this complete illustrative request as `andon-window-next.json`, with the
+actual original scope and Tower registration generation:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-andon-window-901",
+  "address": "fa://1/run/3@41",
+  "verb": "next",
+  "arguments": {"kind": "andon_window", "operation": "901"},
+  "idempotency_key": "901"
+}
+```
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE andon-window-next.json
+```
+
+The `fa.publication-andon-window-next/1` response reports the exact budget,
+`already_registered`, `can_register`, a block reason and the original complete
+basis. Its `action` is present only when the current native preview permits
+registration. Cost, ranking, information gain and continued eligibility remain
+explicitly Unknown.
+
+When selecting the transition, inspect and save the complete returned request
+at `result.value.knowledge.value.action` as `andon-window-register.json`.
+Submit that document explicitly:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE andon-window-register.json
+```
+
+The action uses the registered mutation verb `register-andon-window`. Its
+closed arguments contain only `operation`, complete `expected` basis and
+`expected_budget`. Retain the returned generation and idempotency key.
+A stale basis or substituted budget refuses before spending native work.
+A plan does not reserve the predecessor against later labels or journal changes.
+
+The `fa.publication-andon-window-registration/1` result binds the attempted
+predecessor and expected budget to the original receipt. A new registration
+advances only `journal_revision`; an existing-window acknowledgment changes no
+basis field. The client validates both invariants and requires receipt, request,
+plan and independently selected profile budgets to agree.
+
+Before connecting, the authenticated client checks every explicit input document.
+A missing local budget selection, foreign scope or substituted expected budget
+therefore sends no request bytes. It verifies the supervisor's configured kernel
+credentials and each complete response before proceeding to a later document.
+It never follows a returned action or retries automatically. An explicitly
+resubmitted identical request can receive the original live grant's cached
+historical result.
+
+Nonspending operator capability discovery includes `andon_window`, its original
+grant availability and remaining query, operation and numerical allowances.
+Discovery does not grant window registration and works with an omitted local
+window selection.
+
+## Live integration verification
+
+The final combined source passed fifteen native registration tests, nine new
+public Tower tests and 24 selected existing dispatch/capability tests using
+standard LLVM `nightly-2026-09-08`: 48 integration tests in total. They cover
+actual original assessments and accounting, immutable windows, finite work,
+complete request/receipt binding, owner custody and native refusal paths.
+
+The complete example test crate passed Rust type checking with `-Zno-codegen`.
+The full example test build was killed by the host before producing an executable.
+A temporary copy selected the twelve original service/client tests by disabling
+only unrelated test declarations. Every production body, selected test body and
+fixture was retained, and the normal Rust test harness linked against the same
+already-built production library. Its two profile/receipt contract cases passed.
+The ten Unix-socket cases were blocked by sandbox EPERM; an escalation attempt
+was rejected because the execution policy disables sandbox approval. They are
+not counted as passing tests. No test-selection edits were committed, and the
+repository retains its full example test suite.
+
+The service remains a bounded reference implementation. Full canonical and
+remote RCH qualification remain open. Local process credentials do not establish
+remote cryptographic evaluator attestation, and finite work allowances do not
+establish production latency or containment.

@@ -3,16 +3,18 @@ use super::super::{Config, PeerProfile, Profile};
 use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
-    MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
-    MAX_CREDIBILITY_PROMOTION_QUERIES, MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS,
-    MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES, MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
-    MAX_FENCE_REPLAY_EVENTS, MAX_GOVERNANCE_LEDGER_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES,
-    MAX_JOURNAL_TAIL_PAGE_EVENTS, MAX_JOURNAL_TAIL_QUERIES, MAX_NARROW_OPERATIONS,
-    MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS, MAX_POLICY_PROMOTION_QUERIES,
-    MAX_POLICY_PROMOTION_REPLAY_EVENTS, MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES,
-    MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
-    MAX_RESOLUTION_OPERATIONS, MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS,
-    MAX_REVIEW_EXPLANATION_EVENTS, MAX_REVIEW_EXPLANATION_QUERIES,
+    MAX_ANDON_WINDOW_QUERIES, MAX_ANDON_WINDOW_REPLAY_EVENTS, MAX_CANCELLATION_OPERATIONS,
+    MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS, MAX_CONVENE_OPERATIONS,
+    MAX_CONVENE_QUERIES, MAX_CREDIBILITY_PROMOTION_QUERIES,
+    MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS, MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
+    MAX_FENCE_REPLAY_EVENTS, MAX_GOVERNANCE_LEDGER_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES,
+    MAX_INSPECTION_QUERIES, MAX_JOURNAL_TAIL_PAGE_EVENTS, MAX_JOURNAL_TAIL_QUERIES,
+    MAX_NARROW_OPERATIONS, MAX_NARROW_QUERIES, MAX_NARROW_REPLAY_EVENTS,
+    MAX_POLICY_PROMOTION_QUERIES, MAX_POLICY_PROMOTION_REPLAY_EVENTS,
+    MAX_POLICY_REPLAY_PAGE_QUERIES, MAX_POLICY_REPLAY_QUERIES, MAX_REQUEST_HISTORY_EVENTS,
+    MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS, MAX_RESOLUTION_OPERATIONS,
+    MAX_RESOLUTION_QUERIES, MAX_RESOLUTION_REPLAY_EVENTS, MAX_REVIEW_EXPLANATION_EVENTS,
+    MAX_REVIEW_EXPLANATION_QUERIES,
 };
 use fa_reference::action::consequence::oversight::actor_peer::{MAX_PEER_CONNECTIONS, PeerPolicy};
 use fa_reference::action::consequence::oversight::actor_wire::MAX_CHANNEL_EXCHANGES;
@@ -20,6 +22,7 @@ use fa_reference::action::consequence::policy_campaign::{
     MAX_REPLAY_CASES, MAX_REPLAY_INPUT_BYTES, ReplayLimits,
 };
 use fa_reference::action::{Purpose, Scope};
+use fa_reference::round::review::andon::AndonBudget;
 use fa_reference::strict_json::{self, Json, Limits};
 use fa_reference::tower::publication::PublicationLimits;
 use std::collections::BTreeMap;
@@ -61,6 +64,7 @@ pub(crate) struct Settings {
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
     pub(crate) policy_promotion: Option<PolicyPromotionSettings>,
     pub(crate) credibility_promotion: Option<CredibilityPromotionSettings>,
+    pub(crate) andon_window: Option<AndonWindowSettings>,
 }
 
 /// Explicit disclosure of acknowledged governance accounting. This selection
@@ -189,6 +193,63 @@ impl CredibilityPromotionSettings {
             || self.authority != "promote_qualified_credibility"
         {
             return Err("credibility promotion requires explicit joint-qualified-credibility authority and bounded queries and replay".into());
+        }
+        Ok(())
+    }
+}
+
+/// One independently selected immutable budget for the original Andon ledger.
+/// The live operator can register this exact window, never substitute limits.
+#[derive(Clone, Debug)]
+pub(crate) struct AndonWindowSettings {
+    pub(crate) budget: AndonBudget,
+    pub(crate) queries: usize,
+    pub(crate) max_replay_events: usize,
+    pub(crate) numerical_replay_events: Option<usize>,
+    pub(crate) authority: String,
+}
+
+impl AndonWindowSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let mut budget = Fields::new(fields.take("budget")?)?;
+        let selected = Self {
+            budget: AndonBudget {
+                window: budget.number("window")?,
+                start: budget.number("start")?,
+                end: budget.number("end")?,
+                false_stops_allowed: budget.number("false_stops_allowed")?,
+                cost_per_stop: budget.number("cost_per_stop")?,
+            },
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: fields
+                .optional_number("numerical_replay_events")?
+                .map(usize::try_from)
+                .transpose()
+                .map_err(debug)?,
+            authority: fields.text("authority")?,
+        };
+        budget.end()?;
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.budget.window == 0
+            || self.budget.start >= self.budget.end
+            || self.queries == 0
+            || self.queries > MAX_ANDON_WINDOW_QUERIES
+            || self.max_replay_events == 0
+            || self.max_replay_events > MAX_ANDON_WINDOW_REPLAY_EVENTS
+            || self
+                .numerical_replay_events
+                .is_some_and(|events| events == 0 || events > self.max_replay_events)
+            || self.authority != "register_original_andon_window"
+        {
+            return Err("Andon window registration requires one exact valid budget, explicit original-window authority and bounded queries and replay".into());
         }
         Ok(())
     }
@@ -323,7 +384,9 @@ impl NarrowingSettings {
         }
         if self.numerical_replay_events.is_some_and(|events| {
             events == 0
-                || self.operations.checked_mul(self.max_replay_events)
+                || self
+                    .operations
+                    .checked_mul(self.max_replay_events)
                     .is_none_or(|maximum| events > maximum)
         }) {
             return Err(
@@ -850,6 +913,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(CredibilityPromotionSettings::decode(value)?),
             },
+            andon_window: match fields.optional("andon_window") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(AndonWindowSettings::decode(value)?),
+            },
         };
         fields.end()?;
         settings.validate()?;
@@ -921,7 +988,8 @@ impl Settings {
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none()
                 && self.policy_promotion.is_none()
-                && self.credibility_promotion.is_none())
+                && self.credibility_promotion.is_none()
+                && self.andon_window.is_none())
         {
             return Err("operator service work or lifetime limit is out of range".into());
         }
@@ -959,6 +1027,9 @@ impl Settings {
             selected.validate()?;
         }
         if let Some(selected) = &self.credibility_promotion {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.andon_window {
             selected.validate()?;
         }
         if let Some(selected) = &self.journal_tail {
@@ -1042,16 +1113,11 @@ impl Settings {
         self.check_numerical_operator("native text", true)
     }
 
-    fn check_numerical_operator(
-        &self,
-        profile: &str,
-        governed: bool,
-    ) -> Result<(), String> {
+    fn check_numerical_operator(&self, profile: &str, governed: bool) -> Result<(), String> {
         self.validate()?;
         if self.policy_promotion.is_some() && !governed {
             return Err(
-                "numerical policy promotion requires a separately selected governor"
-                    .into(),
+                "numerical policy promotion requires a separately selected governor".into(),
             );
         }
         if self
@@ -1063,10 +1129,21 @@ impl Settings {
                 "{profile} credibility promotion requires an explicit numerical replay budget"
             ));
         }
+        if self
+            .andon_window
+            .as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(format!(
+                "{profile} Andon window registration requires an explicit numerical replay budget"
+            ));
+        }
         // Convening spends its separate successor allowance, not numerical
         // replay. Learned service admission additionally requires an original
         // nonpredictive native-model sequence with a fixed future roster.
-        if self.narrowing.as_ref()
+        if self
+            .narrowing
+            .as_ref()
             .is_some_and(|selected| selected.numerical_replay_events.is_none())
         {
             return Err(format!(

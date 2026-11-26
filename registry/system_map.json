@@ -47,6 +47,7 @@
         "ledger",
         "evaluator-case",
         "evaluator-assess",
+        "register-andon-window",
         "findings",
         "policy-replay",
         "promote",

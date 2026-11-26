@@ -9,6 +9,7 @@ use std::{
     thread,
 };
 
+#[path = "inventory_client/wire.rs"]
 mod wire;
 
 struct ReportedPage {

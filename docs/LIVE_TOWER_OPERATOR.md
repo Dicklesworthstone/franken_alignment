@@ -1,5 +1,12 @@
 # Live operator inspection and control through the original Tower owner
 
+The optional [`andon_window` capability](LIVE_ANDON_WINDOW_REGISTRATION.md#select-the-live-operator-capability)
+registers one independently fixed native accounting window on the original
+running owner through `next` / `register-andon-window`. It retains the same
+evaluator and immutable accounting law, with complete predecessor and expected
+budget checks before entering the sole mutation. Its complete receipt fits the
+unchanged default response allowance.
+
 Ordinary plain and simple-witness checked services can now select native
 credibility and Andon accounting with `--andon`, explicit history custody and
 an optional separate `--evaluator-profile`. The [live evaluation workflow](LIVE_ANDON_EVALUATION.md)

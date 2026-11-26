@@ -5,6 +5,7 @@
 //! a global Tower generation, control sequence, or proof of effect admission.
 
 mod abandonment;
+mod andon_window;
 mod cancellation;
 mod convening;
 mod credibility_promotion;
@@ -244,6 +245,26 @@ impl PublicationResponse {
             PublicationResult::Convene(linked) => (
                 "convene",
                 convening::encode_convene(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::AndonWindowNext(linked) => (
+                "andon-window-next",
+                andon_window::encode_next(
+                    linked,
+                    &self.envelope.address,
+                    &self.envelope.operation_id,
+                    self.envelope.idempotency_key.as_deref(),
+                    &encoder,
+                )?,
+            ),
+            PublicationResult::AndonWindowRegistration(linked) => (
+                "andon-window-registration",
+                andon_window::encode_registration(
                     linked,
                     &self.envelope.address,
                     &self.envelope.operation_id,

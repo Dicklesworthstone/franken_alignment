@@ -10,6 +10,7 @@ use fa_reference::action::consequence::oversight::actor_peer::PeerPolicy;
 use fa_reference::action::consequence::oversight::actor_wire::client::{
     CLIENT_IO_CHUNK, MAX_CLIENT_IO_BYTES, MAX_CLIENT_IO_CALLS,
 };
+use fa_reference::round::review::andon::AndonBudget;
 use fa_reference::strict_json::{self, Json, Limits};
 use fa_reference::tower::publication::MAX_PUBLICATION_RESPONSE_BYTES;
 use fa_reference::tower::{
@@ -22,16 +23,20 @@ use std::path::Path;
 
 #[path = "client/abandonment.rs"]
 mod abandonment;
+#[path = "client/andon_window.rs"]
+mod andon_window;
 #[path = "client/cancellation.rs"]
 mod cancellation;
 #[path = "client/convening.rs"]
 mod convening;
+#[path = "client/credibility_promotion.rs"]
+mod credibility_promotion;
 #[path = "client/fence.rs"]
 mod fence;
-#[path = "client/governance_ledger.rs"]
-mod governance_ledger;
 #[path = "client/governance_findings.rs"]
 mod governance_findings;
+#[path = "client/governance_ledger.rs"]
+mod governance_ledger;
 #[path = "client/hold_diagnosis.rs"]
 mod hold_diagnosis;
 #[path = "client/journal_tail.rs"]
@@ -42,8 +47,6 @@ mod journal_tail_validation;
 mod narrowing;
 #[path = "client/operator_capabilities.rs"]
 mod operator_capabilities;
-#[path = "client/credibility_promotion.rs"]
-mod credibility_promotion;
 #[path = "client/policy_promotion.rs"]
 mod policy_promotion;
 #[path = "client/policy_replay.rs"]
@@ -159,6 +162,7 @@ struct Endpoint<'a> {
     scope: Scope,
     tail_events_per_page: Option<usize>,
     request_history_limits: Option<(usize, usize)>,
+    andon_window_budget: Option<AndonBudget>,
     exchanges: u64,
     runtime_ms: u64,
     poll_ms: u64,
@@ -172,6 +176,7 @@ impl<'a> Endpoint<'a> {
             scope: profile.scope,
             tail_events_per_page: None,
             request_history_limits: None,
+            andon_window_budget: None,
             exchanges: profile.exchanges,
             runtime_ms: profile.runtime_ms,
             poll_ms: profile.poll_ms,
@@ -191,6 +196,10 @@ impl<'a> Endpoint<'a> {
                 .request_history
                 .as_ref()
                 .map(|selected| (selected.max_history_events, selected.max_reviews)),
+            andon_window_budget: settings
+                .andon_window
+                .as_ref()
+                .map(|selected| selected.budget),
             exchanges: settings.exchange_limit,
             runtime_ms: settings.runtime_ms,
             poll_ms: settings.poll_ms,
@@ -229,6 +238,7 @@ fn exchange_endpoint(
             .map_err(|_| "invalid bounded Tower request document".to_owned())?;
         policy_promotion::check_request(&request, endpoint.scope)?;
         credibility_promotion::check_request(&request, endpoint.scope)?;
+        andon_window::check_request(&request, endpoint.scope, endpoint.andon_window_budget)?;
         let frame = request_frame(&request)?;
         documents.push(Prepared { request, frame });
     }
@@ -250,6 +260,12 @@ fn exchange_endpoint(
         convening::check_profile(&parsed, &document.request, endpoint.scope)?;
         policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
         credibility_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
+        andon_window::check_profile(
+            &parsed,
+            &document.request,
+            endpoint.scope,
+            endpoint.andon_window_budget,
+        )?;
         operator_capabilities::check_profile(&parsed, &document.request, endpoint.scope)?;
         governance_ledger::check_profile(&parsed, &document.request, endpoint.scope)?;
         governance_findings::check_profile(&parsed, &document.request, endpoint.scope)?;
@@ -530,6 +546,10 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,
+            ) || !andon_window::refused_matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
             ) || !operator_capabilities::refused_matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
@@ -655,6 +675,16 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         (Some("credibility-promotion-next"), Verb::Next)
         | (Some("credibility-promotion"), Verb::Promote) => {
             if !credibility_promotion::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
+        (Some("andon-window-next"), Verb::Next)
+        | (Some("andon-window-registration"), Verb::RegisterAndonWindow) => {
+            if !andon_window::matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,

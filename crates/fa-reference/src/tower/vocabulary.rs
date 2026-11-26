@@ -47,12 +47,13 @@ pub enum Verb {
     Promote,
     Rotate,
     Preregister,
+    RegisterAndonWindow,
     ServeLearnedGenerated,
     CompareLearnedPrompt,
 }
 
 impl Verb {
-    pub const ALL: [Self; 40] = [
+    pub const ALL: [Self; 41] = [
         Self::Get,
         Self::Related,
         Self::Capabilities,
@@ -91,6 +92,7 @@ impl Verb {
         Self::Promote,
         Self::Rotate,
         Self::Preregister,
+        Self::RegisterAndonWindow,
         Self::ServeLearnedGenerated,
         Self::CompareLearnedPrompt,
     ];
@@ -135,6 +137,7 @@ impl Verb {
             Self::Promote => "promote",
             Self::Rotate => "rotate",
             Self::Preregister => "preregister",
+            Self::RegisterAndonWindow => "register-andon-window",
             Self::ServeLearnedGenerated => "serve-learned-generated",
             Self::CompareLearnedPrompt => "compare-learned-prompt",
         }
@@ -181,6 +184,7 @@ impl Verb {
             | Self::Promote
             | Self::Rotate
             | Self::Preregister
+            | Self::RegisterAndonWindow
             | Self::ServeLearnedGenerated => VerbClass::Mutation,
         }
     }

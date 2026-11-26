@@ -13,8 +13,8 @@ use super::PublicationTower;
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, FileSupervisorCredibilityPromotionPort,
-    FileSupervisorPolicyPromotionPort,
+    FileActorPort, FileActorPrecheckPort, FileSupervisorAndonWindowPort,
+    FileSupervisorCredibilityPromotionPort, FileSupervisorPolicyPromotionPort,
 };
 use crate::action::consequence::oversight::actor::{ActorError, ActorProposal};
 use crate::action::consequence::oversight::actor_peer::{
@@ -154,6 +154,21 @@ impl PublicationPeerSession {
         }
         self.tower
             .set_credibility_promotion(port)
+            .map_err(|_| Error::Binding)
+    }
+
+    /// Install the original independently selected accounting window grant.
+    /// Pending replies and finite session counters survive replacement, and a
+    /// revoked ingress cannot regain a live registration route.
+    pub fn set_andon_window(
+        &mut self,
+        port: Option<FileSupervisorAndonWindowPort>,
+    ) -> Result<(), Error> {
+        if self.revoked {
+            return Err(Error::WrongState);
+        }
+        self.tower
+            .set_andon_window(port)
             .map_err(|_| Error::Binding)
     }
 

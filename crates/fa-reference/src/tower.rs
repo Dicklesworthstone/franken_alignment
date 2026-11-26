@@ -291,6 +291,21 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FileCredibilityPromotionBasis,
     },
+    /// Inspect one independently selected original Andon accounting window.
+    /// The query cannot choose or replace its budget.
+    #[cfg(unix)]
+    AndonWindowNext {
+        operation: u64,
+    },
+    /// Register the original independently selected window at its exact cut.
+    /// The asserted budget must match the independent grant; it cannot select
+    /// another allowance, price or replacement accounting.
+    #[cfg(unix)]
+    RegisterAndonWindow {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileAndonWindowBasis,
+        expected_budget: crate::round::review::andon::AndonBudget,
+    },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
     #[cfg(unix)]
@@ -732,6 +747,11 @@ impl ReferenceTower {
                 | (Verb::Promote, ReadArguments::Promote { .. })
                 | (Verb::Next, ReadArguments::CredibilityPromotionNext { .. })
                 | (Verb::Promote, ReadArguments::PromoteCredibility { .. })
+                | (Verb::Next, ReadArguments::AndonWindowNext { .. })
+                | (
+                    Verb::RegisterAndonWindow,
+                    ReadArguments::RegisterAndonWindow { .. }
+                )
         ) {
             // Original disposition and authority narrowing require the live
             // owner and separate control grants. Imported history supplies neither.

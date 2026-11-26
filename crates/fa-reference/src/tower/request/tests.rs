@@ -101,6 +101,10 @@ fn fixed_request_vector_is_stable_and_all_registered_verbs_are_recognized() {
             Verb::Narrow => value = narrow_request(),
             #[cfg(unix)]
             Verb::Convene => value = convene_request(),
+            #[cfg(unix)]
+            Verb::Promote => value = credibility_promotion_request(),
+            #[cfg(unix)]
+            Verb::RegisterAndonWindow => value = andon_window_request(),
             Verb::Precheck => {
                 value.arguments = ReadArguments::Precheck {
                     query: 1,
@@ -944,6 +948,76 @@ fn convene_request() -> TowerRequest {
             input_revision: 1,
             recorded_at: expected.recorded_at,
             deadline: ElapsedTick(100),
+        },
+    };
+    request
+}
+
+#[cfg(unix)]
+fn credibility_promotion_request() -> TowerRequest {
+    use crate::action::consequence::delivery::persistent::requests::actor::FileCredibilityPromotionBasis;
+    let mut request = fence_request();
+    let ReadArguments::Fence {
+        operation,
+        expected,
+    } = request.arguments
+    else {
+        panic!("exact native fence fixture");
+    };
+    request.operation_id = format!("promote-credibility-{operation}");
+    request.verb = Verb::Promote;
+    request.arguments = ReadArguments::PromoteCredibility {
+        operation,
+        expected: FileCredibilityPromotionBasis {
+            scope: expected.scope,
+            journal_revision: expected.journal_revision,
+            control_sequence: expected.control_sequence,
+            authority_epoch: expected.authority_epoch,
+            evaluation_revision: 2,
+            congress_generation: 1,
+            policy_generation: 1,
+            recorded_at: Some(ElapsedTick(1)),
+        },
+    };
+    request
+}
+
+#[cfg(unix)]
+fn andon_window_request() -> TowerRequest {
+    use crate::action::consequence::delivery::persistent::requests::actor::FileAndonWindowBasis;
+    use crate::round::review::andon::{AndonBudget, LedgerIdentity};
+    let mut request = credibility_promotion_request();
+    let ReadArguments::PromoteCredibility {
+        operation,
+        expected,
+    } = request.arguments
+    else {
+        panic!("exact native credibility fixture");
+    };
+    request.operation_id = format!("register-andon-window-{operation}");
+    request.verb = Verb::RegisterAndonWindow;
+    request.arguments = ReadArguments::RegisterAndonWindow {
+        operation,
+        expected: FileAndonWindowBasis {
+            scope: expected.scope,
+            journal_revision: expected.journal_revision,
+            control_sequence: expected.control_sequence,
+            authority_epoch: expected.authority_epoch,
+            evaluation_revision: expected.evaluation_revision,
+            congress_generation: expected.congress_generation,
+            policy_generation: expected.policy_generation,
+            recorded_at: expected.recorded_at,
+            accounting: LedgerIdentity {
+                deployment: 91,
+                evaluator: 92,
+            },
+        },
+        expected_budget: AndonBudget {
+            window: 1,
+            start: 0,
+            end: 100,
+            false_stops_allowed: 2,
+            cost_per_stop: 7,
         },
     };
     request

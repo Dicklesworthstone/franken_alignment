@@ -2,6 +2,8 @@
 //! claims about production deployment or independent model judgments.
 #[path = "tests/abandonment.rs"]
 mod abandonment;
+#[path = "tests/andon_window.rs"]
+mod andon_window;
 #[path = "tests/cancellation.rs"]
 mod cancellation;
 #[path = "tests/credibility_promotion.rs"]

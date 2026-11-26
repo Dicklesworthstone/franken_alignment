@@ -47,7 +47,7 @@ Knowledge<T> = Known   { value: T, basis: { claim_class, authentic_origin, compl
 | L4–L5 | `situation`, `why-held`, `next`, `tail` | `propose --branch`, `precheck` | `propose`, `hold`, `narrow`, `suspend`, `reset`, `fence`, `resolve` |
 | L6 | `explain`, `verify` | `annotate --branch`, `handoff --branch` | `annotate`, `handoff` |
 | L7 | `replay-plan` | `branch`, `intervene`, `replay`, `rehearse` | none (no production authority) |
-| L8 | `doctor`, `ledger`, `evaluator-case`, `findings` | `policy-replay` | `evaluator-assess`, `promote`, `rotate`, `preregister` |
+| L8 | `doctor`, `ledger`, `evaluator-case`, `findings` | `policy-replay` | `evaluator-assess`, `register-andon-window`, `promote`, `rotate`, `preregister` |
 
 Every mutation names its expected predecessor and an idempotency key. Every rehearsal returns a `RehearsalOutcome` and can never mint a permit (FA-INV-040). Every response is the envelope of plan §17.3 with typed affordances.
 

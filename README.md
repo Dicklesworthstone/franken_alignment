@@ -578,6 +578,11 @@ reports, exact campaign retries and native refusals. Replies are bounded by the 
 1 MiB). The policy client accepts trace-heavy complete reports within its
 separate finite parser allowance; unrelated operations keep their existing
 parser limits. See [large report delivery](docs/LIVE_TOWER_OPERATOR.md).
+An independently selected `andon_window` grant also supports
+[`next` / `register-andon-window`](docs/LIVE_ANDON_WINDOW_REGISTRATION.md#select-the-live-operator-capability)
+on the same running owner. It registers one exact immutable occurrence budget,
+allowing the original evaluator to retry a benign assessment that lacked its
+window. Existing costs, incident provenance and effect authority are preserved.
 Native hosts can also provision a separate finite page allowance and enumerate
 one complete comparison through a policy header and contiguous 16-case pages.
 Those pages retain one original report, basis and campaign charge across exact
@@ -592,8 +597,9 @@ in an explicit finite request schedule. Use
 `tower-operator-exchange` to exchange explicit request documents, or
 `tower-situation OPERATOR_PROFILE RUN_ADDRESS --max-pages 64` to follow one
 original capture with bounded, validated pagination and explicit incomplete
-output. Operator traffic has no Permit purpose or source admission path, and its transport
-failure retires only the sidecar. Compilation and runtime qualification remain
+output. Read-only operator profiles retain observational purposes; each mutation
+requires its separately selected native grant. Operator transport failure retires
+only the sidecar. Full compilation and runtime qualification remain
 pending the required remote gate.
 
 Tower create modes, including explicit finite request schedules, compose with the existing

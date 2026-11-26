@@ -13,10 +13,10 @@ use fa_reference::action::consequence::delivery::persistent::observed::FileOvers
 use fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyPromotionPermit;
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileActorSupervisor, FileGeneratedTextActorPort, FileLearnedTextStreamActorPort,
-    FileRequestHistoryDisclosure, FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant,
-    FileSupervisorConveneGrant, FileSupervisorCredibilityPromotionGrant,
-    FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
-    FileSupervisorGovernanceLedgerGrant,
+    FileRequestHistoryDisclosure, FileSupervisorAbandonmentGrant, FileSupervisorAndonWindowGrant,
+    FileSupervisorCancellationGrant, FileSupervisorConveneGrant,
+    FileSupervisorCredibilityPromotionGrant, FileSupervisorExplanationGrant,
+    FileSupervisorFenceGrant, FileSupervisorGovernanceLedgerGrant,
     FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant, FileSupervisorPolicyPromotionGrant,
     FileSupervisorPolicyReplayGrant, FileSupervisorRequestHistoryGrant,
@@ -54,6 +54,7 @@ struct Active {
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
     policy_promotion: Option<FileSupervisorPolicyPromotionGrant>,
     credibility_promotion: Option<FileSupervisorCredibilityPromotionGrant>,
+    andon_window: Option<FileSupervisorAndonWindowGrant>,
     promotion_settings: Option<profile::PolicyPromotionSettings>,
 }
 
@@ -102,7 +103,8 @@ impl Service {
                     || settings.narrowing.is_some()
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
-            || settings.credibility_promotion.is_some()
+                    || settings.credibility_promotion.is_some()
+                    || settings.andon_window.is_some()
                 {
                     PublicationTower::new_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -164,6 +166,7 @@ impl Service {
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
                     || settings.credibility_promotion.is_some()
+                    || settings.andon_window.is_some()
                 {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -233,6 +236,7 @@ impl Service {
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
                     || settings.credibility_promotion.is_some()
+                    || settings.andon_window.is_some()
                 {
                     PublicationTower::new_generated_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -331,13 +335,32 @@ impl Service {
                         selected.max_replay_events,
                         events,
                     ),
-                None => driver.supervisor().credibility_promotion_port(
+                None => driver
+                    .supervisor()
+                    .credibility_promotion_port(selected.queries, selected.max_replay_events),
+            }
+            .map_err(debug)?;
+            tower.set_credibility_promotion(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        let andon_window = if let Some(selected) = &settings.andon_window {
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver.supervisor().andon_window_port_with_numerical_budget(
+                    selected.budget,
+                    selected.queries,
+                    selected.max_replay_events,
+                    events,
+                ),
+                None => driver.supervisor().andon_window_port(
+                    selected.budget,
                     selected.queries,
                     selected.max_replay_events,
                 ),
             }
             .map_err(debug)?;
-            tower.set_credibility_promotion(Some(port)).map_err(debug)?;
+            tower.set_andon_window(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
             None
@@ -525,7 +548,8 @@ impl Service {
             || convening.is_some()
             || fence.is_some()
             || settings.policy_promotion.is_some()
-                    || settings.credibility_promotion.is_some()
+            || settings.credibility_promotion.is_some()
+            || settings.andon_window.is_some()
         {
             purposes.push(PurposeTag::Permit);
         }
@@ -575,6 +599,7 @@ impl Service {
                 policy_replay,
                 policy_promotion: None,
                 credibility_promotion,
+                andon_window,
                 promotion_settings: settings.policy_promotion.clone(),
             }),
             started,
@@ -789,7 +814,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; governance_ledger_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}; credibility_promotion_work={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; governance_ledger_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}; credibility_promotion_work={:?}; andon_window_work={:?}",
             self.candidates,
             self.frames,
             active
@@ -860,6 +885,11 @@ impl Service {
                 .as_ref()
                 .map(FileSupervisorPolicyReplayGrant::remaining_queries),
             active.credibility_promotion.as_ref().map(|grant| (
+                grant.remaining_queries(),
+                grant.remaining_operations(),
+                grant.remaining_numerical_replay_events(),
+            )),
+            active.andon_window.as_ref().map(|grant| (
                 grant.remaining_queries(),
                 grant.remaining_operations(),
                 grant.remaining_numerical_replay_events(),

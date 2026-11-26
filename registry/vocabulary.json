@@ -148,7 +148,7 @@
       "idempotency": "n/a",
       "cost_class": "cheap",
       "response": "Vec<Affordance> ranked",
-      "note": "The native publication adapter has separately granted receipt-reconciliation, undispatched-request cancellation, explicit Unknown disposition and target-ceiling narrowing plans. Numerical narrowing requires a separate cumulative replay allowance. Actions cancel_undispatched, abandon_unknown and narrow_authority explicitly select the latter contracts; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown. A separately granted credibility_promotion plan queries original independent marginal and joint helper-weight qualification under finite work, with a complete native cut and no caller labels or weights. A plan never refreshes source/time or reserves its predecessor."
+      "note": "The native publication adapter has separately granted receipt-reconciliation, undispatched-request cancellation, explicit Unknown disposition and target-ceiling narrowing plans. Numerical narrowing requires a separate cumulative replay allowance. Actions cancel_undispatched, abandon_unknown and narrow_authority explicitly select the latter contracts; omitted action preserves reconciliation. Plans reserve no mutation key, and native costs, information gain, ranking and current eligibility remain Unknown. A separately granted credibility_promotion plan queries original independent marginal and joint helper-weight qualification under finite work, with a complete native cut and no caller labels or weights. A plan never refreshes source/time or reserves its predecessor. A separately provisioned andon_window plan exposes one exact independently selected native occurrence budget and its complete original cut; only its explicit register-andon-window action can enter registration."
     },
     {
       "verb": "tail",
@@ -399,6 +399,16 @@
       "cost_class": "cheap",
       "response": "GovernanceTransition",
       "note": ""
+    },
+    {
+      "verb": "register-andon-window",
+      "layer": "L8",
+      "class": "mutation",
+      "authority": "independently configured supervisor/governance holding a finite original-owner Andon window grant",
+      "idempotency": "exact operation identifier, complete original predecessor and expected-budget assertion; exact already-registered immutable window is a no-write observation",
+      "cost_class": "bounded native journal transaction; numerical reconstruction requires an explicit cumulative complete-history allowance",
+      "response": "Knowledge<AndonWindowRegistration> with exact window and original before/after basis",
+      "note": "A live request asserts the operation, complete predecessor and expected_budget. The budget assertion must equal the independently provisioned selection and cannot override it; a plan from one grant cannot register a different window through another grant on the same owner. The original supervisor fixes one exact AndonBudget when provisioning the noncloneable revocable custodian; weak clones share its finite work and one entered registration. The native immutable/nonoverlapping law, elapsed occurrence windows and original accounting identity remain authoritative. Missing original occurrence windows may be registered under that law without acquiring fresh time or accepting a label. Existing windows cannot be widened or replaced. No helper weights, publication policy, effect authority, source refresh, charge refund or incident closure is granted. Unknown native storage outcomes remain uncertain, and no transport retry invents acknowledgment."
     },
     {
       "verb": "preregister",

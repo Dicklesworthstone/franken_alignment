@@ -1,6 +1,8 @@
 //! Real operator-profile transport, with grants fixed by the original server.
 #[path = "operator/abandonment.rs"]
 mod abandonment;
+#[path = "operator/andon_window.rs"]
+mod andon_window;
 #[path = "operator/cancellation.rs"]
 mod cancellation;
 #[path = "operator/capabilities.rs"]

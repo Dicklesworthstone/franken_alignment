@@ -9,6 +9,12 @@ The actor still needs original source admission, helper review, independent huma
 approval and publication checks for every new effect. Native and learned
 generated services also support the explicit compositions below.
 
+An independent [`andon_window` operator grant](LIVE_ANDON_WINDOW_REGISTRATION.md#select-the-live-operator-capability)
+can register one exact missing or next occurrence window while this same owner
+and evaluator remain live. A benign assessment refused for a missing window can
+then be retried through its original evaluator ticket. Registration preserves
+the existing prices, charges and calibration incidents; it accepts no label.
+
 This connects FA-105/049/134, plan §§9.9, 13.4, 17.1, 22.3–22.4 and
 FI-A08/A13/A18. It is a bounded reference composition; execution qualification
 remains pending. It does not make helper or actor judgments into ground truth.

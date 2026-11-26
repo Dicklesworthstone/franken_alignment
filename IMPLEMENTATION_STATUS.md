@@ -1,5 +1,47 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: original Andon windows through the live Tower operator
+
+The independently selected `andon_window` profile connects finite native custody
+to the running operator service. `next` with `kind: "andon_window"` exposes the
+exact frozen window and original owner cut. The new registered L8 mutation
+`register-andon-window` checks operation, full predecessor and expected budget
+before entering the original durable transition. A later missing occurrence
+window can therefore be supplied while the same evaluator retains its original
+assessment ticket, accounting identity and journal.
+
+The service keeps one noncloneable custodian across authenticated connections.
+Original native and learned numerical services require explicit complete-history
+funding; an existing-window acknowledgment spends no replay. The conservative
+complete response bound fits the unchanged default 16 KiB allowance. Original
+role, Permit purpose, owner, control mount and registration checks precede
+native work. Capability discovery reports the actual shared allowances without
+spending them or installing new authority.
+
+The document client requires its independently selected budget for both planning
+and mutation, preflights every explicit request before connecting, checks full
+response correlation and budget equality, and validates the exact successor.
+Only journal revision may advance for a new registration; a no-op changes no
+basis coordinate. Malformed or foreign responses stop later documents, and no
+returned action is automatically selected or retried. Omitted selections retain
+observational discovery and install no grant.
+
+The final combined source passes all 15 native, nine new Tower and 24 existing
+dispatch/capability tests on standard LLVM `nightly-2026-09-08`. The complete
+example test crate passes Rust type checking with `-Zno-codegen`; its full test
+build was killed by the host. A normal Rust test harness selecting the twelve
+unchanged new example tests, with identical production bodies and only unrelated
+tests disabled in a temporary copy, builds against the same production library.
+The two profile/receipt cases pass. Ten socket cases stop at EPERM from the
+execution sandbox; escalation is disabled by the environment's approval policy.
+They are blocked, not passing integration evidence. The original full test suite
+is retained in the repository. Canonical and remote RCH qualification remain open.
+
+See the [live registration contract and commands](docs/LIVE_ANDON_WINDOW_REGISTRATION.md).
+This implements the existing native accounting law without changing journal
+encoding, accepting independent labels through the operator, closing calibration
+incidents or declaring complete native risk-theater source histories.
+
 ## 2026-11-26: finite original Andon window registration
 
 An independently retained supervisor can now delegate one exact immutable

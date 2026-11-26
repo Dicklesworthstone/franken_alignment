@@ -300,7 +300,7 @@ fn limits(value: &Json, kind: OperatorCapabilityKind) -> Option<()> {
             Some("remaining_numerical_replay_events"),
         ),
         Resolution | Cancellation | Abandonment | Narrowing | PolicyPromotion
-        | CredibilityPromotion => (
+        | CredibilityPromotion | AndonWindow => (
             &[
                 "remaining_queries",
                 "remaining_operations",

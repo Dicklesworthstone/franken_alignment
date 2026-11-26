@@ -8,6 +8,8 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Write};
 
 #[cfg(unix)]
+pub(super) mod andon_window;
+#[cfg(unix)]
 pub(super) mod convening;
 #[cfg(unix)]
 pub(super) mod credibility_promotion;
@@ -242,12 +244,15 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         Verb::Next if args.contains_key("operation") => {
             if args.contains_key("kind") {
                 fields(args, &["kind", "operation"])?;
-                if text(args, "kind")? != "credibility_promotion" {
-                    return Err(TowerDecodingError::MalformedRequest);
-                }
-                return Ok(ReadArguments::CredibilityPromotionNext {
-                    operation: decimal(args, "operation")?,
-                });
+                return match text(args, "kind")? {
+                    "credibility_promotion" => Ok(ReadArguments::CredibilityPromotionNext {
+                        operation: decimal(args, "operation")?,
+                    }),
+                    "andon_window" => Ok(ReadArguments::AndonWindowNext {
+                        operation: decimal(args, "operation")?,
+                    }),
+                    _ => Err(TowerDecodingError::MalformedRequest),
+                };
             }
             if args.contains_key("action") {
                 if text(args, "action")? == "promote_policy" {
@@ -317,6 +322,15 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
                 operation: decimal(args, "operation")?,
                 expected: narrowing::decode_basis(field(args, "expected")?)?,
                 retained_targets: narrowing::decode_targets(field(args, "retained_targets")?)?,
+            })
+        }
+        #[cfg(unix)]
+        Verb::RegisterAndonWindow => {
+            fields(args, &["operation", "expected", "expected_budget"])?;
+            Ok(ReadArguments::RegisterAndonWindow {
+                operation: decimal(args, "operation")?,
+                expected: andon_window::decode_basis(field(args, "expected")?)?,
+                expected_budget: andon_window::decode_budget(field(args, "expected_budget")?)?,
             })
         }
         #[cfg(unix)]
@@ -541,13 +555,41 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
             }
         }
         #[cfg(unix)]
-        (Verb::Next, ReadArguments::CredibilityPromotionNext { operation }) => {
+        (
+            Verb::Next,
+            ReadArguments::CredibilityPromotionNext { operation }
+            | ReadArguments::AndonWindowNext { operation },
+        ) => {
             if *operation == 0
                 || request
                     .idempotency_key
                     .as_ref()
                     .is_some_and(|key| key != &operation.to_string())
                 || request.address.kind != crate::address_resolver::Noun::Run
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (
+            Verb::RegisterAndonWindow,
+            ReadArguments::RegisterAndonWindow {
+                operation,
+                expected,
+                expected_budget,
+            },
+        ) => {
+            andon_window::validate_expected(*expected)?;
+            andon_window::validate_budget(*expected_budget)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.address.tenant != expected.scope.tenant.to_string()
+                || request.address.id != expected.scope.run.to_string()
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
@@ -755,7 +797,12 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
         }
         #[cfg(unix)]
         (
-            Verb::Resolve | Verb::Fence | Verb::Narrow | Verb::Convene | Verb::Promote,
+            Verb::Resolve
+            | Verb::Fence
+            | Verb::Narrow
+            | Verb::Convene
+            | Verb::Promote
+            | Verb::RegisterAndonWindow,
             ReadArguments::None,
         ) => {
             return Err(TowerDecodingError::MalformedRequest);
@@ -1068,6 +1115,24 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
             (
                 "retained_targets",
                 narrowing::encode_targets(retained_targets),
+            ),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::AndonWindowNext { operation } => object_json(&[
+            ("kind", quote("andon_window")),
+            ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::RegisterAndonWindow {
+            operation,
+            expected,
+            expected_budget,
+        } => object_json(&[
+            ("operation", quote(&operation.to_string())),
+            ("expected", andon_window::encode_basis(*expected)),
+            (
+                "expected_budget",
+                andon_window::encode_budget(*expected_budget),
             ),
         ]),
         #[cfg(unix)]

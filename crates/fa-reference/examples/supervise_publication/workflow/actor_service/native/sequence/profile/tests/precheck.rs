@@ -542,10 +542,14 @@ fn accounted_continuation_manifest_keeps_explicit_disclosures_at_the_recovered_e
             Mode::ContinueGeneration,
             None,
             None,
-            Some(anchors::take_options(&args).unwrap().1),
+            Some(
+                crate::workflow::actor_service::native::sequence::anchors::take_options(&args)
+                    .unwrap()
+                    .1,
+            ),
             None,
             None,
-            Some(andon::Selection {
+            Some(crate::workflow::actor_service::native::sequence::andon::Selection {
                 settings: &accounting,
                 evaluator: &evaluator,
                 recovery: Some(&recovery),

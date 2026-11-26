@@ -394,8 +394,8 @@ fn registry_verbs_classes_and_envelope_are_exact_not_a_second_vocabulary() {
         .expect("registered verbs");
     let registered: BTreeSet<_> = verbs.iter().map(|entry| text(entry, "verb")).collect();
     let implemented: BTreeSet<_> = Verb::ALL.iter().map(|verb| verb.as_str()).collect();
-    assert_eq!(verbs.len(), 39);
-    assert_eq!(registered.len(), 39);
+    assert_eq!(verbs.len(), Verb::ALL.len());
+    assert_eq!(registered.len(), Verb::ALL.len());
     assert_eq!(implemented, registered);
     for entry in verbs {
         let verb: Verb = text(entry, "verb")
@@ -1463,7 +1463,7 @@ fn every_unconnected_registered_verb_refuses_without_read_charge_or_journal_tran
         assert!(field(&json, "result").get("value").is_none());
         refused += 1;
     }
-    assert_eq!(refused, 30);
+    assert_eq!(refused, Verb::ALL.len() - CONNECTED_VERBS.len());
     let query = request(&tower, Verb::Tail);
     let response = tower.dispatch(&access(), query);
     let (TowerValue::Tail(batch), _) = known(&response.result) else {

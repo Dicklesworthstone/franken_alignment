@@ -228,7 +228,10 @@ fn complete_grant_selection_reports_original_finite_limits_without_spending_any(
         let response = discover(&mut facade);
         assert_eq!(linked(&response).entries().len(), Kind::ALL.len());
         for kind in Kind::ALL {
-            if matches!(kind, Kind::PolicyPromotion | Kind::CredibilityPromotion) {
+            if matches!(
+                kind,
+                Kind::PolicyPromotion | Kind::CredibilityPromotion | Kind::AndonWindow
+            ) {
                 assert!(!entry(&response, kind).configured());
                 continue;
             }
