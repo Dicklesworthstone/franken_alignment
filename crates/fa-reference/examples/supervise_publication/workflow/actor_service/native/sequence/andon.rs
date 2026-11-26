@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; governance, topology, joint promotion and activation require their own composition";
+pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; credibility promotion requires the explicitly selected joint Andon policy and numerical operator allowance; policy governance, topology and held-out activation require their own composition";
 
 pub(super) struct Paths {
     pub settings: PathBuf,
@@ -44,7 +44,9 @@ pub(super) fn take_options(
         || args.len() < 10
         || args.len() > 22
         || args.first().map(String::as_str) != Some("serve-native-generated")
-        || args[1..4].iter().any(|value| value.is_empty() || value.starts_with("--"))
+        || args[1..4]
+            .iter()
+            .any(|value| value.is_empty() || value.starts_with("--"))
     {
         return Err(INVALID.into());
     }
@@ -164,9 +166,7 @@ impl Selection<'_> {
         if self.recovery.is_none() {
             self.settings.creation()?;
         }
-        if self.settings.joint.is_some()
-            || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
-        {
+        if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN {
             return Err(INVALID.into());
         }
         if let Some(publication) = publication {
@@ -209,10 +209,18 @@ impl Selection<'_> {
         if self.recovery.is_none() {
             self.settings.creation()?;
         }
-        if self.settings.joint.is_some()
-            || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
+        if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
             || selected_operator.is_some_and(operator::Selection::is_governed)
         {
+            return Err(INVALID.into());
+        }
+        // A numerical promotion grant may only use the immutable joint policy
+        // independently selected for this original evaluated owner. Reject an
+        // absent selection before model reads, transport or durable bootstrap;
+        // a later journal or recipe-owned held-out guard cannot supply it.
+        if selected_operator.is_some_and(|selected| {
+            selected.settings.credibility_promotion.is_some() && self.settings.joint.is_none()
+        }) {
             return Err(INVALID.into());
         }
         if let Some(recovery) = self.recovery {
@@ -314,9 +322,7 @@ impl Selection<'_> {
         let store = operator::resolve(&config.store)?;
         for selected in prechecks {
             let socket = operator::resolve(selected.settings.socket_path())?;
-            if overlaps(&socket, &store)
-                || endpoints.iter().any(|other| overlaps(&socket, other))
-            {
+            if overlaps(&socket, &store) || endpoints.iter().any(|other| overlaps(&socket, other)) {
                 return Err("native evaluation precheck endpoints must be disjoint from the authority store and every scheduled service endpoint".into());
             }
             self.check_files(&[socket.as_path()])?;

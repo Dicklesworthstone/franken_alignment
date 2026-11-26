@@ -87,7 +87,11 @@ and final witness changes; required RCH execution qualification remains pending.
 Native creation and explicitly anchored remaining sequences can select [live independent evaluation and Andon
 accounting](docs/RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
 with paired `--andon` and `--evaluator-profile` profiles and a new
-`--retain-history-anchor` output. The same evaluator observes original cases and
+`--retain-history-anchor` output. Both marginal `/1` and explicit joint `/2`
+Andon profiles are supported. Joint creation installs the original policy in
+the first acknowledged image, and anchored recovery requires every selected
+policy field before Fence. An explicitly funded credibility-promotion grant
+can remain with that numerical owner across all Message/Finish handoffs. The same evaluator observes original cases and
 labels them across Message/Finish handoffs under one finite allowance; optional
 operator Ledger reads the original accounting. A held final review remains
 labelable under the remaining original budgets. Final intake retirement precedes

@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: jointly evaluated resident native publication
+
+Resident native creation now accepts the independently selected joint Andon
+`/2` profile. The original generated bootstrap installs that exact policy before
+Andon accounting in the same acknowledged first image. Explicitly anchored
+remaining sequences use the existing complete recovery requirements, including
+the exact original joint policy before their sole Fence.
+
+The same original evaluator and numerical owner survive Message/Finish handoffs.
+An independently selected, numerically funded credibility-promotion operator can
+retain its finite grant beside that evaluator. A grant without the original
+joint profile refuses during preflight. Policy governance, topology and separate
+held-out publication qualification retain their existing exclusions.
+
+Four new service regression definitions exercise real generated Messages and
+Finish, original helper processes, independent human approval/rejection and
+separately authenticated labels; missing joint/numerical grant selection; all
+eight changed joint-policy fields and omitted selection before recovery Fence;
+and exact recovery followed by a fresh approved Finish. They retain numerical
+draws and charges, listener custody and cumulative operator query limits.
+The live fixture supplies only benign labels and correctly remains marginally
+unqualified; no successful promotion or detector-quality result is claimed
+from that fixture.
+
+Independent source review and scoped parsing/format checks passed for all four
+changed Rust files with the available 2026-08-30 rustfmt. A disk-space failure
+during initial formatting truncated one temporary integration copy; the complete
+cached originals were restored, formatted outside that volume and checked
+byte-for-byte before integration. Scoped whitespace and content checks passed.
+Compilation, runtime tests, Clippy and canonical qualification remain pending:
+the required RCH runner is absent, and no local compilation fallback was used.
+Existing evaluation and resident-publication acceptance remains open. See the
+[resident native contract](docs/RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
+and [explicit live operator selection](docs/LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-resident-native-service).
+
 ## 2026-11-26: retain paid credibility-promotion custody on live learned owners
 
 Learned single-request and resident admission now reject a selected live

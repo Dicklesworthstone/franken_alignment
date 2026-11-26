@@ -93,10 +93,11 @@ pub(super) fn prepare_andon(
     settings: &super::super::andon_settings::Settings,
 ) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String> {
     settings.creation()?;
-    if settings.joint.is_some() {
-        return Err("native live Andon creation requires the marginal evaluation profile".into());
+    let mut evaluation = FileGeneratedEvaluationConfig::new(settings.protocol.clone());
+    if let Some(policy) = settings.joint {
+        evaluation = evaluation.with_joint(policy).map_err(debug)?;
     }
-    let evaluation = FileGeneratedEvaluationConfig::new(settings.protocol.clone())
+    let evaluation = evaluation
         .with_andon(settings.config.clone())
         .map_err(debug)?;
     let (host, roles) = FileOversight::create_generated_text_stream_from_source_evaluated(

@@ -112,8 +112,11 @@ ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE` and a required
 allowances persist across Message/Finish handoffs, including a bounded labeling
 opportunity after a final helper Hold. Creation and
 [explicitly anchored suffix recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
-accept the marginal `/1` accounting profile and optional simple witnesses/operator
-Ledger. Recovery selects `--after-message` for a confirmed boundary or
+accept marginal `/1` or explicit joint `/2` accounting and optional simple
+witnesses/operator Ledger. Joint creation installs the original policy atomically;
+recovery requires every original policy field before Fence. A separately funded
+live credibility-promotion grant may remain on that same numerical owner, with
+finite custody across all requests and reconnects. Recovery selects `--after-message` for a confirmed boundary or
 [`--continue-generation`](RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-accounted-generation)
 for the exact original pending or completed-but-unsubmitted first Message.
 Both require an independent input anchor and the same explicit evaluation
@@ -121,8 +124,8 @@ recovery requirements used below; one fresh evaluator serves the recovered
 sequence without renewing its allowance at handoffs. Explicit version-two
 per-release exact prechecks compose with both creation and recovered sequences,
 retaining their original actor grants, complete endpoint/input custody and
-actual owner epoch checks before source or numerical work. Joint profiles,
-governance and topology remain separate. Required RCH compilation and runtime
+actual owner epoch checks before source or numerical work. Policy governance,
+topology and separate held-out publication qualification remain excluded. Required RCH compilation and runtime
 qualification remain pending.
 
 ## Recover an evaluated native generated service

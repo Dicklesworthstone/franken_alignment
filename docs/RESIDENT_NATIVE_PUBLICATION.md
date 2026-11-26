@@ -619,13 +619,16 @@ The sequence retains the ordinary creation rule of 2 through 16 entries, with
 its own actor submission, fresh helper review and independent human approval
 for every release.
 
-`ANDON_PROFILE` uses `fa.native-andon-operator/1`; the existing example is
-`crates/fa-reference/fixtures/native_andon_operator.json`. Creation requires
-identical initial/current windows and minimum evaluation revision zero. The
+`ANDON_PROFILE` accepts marginal `fa.native-andon-operator/1` or the explicitly
+selected joint `fa.native-andon-operator/2` profile. Their examples are
+`crates/fa-reference/fixtures/native_andon_operator.json` and
+`crates/fa-reference/fixtures/joint_native_andon_operator.json`. Creation
+requires identical initial/current windows and minimum evaluation revision zero. The
 [atomic source-bound constructor](NATIVE_GENERATED_EVALUATION.md)
 installs the exact source policy, decoder, tokenizer, generated stream, terminal
 recovery reserve, selected witnesses, evaluation protocol and Andon accounting
-in one first acknowledged image. It returns the independent evaluator only
+in one first acknowledged image. With `/2`, it also installs the exact original
+joint helper-weight policy in that same image before any evaluator is released. It returns the independent evaluator only
 after that acknowledgment. Accounting cannot be attached after a proposal or
 substituted for original publication checks.
 
@@ -684,8 +687,21 @@ original history anchor, so acknowledged assessment Time and label events are
 included and no evaluator mutation can follow that retained cut. Archive custody
 and export failures retain the [existing history contract](#independently-retained-history).
 
-Creation and the explicitly anchored recovery below retain the marginal `/1`
-accounting contract. Version-two sequence rows may independently select the
+Creation and the explicitly anchored recovery below support marginal `/1` and
+joint `/2` accounting. A joint history requires every field of its independently
+selected original policy, including identity, generation, rate fractions and
+replay ceilings. Omitting or changing that policy refuses before the recovery
+Fence; the command cannot infer a weaker contract from disk.
+
+With `/2`, the existing operator pair can retain an explicitly funded
+`credibility_promotion` grant on the same numerical owner. Selecting that grant
+without a joint policy or its numerical replay allowance refuses before startup.
+The evaluator supplies the original independent labels; the operator supplies
+only an operation and exact predecessor. One custodian retains its original
+queries, replay funding and single entered mutation across all handoffs and
+connections. See the
+[resident native promotion selection](LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-resident-native-service)
+for complete response capacity and explicit operator requests. Version-two sequence rows may independently select the
 existing exact-predicate precheck for each Message or Finish, or explicitly use
 `null`. The original evaluator role and finite allowance survive these actor
 disclosures and all later handoffs. Each disclosure keeps its own original query
@@ -701,8 +717,10 @@ even without a confirmed Message predecessor. Its first selected disclosure
 binds the actual post-Fence owner epoch before source acquisition or numerical
 resume. Later stale expectations cannot initiate a successor.
 
-Policy governance, topology, credibility activation, joint publication and joint
-Andon `/2` still require separate compositions and are refused. No selected guard
+Policy governance, topology, offline credibility activation and the separate
+held-out joint publication guard still require their own compositions and are
+refused. The newly supported Andon `/2` policy qualifies original helper-weight
+updates; it does not supply a missing held-out publication contract. No selected guard
 is silently removed. Single-release native and learned modes keep their separate
 grammars.
 
@@ -714,6 +732,17 @@ aliases and the terminal reply barrier. They establish
 test intent, not executed results or detector quality. Compilation, runtime
 tests, Clippy and the required gate remain unqualified because remote-only RCH
 is unavailable.
+
+Four additional joint-service regression definitions cover actual generated
+Messages and Finish with original helper processes, independent human keys and
+separately authenticated labels; rejection of Finish's fresh key; missing joint
+or numerical grant selection; and omitted or changed recovery-policy fields
+paired with an exact resumed Finish. The evaluator/operator listeners and paid
+query allowance remain original across handoffs. Their benign-only evidence
+correctly remains marginally unqualified; these fixtures do not claim successful
+weight promotion. All four changed Rust files passed scoped parsing/formatting
+with the available 2026-08-30 rustfmt. Compilation and runtime execution remain
+pending.
 
 ### Recover an accounted resident suffix
 
@@ -798,9 +827,10 @@ This unary option takes no value and cannot be combined with `--after-message`.
 Both accounting/evaluator profiles, an independently retained input anchor, a
 new output anchor and the same closed recovery requirements are mandatory. The
 optional simple witness profile, independent operator pair and explicit
-version-two per-release exact prechecks remain available. Governor, topology,
-joint accounting and credibility activation retain their separate composition
-requirements.
+version-two per-release exact prechecks remain available. Joint `/2` accounting
+requires its exact original policy throughout this recovery, just as it does
+for a confirmed-Message suffix. Governor, topology and offline credibility
+activation retain their separate composition requirements.
 
 The remaining sequence contains 1 through 16 entries and starts with a Message.
 Its first recipe must identify the exact original text intent: generation,

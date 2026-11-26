@@ -294,6 +294,43 @@ rewritten or retried. See the
 and [resident contract](RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
 for the original scheduling and custody boundaries.
 
+## Select a jointly evaluated resident native service
+
+The resident native command also accepts the original joint Andon `/2` policy:
+
+```sh
+supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE \
+  --andon JOINT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/new-native-anchor \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+Use the numerically funded operator object above and `response_bytes: 65536`.
+Atomic bootstrap installs the selected original joint policy with the decoder,
+tokenizer, source, generated stream, evaluation, accounting and terminal reserve.
+The evaluator and operator stay with that same owner through every Message and
+Finish. A marginal-only selection with a promotion grant refuses during
+preflight; it cannot install a policy after startup.
+
+Anchored remaining sequences may use `--after-message PREVIOUS_REQUEST` or
+`--continue-generation`, together with the independent input history and
+`--evaluation-recovery REQUIREMENTS`. The complete recovery contract requires
+the exact original joint policy before its Fence, while preserving original
+numerical work, cases, labels, costs and liabilities. A sole remaining Finish
+requires the confirmed Message predecessor and performs no new inference.
+
+Qualification and promotion retain the same explicit Next/Promote law below.
+The original grant is shared across entries, and a label supplies no publication
+key. Missing violation evidence remains an explicit marginal refusal. After a
+permitted weight transition, any subsequent entry must independently satisfy
+the new authority epoch and fresh source, helper and human requirements.
+The service never rewrites a stale selected request to make it acceptable.
+
+The [resident native contract](RESIDENT_NATIVE_PUBLICATION.md#independent-live-evaluation-and-andon-accounting)
+defines request sequencing, complete endpoint/input custody, independent Stop,
+exact recovery and the continuing exclusions for topology, campaign governance
+and separate held-out publication qualification.
+
 ## Inspect and submit explicit Tower documents
 
 Next and Promote reuse the existing registered verbs. The closed

@@ -21,16 +21,18 @@ use std::{
 const PEER_ROOT: &str = "FA_NATIVE_SEQUENCE_EVALUATOR_ROOT";
 const PEER_TEST: &str = "workflow::actor_service::native::sequence::tests::andon_tests::native_resident_evaluator_process";
 
-#[path = "andon/held_case.rs"]
-mod held_case;
 #[path = "andon/continuation.rs"]
 mod continuation;
+#[path = "andon/held_case.rs"]
+mod held_case;
+#[path = "andon/joint.rs"]
+mod joint;
+#[path = "andon/precheck.rs"]
+mod precheck;
 #[path = "andon/recovery.rs"]
 mod recovered;
 #[path = "andon/stop_failure.rs"]
 mod stop_failure;
-#[path = "andon/precheck.rs"]
-mod precheck;
 
 fn parse(bytes: &[u8]) -> Json {
     strict_json::parse(bytes, strict_json::Limits::default()).unwrap()

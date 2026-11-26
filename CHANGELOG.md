@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26: connect resident native generation to original joint evaluation
+
+- Admit explicit joint Andon `/2` during resident native creation and anchored
+  continuation, installing the immutable policy with the original first image.
+- Require the original joint profile before provisioning a numerically funded
+  live credibility-promotion operator, retaining finite custody across entries.
+- Add four service regression definitions for real generated publication,
+  independent labels and human rejection, cumulative grants, exact joint-policy
+  recovery refusals and an approved recovered Finish.
+- Preserve decoder work, charges, fresh approval, Stop and existing unsupported
+  composition boundaries. Scoped source parsing/formatting passed; required
+  remote compilation and runtime qualification remain pending.
+
 ## 2026-11-26: retain paid credibility promotion through live learned evaluation
 
 - Reject a selected credibility-promotion grant without the original joint
