@@ -12,6 +12,7 @@
 //!   mutate policy (`Permit` cannot be constructed from any type in this module).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::mem::size_of;
 
 use crate::{
     observation_algebra::{Basis, Knowledge, UncertaintyClass},
@@ -673,7 +674,19 @@ pub struct ViewReceipt {
     pub coarsened_findings: usize,
     pub spilled_to_batch_recompute: bool,
     pub generation_rebuilds: u64,
+    /// Distinct finding keys selected by this batch's old and new exact tuples.
+    /// Includes findings removed by the batch; excludes untouched cached keys.
+    pub affected_findings: usize,
+    /// Input deltas plus indexed neighbor/contribution visits and affected-key
+    /// refreshes. This is NOT total update work: atomic state/receipt copies,
+    /// map comparisons and antichain minimization are not counted here.
     pub incremental_work_units: usize,
+    /// Tuple visits in the mandatory independent batch verification and any
+    /// exact spill. Verification still runs over the complete closed snapshot;
+    /// indexed maintenance does not make the whole operation sublinear.
+    pub batch_work_units: usize,
+    /// Estimated fact, index and retained finding payload bytes. Excludes map
+    /// allocator overhead, frontier storage and temporary candidate/receipt copies.
     pub retained_state_bytes: usize,
 }
 
@@ -688,6 +701,103 @@ impl ViewReceipt {
     }
 }
 
+// Exact tuple indexes, not the wrapping display identifiers in negative_guards.
+// Each active fact belongs to at most three buckets, and an empty bucket is
+// removed immediately. Index space is bounded by the CURRENT snapshot, not by
+// the number of historic inserts, retractions or fact-ID replacements.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum FactIndexKey {
+    EdgeFrom(u64),
+    EdgeTo(u64),
+    Edge(u64, u64),
+    Gate(u64, u64),
+    Dependency(u64, u64),
+    Reviewed(u64, u64),
+    HeldKey(u64),
+    Held(u64, u64),
+    Invalidated(u64),
+    Cohort(u64, u64),
+}
+
+#[derive(Clone, Debug, Default)]
+struct FactIndexes(BTreeMap<FactIndexKey, BTreeSet<u64>>);
+
+impl FactIndexes {
+    fn keys(query: StandingQueryFamily, kind: BaseFactKind) -> [Option<FactIndexKey>; 3] {
+        use BaseFactKind as Fact;
+        use FactIndexKey as Index;
+        use StandingQueryFamily as Query;
+        match (query, kind) {
+            (Query::UngatedSinkReachability, Fact::AuthorityEdge { from, to }) => [
+                Some(Index::EdgeFrom(from)),
+                Some(Index::EdgeTo(to)),
+                Some(Index::Edge(from, to)),
+            ],
+            (Query::UngatedSinkReachability, Fact::QualifiedGate { from, to }) => {
+                [Some(Index::Gate(from, to)), None, None]
+            }
+            (
+                Query::UnreviewedArtifactDependency,
+                Fact::ArtifactDependency {
+                    artifact,
+                    dependency,
+                },
+            ) => [Some(Index::Dependency(artifact, dependency)), None, None],
+            (
+                Query::UnreviewedArtifactDependency,
+                Fact::ReviewedDependency {
+                    artifact,
+                    dependency,
+                },
+            ) => [Some(Index::Reviewed(artifact, dependency)), None, None],
+            (Query::InvalidatedHeldProposal, Fact::HeldProposalDependency { proposal, key }) => [
+                Some(Index::HeldKey(key)),
+                Some(Index::Held(proposal, key)),
+                None,
+            ],
+            (Query::InvalidatedHeldProposal, Fact::InvalidatedKey { key, .. }) => {
+                [Some(Index::Invalidated(key)), None, None]
+            }
+            (Query::SharedHelperFailureCohort, Fact::CohortFailure { cohort, failure_id }) => {
+                [Some(Index::Cohort(cohort, failure_id)), None, None]
+            }
+            _ => [None; 3],
+        }
+    }
+
+    fn update(&mut self, query: StandingQueryFamily, fact: BaseFact, insert: bool) {
+        for key in Self::keys(query, fact.kind).into_iter().flatten() {
+            if insert {
+                self.0.entry(key).or_default().insert(fact.fact_id);
+            } else if let Some(ids) = self.0.get_mut(&key) {
+                ids.remove(&fact.fact_id);
+                if ids.is_empty() {
+                    self.0.remove(&key);
+                }
+            }
+        }
+    }
+
+    fn ids(&self, key: FactIndexKey) -> impl Iterator<Item = u64> + '_ {
+        self.0.get(&key).into_iter().flatten().copied()
+    }
+
+    fn contains(&self, key: FactIndexKey) -> bool {
+        self.0.contains_key(&key)
+    }
+
+    fn count(&self, key: FactIndexKey) -> usize {
+        self.0.get(&key).map_or(0, BTreeSet::len)
+    }
+
+    fn payload_bytes(&self) -> usize {
+        self.0
+            .values()
+            .map(|ids| size_of::<FactIndexKey>() + ids.len() * size_of::<u64>())
+            .sum()
+    }
+}
+
 /// Incremental standing oversight engine maintaining support-backed findings
 /// across canonical `-old, +new` delta streams with bounded antichains (`FA-079`),
 /// semantic-generation rebuilds (`FA-080`), and closed-frontier differential
@@ -699,7 +809,8 @@ pub struct IncrementalOversightEngine {
     max_antichain_width: usize,
     overflow_mode: AntichainOverflowMode,
     snapshot: OversightSnapshot,
-    maintained_antichains: BTreeMap<FindingKey, SupportAntichain>,
+    indexes: FactIndexes,
+    maintained_findings: BTreeMap<FindingKey, FindingEvaluation>,
     last_closed_seq: u64,
     generation_rebuilds: u64,
 }
@@ -736,7 +847,8 @@ impl IncrementalOversightEngine {
                 frontiers,
                 required_frontier,
             ),
-            maintained_antichains: BTreeMap::new(),
+            indexes: FactIndexes::default(),
+            maintained_findings: BTreeMap::new(),
             last_closed_seq: 0,
             generation_rebuilds: 0,
         })
@@ -774,12 +886,17 @@ impl IncrementalOversightEngine {
         }
         let mut candidate = self.clone();
         candidate.snapshot.generations = new_generations;
-        candidate.maintained_antichains.clear();
+        candidate.maintained_findings.clear();
         candidate.generation_rebuilds = candidate
             .generation_rebuilds
             .checked_add(1)
             .ok_or(StandingOversightError::GenerationRebuildOverflow)?;
-        let _ = candidate.recompute_incremental_state()?;
+        let mut affected = BTreeSet::new();
+        let mut work = 0;
+        for (fact, _) in candidate.snapshot.facts.values() {
+            candidate.collect_affected(fact.kind, &mut affected, &mut work);
+        }
+        candidate.refresh_findings(&affected, &mut work)?;
         *self = candidate;
         Ok(())
     }
@@ -850,16 +967,27 @@ impl IncrementalOversightEngine {
             .map_err(|_| StandingOversightError::IncompleteProductFrontier)?;
         self.snapshot.required_frontier.through = next_frontier_seq;
 
+        let mut affected = BTreeSet::new();
+        let mut work_units = deltas.len();
         for &delta in deltas {
+            // Route both sides of an exact replacement, including old paths
+            // removed by this delta and new joins formed within the same batch.
+            // Refresh happens only after ALL final base tuples are admitted.
+            self.collect_affected(delta.fact.kind, &mut affected, &mut work_units);
+            let was_present = self.snapshot.facts.contains_key(&delta.fact.fact_id);
             self.snapshot.apply_fact_delta(delta)?;
+            let is_present = self.snapshot.facts.contains_key(&delta.fact.fact_id);
+            if was_present != is_present {
+                self.indexes.update(self.query, delta.fact, is_present);
+            }
+            self.collect_affected(delta.fact.kind, &mut affected, &mut work_units);
         }
 
-        let (findings, coarsened_findings, spilled_to_batch_recompute, work_units) =
-            self.recompute_incremental_state()?;
+        let spill_work = self.refresh_findings(&affected, &mut work_units)?;
+        let (coarsened_findings, spilled_to_batch_recompute) = self.precision_state();
 
-        // FA-078 / FA-INV-026: Compare against the independent FA-077 batch oracle
-        // at every closed frontier (using unbounded snapshot capacity when the
-        // incremental antichain spilled or coarsened).
+        // The complete oracle remains independent of every maintained index and
+        // cache. Its cost is explicit, separate from indexed derivative work.
         let oracle_width = if spilled_to_batch_recompute || coarsened_findings > 0 {
             MAX_SNAPSHOT_FACTS
         } else {
@@ -867,283 +995,358 @@ impl IncrementalOversightEngine {
         };
         let oracle_artifact =
             batch_oracle::evaluate_batch_query(&self.snapshot, self.query, oracle_width)?;
-
-        if !spilled_to_batch_recompute && coarsened_findings == 0 {
-            if findings != oracle_artifact.findings {
-                return Err(StandingOversightError::OracleDivergenceDetected);
-            }
-        } else {
-            // Even under ConservativeCoarsen or SpillToBatchRecompute, no positive
-            // finding may be missed (zero false negatives!).
-            if findings.keys().collect::<BTreeSet<_>>()
-                != oracle_artifact.findings.keys().collect::<BTreeSet<_>>()
-            {
-                return Err(StandingOversightError::OracleDivergenceDetected);
-            }
-        }
+        self.verify_findings(&oracle_artifact.findings)?;
 
         let from_seq = self.last_closed_seq;
         self.last_closed_seq = next_frontier_seq;
-        let retained_state_bytes =
-            self.snapshot.facts.len() * 32 + self.maintained_antichains.len() * 96;
-
         let uncertainty = if coarsened_findings > 0 {
             UncertaintyClass::Conservative
         } else {
             UncertaintyClass::Exact
         };
-
         let receipt = ViewReceipt {
             query: self.query,
             generations: self.snapshot.generations,
             uncertainty,
             from_frontier_seq: from_seq,
             to_frontier_seq: next_frontier_seq,
-            findings,
+            findings: self.maintained_findings.clone(),
             coarsened_findings,
             spilled_to_batch_recompute,
             generation_rebuilds: self.generation_rebuilds,
-            incremental_work_units: deltas.len() + work_units,
-            retained_state_bytes,
+            affected_findings: affected.len(),
+            incremental_work_units: work_units,
+            batch_work_units: spill_work + oracle_artifact.tuples_examined,
+            retained_state_bytes: self.retained_payload_bytes(),
         };
 
         Ok(Knowledge::known(receipt, self.basis))
     }
 
-    fn recompute_incremental_state(
-        &mut self,
-    ) -> Result<(BTreeMap<FindingKey, FindingEvaluation>, usize, bool, usize), StandingOversightError>
-    {
-        if matches!(
-            self.query,
-            StandingQueryFamily::UngatedSinkReachability
-                | StandingQueryFamily::UnreviewedArtifactDependency
-        ) && !self.snapshot.negative_domain_closed
-        {
-            return Err(StandingOversightError::UnclosedNegativeDomain);
-        }
-
-        let active_facts: Vec<(BaseFact, i64)> = self
-            .snapshot
-            .facts
-            .values()
-            .filter(|(_, w)| *w > 0)
-            .copied()
-            .collect();
-
-        let mut next_antichains: BTreeMap<FindingKey, SupportAntichain> = BTreeMap::new();
-        let mut work_units = 0_usize;
-        let mut spilled = false;
-
-        let build_result = (|| -> Result<(), StandingOversightError> {
-            match self.query {
-                StandingQueryFamily::UngatedSinkReachability => {
-                    let gates: BTreeSet<(u64, u64)> = active_facts
-                        .iter()
-                        .filter_map(|(f, _)| match f.kind {
-                            BaseFactKind::QualifiedGate { from, to } => Some((from, to)),
-                            _ => None,
-                        })
-                        .collect();
-
-                    for &(f1, w1) in &active_facts {
-                        let BaseFactKind::AuthorityEdge {
-                            from: actor,
-                            to: mid,
-                        } = f1.kind
-                        else {
-                            continue;
-                        };
-                        for &(f2, w2) in &active_facts {
-                            work_units += 1;
-                            let BaseFactKind::AuthorityEdge {
-                                from: mid2,
-                                to: sink,
-                            } = f2.kind
-                            else {
-                                continue;
-                            };
-                            if mid != mid2 || actor == sink {
-                                continue;
-                            }
-                            if gates.contains(&(actor, mid)) || gates.contains(&(mid, sink)) {
-                                continue;
-                            }
-                            let mut pos = BTreeSet::new();
-                            pos.insert(f1.fact_id);
-                            pos.insert(f2.fact_id);
-                            let mut neg = BTreeSet::new();
-                            neg.insert(actor.wrapping_mul(1_000_003).wrapping_add(mid));
-                            neg.insert(mid.wrapping_mul(1_000_003).wrapping_add(sink));
-                            let path = SupportPath::new(pos, neg)?;
-                            let weight = w1
-                                .checked_mul(w2)
-                                .ok_or(StandingOversightError::WeightOverflow)?;
-                            let key = FindingKey {
-                                query: self.query,
-                                subject: actor,
-                                target: sink,
-                            };
-                            let entry = match next_antichains.entry(key) {
-                                std::collections::btree_map::Entry::Occupied(o) => o.into_mut(),
-                                std::collections::btree_map::Entry::Vacant(v) => {
-                                    v.insert(SupportAntichain::new(self.max_antichain_width)?)
-                                }
-                            };
-                            entry.apply_delta(path, weight, self.overflow_mode)?;
-                        }
-                    }
+    fn collect_affected(
+        &self,
+        kind: BaseFactKind,
+        affected: &mut BTreeSet<FindingKey>,
+        work: &mut usize,
+    ) {
+        let mut insert = |subject, target| {
+            affected.insert(FindingKey {
+                query: self.query,
+                subject,
+                target,
+            });
+        };
+        match (self.query, kind) {
+            (
+                StandingQueryFamily::UngatedSinkReachability,
+                BaseFactKind::AuthorityEdge { from, to },
+            ) => {
+                self.edge_neighbors(from, to, &mut insert, work);
+            }
+            (
+                StandingQueryFamily::UngatedSinkReachability,
+                BaseFactKind::QualifiedGate { from, to },
+            ) => {
+                // Blockers refer to exact tuples, and all IDs/multiplicities of
+                // the same blocker must disappear before an edge is ungated.
+                if self.indexes.contains(FactIndexKey::Edge(from, to)) {
+                    self.edge_neighbors(from, to, &mut insert, work);
                 }
-                StandingQueryFamily::UnreviewedArtifactDependency => {
-                    let reviewed: BTreeSet<(u64, u64)> = active_facts
-                        .iter()
-                        .filter_map(|(f, _)| match f.kind {
-                            BaseFactKind::ReviewedDependency {
-                                artifact,
-                                dependency,
-                            } => Some((artifact, dependency)),
-                            _ => None,
-                        })
-                        .collect();
-
-                    for &(f, w) in &active_facts {
-                        work_units += 1;
-                        let BaseFactKind::ArtifactDependency {
-                            artifact,
-                            dependency,
-                        } = f.kind
-                        else {
-                            continue;
-                        };
-                        if reviewed.contains(&(artifact, dependency)) {
-                            continue;
-                        }
-                        let mut pos = BTreeSet::new();
-                        pos.insert(f.fact_id);
-                        let mut neg = BTreeSet::new();
-                        neg.insert(artifact.wrapping_mul(1_000_003).wrapping_add(dependency));
-                        let path = SupportPath::new(pos, neg)?;
-                        let key = FindingKey {
-                            query: self.query,
-                            subject: artifact,
-                            target: dependency,
-                        };
-                        let entry = match next_antichains.entry(key) {
-                            std::collections::btree_map::Entry::Occupied(o) => o.into_mut(),
-                            std::collections::btree_map::Entry::Vacant(v) => {
-                                v.insert(SupportAntichain::new(self.max_antichain_width)?)
-                            }
-                        };
-                        entry.apply_delta(path, w, self.overflow_mode)?;
-                    }
+            }
+            (
+                StandingQueryFamily::UnreviewedArtifactDependency,
+                BaseFactKind::ArtifactDependency {
+                    artifact,
+                    dependency,
                 }
-                StandingQueryFamily::InvalidatedHeldProposal => {
-                    for &(f1, w1) in &active_facts {
-                        let BaseFactKind::HeldProposalDependency { proposal, key } = f1.kind else {
-                            continue;
-                        };
-                        for &(f2, w2) in &active_facts {
-                            work_units += 1;
-                            let BaseFactKind::InvalidatedKey { key: k2, .. } = f2.kind else {
-                                continue;
-                            };
-                            if key != k2 {
-                                continue;
-                            }
-                            let mut pos = BTreeSet::new();
-                            pos.insert(f1.fact_id);
-                            pos.insert(f2.fact_id);
-                            let path = SupportPath::new(pos, BTreeSet::new())?;
-                            let weight = w1
-                                .checked_mul(w2)
-                                .ok_or(StandingOversightError::WeightOverflow)?;
-                            let finding_key = FindingKey {
-                                query: self.query,
-                                subject: proposal,
-                                target: key,
-                            };
-                            let entry = match next_antichains.entry(finding_key) {
-                                std::collections::btree_map::Entry::Occupied(o) => o.into_mut(),
-                                std::collections::btree_map::Entry::Vacant(v) => {
-                                    v.insert(SupportAntichain::new(self.max_antichain_width)?)
-                                }
-                            };
-                            entry.apply_delta(path, weight, self.overflow_mode)?;
-                        }
-                    }
-                }
-                StandingQueryFamily::SharedHelperFailureCohort => {
-                    for &(f, w) in &active_facts {
-                        work_units += 1;
-                        let BaseFactKind::CohortFailure { cohort, failure_id } = f.kind else {
-                            continue;
-                        };
-                        let mut pos = BTreeSet::new();
-                        pos.insert(f.fact_id);
-                        let path = SupportPath::new(pos, BTreeSet::new())?;
-                        let key = FindingKey {
-                            query: self.query,
-                            subject: cohort,
-                            target: failure_id,
-                        };
-                        let entry = match next_antichains.entry(key) {
-                            std::collections::btree_map::Entry::Occupied(o) => o.into_mut(),
-                            std::collections::btree_map::Entry::Vacant(v) => {
-                                v.insert(SupportAntichain::new(self.max_antichain_width)?)
-                            }
-                        };
-                        entry.apply_delta(path, w, self.overflow_mode)?;
+                | BaseFactKind::ReviewedDependency {
+                    artifact,
+                    dependency,
+                },
+            ) => {
+                *work += 1;
+                insert(artifact, dependency);
+            }
+            (
+                StandingQueryFamily::InvalidatedHeldProposal,
+                BaseFactKind::HeldProposalDependency { proposal, key },
+            ) => {
+                *work += 1;
+                insert(proposal, key);
+            }
+            (
+                StandingQueryFamily::InvalidatedHeldProposal,
+                BaseFactKind::InvalidatedKey { key, .. },
+            ) => {
+                for id in self.indexes.ids(FactIndexKey::HeldKey(key)) {
+                    *work += 1;
+                    if let BaseFactKind::HeldProposalDependency { proposal, .. } =
+                        self.snapshot.facts[&id].0.kind
+                    {
+                        insert(proposal, key);
                     }
                 }
             }
-            Ok(())
-        })();
+            (
+                StandingQueryFamily::SharedHelperFailureCohort,
+                BaseFactKind::CohortFailure { cohort, failure_id },
+            ) => {
+                *work += 1;
+                insert(cohort, failure_id);
+            }
+            _ => {}
+        }
+    }
 
-        match build_result {
-            Ok(()) => {}
-            Err(StandingOversightError::AntichainWidthExceeded { .. })
-                if self.overflow_mode == AntichainOverflowMode::SpillToBatchRecompute =>
+    fn edge_neighbors(
+        &self,
+        from: u64,
+        to: u64,
+        insert: &mut impl FnMut(u64, u64),
+        work: &mut usize,
+    ) {
+        for id in self.indexes.ids(FactIndexKey::EdgeFrom(to)) {
+            *work += 1;
+            if let BaseFactKind::AuthorityEdge { to: sink, .. } = self.snapshot.facts[&id].0.kind {
+                if from != sink {
+                    insert(from, sink);
+                }
+            }
+        }
+        for id in self.indexes.ids(FactIndexKey::EdgeTo(from)) {
+            *work += 1;
+            if let BaseFactKind::AuthorityEdge { from: actor, .. } = self.snapshot.facts[&id].0.kind
             {
-                spilled = true;
-                let batch = batch_oracle::evaluate_batch_query(
-                    &self.snapshot,
-                    self.query,
-                    MAX_SNAPSHOT_FACTS,
-                )?;
-                self.maintained_antichains.clear();
-                return Ok((
-                    batch.findings,
-                    0,
-                    spilled,
-                    work_units + batch.tuples_examined,
-                ));
-            }
-            Err(e) => return Err(e),
-        }
-
-        let mut findings = BTreeMap::new();
-        let mut coarsened_findings = 0_usize;
-        for (key, antichain) in &next_antichains {
-            if antichain.is_supported() {
-                if matches!(
-                    antichain.precision(),
-                    SupportPrecision::CoarsenedConservative { .. }
-                ) {
-                    coarsened_findings += 1;
+                if actor != to {
+                    insert(actor, to);
                 }
-                findings.insert(
-                    *key,
+            }
+        }
+    }
+
+    /// Reconstruct each selected key once from the FINAL indexed base relation.
+    /// This retains all weighted supports under coarsening without applying
+    /// transient partial-batch widths or losing a previously hidden alternative.
+    /// A spill still uses the original complete independent batch evaluator.
+    fn refresh_findings(
+        &mut self,
+        affected: &BTreeSet<FindingKey>,
+        work: &mut usize,
+    ) -> Result<usize, StandingOversightError> {
+        for &key in affected {
+            *work += 1;
+            let built = self.build_finding(key, work);
+            let chain = match built {
+                Ok(chain) => chain,
+                Err(StandingOversightError::AntichainWidthExceeded { .. })
+                    if self.overflow_mode == AntichainOverflowMode::SpillToBatchRecompute =>
+                {
+                    let batch = batch_oracle::evaluate_batch_query(
+                        &self.snapshot,
+                        self.query,
+                        MAX_SNAPSHOT_FACTS,
+                    )?;
+                    self.maintained_findings = batch.findings;
+                    return Ok(batch.tuples_examined);
+                }
+                Err(error) => return Err(error),
+            };
+            if chain.is_supported() {
+                self.maintained_findings.insert(
+                    key,
                     FindingEvaluation {
-                        key: *key,
-                        minimal_supports: antichain.paths().to_vec(),
-                        total_support_weight: antichain.total_weight()?,
-                        precision: antichain.precision(),
+                        key,
+                        minimal_supports: chain.paths().to_vec(),
+                        total_support_weight: chain.total_weight()?,
+                        precision: chain.precision(),
                     },
                 );
+            } else {
+                self.maintained_findings.remove(&key);
             }
         }
-        self.maintained_antichains = next_antichains;
-        Ok((findings, coarsened_findings, spilled, work_units))
+        Ok(0)
+    }
+
+    fn build_finding(
+        &self,
+        key: FindingKey,
+        work: &mut usize,
+    ) -> Result<SupportAntichain, StandingOversightError> {
+        use FactIndexKey as Index;
+        let mut chain = SupportAntichain::new(self.max_antichain_width)?;
+        let subject = key.subject;
+        let target = key.target;
+        match self.query {
+            StandingQueryFamily::UngatedSinkReachability => {
+                // Visit the smaller endpoint index, then join exact midpoints.
+                // Neither unrelated source pairs nor unrelated fact kinds scan.
+                let forward = self.indexes.count(Index::EdgeFrom(subject))
+                    <= self.indexes.count(Index::EdgeTo(target));
+                let index = if forward {
+                    Index::EdgeFrom(subject)
+                } else {
+                    Index::EdgeTo(target)
+                };
+                for id in self.indexes.ids(index) {
+                    *work += 1;
+                    let BaseFactKind::AuthorityEdge { from, to } = self.snapshot.facts[&id].0.kind
+                    else {
+                        return Err(StandingOversightError::OracleDivergenceDetected);
+                    };
+                    let middle = if forward { to } else { from };
+                    if self.indexes.contains(Index::Gate(subject, middle))
+                        || self.indexes.contains(Index::Gate(middle, target))
+                    {
+                        continue;
+                    }
+                    let other = if forward {
+                        Index::Edge(middle, target)
+                    } else {
+                        Index::Edge(subject, middle)
+                    };
+                    for other_id in self.indexes.ids(other) {
+                        *work += 1;
+                        let (_, first_weight) = self.snapshot.facts[&id];
+                        let (_, second_weight) = self.snapshot.facts[&other_id];
+                        let weight = first_weight
+                            .checked_mul(second_weight)
+                            .ok_or(StandingOversightError::WeightOverflow)?;
+                        let positive = BTreeSet::from([id, other_id]);
+                        let negative = BTreeSet::from([
+                            subject.wrapping_mul(1_000_003).wrapping_add(middle),
+                            middle.wrapping_mul(1_000_003).wrapping_add(target),
+                        ]);
+                        chain.apply_delta(
+                            SupportPath::new(positive, negative)?,
+                            weight,
+                            self.overflow_mode,
+                        )?;
+                    }
+                }
+            }
+            StandingQueryFamily::UnreviewedArtifactDependency => {
+                if !self.indexes.contains(Index::Reviewed(subject, target)) {
+                    let negative =
+                        BTreeSet::from([subject.wrapping_mul(1_000_003).wrapping_add(target)]);
+                    for id in self.indexes.ids(Index::Dependency(subject, target)) {
+                        *work += 1;
+                        chain.apply_delta(
+                            SupportPath::new(BTreeSet::from([id]), negative.clone())?,
+                            self.snapshot.facts[&id].1,
+                            self.overflow_mode,
+                        )?;
+                    }
+                }
+            }
+            StandingQueryFamily::InvalidatedHeldProposal => {
+                for first in self.indexes.ids(Index::Held(subject, target)) {
+                    *work += 1;
+                    for second in self.indexes.ids(Index::Invalidated(target)) {
+                        *work += 1;
+                        let weight = self.snapshot.facts[&first]
+                            .1
+                            .checked_mul(self.snapshot.facts[&second].1)
+                            .ok_or(StandingOversightError::WeightOverflow)?;
+                        chain.apply_delta(
+                            SupportPath::new(BTreeSet::from([first, second]), BTreeSet::new())?,
+                            weight,
+                            self.overflow_mode,
+                        )?;
+                    }
+                }
+            }
+            StandingQueryFamily::SharedHelperFailureCohort => {
+                for id in self.indexes.ids(Index::Cohort(subject, target)) {
+                    *work += 1;
+                    chain.apply_delta(
+                        SupportPath::new(BTreeSet::from([id]), BTreeSet::new())?,
+                        self.snapshot.facts[&id].1,
+                        self.overflow_mode,
+                    )?;
+                }
+            }
+        }
+        Ok(chain)
+    }
+
+    fn precision_state(&self) -> (usize, bool) {
+        let coarsened = self
+            .maintained_findings
+            .values()
+            .filter(|finding| {
+                matches!(
+                    finding.precision,
+                    SupportPrecision::CoarsenedConservative { .. }
+                )
+            })
+            .count();
+        // A retained exact spill survives irrelevant/empty batches. Its larger
+        // verification width is withdrawn only after every wide finding shrinks.
+        let spilled = self.overflow_mode == AntichainOverflowMode::SpillToBatchRecompute
+            && self
+                .maintained_findings
+                .values()
+                .any(|finding| finding.minimal_supports.len() > self.max_antichain_width);
+        (coarsened, spilled)
+    }
+
+    fn verify_findings(
+        &self,
+        oracle: &BTreeMap<FindingKey, FindingEvaluation>,
+    ) -> Result<(), StandingOversightError> {
+        if self.maintained_findings.len() != oracle.len() {
+            return Err(StandingOversightError::OracleDivergenceDetected);
+        }
+        for (key, actual) in &self.maintained_findings {
+            let expected = oracle
+                .get(key)
+                .ok_or(StandingOversightError::OracleDivergenceDetected)?;
+            let agrees = match actual.precision {
+                SupportPrecision::ExactMinimalAntichain => actual == expected,
+                SupportPrecision::CoarsenedConservative {
+                    retained_union_atoms,
+                } => {
+                    let union: BTreeSet<_> = expected
+                        .minimal_supports
+                        .iter()
+                        .flat_map(|path| path.positive_atoms.iter().copied())
+                        .collect();
+                    expected.minimal_supports.len() > self.max_antichain_width
+                        && actual.key == expected.key
+                        && actual.total_support_weight == expected.total_support_weight
+                        && retained_union_atoms == union.len()
+                        && actual.minimal_supports
+                            == expected.minimal_supports[..self.max_antichain_width]
+                }
+            };
+            if !agrees {
+                return Err(StandingOversightError::OracleDivergenceDetected);
+            }
+        }
+        Ok(())
+    }
+
+    fn retained_payload_bytes(&self) -> usize {
+        self.snapshot.facts.len() * size_of::<(u64, (BaseFact, i64))>()
+            + self.indexes.payload_bytes()
+            + self
+                .maintained_findings
+                .values()
+                .map(|finding| {
+                    size_of::<FindingKey>()
+                        + size_of::<FindingEvaluation>()
+                        + finding
+                            .minimal_supports
+                            .iter()
+                            .map(|path| {
+                                size_of::<SupportPath>()
+                                    + size_of::<u64>()
+                                        * (path.positive_atoms.len() + path.negative_guards.len())
+                            })
+                            .sum::<usize>()
+                })
+                .sum::<usize>()
     }
 }
 

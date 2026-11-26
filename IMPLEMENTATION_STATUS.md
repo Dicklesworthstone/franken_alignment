@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: update standing findings through exact tuple indexes
+
+All four registered standing queries now rebuild only finding keys affected by
+the old and new tuples in a closed batch. Exact indexes handle weighted joins,
+multiple independent blockers and same-ID replacement; unaffected findings stay
+cached. Reconstruction uses the final batch, so temporary support expansion
+during replacement cannot reject a final result that fits the configured width.
+Failed updates preserve facts, indexes, findings and frontiers together.
+
+Coarsened and spilled results survive empty or unrelated batches. Complete base
+facts retain hidden alternatives for later retractions, and the independent
+oracle checks exact weights and support content at every closed frontier.
+Derivative work and full batch visits are reported separately. Whole-state
+candidate cloning and full oracle evaluation remain; retained bytes estimate
+logical payloads rather than RSS or total allocation.
+
+The 11 existing boundary tests and nine new indexed-maintenance tests passed with
+the complete `fa-reference` crate on standard LLVM `nightly-2026-09-08`, using
+frozen `d3703cfb` plus the roster-resolution and standing patches. Coverage includes
+96 mixed mutation cuts for each query, generation rebuild, blocker multiplicity,
+hash collisions, overflow recovery and bounded index retention. The local
+canonical gate refused `source_snapshot` because current sources and digests
+differ from its checked-in inventory, including pre-existing unrelated files.
+Full canonical and remote RCH qualification remain open. See the
+[standing oversight contract](docs/STANDING_OVERSIGHT_REFERENCE.md).
+
 ## 2026-11-25: resolve independently censored roster holds without rewriting history
 
 FA-125's typed roster query now accepts one strictly later definitive independent

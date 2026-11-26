@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26: maintain standing findings through exact tuple indexes
+
+- Rebuild affected finding keys from each final closed batch across all four
+  standing queries, preserving weighted joins, exact replacement and independent
+  blocker multiplicities.
+- Preserve unaffected findings, atomic rollback, hidden support alternatives and
+  coarsening/spill state across empty or unrelated batches.
+- Verify exact weights and support content against the independent full oracle.
+  Separate indexed work from batch visits and label retained payload estimates.
+- Pass all 11 boundary and nine new indexed-maintenance tests with the complete
+  reference crate on standard LLVM nightly. The local canonical gate stops at
+  source-inventory/digest mismatch; full and remote RCH qualification remain open.
+
 ## 2026-11-25: resolve censored independent roster assessments
 
 - Accept one strictly later independent Benign or ConfirmedViolation label after
