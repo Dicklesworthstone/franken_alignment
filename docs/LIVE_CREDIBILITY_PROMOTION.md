@@ -137,6 +137,169 @@ Owners requiring action-consistency forecasts remain unsupported even with this
 allowance. A replay grant does not install missing independent predictors or
 reconstruct missing role custody.
 
+## Select the live Tower operator capability
+
+The existing Linux operator endpoint can retain this grant on the same live
+owner. Its independently selected public profile opts in with
+`credibility_promotion`. Omission or `null` keeps the capability disabled.
+The service retains the noncloneable custodian; reconnecting the operator does
+not renew its queries, replay allowance or sole entered mutation.
+
+For an ordinary service, select the original joint policy at creation through
+`--andon` with `schema_version: "fa.native-andon-operator/2"`. That profile
+requires the complete `joint` object, evaluation protocol and accounting
+inventory described in [Joint native Andon](JOINT_NATIVE_ANDON.md#shared-operator-profile-and-guarded-promotion).
+The example
+[joint accounting profile](../crates/fa-reference/fixtures/joint_native_andon_operator.json)
+shows the closed format; its numerical policy inputs are examples, not
+recommended calibration thresholds. Creation requires identical initial/current
+windows and minimum evaluation revision zero. A marginal-only `/1` owner cannot
+gain joint qualification by installing the operator grant.
+
+With the original actor/reviewer profiles, independent evaluator profile and new
+retained-history destination, the ordinary creation command is:
+
+```sh
+supervise_publication serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --andon JOINT_ANDON_PROFILE \
+  --retain-history-anchor /absolute/independent/new-history-anchor \
+  --operator-profile OPERATOR_PROFILE \
+  --evaluator-profile EVALUATOR_PROFILE
+```
+
+The existing [live evaluation workflow](LIVE_ANDON_EVALUATION.md#create-an-accounted-service)
+owns bootstrap, credential separation, case discovery and assessments. Its
+`evaluator-case` and `evaluator-assess` commands continue to use the separately
+authenticated evaluator endpoint. The operator receives no evaluator credential
+or permission to label a case. The grant can be selected before evidence
+qualifies and remain resident while that evaluator supplies later assessments.
+
+For example, a public operator profile selecting only this capability is:
+
+```json
+{
+  "schema": "fa.tower-operator-service/1",
+  "scope": {"tenant": 1, "principal": 2, "run": 3, "branch": 4, "authority": 5},
+  "socket": "/run/fa/operator.sock",
+  "supervisor": {"uid": 1000, "gid": 1000, "pid": null},
+  "operator": {"uid": 1001, "gid": 1000, "pid": null},
+  "candidate_limit": 8,
+  "connection_limit": 4,
+  "exchange_limit": 32,
+  "response_bytes": 65536,
+  "runtime_ms": 60000,
+  "poll_ms": 5,
+  "inspection_queries": 0,
+  "explanation_queries": 0,
+  "explanation_replay_events": 0,
+  "explanation_disclosure": "none",
+  "credibility_promotion": {
+    "queries": 8,
+    "max_replay_events": 4096,
+    "authority": "promote_qualified_credibility"
+  }
+}
+```
+
+Replace the scope, socket and kernel identities with the independently selected
+values for the deployment. The existing
+[operator profile and endpoint checks](LIVE_TOWER_OPERATOR.md#public-operator-profile)
+still apply. The `credibility_promotion` object is closed:
+
+| Field | Contract |
+|---|---|
+| `queries` | Required positive unsigned JSON integer, bounded by `MAX_CREDIBILITY_PROMOTION_QUERIES` |
+| `max_replay_events` | Required positive unsigned JSON integer, bounded by `MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS`; covers the complete history plus proposed Promote event |
+| `authority` | Required exact string `"promote_qualified_credibility"` |
+| `numerical_replay_events` | Optional positive unsigned JSON integer no greater than `max_replay_events`; omission withholds numerical reconstruction work |
+
+Duplicate, unknown or missing required fields refuse. Caller-selected weights,
+labels, candidates and an `operations` override are not profile fields. There
+is exactly one entered mutation per native custodian. Numerical funding applies
+only to a supported original numerical owner that already has its joint policy;
+it does not enable an unsupported bootstrap or command combination. A separate
+`governance_ledger` selection is required to read accounting through Ledger.
+
+**Select `response_bytes: 65536` for this operation.** The server reserves space
+for a complete worst-case receipt before calling native promotion, including
+up to `MAX_ATTEMPTS` (1,024) cancelled identifiers and the full predecessor and
+successor. The 64 KiB selection covers this bound. The unchanged 16 KiB default
+cannot cover it, so Promote returns `BudgetExhausted` before spending the
+operation or changing journal, weights or reservations. Next can still describe
+native qualification under that smaller allowance. Increasing output capacity
+adds no native authority, query budget or replay allowance.
+
+## Inspect and submit explicit Tower documents
+
+Next and Promote reuse the existing registered verbs. The closed
+`arguments.kind: "credibility_promotion"` discriminator selects helper-weight
+promotion. The native `arguments.operation` and predecessor integers use
+canonical decimal strings, separately from the numeric operator-profile fields.
+The outer `operation_id` is the request's correlation label.
+
+For the example scope and registration above, save this complete request as
+`credibility-next.json`:
+
+```json
+{
+  "schema_version": "fa.tower_request/1",
+  "operation_id": "inspect-credibility-901",
+  "address": "fa://1/run/3@41",
+  "verb": "next",
+  "arguments": {
+    "kind": "credibility_promotion",
+    "operation": "901"
+  },
+  "idempotency_key": "901"
+}
+```
+
+Send that document through the authenticated operator client:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE credibility-next.json
+```
+
+The `credibility-promotion-next` result uses schema
+`fa.publication-credibility-promotion-next/1`. Its native Known value gives
+`can_promote`, an explicit `block_reason` when blocked, and an `action` only
+when the original qualification and checked preconditions permit one. Planning
+cost, information gain, ranking and current eligibility remain explicitly
+Unknown. The query reads acknowledged original state; it neither acquires fresh
+source evidence nor refreshes the clock.
+
+When `can_promote` is true, inspect the complete request object at
+`result.value.knowledge.value.action`. If you select that transition, save that
+object as `credibility-promote.json` and submit it explicitly:
+
+```sh
+supervise_publication tower-operator-exchange OPERATOR_PROFILE credibility-promote.json
+```
+
+The returned action uses `verb: "promote"`, the same
+`kind: "credibility_promotion"`, the exact operation and all eight basis fields
+listed above under `expected`. Its explicit registration generation and
+idempotency key must be retained. Another assessment or journal transition can
+invalidate that predecessor. A previous Known plan provides no permission to
+replace its cut, supply a positive report or skip native requalification.
+
+The `credibility-promotion` result uses schema
+`fa.publication-credibility-promotion/1`. A successful Known receipt retains
+the full before/after cuts, cancelled identifiers and refunded units described
+above. It carries no weights, independent labels, payload, evaluator role or
+effect permit. Operator capability discovery separately lists
+`credibility_promotion` with its actual installed-grant observation and
+remaining finite work; discovery itself spends none of that work.
+
+The client validates the selected audience, registration, operation,
+predecessor, result shape and receipt transitions before emitting a reply or
+sending a later explicit document. It never follows a returned action or
+automatically retries a promotion. An explicit same-grant retry may obtain the
+cached historical result under the native idempotency rules above. A lost
+transport or malformed reply does not establish that the native mutation failed
+or was rolled back.
+
 ## Source and qualification boundary
 
 The native regression definitions cover positive joint qualification, fresh
@@ -146,6 +309,14 @@ marginal/joint counterexamples; unfinished, pending and censored cases; work and
 history limits; original owner, borrow and revocation boundaries; and original
 clock, Fence, Stop and suspension behavior. Compile-fail examples keep grant
 custody and effect authority separate.
+
+Five Tower and eight authenticated live service/client regression definitions
+also cover original labels arriving while the operator is resident, closed
+request/receipt validation, role and owner boundaries, insufficient output
+capacity followed by the same action's permitted transition, exact retries and
+client termination on causally corrupted replies. All 28 changed Rust files
+passed scoped Tree-sitter parsing; the eleven Tower-owned files also received
+scoped rustfmt parsing/formatting before the formatter host restarted.
 
 These are authored regression definitions, not an execution receipt. The
 required command

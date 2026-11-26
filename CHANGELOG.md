@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-25: connect qualified helper weights to the live Tower operator
+
+- Connect a separately selected credibility_promotion capability to the existing
+  Next/Promote verbs on the same running independently evaluated owner.
+- Require original-owner, operator/Permit, full audience, registration and exact
+  predecessor checks; reserve complete response capacity before native mutation.
+- Retain one finite custodian across operator connections and expose its actual
+  allowances through nonspending capability discovery.
+- Validate closed plan/action and receipt documents in the authenticated client;
+  preserve explicit selection and stop after malformed or foreign responses.
+- Add five Tower and eight live service/client regression definitions, an exact
+  operator profile and complete usage examples. All 28 changed Rust files pass
+  scoped syntax parsing; required remote compilation/runtime qualification is open.
+
 ## 2026-11-25: delegate jointly qualified original helper-weight promotion
 
 - Add separate finite supervisor custody for one original helper-weight

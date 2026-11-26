@@ -42,6 +42,8 @@ mod journal_tail_validation;
 mod narrowing;
 #[path = "client/operator_capabilities.rs"]
 mod operator_capabilities;
+#[path = "client/credibility_promotion.rs"]
+mod credibility_promotion;
 #[path = "client/policy_promotion.rs"]
 mod policy_promotion;
 #[path = "client/policy_replay.rs"]
@@ -226,6 +228,7 @@ fn exchange_endpoint(
         let request = decode_request(&read_regular(path, MAX_REQUEST_BYTES)?)
             .map_err(|_| "invalid bounded Tower request document".to_owned())?;
         policy_promotion::check_request(&request, endpoint.scope)?;
+        credibility_promotion::check_request(&request, endpoint.scope)?;
         let frame = request_frame(&request)?;
         documents.push(Prepared { request, frame });
     }
@@ -246,6 +249,7 @@ fn exchange_endpoint(
         narrowing::check_profile(&parsed, &document.request, endpoint.scope)?;
         convening::check_profile(&parsed, &document.request, endpoint.scope)?;
         policy_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
+        credibility_promotion::check_profile(&parsed, &document.request, endpoint.scope)?;
         operator_capabilities::check_profile(&parsed, &document.request, endpoint.scope)?;
         governance_ledger::check_profile(&parsed, &document.request, endpoint.scope)?;
         governance_findings::check_profile(&parsed, &document.request, endpoint.scope)?;
@@ -461,7 +465,10 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
                 MAX_NARROWING_REPLY_ITEMS
             } else if matches!(
                 &request.arguments,
-                ReadArguments::PolicyPromotionNext { .. } | ReadArguments::Promote { .. }
+                ReadArguments::PolicyPromotionNext { .. }
+                    | ReadArguments::Promote { .. }
+                    | ReadArguments::CredibilityPromotionNext { .. }
+                    | ReadArguments::PromoteCredibility { .. }
             ) {
                 MAX_POLICY_PROMOTION_REPLY_ITEMS
             } else if request.verb == Verb::Related {
@@ -516,6 +523,10 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
     match (result.get("kind").and_then(Json::as_str), request.verb) {
         (Some("refused"), _) => {
             if !policy_promotion::refused_matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) || !credibility_promotion::refused_matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,
@@ -634,6 +645,16 @@ fn parse_response(bytes: &[u8], request: &TowerRequest) -> Result<Json, String> 
         }
         (Some("policy-promotion-next"), Verb::Next) | (Some("policy-promotion"), Verb::Promote) => {
             if !policy_promotion::matches(
+                result.get("value").ok_or_else(invalid)?,
+                request,
+                parsed.get("envelope").ok_or_else(invalid)?,
+            ) {
+                return Err(invalid());
+            }
+        }
+        (Some("credibility-promotion-next"), Verb::Next)
+        | (Some("credibility-promotion"), Verb::Promote) => {
+            if !credibility_promotion::matches(
                 result.get("value").ok_or_else(invalid)?,
                 request,
                 parsed.get("envelope").ok_or_else(invalid)?,

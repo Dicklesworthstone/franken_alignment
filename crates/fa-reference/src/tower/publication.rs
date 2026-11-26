@@ -44,6 +44,8 @@ mod policy_replay;
 pub use policy_replay::{LinkedPolicyReplay, LinkedPolicyReplayPage};
 mod policy_promotion;
 pub use policy_promotion::{LinkedPolicyPromotion, LinkedPolicyPromotionNext};
+mod credibility_promotion;
+pub use credibility_promotion::{LinkedCredibilityPromotion, LinkedCredibilityPromotionNext};
 mod precheck;
 
 use super::{
@@ -55,8 +57,9 @@ use crate::action::consequence::delivery::persistent::requests::actor::{
     FileActorPort, FileActorPrecheckPort, FileExplanationResult, FileGeneratedTextActorPort,
     FileInspectionCursor, FileInspectionResult, FileJournalTailCursor,
     FileLearnedTextStreamActorPort, FilePolicyReplayCursor, FileSupervisorAbandonmentPort,
-    FileSupervisorCancellationPort, FileSupervisorConvenePort, FileSupervisorExplanationPort,
-    FileSupervisorFencePort, FileSupervisorGovernanceLedgerPort, FileSupervisorHoldDiagnosisPort,
+    FileSupervisorCancellationPort, FileSupervisorConvenePort,
+    FileSupervisorCredibilityPromotionPort, FileSupervisorExplanationPort, FileSupervisorFencePort,
+    FileSupervisorGovernanceLedgerPort, FileSupervisorHoldDiagnosisPort,
     FileSupervisorInspectionPort, FileSupervisorJournalTailPort, FileSupervisorNarrowPort,
     FileSupervisorPolicyPromotionPort, FileSupervisorPolicyReplayPort,
     FileSupervisorRequestHistoryPort, FileSupervisorResolutionPort,
@@ -158,6 +161,8 @@ pub enum PublicationResult {
     PolicyReplayPage(LinkedPolicyReplayPage),
     PolicyPromotionNext(LinkedPolicyPromotionNext),
     PolicyPromotion(LinkedPolicyPromotion),
+    CredibilityPromotionNext(LinkedCredibilityPromotionNext),
+    CredibilityPromotion(LinkedCredibilityPromotion),
     Refused(Knowledge<()>),
 }
 
@@ -209,6 +214,7 @@ pub struct PublicationTower {
     review_explanation: Option<FileSupervisorReviewExplanationPort>,
     policy_replay: Option<FileSupervisorPolicyReplayPort>,
     policy_promotion: Option<FileSupervisorPolicyPromotionPort>,
+    credibility_promotion: Option<FileSupervisorCredibilityPromotionPort>,
     policy_replay_cursors: BTreeMap<u64, FilePolicyReplayCursor>,
     limits: PublicationLimits,
 }
@@ -260,6 +266,7 @@ impl PublicationTower {
             review_explanation: None,
             policy_replay: None,
             policy_promotion: None,
+            credibility_promotion: None,
             policy_replay_cursors: BTreeMap::new(),
             limits,
         })
@@ -591,6 +598,17 @@ impl PublicationTower {
                 return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
             }
             return self.dispatch_narrowing(access, request);
+        }
+
+        if matches!(
+            (&request.verb, &request.arguments),
+            (Verb::Next, ReadArguments::CredibilityPromotionNext { .. })
+                | (Verb::Promote, ReadArguments::PromoteCredibility { .. })
+        ) {
+            if !self.control_operator {
+                return self.refusal(&request, ReasonCode::CapabilityUnsupported, false);
+            }
+            return self.dispatch_credibility_promotion(access, request);
         }
 
         if request.verb == Verb::Promote

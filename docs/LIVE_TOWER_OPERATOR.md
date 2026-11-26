@@ -45,6 +45,15 @@ The operator client/profile alone cannot turn policy replay into approval;
 it checks the complete audience and original response bindings and sends only
 the caller's explicit documents, with no automatic promotion or retry.
 
+An independently selected [credibility promotion grant](LIVE_CREDIBILITY_PROMOTION.md)
+uses the same `next` / `promote` verbs with `kind: "credibility_promotion"`.
+It applies deterministic helper weights from original independent labels only
+after both marginal and original joint qualification. It retains the running
+owner, separate evaluator, original journal, charged effects and later two-key
+publication review. Its finite custodian is separate from policy-campaign
+approval. Set `response_bytes` to 65,536 for the complete bounded receipt;
+the default 16 KiB endpoint refuses mutation before journal or grant spending.
+
 ## Select the operator endpoint
 
 Using an already qualified executable:
@@ -183,7 +192,7 @@ deployment's values:
 
 The schema is closed: missing required fields, duplicate fields and unknown
 fields fail. `journal_tail`, `request_history`, `governance_ledger`, `hold_diagnosis`, `policy_replay`,
-`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`, `policy_promotion`
+`review_explanation`, `resolution`, `cancellation`, `abandonment`, `narrowing`, `convening`, `policy_promotion`, `credibility_promotion`
 and `fence` are independently optional;
 omitting one or setting it to `null` keeps that capability
 disabled, so existing inspection/explanation profiles retain their behavior.
@@ -194,6 +203,14 @@ governor role or changing an existing session's counters. The executable ordinar
 service requires its separate governor profile; numerical operator modes refuse
 this selection. [Live governor setup](LIVE_POLICY_GOVERNOR.md) specifies the
 supported creation/recovery grammar, independent cut discovery and exact-report approval.
+`credibility_promotion` requires bounded positive `queries` and
+`max_replay_events`, plus exactly `authority: "promote_qualified_credibility"`.
+The original joint credibility policy must already be installed; selecting this
+capability cannot add that policy to a marginal-only owner. An optional positive
+`numerical_replay_events` allowance is required for numerical owners and cannot
+exceed `max_replay_events`. Required action forecasts remain unsupported.
+[Credibility promotion setup](LIVE_CREDIBILITY_PROMOTION.md) gives the exact
+profile, original evaluation requirements and explicit action workflow.
 Profile integers are unsigned JSON integers, as in the existing actor
 profiles. Tower request integers retain their separate canonical decimal-string
 format. The optional numeric `response_bytes` selects the complete response
@@ -208,7 +225,8 @@ Inspection and explanation have separate allowances, each bounded by the
 original native maximum of 1,024 queries. At least one of inspection, admission
 explanation, journal Tail, request history, governance accounting, recorded-state diagnosis, completed-review explanation,
 policy replay, receipt reconciliation, undispatched-request cancellation,
-Unknown disposition, ordinary target restriction, explicit held-review convening or
+Unknown disposition, ordinary target restriction, explicit held-review convening,
+independent policy/credibility promotion or
 original admission fencing must be
 enabled. For inspection only, set
 `explanation_queries` and `explanation_replay_events` to

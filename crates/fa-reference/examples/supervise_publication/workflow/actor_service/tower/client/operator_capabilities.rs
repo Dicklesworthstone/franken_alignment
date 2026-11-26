@@ -299,7 +299,8 @@ fn limits(value: &Json, kind: OperatorCapabilityKind) -> Option<()> {
             &["remaining_queries", "replay_event_limit"],
             Some("remaining_numerical_replay_events"),
         ),
-        Resolution | Cancellation | Abandonment | Narrowing | PolicyPromotion => (
+        Resolution | Cancellation | Abandonment | Narrowing | PolicyPromotion
+        | CredibilityPromotion => (
             &[
                 "remaining_queries",
                 "remaining_operations",

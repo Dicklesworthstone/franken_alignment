@@ -7,6 +7,8 @@ mod cancellation;
 mod capabilities;
 #[path = "operator/convening.rs"]
 mod convening;
+#[path = "operator/credibility_promotion.rs"]
+mod credibility_promotion;
 #[path = "operator/fence.rs"]
 mod fence;
 #[path = "operator/governance_ledger.rs"]

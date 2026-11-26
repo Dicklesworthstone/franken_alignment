@@ -4,6 +4,7 @@ use crate::config::{debug, read_regular};
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     MAX_ABANDONMENT_OPERATIONS, MAX_ABANDONMENT_QUERIES, MAX_ABANDONMENT_REPLAY_EVENTS,
     MAX_CANCELLATION_OPERATIONS, MAX_CANCELLATION_QUERIES, MAX_CANCELLATION_REPLAY_EVENTS,
+    MAX_CREDIBILITY_PROMOTION_QUERIES, MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS,
     MAX_CONVENE_OPERATIONS, MAX_CONVENE_QUERIES, MAX_EXPLANATION_EVENTS, MAX_EXPLANATION_QUERIES,
     MAX_FENCE_REPLAY_EVENTS, MAX_GOVERNANCE_LEDGER_QUERIES, MAX_HOLD_DIAGNOSIS_QUERIES, MAX_INSPECTION_QUERIES,
     MAX_JOURNAL_TAIL_PAGE_EVENTS, MAX_JOURNAL_TAIL_QUERIES, MAX_NARROW_OPERATIONS,
@@ -59,6 +60,7 @@ pub(crate) struct Settings {
     pub(crate) review_explanation: Option<ReviewExplanationSettings>,
     pub(crate) policy_replay: Option<PolicyReplaySettings>,
     pub(crate) policy_promotion: Option<PolicyPromotionSettings>,
+    pub(crate) credibility_promotion: Option<CredibilityPromotionSettings>,
 }
 
 /// Explicit disclosure of acknowledged governance accounting. This selection
@@ -137,6 +139,56 @@ impl PolicyPromotionSettings {
             || self.authority != "promote_approved_policy"
         {
             return Err("policy promotion requires explicit approved-policy authority and bounded queries and replay".into());
+        }
+        Ok(())
+    }
+}
+
+/// One deterministic weight promotion under the original joint qualification.
+/// Labels and evaluation truth remain with the separately held evaluator.
+#[derive(Clone, Debug)]
+pub(crate) struct CredibilityPromotionSettings {
+    pub(crate) queries: usize,
+    pub(crate) max_replay_events: usize,
+    /// One separately admitted complete numerical history plus Promote.
+    pub(crate) numerical_replay_events: Option<usize>,
+    pub(crate) authority: String,
+}
+
+impl CredibilityPromotionSettings {
+    fn decode(value: Json) -> Result<Self, String> {
+        let mut fields = Fields::new(value)?;
+        let selected = Self {
+            queries: usize::try_from(fields.number("queries")?).map_err(debug)?,
+            max_replay_events: usize::try_from(fields.number("max_replay_events")?)
+                .map_err(debug)?,
+            numerical_replay_events: match fields.optional("numerical_replay_events") {
+                None => None,
+                Some(value) => Some(
+                    usize::try_from(value.as_u64().ok_or(
+                        "credibility promotion numerical replay events must be an unsigned integer",
+                    )?)
+                    .map_err(debug)?,
+                ),
+            },
+            authority: fields.text("authority")?,
+        };
+        fields.end()?;
+        selected.validate()?;
+        Ok(selected)
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.queries == 0
+            || self.queries > MAX_CREDIBILITY_PROMOTION_QUERIES
+            || self.max_replay_events == 0
+            || self.max_replay_events > MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS
+            || self
+                .numerical_replay_events
+                .is_some_and(|events| events == 0 || events > self.max_replay_events)
+            || self.authority != "promote_qualified_credibility"
+        {
+            return Err("credibility promotion requires explicit joint-qualified-credibility authority and bounded queries and replay".into());
         }
         Ok(())
     }
@@ -794,6 +846,10 @@ impl Settings {
                 None | Some(Json::Null) => None,
                 Some(value) => Some(PolicyPromotionSettings::decode(value)?),
             },
+            credibility_promotion: match fields.optional("credibility_promotion") {
+                None | Some(Json::Null) => None,
+                Some(value) => Some(CredibilityPromotionSettings::decode(value)?),
+            },
         };
         fields.end()?;
         settings.validate()?;
@@ -864,7 +920,8 @@ impl Settings {
                 && self.fence.is_none()
                 && self.review_explanation.is_none()
                 && self.policy_replay.is_none()
-                && self.policy_promotion.is_none())
+                && self.policy_promotion.is_none()
+                && self.credibility_promotion.is_none())
         {
             return Err("operator service work or lifetime limit is out of range".into());
         }
@@ -899,6 +956,9 @@ impl Settings {
             selected.validate()?;
         }
         if let Some(selected) = &self.policy_promotion {
+            selected.validate()?;
+        }
+        if let Some(selected) = &self.credibility_promotion {
             selected.validate()?;
         }
         if let Some(selected) = &self.journal_tail {
@@ -993,6 +1053,15 @@ impl Settings {
                 "numerical policy promotion requires a separately selected governor"
                     .into(),
             );
+        }
+        if self
+            .credibility_promotion
+            .as_ref()
+            .is_some_and(|selected| selected.numerical_replay_events.is_none())
+        {
+            return Err(format!(
+                "{profile} credibility promotion requires an explicit numerical replay budget"
+            ));
         }
         // Convening spends its separate successor allowance, not numerical
         // replay. Learned service admission additionally requires an original

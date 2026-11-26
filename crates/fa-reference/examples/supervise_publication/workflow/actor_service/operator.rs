@@ -14,7 +14,8 @@ use fa_reference::action::consequence::delivery::persistent::observed::governanc
 use fa_reference::action::consequence::delivery::persistent::requests::actor::{
     FileActorSupervisor, FileGeneratedTextActorPort, FileLearnedTextStreamActorPort,
     FileRequestHistoryDisclosure, FileSupervisorAbandonmentGrant, FileSupervisorCancellationGrant,
-    FileSupervisorConveneGrant, FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
+    FileSupervisorConveneGrant, FileSupervisorCredibilityPromotionGrant,
+    FileSupervisorExplanationGrant, FileSupervisorFenceGrant,
     FileSupervisorGovernanceLedgerGrant,
     FileSupervisorHoldDiagnosisGrant, FileSupervisorInspectionGrant,
     FileSupervisorJournalTailGrant, FileSupervisorNarrowGrant, FileSupervisorPolicyPromotionGrant,
@@ -52,6 +53,7 @@ struct Active {
     review_explanation: Option<FileSupervisorReviewExplanationGrant>,
     policy_replay: Option<FileSupervisorPolicyReplayGrant>,
     policy_promotion: Option<FileSupervisorPolicyPromotionGrant>,
+    credibility_promotion: Option<FileSupervisorCredibilityPromotionGrant>,
     promotion_settings: Option<profile::PolicyPromotionSettings>,
 }
 
@@ -100,6 +102,7 @@ impl Service {
                     || settings.narrowing.is_some()
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
+            || settings.credibility_promotion.is_some()
                 {
                     PublicationTower::new_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -160,6 +163,7 @@ impl Service {
                     || settings.narrowing.is_some()
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
+                    || settings.credibility_promotion.is_some()
                 {
                     PublicationTower::new_learned_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -228,6 +232,7 @@ impl Service {
                     || settings.narrowing.is_some()
                     || settings.convening.is_some()
                     || settings.policy_promotion.is_some()
+                    || settings.credibility_promotion.is_some()
                 {
                     PublicationTower::new_generated_control_operator(mount, port, limits)
                 } else if settings.resolution.is_some() {
@@ -313,6 +318,26 @@ impl Service {
                 .governance_ledger_port(selected.queries)
                 .map_err(debug)?;
             tower.set_governance_ledger(Some(port)).map_err(debug)?;
+            Some(custodian)
+        } else {
+            None
+        };
+        let credibility_promotion = if let Some(selected) = &settings.credibility_promotion {
+            let (port, custodian) = match selected.numerical_replay_events {
+                Some(events) => driver
+                    .supervisor()
+                    .credibility_promotion_port_with_numerical_budget(
+                        selected.queries,
+                        selected.max_replay_events,
+                        events,
+                    ),
+                None => driver.supervisor().credibility_promotion_port(
+                    selected.queries,
+                    selected.max_replay_events,
+                ),
+            }
+            .map_err(debug)?;
+            tower.set_credibility_promotion(Some(port)).map_err(debug)?;
             Some(custodian)
         } else {
             None
@@ -500,6 +525,7 @@ impl Service {
             || convening.is_some()
             || fence.is_some()
             || settings.policy_promotion.is_some()
+                    || settings.credibility_promotion.is_some()
         {
             purposes.push(PurposeTag::Permit);
         }
@@ -548,6 +574,7 @@ impl Service {
                 review_explanation,
                 policy_replay,
                 policy_promotion: None,
+                credibility_promotion,
                 promotion_settings: settings.policy_promotion.clone(),
             }),
             started,
@@ -762,7 +789,7 @@ impl Service {
         active.session.revoke();
         self.retirement = Some(reason);
         eprintln!(
-            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; governance_ledger_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}",
+            "Tower operator ingress retired: {reason:?}; candidates={}; frames={}; inspection_queries={:?}; journal_tail_queries={:?}; governance_ledger_queries={:?}; request_history_queries={:?}; explanation_queries={:?}; explanation_numerical_replay_events={:?}; hold_diagnosis_queries={:?}; resolution_work={:?}; cancellation_work={:?}; abandonment_work={:?}; narrowing_work={:?}; convening_work={:?}; fence_work={:?}; review_explanation_queries={:?}; numerical_replay_events={:?}; policy_replay_queries={:?}; credibility_promotion_work={:?}",
             self.candidates,
             self.frames,
             active
@@ -831,7 +858,12 @@ impl Service {
             active
                 .policy_replay
                 .as_ref()
-                .map(FileSupervisorPolicyReplayGrant::remaining_queries)
+                .map(FileSupervisorPolicyReplayGrant::remaining_queries),
+            active.credibility_promotion.as_ref().map(|grant| (
+                grant.remaining_queries(),
+                grant.remaining_operations(),
+                grant.remaining_numerical_replay_events(),
+            ))
         );
         // Dropping the only custodians revokes all their weak ports/cursors.
         // BoundSocket removes only this invocation's original socket inode.

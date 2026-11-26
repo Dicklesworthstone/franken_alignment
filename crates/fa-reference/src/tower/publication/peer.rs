@@ -13,7 +13,8 @@ use super::PublicationTower;
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::FileOversight;
 use crate::action::consequence::delivery::persistent::requests::actor::{
-    FileActorPort, FileActorPrecheckPort, FileSupervisorPolicyPromotionPort,
+    FileActorPort, FileActorPrecheckPort, FileSupervisorCredibilityPromotionPort,
+    FileSupervisorPolicyPromotionPort,
 };
 use crate::action::consequence::oversight::actor::{ActorError, ActorProposal};
 use crate::action::consequence::oversight::actor_peer::{
@@ -138,6 +139,21 @@ impl PublicationPeerSession {
         }
         self.tower
             .set_policy_promotion(port)
+            .map_err(|_| Error::Binding)
+    }
+
+    /// Host-only installation of independently granted helper-weight promotion.
+    /// The original-owner check and revoked-session boundary are unchanged;
+    /// pending responses, connection counts and work allowances stay retained.
+    pub fn set_credibility_promotion(
+        &mut self,
+        port: Option<FileSupervisorCredibilityPromotionPort>,
+    ) -> Result<(), Error> {
+        if self.revoked {
+            return Err(Error::WrongState);
+        }
+        self.tower
+            .set_credibility_promotion(port)
             .map_err(|_| Error::Binding)
     }
 

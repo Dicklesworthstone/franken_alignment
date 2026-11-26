@@ -226,9 +226,9 @@ fn complete_grant_selection_reports_original_finite_limits_without_spending_any(
     let state = supervisor.host().unwrap().inspect();
     for _ in 0..3 {
         let response = discover(&mut facade);
-        assert_eq!(linked(&response).entries().len(), 15);
+        assert_eq!(linked(&response).entries().len(), Kind::ALL.len());
         for kind in Kind::ALL {
-            if kind == Kind::PolicyPromotion {
+            if matches!(kind, Kind::PolicyPromotion | Kind::CredibilityPromotion) {
                 assert!(!entry(&response, kind).configured());
                 continue;
             }

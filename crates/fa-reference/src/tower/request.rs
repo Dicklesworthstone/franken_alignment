@@ -10,6 +10,8 @@ use std::fmt::{self, Write};
 #[cfg(unix)]
 pub(super) mod convening;
 #[cfg(unix)]
+pub(super) mod credibility_promotion;
+#[cfg(unix)]
 pub(super) mod fence;
 #[cfg(unix)]
 pub(super) mod narrowing;
@@ -238,6 +240,15 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         }
         #[cfg(unix)]
         Verb::Next if args.contains_key("operation") => {
+            if args.contains_key("kind") {
+                fields(args, &["kind", "operation"])?;
+                if text(args, "kind")? != "credibility_promotion" {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::CredibilityPromotionNext {
+                    operation: decimal(args, "operation")?,
+                });
+            }
             if args.contains_key("action") {
                 if text(args, "action")? == "promote_policy" {
                     fields(args, &["action", "campaign", "operation"])?;
@@ -310,6 +321,16 @@ fn decode_arguments(verb: Verb, value: &Json) -> DecodeResult<ReadArguments> {
         }
         #[cfg(unix)]
         Verb::Promote => {
+            if args.contains_key("kind") {
+                fields(args, &["kind", "operation", "expected"])?;
+                if text(args, "kind")? != "credibility_promotion" {
+                    return Err(TowerDecodingError::MalformedRequest);
+                }
+                return Ok(ReadArguments::PromoteCredibility {
+                    operation: decimal(args, "operation")?,
+                    expected: credibility_promotion::decode_basis(field(args, "expected")?)?,
+                });
+            }
             fields(args, &["operation", "expected"])?;
             Ok(ReadArguments::Promote {
                 operation: decimal(args, "operation")?,
@@ -515,6 +536,40 @@ fn validate_request(request: &TowerRequest) -> DecodeResult<()> {
                     .idempotency_key
                     .as_ref()
                     .is_some_and(|key| key != &operation.to_string())
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (Verb::Next, ReadArguments::CredibilityPromotionNext { operation }) => {
+            if *operation == 0
+                || request
+                    .idempotency_key
+                    .as_ref()
+                    .is_some_and(|key| key != &operation.to_string())
+                || request.address.kind != crate::address_resolver::Noun::Run
+            {
+                return Err(TowerDecodingError::MalformedRequest);
+            }
+        }
+        #[cfg(unix)]
+        (
+            Verb::Promote,
+            ReadArguments::PromoteCredibility {
+                operation,
+                expected,
+            },
+        ) => {
+            credibility_promotion::validate_expected(*expected)?;
+            if *operation == 0
+                || request.idempotency_key.as_deref() != Some(operation.to_string().as_str())
+                || request
+                    .address
+                    .generation
+                    .is_none_or(|generation| generation == 0)
+                || request.address.kind != crate::address_resolver::Noun::Run
+                || request.address.tenant != expected.scope.tenant.to_string()
+                || request.address.id != expected.scope.run.to_string()
             {
                 return Err(TowerDecodingError::MalformedRequest);
             }
@@ -1014,6 +1069,20 @@ fn encode_arguments(arguments: &ReadArguments) -> String {
                 "retained_targets",
                 narrowing::encode_targets(retained_targets),
             ),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::CredibilityPromotionNext { operation } => object_json(&[
+            ("kind", quote("credibility_promotion")),
+            ("operation", quote(&operation.to_string())),
+        ]),
+        #[cfg(unix)]
+        ReadArguments::PromoteCredibility {
+            operation,
+            expected,
+        } => object_json(&[
+            ("kind", quote("credibility_promotion")),
+            ("operation", quote(&operation.to_string())),
+            ("expected", credibility_promotion::encode_basis(*expected)),
         ]),
         #[cfg(unix)]
         ReadArguments::PolicyPromotionNext {

@@ -1,5 +1,47 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: promote independently qualified helper weights through the live operator
+
+The original running publication owner now exposes its finite credibility
+promotion grant through the existing Tower Next/Promote verbs. The closed
+credibility_promotion request kind selects the original independent marginal
+and joint weight qualification. A separately selected operator profile retains
+the noncloneable custodian while the original evaluator supplies later labels;
+neither operator requests nor responses can provide labels, weights or effect
+keys. Omission preserves existing profiles.
+
+Control-mount, operator/Permit purpose, original-owner identity, exact audience
+and registration checks precede native entry. The complete cancellation receipt
+is reserved before mutation: an explicit 64 KiB response allowance supports the
+bounded positive path; the unchanged 16 KiB default refuses without spending
+the operation or changing the journal. Capability discovery reports the original
+grant without consuming it. Existing peer-session installation preserves session
+identity, pending replies and finite transport counters.
+
+The explicit authenticated document client validates the full request, original
+response audience, action predecessor, exact receipt increments, policy/time
+preservation and bounded cancellation/refund fields. It sends only selected
+documents and halts on a malformed or foreign reply without following an action
+or retrying. A native acknowledged change remains possible after a lost response.
+
+Five Tower and eight live service/client regression definitions cover genuine
+native qualification, labels arriving during the same service lifetime,
+marginal/joint counterexamples, response-capacity nonentry then success, stale
+cuts, role/mount/owner refusals, exact retry and causal reply mutations. Together
+with the native increment there are 24 added regression definitions and five
+compile-fail authority examples. Fixture verdicts test enforcement, not empirical
+helper performance.
+
+Independent source reviews and scoped whitespace checks passed. Tree-sitter
+Rust parsing accepted all 28 changed Rust files without syntax errors. The
+eleven Tower-owned files also passed scoped rustfmt parsing/formatting with the
+available 2026-08-30 formatter before its host restarted; the remaining formatting
+gate is open. No compilation, runtime tests or Clippy ran: the required
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` could not
+start because `rch` was absent (exit 127). Source parsing and committed-content
+checks do not establish type checking or execution. FA-105/134 and their
+existing acceptance remain open. See the [live workflow and exact profile](docs/LIVE_CREDIBILITY_PROMOTION.md).
+
 ## 2026-11-25: delegate one original jointly qualified helper-weight promotion
 
 The native supervisor can now provision a separate finite helper-weight

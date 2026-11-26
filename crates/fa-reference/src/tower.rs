@@ -278,6 +278,19 @@ pub enum ReadArguments {
         operation: u64,
         expected: crate::action::consequence::delivery::persistent::requests::actor::FilePolicyPromotionBasis,
     },
+    /// Inspect one independently granted original helper-weight promotion.
+    /// The native owner evaluates the complete current calibration cut.
+    #[cfg(unix)]
+    CredibilityPromotionNext {
+        operation: u64,
+    },
+    /// Apply the qualified current helper weights under the original grant.
+    /// Request data supplies neither credibility weights nor evaluator labels.
+    #[cfg(unix)]
+    PromoteCredibility {
+        operation: u64,
+        expected: crate::action::consequence::delivery::persistent::requests::actor::FileCredibilityPromotionBasis,
+    },
     /// Permanently stop admission in one original native domain. This carries
     /// data only; an independently retained supervisor grant owns the mutation.
     #[cfg(unix)]
@@ -717,6 +730,8 @@ impl ReferenceTower {
                 | (Verb::Narrow, ReadArguments::Narrow { .. })
                 | (Verb::Next, ReadArguments::PolicyPromotionNext { .. })
                 | (Verb::Promote, ReadArguments::Promote { .. })
+                | (Verb::Next, ReadArguments::CredibilityPromotionNext { .. })
+                | (Verb::Promote, ReadArguments::PromoteCredibility { .. })
         ) {
             // Original disposition and authority narrowing require the live
             // owner and separate control grants. Imported history supplies neither.

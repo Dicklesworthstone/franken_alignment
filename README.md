@@ -29,6 +29,16 @@ RCH_REQUIRE_REMOTE=1 rch exec --base HEAD --clean-overlay --no-overlay -- cargo 
 
 The reference now binds explicit tokenizer, policy and model epochs to the entire helper input and tests independent stream-prefix/closure obligations through public APIs. The [373-test execution receipt](artifacts/execution/2026-09-08-input-frontier-receipt.json) records the bounded result and its authentication and performance limits.
 
+A separate [live helper-weight promotion capability](docs/LIVE_CREDIBILITY_PROMOTION.md)
+connects original independent labels to an explicit weight transition on the same
+running publication owner. Both original marginal qualification and the immutable
+joint replay policy must qualify. Finite supervisor custody, an exact native
+predecessor and one entered mutation preserve charged/Unknown effects and require
+fresh helper/human review for later publication. The authenticated operator uses
+the existing `next` / `promote` verbs; neither labels nor weights come from its
+request. Native, Tower and live service/client regression definitions accompany
+the implementation; required remote execution qualification remains pending.
+
 The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
 with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
 for evaluation only. Fixed sixteen-case pages retain original case identities,

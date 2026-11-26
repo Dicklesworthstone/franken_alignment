@@ -4,6 +4,8 @@
 mod abandonment;
 #[path = "tests/cancellation.rs"]
 mod cancellation;
+#[path = "tests/credibility_promotion.rs"]
+mod credibility_promotion;
 #[path = "tests/fence.rs"]
 mod fence;
 #[path = "tests/governance_ledger.rs"]
