@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26: register original Andon windows without replacing the live owner
+
+- Delegate one independently selected immutable accounting window through finite
+  original supervisor custody, with complete owner and expected-budget assertions.
+- Preserve the original evaluator so a benign assessment blocked by a missing
+  occurrence window can succeed after registration on the same running owner.
+- Reuse the durable native transition, exact no-op and original source/numerical
+  admission; preserve authority, charged costs and incident-opening provenance.
+- Add fifteen native regression definitions for useful label recovery, exact
+  guarded reopen, finite work, source failure, numerical gates and refusal paths.
+  All fifteen passed on the combined source using standard LLVM nightly; scoped
+  formatting passed. Canonical and remote RCH qualification remain open.
+
 ## 2026-11-26: compose learned topology custody with independent Andon evaluation
 
 - Install the original learned recipe, topology, marginal or joint evaluator,

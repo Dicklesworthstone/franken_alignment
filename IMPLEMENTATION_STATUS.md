@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: finite original Andon window registration
+
+An independently retained supervisor can now delegate one exact immutable
+`AndonBudget` to its original live file-backed owner. The weak port observes the
+complete owner cut and supplies an explicit request bound to that predecessor
+and the independently provisioned budget. A request from another grant cannot
+substitute a different window, even on the same unchanged owner.
+
+Registration reuses the original journal transition and accounting binding. A
+new window advances only the journal revision; an exact existing-window no-op
+requires no event, numerical replay or actor-snapshot withdrawal. The original
+evaluator remains live, allowing the same benign assessment to succeed after
+its missing occurrence window is supplied. Existing prices, limits, charges,
+incidents, effect rights and clock observations are preserved.
+
+One noncloneable custodian owns cumulative planning queries, one entered
+operation and optional explicit numerical replay funding. Stale predecessors,
+substituted budgets and original pre-entry source/admission refusals preserve
+the operation; entered failure and unwind do not refund it. Exact guarded
+recovery requires the extended independently retained window inventory and
+does not recreate the old evaluator or registration custody.
+
+Fifteen public regression definitions exercise useful delayed-label recovery,
+complete cut and budget fidelity, source repair, exact no-ops, numerical work,
+capacity, storage failure and guarded recovery. All fifteen passed on the combined
+source at `b0866b44` plus this capability, using standard LLVM
+`nightly-2026-09-08`. Scoped Rust formatting passed. Canonical source-snapshot
+and remote RCH qualification remain open. This implements the native finite
+capability for FA-105 and the existing credibility-ledger contract; it does not
+close incidents or declare complete native risk-theater histories. See the
+[registration contract](docs/LIVE_ANDON_WINDOW_REGISTRATION.md).
+
 ## 2026-11-26: original learned topology and Andon composition
 
 Learned publication can now retain topology enforcement, independent evaluation

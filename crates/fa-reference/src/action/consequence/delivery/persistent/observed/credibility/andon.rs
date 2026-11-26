@@ -51,6 +51,28 @@ impl FileAndonConfig {
 }
 
 impl FileOversight {
+    /// Read-only original admission for one independently selected new window.
+    /// Exact existing-window retries use their original no-event fast path.
+    pub(in crate::action::consequence::delivery::persistent) fn andon_window_admission(
+        &self,
+        budget: AndonBudget,
+    ) -> Result<(), JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        let event = Event::Credibility(CredibilityEvent::AndonWindow(budget));
+        // Match the ORIGINAL host gate before any replay, work reservation or
+        // actor-snapshot withdrawal. Machine-only admission cannot observe a
+        // caught/failed source acquisition owned by this live FileOversight.
+        self.check_source_admission(&event)?;
+        if self.events.len() >= self.profile.delivery.limits.events {
+            return Err(Error::Limit.into());
+        }
+        self.machine
+            .andon_window_admission(budget)
+            .map_err(Into::into)
+    }
+
     /// Activate before any proposal/request/review. The original transaction
     /// publishes the enable event BEFORE returning a binding. Exact retries do
     /// not write; changed bootstrap inputs cannot replace or reset accounting.

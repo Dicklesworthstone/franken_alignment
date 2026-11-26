@@ -21,6 +21,18 @@ pub(super) struct CredibilityState {
 }
 
 impl Machine {
+    /// Preserve the original source, predictor and decoder gates without
+    /// replaying history or mutating a candidate merely to display a plan.
+    pub(in super::super) fn andon_window_admission(
+        &self,
+        budget: crate::round::review::andon::AndonBudget,
+    ) -> Result<(), Error> {
+        let event = super::super::Event::Credibility(CredibilityEvent::AndonWindow(budget));
+        self.check_generated_text_origin(&event)?;
+        self.check_consistency_route(&event)?;
+        self.check_decoder_admission(&event)
+    }
+
     pub(in super::super) fn andon_contract(&self) -> Option<&FileAndonConfig> {
         self.credibility
             .as_ref()
