@@ -1039,3 +1039,97 @@ fn original_stop_retires_partial_late_evaluation_and_preserves_the_exact_source_
     );
     assert_eq!(original.pair.read(), saved);
 }
+
+#[test]
+fn evaluator_bind_failure_retains_only_an_acknowledged_creation_cut() {
+    let root = Root::new();
+    let (config, recipe, loaded) = topology_fixture::selected(&root, None, false);
+    let pair = Archives::first(&root);
+    let accounting = accounting_file(&root);
+    let actor = peers::actor_profile(&root, &config, loaded.request);
+    let peer = peer_file(
+        &root,
+        &actor,
+        std::process::id().checked_add(100_000).unwrap(),
+    );
+    let endpoint = root.0.join("evaluator.sock");
+    let create_profile = root.0.join("create-topology.json");
+    let call = Invocation {
+        recipe: &recipe,
+        loaded: &loaded,
+        accounting: &accounting,
+        topology: &create_profile,
+        input: None,
+        output: &pair,
+        mode: &[],
+        round: 1,
+        decision: ReviewDecision::Approve,
+        evaluator_mode: "assess",
+    };
+    let args = arguments(&root, &config, &actor, &peer, &call);
+
+    // A conflict present during preflight cannot manufacture an initial cut.
+    fs::write(&endpoint, b"other owner").unwrap();
+    let error = command_with_clock(&args, None, crate::workflow::clock).unwrap_err();
+    assert!(
+        error.contains("evaluator socket path already exists"),
+        "{error}"
+    );
+    assert!(!config.store.join("delivery.bin").exists());
+    assert!(!pair.history.exists() && !pair.source.exists());
+    fs::remove_file(&endpoint).unwrap();
+
+    // Occupy the same path after preflight, during topology document intake.
+    // The created owner and its original source already exist at evaluator bind.
+    let mut occupied = false;
+    let error = command_with_clock(&args, None, || {
+        if !occupied && actor.socket.exists() {
+            fs::write(&endpoint, b"other owner").unwrap();
+            occupied = true;
+        }
+        crate::workflow::clock()
+    })
+    .unwrap_err();
+    assert!(
+        occupied && error.contains("evaluator socket path already exists"),
+        "{error}"
+    );
+    assert_eq!(fs::read(&endpoint).unwrap(), b"other owner");
+    assert!(!actor.socket.exists());
+    let saved = pair.read();
+    let snapshot = FileOversight::read_publication_with_learned_generation(
+        &config.store,
+        &config.profile,
+        &loaded.generation,
+    )
+    .unwrap();
+    assert_eq!(saved.minimum().journal_revision, snapshot.revision);
+    assert_eq!(
+        saved.minimum().authority_epoch,
+        snapshot.control.ledger.epoch
+    );
+    assert_eq!(snapshot.executions, 0);
+    assert_eq!(snapshot.control.ledger.charged, 0);
+    assert!(snapshot.stop.is_none());
+
+    // The original cut supports genuine anchored continuation. A fresh actor,
+    // independent evaluator and human each participate in its first release.
+    fs::remove_file(&endpoint).unwrap();
+    next_source(&root, 2);
+    let resumed = Archives::named(&root, "first-release");
+    let source = topology_profile(&root, &pair, Some(&resumed), 2, "resume-first");
+    let delivered = run_command(
+        &root,
+        &config,
+        Invocation {
+            topology: &source,
+            input: Some(&pair),
+            output: &resumed,
+            mode: &["--continue-generation"],
+            ..call
+        },
+    );
+    assert_eq!(delivered.snapshot.executions, 1);
+    assert_eq!(delivered.snapshot.payload, b"A");
+    assert!(resumed.read().last_operation() > saved.last_operation());
+}

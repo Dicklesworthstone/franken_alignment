@@ -1,5 +1,18 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26 · Acknowledged creation survives evaluator startup failure
+
+The learned service captures its first acknowledged journal image and any
+selected topology checkpoint before it transfers the owner to its gateway.
+A listener setup failure can therefore export the requested archives with
+the same journal revision and source expenditure. An operator can correct
+the listener conflict and resume from that pair with fresh review.
+
+The regression exercises an occupied evaluator path both before owner creation
+and after source binding. It checks zero initial executions and charges,
+preservation of the existing endpoint, and anchored continuation to the first
+approved Message. Compilation and runtime qualification require RCH.
+
 ## 2026-11-26 · Topology and independent evaluation across a resident learned sequence
 
 The resident learned service can now keep the original topology source and

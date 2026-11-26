@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-26 · Recover an acknowledged learned-service creation after startup failure
+
+- Retain the selected history and topology checkpoints when listener setup
+  fails after the first durable image and source binding. An operator can
+  continue generation from that pair after correcting the endpoint conflict.
+
 ## 2026-11-26 · Resident learned topology and independent evaluation
 
 - `serve-learned-generated` accepts a topology profile alongside the independent

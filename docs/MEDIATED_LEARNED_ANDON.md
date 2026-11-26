@@ -132,6 +132,13 @@ The Andon profile may be marginal `/1` or explicit joint `/2`; a joint policy
 is installed in the original first image, separately from the topology graph.
 A recipe-owned held-out publication policy still requires its own composition.
 
+If a service listener fails after the first image was acknowledged and its
+topology source was bound, creation reports the error and attempts to retain
+the selected history and source checkpoints. After correcting the listener
+conflict, use that pair with `--continue-generation`, a continuation topology
+profile and two new output paths. An earlier refusal during preflight produces
+no recovery pair.
+
 The original source is attached to the same supervised driver and certified
 before generation or request work. The original cut checks remain required
 through review and publication. Independent evaluation runs only under the

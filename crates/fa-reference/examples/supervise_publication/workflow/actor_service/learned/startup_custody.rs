@@ -108,12 +108,19 @@ impl<'a> Captured<'a> {
         output: Option<&'a Output>,
     ) -> Result<Self, String> {
         let mut captured = Self { history: None, source: None };
-        let Some(previous) = loaded.recovery_anchor.as_ref().filter(|_| continuing) else {
+        // Unanchored legacy recovery has no independently selected predecessor.
+        // Creation can capture its own acknowledged first image before custody
+        // moves into the gateway and the fallible service listeners are bound.
+        if continuing && loaded.recovery_anchor.is_none() {
             return Ok(captured);
-        };
+        }
         let mut failures = Vec::new();
         if let Some(path) = loaded.anchor_output.as_deref() {
-            match host.history_anchor_after(previous) {
+            let anchor = match loaded.recovery_anchor.as_ref() {
+                Some(previous) => host.history_anchor_after(previous),
+                None => host.history_anchor(),
+            };
+            match anchor {
                 Ok(anchor) => captured.history = Some((path, anchor)),
                 Err(error) => failures.push(format!("acknowledged recovery history capture failed: {}", debug(error))),
             }
