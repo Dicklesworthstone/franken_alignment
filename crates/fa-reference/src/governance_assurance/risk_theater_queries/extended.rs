@@ -10,7 +10,7 @@
 
 use super::{
     FamilyEvaluation, HistoryFact, HistoryRecord, QueryError, QueryFinding, find_record,
-    resolve_assessment_chain, validate_address, validate_family,
+    resolve_assessment_chain, validate_address, validate_family, MAX_QUERY_RECORDS,
 };
 use crate::action::consequence::Consequence;
 use crate::address_resolver::{Address, Noun};
@@ -183,6 +183,74 @@ pub enum CoverageFact {
     },
 }
 
+/// Derived identities of an opening already validated at an accepted source
+/// boundary, not another source or permission. Retractions cannot move that
+/// opening to a later confirmation. Replaying the original source history
+/// reconstructs these bindings without any external cache or native claim.
+///
+/// There are at most MAX_QUERY_RECORDS incident bindings, each containing at
+/// most MAX_QUERY_RECORDS distinct source addresses. These are existing lifetime
+/// source identities; retiring a record cannot allocate a new identity here.
+#[derive(Clone, Debug, Default)]
+pub(super) struct AndonOpeningProvenance {
+    bindings: BTreeMap<Address, OpeningSupport>,
+}
+
+#[derive(Clone, Debug)]
+struct OpeningSupport {
+    window: Address,
+    opened_by: Address,
+    sources: BTreeSet<Address>,
+}
+
+impl AndonOpeningProvenance {
+    fn missing_sources(
+        &self,
+        incident: &Address,
+        window: &Address,
+        opened_by: &Address,
+        records: &[HistoryRecord],
+    ) -> Result<bool, QueryError> {
+        let Some(original) = self.bindings.get(incident) else {
+            return Ok(false);
+        };
+        if &original.window != window || &original.opened_by != opened_by {
+            return Err(QueryError::InvalidReference);
+        }
+        Ok(original.sources.iter().any(|address| find_record(records, address).is_none()))
+    }
+
+    fn retain(
+        &mut self,
+        incident: &Address,
+        window: &Address,
+        opened_by: &Address,
+        prefix: &[&HistoryRecord],
+    ) -> Result<(), QueryError> {
+        if self.bindings.contains_key(incident) {
+            return Ok(());
+        }
+        if self.bindings.len() >= MAX_QUERY_RECORDS {
+            return Err(QueryError::ResourceLimit);
+        }
+        let mut sources = BTreeSet::from([window.clone()]);
+        for confirmation in prefix {
+            let HistoryFact::Andon(AndonFact::FalseStop { round, .. }) = &confirmation.fact else {
+                return Err(QueryError::InvalidReference);
+            };
+            sources.insert(confirmation.address.clone());
+            sources.insert(round.clone());
+        }
+        if sources.len() > MAX_QUERY_RECORDS {
+            return Err(QueryError::ResourceLimit);
+        }
+        self.bindings.insert(incident.clone(), OpeningSupport {
+            window: window.clone(), opened_by: opened_by.clone(), sources,
+        });
+        Ok(())
+    }
+}
+
 pub(super) fn validate_policy(policy: &ExtendedQueryPolicy) -> Result<(), QueryError> {
     for rate in [policy.minimum_continue_increase, policy.minimum_canary_escape] {
         if rate.numerator == 0 || rate.denominator == 0 || rate.numerator > rate.denominator {
@@ -325,10 +393,11 @@ pub(super) fn evaluate(
     records: &[HistoryRecord],
     _frontier: u64,
     evaluation_owner: &Address,
+    andon_openings: &mut AndonOpeningProvenance,
 ) -> Result<Vec<FamilyEvaluation>, QueryError> {
     Ok(vec![
         consequence_drift(policy, records, evaluation_owner)?,
-        andon_closures(policy, records, evaluation_owner)?,
+        andon_closures(policy, records, evaluation_owner, andon_openings)?,
         coverage_erosion(records)?,
     ])
 }
@@ -533,6 +602,7 @@ fn andon_closures(
     policy: &ExtendedQueryPolicy,
     records: &[HistoryRecord],
     evaluation_owner: &Address,
+    openings: &mut AndonOpeningProvenance,
 ) -> Result<FamilyEvaluation, QueryError> {
     let family = RiskTheaterFamily::AndonClosureMode;
     let windows: Vec<_> = records.iter().filter(|record| matches!(
@@ -596,6 +666,7 @@ fn andon_closures(
     // selects it. An orphan reference is incomplete; an observed contradiction
     // is refused instead of being hidden by a still-open/missing disposition.
     let mut closures = BTreeSet::new();
+    let mut dispositions = BTreeMap::<Address, Vec<_>>::new();
     for record in records {
         match &record.fact {
             HistoryFact::Andon(AndonFact::Incident { window, opened_by }) => {
@@ -617,6 +688,7 @@ fn andon_closures(
                 }
             }
             HistoryFact::Andon(AndonFact::Disposition { incident, state }) => {
+                dispositions.entry(incident.clone()).or_default().push((record, state));
                 match find_record(records, incident) {
                     Some(selected) if matches!(&selected.fact, HistoryFact::Andon(AndonFact::Incident { .. }))
                         && selected.occurred_at <= record.occurred_at => {}
@@ -665,6 +737,23 @@ fn andon_closures(
             _ => {}
         }
     }
+    // An unavailable prerequisite cannot conceal an observed reopening or
+    // conflicting same-boundary dispositions. Check every retained chain before
+    // any per-window incompleteness shortcut, including orphan source views.
+    for chain in dispositions.values_mut() {
+        chain.sort_by_key(|(record, _)| record.occurred_at);
+        let mut previous: Option<(u64, &IncidentDisposition)> = None;
+        for (record, state) in chain.iter() {
+            if let Some((sequence, prior)) = previous {
+                if (sequence == record.occurred_at && prior != *state)
+                    || (matches!(prior, IncidentDisposition::Closed { .. }) && prior != *state)
+                {
+                    return Err(QueryError::ConflictingRecord);
+                }
+            }
+            previous = Some((record.occurred_at, *state));
+        }
+    }
     let mut roster_closed = Vec::new();
     for window in windows {
         let HistoryFact::Andon(AndonFact::Window { false_stops_allowed, cost_per_stop, .. }) = &window.fact else {
@@ -706,30 +795,27 @@ fn andon_closures(
         let HistoryFact::Andon(AndonFact::Incident { opened_by, .. }) = &incident.fact else {
             unreachable!("incident selection");
         };
+        let Some(original_opening) = find_record(records, opened_by) else {
+            complete = false;
+            continue;
+        };
+        // Missing A in a formerly validated A/B prefix cannot make later C the
+        // cause of B's incident. Conversely, an observed earlier crossing is a
+        // contradiction even if another original prerequisite is unavailable.
+        if opened_by != &opening.address && opening.occurred_at <= original_opening.occurred_at {
+            return Err(QueryError::InvalidReference);
+        }
+        if openings.missing_sources(&incident.address, &window.address, opened_by, records)? {
+            complete = false;
+            continue;
+        }
         if opened_by != &opening.address || incident.occurred_at < opening.occurred_at {
             return Err(QueryError::InvalidReference);
         }
-        let mut dispositions: Vec<_> = records.iter().filter_map(|record| match &record.fact {
-            HistoryFact::Andon(AndonFact::Disposition { incident: selected, state })
-                if selected == &incident.address => Some((record, state)),
-            _ => None,
-        }).collect();
-        dispositions.sort_by_key(|(record, _)| record.occurred_at);
-        let mut previous_disposition: Option<(u64, &IncidentDisposition)> = None;
-        for (record, state) in &dispositions {
-            if record.occurred_at < incident.occurred_at {
-                return Err(QueryError::InvalidReference);
-            }
-            if let Some((sequence, previous)) = previous_disposition {
-                if (sequence == record.occurred_at && previous != *state)
-                    || (matches!(previous, IncidentDisposition::Closed { .. }) && previous != *state)
-                {
-                    return Err(QueryError::ConflictingRecord);
-                }
-            }
-            previous_disposition = Some((record.occurred_at, *state));
-        }
-        let Some((disposition, state)) = dispositions.last() else {
+        // Capture the strict prefix before any closure-mode filtering: known
+        // open and evidence/policy-closed incidents need the same provenance.
+        openings.retain(&incident.address, &window.address, opened_by, &stops[..=crossing_index])?;
+        let Some((disposition, state)) = dispositions.get(&incident.address).and_then(|chain| chain.last()) else {
             complete = false;
             continue;
         };

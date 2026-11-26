@@ -136,6 +136,24 @@ assessments and closure chain remain in the support of each threshold finding.
 Evidence or policy closure is a permitted control for this particular predicate;
 it does not by itself establish the safety of the broader system.
 
+An accepted boundary retains the exact source identities that established an
+incident's original first crossing: its budget window, threshold-prefix
+confirmations and their held rounds. Withdrawing an earlier confirmation makes
+that incident's support incomplete; later confirmations cannot replace the
+original opening. The same rule applies before closure and to incidents closed
+through evidence or policy. Restoring the exact sources restores evaluation.
+Fresh incorrect openings and any currently observed earlier crossing still
+refuse, and missing prerequisites cannot hide conflicting or reopened
+dispositions.
+
+This private, history-derived provenance is staged with the whole source
+boundary and committed only after all predicates and kernel checks succeed.
+Replaying the complete accepted source history reconstructs it; a failed boundary
+cannot install it. The existing lifetime identity limit bounds it to at most 128
+incident bindings, each naming at most 128 original prerequisite addresses.
+Withdrawn records remain absent from live evidence and finding supports. This
+adds no native source authentication, incident authority or completeness claim.
+
 ### Componentwise coverage and active predecessors
 
 Coverage states are occurrence-ordered observations. A change selects exact
@@ -192,20 +210,25 @@ semantic predicates and cannot detect an omission shared by their supplied input
 
 ## Verification boundary
 
-Fifty-five public regression functions accompany all six predicates and pair
-findings with near-identical permitted histories. Eight additional roster cases
-cover delayed independent resolution, original supports, exact retractions,
-owner/generation isolation, same-boundary ambiguity and conflicting final labels.
+The base and extended query targets contain 55 public regressions over all six
+predicates, including eight cases for delayed independent roster resolution.
+Ten additional Andon regressions cover exact prerequisite withdrawal and
+restoration, later-confirmation independence, open and non-roster incidents,
+fresh invalid openings, failed-candidate rollback, contradictory dispositions,
+accepted-history replay and restored earlier crossings.
 
-On 2026-11-25, the complete `risk_theater_queries` (26),
-`risk_theater_queries_extended` (29) and `tower_governance_findings` (4)
-integration targets passed locally on standard LLVM with
-`nightly-2026-09-08`. The frozen checkout was `d3703cfb` plus the exact
-roster-resolution changes and a registered-noun correction in the Tower test.
-Earlier attempts encountered an existing test compile error, resource-limit
-SIGKILLs and executor disconnections; those attempts were not successful gates.
-This selected execution does not qualify concurrent main changes, the complete
-workspace, native query feeds or the required remote RCH gate.
+Before the Andon repair, the first nine new cases produced five passes and four
+failures, reproducing rejected source corrections and replay. With the repair,
+all ten passed along with all 26 base-query, 29 extended-query and four Tower
+findings tests on the complete `fa-reference` crate using standard LLVM
+`nightly-2026-09-08`. The source cut was `60d6d3e1` plus the three Rust files in
+the Andon repair, including the concurrent main additions and indexed standing
+maintenance. Independent source review and whitespace checks passed.
+
+The local canonical gate previously stopped at `source_snapshot` because the
+checked-in source inventory and digests differ from current source/build inputs,
+including unrelated existing files. This focused execution does not establish
+a full workspace, Clippy, remote RCH or production qualification.
 
 FA-125 remains in progress. Native authenticated complete input feeds, governed
 query promotion, durable incident lifecycle, evaluator/governance access control,

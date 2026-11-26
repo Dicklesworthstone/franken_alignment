@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: preserve original Andon openings through exact source corrections
+
+With allowance two and confirmations A, B and C, an incident opened by B now
+accepts exact withdrawal of A as missing original support. The former query
+recomputed C as the crossing and refused the whole correction. Private opening
+provenance retains the original window, threshold-prefix confirmations and held
+rounds only after their strict crossing has passed an accepted boundary. Later
+confirmations cannot replace that history; exact restoration restores evaluation.
+
+The same law covers still-open and evidence/policy-closed incidents. Provenance
+commits atomically after all predicates and kernel checks, remains bounded by
+the existing lifetime source identities, and reconstructs by replaying accepted
+source history. Fresh incorrect openings and observed earlier crossings still
+refuse. All retained disposition chains are now checked before missing-source
+shortcuts, so a withdrawal cannot conceal a contradictory reopening.
+
+The first nine regression cases reproduced four failures before the repair.
+All ten final Andon regressions and the 26 base-query, 29 extended-query and four
+Tower findings tests passed on the complete reference crate with standard LLVM
+`nightly-2026-09-08`, using `60d6d3e1` plus this change. Independent review and
+whitespace checks passed. The 20 standing boundary and indexed-maintenance tests also passed on this same source cut, for 89 selected integration tests in total. The earlier local canonical gate
+refused the source snapshot inventory/digests; full workspace, Clippy and remote
+RCH qualification remain open. Native authenticated complete feeds and incident
+authority are not supplied by this reference change. See the
+[Andon query contract](docs/RISK_THEATER_QUERIES.md#original-andon-budgets-and-closure-history).
+
 ## 2026-11-26: update standing findings through exact tuple indexes
 
 All four registered standing queries now rebuild only finding keys affected by

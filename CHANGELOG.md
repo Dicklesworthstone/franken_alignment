@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-26: withdraw Andon findings without rewriting original openings
+
+- Retain exact, previously validated opening prerequisites so source corrections
+  withdraw dependent findings instead of moving the crossing to a later label
+  and refusing the whole update.
+- Preserve strict fresh-opening and earlier-crossing checks, including when an
+  original prerequisite is missing; validate disposition conflicts before
+  incompleteness shortcuts.
+- Stage opening provenance atomically and reconstruct it through accepted source
+  history replay, including open and evidence/policy-closed incidents.
+- Reproduce four pre-fix failures and pass all ten new regressions plus the
+  59 base, extended and Tower tests on the current combined source cut.
+  The 20 standing tests also pass on this cut: 89 selected integration tests in all.
+  Full canonical and remote RCH qualification remain outstanding.
+
 ## 2026-11-26: maintain standing findings through exact tuple indexes
 
 - Rebuild affected finding keys from each final closed batch across all four
