@@ -1,5 +1,8 @@
 //! Learned startup composes the original joint replay and native accounting.
 //! Synthetic cases test enforcement and recovery, not detector quality.
+#[path = "joint/live_promotion.rs"]
+mod live_promotion;
+
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::observed::{
     credibility::{

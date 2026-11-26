@@ -1,10 +1,10 @@
 //! Independent post-review assessment of the same original learned owner.
 //! Selection precedes work; the finite evaluator lifetime includes generation
 //! and review. A late label never reruns either or supplies an effect key.
-#[path = "evaluation/recovery.rs"]
-mod recovery;
 #[path = "evaluation/history.rs"]
 pub(super) mod history;
+#[path = "evaluation/recovery.rs"]
+mod recovery;
 use super::super::{Profile, andon_settings, evaluator};
 use super::{
     Config, Control, Deadline, ElapsedTick, FileHumanReviewer, FileOversight, FileSupervisedDriver,
@@ -54,10 +54,12 @@ fn parse_options(
     } else {
         ("create-learned-generated", USAGE)
     };
-    if !args
-        .iter()
-        .any(|arg| matches!(arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluate-only"))
-    {
+    if !args.iter().any(|arg| {
+        matches!(
+            arg.as_str(),
+            "--andon" | "--evaluator-profile" | "--evaluate-only"
+        )
+    }) {
         return Ok((args.to_vec(), None));
     }
     if credibility.is_some()
@@ -87,8 +89,10 @@ fn parse_options(
             at += 1;
             continue;
         }
-        if matches!(flag, "--continue-generation" | "--after-message" | "--finish-after-message")
-            && std::mem::replace(&mut continuing, true)
+        if matches!(
+            flag,
+            "--continue-generation" | "--after-message" | "--finish-after-message"
+        ) && std::mem::replace(&mut continuing, true)
         {
             return Err(usage.into());
         }
@@ -108,17 +112,21 @@ fn parse_options(
                 history_input = Some(PathBuf::from(value));
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--after-message" | "--finish-after-message" if !resident || flag == "--after-message" => {
+            "--after-message" | "--finish-after-message"
+                if !resident || flag == "--after-message" =>
+            {
                 let predecessor = value.parse::<u64>().map_err(|_| usage)?;
                 if predecessor == 0 || predecessor.to_string() != *value {
                     return Err(usage.into());
                 }
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
-            "--actor-profile" | "--precheck-profile" if !resident => remaining.extend_from_slice(&args[at..at + 2]),
-            "--retain-history-anchor"
-            | "--operator-profile"
-            | "--tower-generation" => remaining.extend_from_slice(&args[at..at + 2]),
+            "--actor-profile" | "--precheck-profile" if !resident => {
+                remaining.extend_from_slice(&args[at..at + 2])
+            }
+            "--retain-history-anchor" | "--operator-profile" | "--tower-generation" => {
+                remaining.extend_from_slice(&args[at..at + 2])
+            }
             _ => return Err(usage.into()),
         }
         at += 2;
@@ -191,7 +199,11 @@ impl Selection {
         selected_operator: Option<&operator::Selection>,
     ) -> Result<(), String> {
         let first = entries.first().ok_or(SEQUENCE_USAGE)?;
-        let history = first.loaded.anchor_output.as_deref().ok_or(SEQUENCE_USAGE)?;
+        let history = first
+            .loaded
+            .anchor_output
+            .as_deref()
+            .ok_or(SEQUENCE_USAGE)?;
         self.check_sequence_inputs(history, &[config.source.path()])?;
         if self.history_input.is_some() != first.loaded.recovery_anchor.is_some() {
             return Err(SEQUENCE_USAGE.into());
@@ -216,7 +228,10 @@ impl Selection {
                 || loaded.creation_campaigns.is_some()
                 || loaded.expected_campaigns.is_some()
                 || loaded.generation.required_pre_output_forecast().is_some()
-                || loaded.generation.required_owned_pre_output_forecast().is_some()
+                || loaded
+                    .generation
+                    .required_owned_pre_output_forecast()
+                    .is_some()
                 || loaded.generation.required_held_out_joint().is_some()
             {
                 return Err(SEQUENCE_USAGE.into());
@@ -229,8 +244,14 @@ impl Selection {
             }
             if let Some(publication) = &loaded.publication {
                 publication.simple_limits()?;
-                self.check_sequence_inputs(history, &publication.input_paths()
-                    .iter().map(PathBuf::as_path).collect::<Vec<_>>())?;
+                self.check_sequence_inputs(
+                    history,
+                    &publication
+                        .input_paths()
+                        .iter()
+                        .map(PathBuf::as_path)
+                        .collect::<Vec<_>>(),
+                )?;
                 inputs.extend(publication.input_paths().iter().cloned());
             }
             if let Some(identity) = &loaded.identity {
@@ -266,16 +287,38 @@ impl Selection {
         if self.history_input.is_none() {
             self.settings.creation()?;
         }
+        self.check_operator_joint(selected_operator)?;
         if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
-            || selected_operator.is_some_and(|selected| selected.settings.policy_promotion.is_some())
+            || selected_operator
+                .is_some_and(|selected| selected.settings.policy_promotion.is_some())
         {
             return Err(SEQUENCE_USAGE.into());
         }
         let requests = actors.iter().map(|actor| actor.request).collect::<Vec<_>>();
         for actor in actors {
-            self.peer.check_host(config, actor, reviewer,
-                selected_operator.map(|selected| &selected.settings), &requests,
-                self.settings.config.identity())?;
+            self.peer.check_host(
+                config,
+                actor,
+                reviewer,
+                selected_operator.map(|selected| &selected.settings),
+                &requests,
+                self.settings.config.identity(),
+            )?;
+        }
+        Ok(())
+    }
+
+    // A selected mutation grant must be installable on the original owner.
+    // Reject an incomplete profile pair before any listener, store or numerical
+    // work; late provisioning cannot retrofit the immutable joint contract.
+    fn check_operator_joint(&self, selected: Option<&operator::Selection>) -> Result<(), String> {
+        if self.settings.joint.is_none()
+            && selected.is_some_and(|selected| selected.settings.credibility_promotion.is_some())
+        {
+            return Err(
+                "learned credibility promotion requires the original joint evaluation/Andon profile"
+                    .into(),
+            );
         }
         Ok(())
     }
@@ -283,15 +326,23 @@ impl Selection {
     /// Preserve selected input names even when a file has disappeared or will
     /// be read only by a later request. Existing-ancestor resolution catches
     /// canonical aliases before any listener or retained output can claim them.
-    pub(super) fn check_sequence_inputs(&self, history: &Path, paths: &[&Path])
-        -> Result<(), String>
-    {
+    pub(super) fn check_sequence_inputs(
+        &self,
+        history: &Path,
+        paths: &[&Path],
+    ) -> Result<(), String> {
         let history = fields::resolve_root(history)?;
         let evaluator = fields::resolve_root(self.peer.socket_path())?;
-        for path in paths.iter().copied().chain(self.inputs.iter().map(PathBuf::as_path)) {
+        for path in paths
+            .iter()
+            .copied()
+            .chain(self.inputs.iter().map(PathBuf::as_path))
+        {
             let input = fields::resolve_root(path)?;
             if overlaps(&history, &input) {
-                return Err("learned evaluation history output conflicts with a selected input".into());
+                return Err(
+                    "learned evaluation history output conflicts with a selected input".into(),
+                );
             }
             if overlaps(&evaluator, &input) {
                 return Err("learned evaluator endpoint conflicts with a selected input".into());
@@ -300,13 +351,17 @@ impl Selection {
         Ok(())
     }
 
-    pub(super) fn check_history_endpoints(&self, history: &Path, endpoints: &[PathBuf])
-        -> Result<(), String>
-    {
+    pub(super) fn check_history_endpoints(
+        &self,
+        history: &Path,
+        endpoints: &[PathBuf],
+    ) -> Result<(), String> {
         let history = fields::resolve_root(history)?;
         for endpoint in endpoints {
             if overlaps(&history, &fields::resolve_root(endpoint)?) {
-                return Err("learned evaluation history output conflicts with a service endpoint".into());
+                return Err(
+                    "learned evaluation history output conflicts with a service endpoint".into(),
+                );
             }
         }
         Ok(())
@@ -319,7 +374,9 @@ impl Selection {
         endpoints: &[PathBuf],
         paths: &[PathBuf],
     ) -> Result<(), String> {
-        let endpoints = endpoints.iter().map(|path| fields::resolve_root(path))
+        let endpoints = endpoints
+            .iter()
+            .map(|path| fields::resolve_root(path))
             .collect::<Result<Vec<_>, _>>()?;
         for path in paths.iter().chain(self.inputs.iter()) {
             let input = fields::resolve_root(path)?;
@@ -345,6 +402,7 @@ impl Selection {
         credibility: Option<&Path>,
     ) -> Result<(), String> {
         let actor = actor.ok_or(USAGE)?;
+        self.check_operator_joint(services.0)?;
         if ((finishing.is_some() || after_message.is_some()) && !continuing)
             || continuing != loaded.recovery_anchor.is_some()
             || continuing != self.history_input.is_some()
@@ -417,7 +475,10 @@ impl Selection {
             endpoints.push(precheck.socket_path().to_path_buf());
         }
         self.check_history_endpoints(history, &endpoints)?;
-        let custody = custody.into_iter().map(Path::to_path_buf).collect::<Vec<_>>();
+        let custody = custody
+            .into_iter()
+            .map(Path::to_path_buf)
+            .collect::<Vec<_>>();
         self.check_sequence_endpoint_inputs(&endpoints, &custody)?;
         Ok(())
     }

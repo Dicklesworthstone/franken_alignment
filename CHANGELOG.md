@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-11-26: retain paid credibility promotion through live learned evaluation
+
+- Reject a selected credibility-promotion grant without the original joint
+  Andon policy before live learned clocks, listeners, storage or numerical work.
+- Preserve the existing joint bootstrap, exact recovery contract and resident
+  evaluator/operator ownership across request handoffs.
+- Add two live service and three numerical regression definitions for paid
+  grant discovery, independent human decisions and truth, exact promotion,
+  Unknown charges, unused refunds, fresh publication and causal budget/stale
+  refusals. Required remote compilation and execution remain pending.
+- Document complete learned command/profile selection and the authority
+  withdrawal and fresh approval requirements of subsequent publication.
+
 ## 2026-11-26: connect original Andon windows to the live operator
 
 - Add the registered L8 `register-andon-window` mutation and a bounded `next`

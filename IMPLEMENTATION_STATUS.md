@@ -1,5 +1,39 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: retain paid credibility-promotion custody on live learned owners
+
+Learned single-request and resident admission now reject a selected live
+credibility-promotion grant unless the independently supplied Andon profile
+installs the original joint policy. This refusal precedes clocks, listeners,
+authority storage and numerical work. It preserves the concurrently added
+joint bootstrap and exact anchored recovery paths, rather than attempting to
+retrofit a missing policy when the operator port is installed.
+
+Two new service regression definitions exercise an authenticated paid-grant
+Next on the original learned owner while separate human review is pending,
+followed by actual publication or rejection and later independent truth.
+The incomplete joint/profile and missing numerical-funding cases refuse before
+work. Three additional numerical regression definitions exercise actual learned
+generation, exact paid native promotion, preserved Unknown charges, refunded
+unused reservations, fresh identity and both fresh review keys before subsequent
+publication. Historical promotion retry during a newer open review preserves
+that review; missing/one-short funding and stale cuts preserve the separate
+operation and original state.
+
+The source review traced the original APIs, budget accounting, actor admission
+and review bases. All five changed Rust files passed scoped parsing and
+formatting with the available rustfmt 1.10.0-nightly (2026-08-30), using edition
+2024 and no recursive formatting. Scoped whitespace and exact content checks
+also passed. These new regression definitions have not been compiled or
+executed: the required
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because RCH is absent (exit 127), and the execution workspace
+then disconnected. Compilation, runtime tests, Clippy and canonical qualification
+remain pending. No acceptance or bead status is closed by this source work.
+The [live promotion guide](docs/LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-learned-service)
+now includes the learned command, explicit numerical allowance, complete receipt
+capacity and fresh authority required after a weight transition.
+
 ## 2026-11-26: original Andon windows through the live Tower operator
 
 The independently selected `andon_window` profile connects finite native custody

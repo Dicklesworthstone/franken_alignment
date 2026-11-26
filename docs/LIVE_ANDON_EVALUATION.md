@@ -372,8 +372,12 @@ or qualify a helper merely by being present. An independently selected
 this original joint ledger through its existing `next` / `promote` verbs.
 Learned owners require that operator's explicit `numerical_replay_events`
 allowance; its original qualification, exact predecessor and one-mutation
-limits remain in force. The separate recipe-owned held-out joint publication
-policy remains outside this evaluation contract.
+limits remain in force. Selecting this grant with a marginal-only `/1` profile
+refuses during preflight, before listener, store or numerical work. The
+[joint learned operator example](LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-learned-service)
+includes the paid replay and complete response allowances. The separate
+recipe-owned held-out joint publication policy remains outside this evaluation
+contract.
 
 Recovery binds the selected policy before numerical replay, cleanup or the
 recovery Fence. An omitted or individually changed policy field refuses without

@@ -98,8 +98,8 @@ governor. The operator's `policy_promotion` selection must include its own
 `numerical_replay_events`, and the governor must independently select Request/
 Approve work. Every actor, the operator and the human reviewer must have
 credentials disjoint from that governor. Only its original approved permit can
-populate the operator's live promotion grant. Ordinary learned/native-text
-selections continue to refuse promotion. The [live governor contract](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
+populate the operator's live policy-promotion grant. Ordinary learned/native-text
+selections without that governor continue to refuse policy-campaign promotion. The [live governor contract](LIVE_POLICY_GOVERNOR.md#govern-a-new-resident-learned-sequence)
 defines the complete composition and its unchanged two-key publication gates.
 Recovery additionally requires an independent history anchor and each recipe's
 complete current-policy/campaign expectation. Its fresh governor comes from the
@@ -111,6 +111,15 @@ Topology-selected sequences retain the original source alongside governor
 custody. Governed mediated recovery requires its exact matching v2 source/history
 pair. Promotion preserves source expenditure and cannot replace the initial
 certification or compulsory final topology refresh for any release.
+
+Separately, learned services selecting original joint Andon `/2` accounting and
+an independent evaluator can install the finite `credibility_promotion` grant.
+This delegates the existing helper-weight transition, without a campaign governor.
+The profile must explicitly fund numerical replay to enter promotion, and a
+64 KiB response allowance covers the complete bounded receipt. Single-request
+and resident learned creation and anchored continuation retain the same owner
+and evaluator; resident handoffs never replenish this grant. See the
+[joint learned selection](LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-learned-service).
 
 The socket directory must be supervisor-owned and not group/other writable.
 Admission compares the canonical path with the authority store subtree, selected

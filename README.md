@@ -39,6 +39,17 @@ the existing `next` / `promote` verbs; neither labels nor weights come from its
 request. Native, Tower and live service/client regression definitions accompany
 the implementation; required remote execution qualification remains pending.
 
+Single-request and resident learned services now accept the original joint
+Andon `/2` profile at atomic creation and throughout anchored continuation or
+evaluation-only recovery. The exact independently selected joint policy remains
+required before the recovery Fence. With a separately funded operator grant,
+those live numerical owners can apply qualified helper weights through the
+[same Next/Promote workflow](docs/LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-learned-service).
+Numerical replay, queries and the single entered promotion remain finite;
+publication after promotion requires fresh identity, source, helper review and
+human approval. New service and numerical regression definitions remain pending
+required remote compilation and execution.
+
 The independent evaluator can now [discover pending cases](docs/LIVE_ANDON_EVALUATION.md#discover-pending-cases-without-a-round-id)
 with `evaluator-case EVALUATOR_PROFILE --pending`, including histories reopened
 for evaluation only. Fixed sixteen-case pages retain original case identities,

@@ -428,7 +428,7 @@
       "idempotency": "original distinct request identity and expected predecessor; no effect retry after an ambiguous receipt",
       "cost_class": "expensive",
       "response": "Vec<WireResponse> retaining original Knowledge<ActorOutcome>",
-      "note": "bounded resident operator adapter; one original generation, forecast observer and topology custodian; no lifetime allowance refill or branch authority"
+      "note": "bounded resident operator adapter; one original generation, forecast observer and topology custodian; no lifetime allowance refill or branch authority; evaluated creation and anchored recovery can select original joint Andon /2 with an exact independently required policy and a separately funded live credibility-promotion grant retained across all entries"
     },
     {
       "verb": "compare-learned-prompt",

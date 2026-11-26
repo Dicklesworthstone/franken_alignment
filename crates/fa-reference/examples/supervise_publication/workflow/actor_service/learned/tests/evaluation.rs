@@ -1,5 +1,7 @@
 //! Real learned generation/native helper review and a separate evaluator process.
 //! Fixed weights exercise custody and two-key causality, not detector quality.
+#[path = "evaluation/live_credibility.rs"]
+mod live_credibility_tests;
 #[path = "evaluation/recovery.rs"]
 mod recovery_tests;
 use super::super::anchors as archive;
@@ -325,11 +327,26 @@ fn evaluator_process() {
 /// The same native startup and request executor run normally; only final cleanup
 /// waits until this test has inspected the original acknowledged live state.
 fn run_retained<F>(
+    config: Config,
+    loaded: &Loaded,
+    reviewer: &PeerProfile,
+    actor: &Profile,
+    selected: &evaluation::Selection,
+    time: F,
+) -> Result<RequestCycle, String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    run_retained_with_operator(config, loaded, reviewer, actor, selected, None, time)
+}
+
+fn run_retained_with_operator<F>(
     mut config: Config,
     loaded: &Loaded,
     reviewer: &PeerProfile,
     actor: &Profile,
     selected: &evaluation::Selection,
+    selected_operator: Option<&operator::Selection>,
     mut time: F,
 ) -> Result<RequestCycle, String>
 where
@@ -338,12 +355,15 @@ where
     reviewer.check_host(&config)?;
     ingress::check(&config, loaded, reviewer, actor)?;
     checked::check_selection(&config, loaded)?;
+    if let Some(operator) = selected_operator {
+        operator.check(&config, loaded, actor, reviewer, None)?;
+    }
     selected.check(
         &config,
         loaded,
         Some(actor),
         reviewer,
-        (None, None),
+        (selected_operator, None),
         false,
         None,
         None,
@@ -378,8 +398,10 @@ where
     let driver = FileSupervisedDriver::new(supervisor);
     let mut service =
         evaluator::Service::start(&selected.peer, actor, evaluator_role, &driver, &deadline)?;
+    let mut operator = selected_operator
+        .map(|selected| selected.start(actor, port.clone(), &driver, &deadline))
+        .transpose()?;
     let mut wire = ActorWire::new(port);
-    let mut operator = None;
     let mut cycle = execute_request_with_evaluation(
         driver,
         &mut config,

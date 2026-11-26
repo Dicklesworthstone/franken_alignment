@@ -230,6 +230,70 @@ operation or changing journal, weights or reservations. Next can still describe
 native qualification under that smaller allowance. Increasing output capacity
 adds no native authority, query budget or replay allowance.
 
+## Select a jointly evaluated learned service
+
+Single-request and resident learned services accept the original joint Andon
+`fa.native-andon-operator/2` profile, together with the independently
+authenticated evaluator and retained-history output. Atomic creation installs
+that exact policy with the original numerical recipe, guards, accounting and
+terminal reserve before returning any live role:
+
+```sh
+supervise_publication create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE \
+  --actor-profile ACTOR_PROFILE \
+  --andon JOINT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --retain-history-anchor /absolute/independent/new-learned-anchor \
+  --operator-profile OPERATOR_PROFILE --tower-generation 41
+```
+
+For a finite sequence, use `serve-learned-generated CONFIG SEQUENCE_PROFILE
+REVIEWER_PROFILE` with the same paired evaluation and operator options; each
+entry selects its own actor profile. The original evaluator and promotion
+custodian remain attached across Message/Finish handoffs. Neither reconnecting
+nor advancing to another entry replenishes their finite work.
+
+Add explicit numerical funding to the operator profile above:
+
+```json
+"credibility_promotion": {
+  "queries": 8,
+  "max_replay_events": 4096,
+  "numerical_replay_events": 4096,
+  "authority": "promote_qualified_credibility"
+}
+```
+
+Retain `response_bytes: 65536` for the complete mutation receipt. The event
+allowance must cover the complete acknowledged history plus the proposed
+promotion event at the actual selected cut; 4096 is an example ceiling, not an
+estimate of the work for every deployment. The learned operator profile
+rejects missing numerical funding before startup. Insufficient funding at the
+selected cut blocks promotion while preserving its independent mutation allowance.
+Selecting the grant with marginal-only Andon `/1` refuses during preflight.
+
+Explicit learned continuation also supplies the independent input history and
+new output. The complete recovery requirements pin every original joint-policy
+field before the sole Fence. Evaluation-only learned recovery accepts that same
+exact joint contract but does not start an operator or publication service.
+The Andon joint policy is separate from the learned recipe's held-out
+publication policy; existing forecast, topology, campaign and held-out
+composition exclusions remain in force for this evaluated service.
+
+The original independent evaluator must still discover and label actual
+completed cases. A single learned request may supply insufficient independent
+evidence; installing a grant does not manufacture the missing strata.
+Use the existing explicit Next/Promote documents below only when the native
+plan is eligible. Another native transition can stale that predecessor.
+
+Promotion preserves the original numerical owner and charged liabilities while
+withdrawing old identity and helper/human approvals. A later release needs fresh
+identity, source, helper review and independent human approval at the new
+authority epoch. A request accepted under an older epoch is not automatically
+rewritten or retried. See the
+[learned evaluation workflow](LIVE_ANDON_EVALUATION.md#create-an-evaluated-learned-service)
+and [resident contract](RESIDENT_LEARNED_PUBLICATION.md#independent-evaluation-and-andon-accounting)
+for the original scheduling and custody boundaries.
+
 ## Inspect and submit explicit Tower documents
 
 Next and Promote reuse the existing registered verbs. The closed
@@ -317,6 +381,14 @@ capacity followed by the same action's permitted transition, exact retries and
 client termination on causally corrupted replies. All 28 changed Rust files
 passed scoped Tree-sitter parsing; the eleven Tower-owned files also received
 scoped rustfmt parsing/formatting before the formatter host restarted.
+
+Three additional learned numerical regression definitions exercise actual
+original generation, paid promotion, retained Unknown charges, refunds of unused
+reservations, exact retries during later review work and publication through
+fresh keys. Paired missing/one-short numerical allowances and stale predecessor
+cases check that refused work preserves the original operation and state. Live
+learned service regressions cover the new joint selection and exact recovery.
+These newly added sources have not been compiled or executed.
 
 These are authored regression definitions, not an execution receipt. The
 required command

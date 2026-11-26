@@ -44,7 +44,14 @@ separate recipe-owned held-out publication policy remains unsupported in this
 accounted composition. The existing independently selected
 [credibility-promotion operator](LIVE_CREDIBILITY_PROMOTION.md) requires its
 explicit numerical replay allowance and native joint qualification on this
-same owner. Independent labels still supply no publication key.
+same owner. Selecting that grant with a marginal-only profile refuses during
+preflight. Its one entered mutation and cumulative query/replay allowances
+remain shared across all entries and operator connections. A weight transition
+withdraws old identity and helper/human approvals; later publication requires
+fresh original identity, source, review and human authority. See the
+[joint learned operator example](LIVE_CREDIBILITY_PROMOTION.md#select-a-jointly-evaluated-learned-service)
+for the paid grant and complete receipt allowance. Independent labels still
+supply no publication key.
 
 One evaluator role, listener and original finite time/candidate/I/O/byte allowance
 remain attached to that owner through Message and Finish handoffs. Successful
