@@ -1,5 +1,40 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: delegate one original jointly qualified helper-weight promotion
+
+The native supervisor can now provision a separate finite helper-weight
+promotion port on an owner with its original immutable joint credibility policy.
+Independent assessments continue through the existing evaluator. Next spends a
+finite query to inspect original marginal and joint qualification; Promote
+requires the complete journal/control/authority/evaluation/congress/policy/time
+predecessor and enters the original durable credibility transition.
+
+The noncloneable custodian owns one entered mutation, including refused or
+uncertain entered work. Weak clones share that allowance, query budget and
+historical exact retry. Stale/resource refusals preserve the operation; an
+entered sentinel prevents unsafe re-entry. Numerical histories require explicit
+complete-history event funding; required action forecasts remain unsupported.
+No caller supplies weights or labels, installs a policy, refreshes time or
+receives an effect key.
+
+Successful receipts verify original reports and exact generation advances,
+retaining charged/Unknown effects while refunding only unused native
+reservations. Old review keys are withdrawn by the original transition; fresh
+publication still needs original helper and human review. Cheap original
+identity access avoids retallying labels on repeated refused mutation requests.
+
+Eleven public native regression definitions and five compile-fail examples
+exercise the positive publication path, joint counterexamples, pending/censored
+evidence, exact predecessors, one-operation custody, replay work and original
+clock/control boundaries. Independent source review is complete; scoped tracked
+whitespace checks passed before the executor disconnected. The required command
+`RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check` returned
+127 because `rch` was absent. Core formatting, compilation, runtime tests,
+Clippy and canonical qualification remain unexecuted. Source and committed-blob
+review do not qualify execution. FA-105/134 and existing evaluation acceptance
+remain open; the unavailable bead tool was not bypassed with manual edits.
+See the [original-owner promotion contract](docs/LIVE_CREDIBILITY_PROMOTION.md).
+
 ## 2026-11-26: preserve original Andon openings through exact source corrections
 
 With allowance two and confirmations A, B and C, an incident opened by B now

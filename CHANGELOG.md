@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-25: delegate jointly qualified original helper-weight promotion
+
+- Add separate finite supervisor custody for one original helper-weight
+  promotion, with original marginal and immutable joint qualification.
+- Bind the complete native predecessor, preserve exact live retries across weak
+  clones, and spend entered mutations before replay or uncertain failure.
+- Retain charged and Unknown effects, refund only unused native reservations,
+  and require fresh original helper/human approval after promotion.
+- Require explicit complete-history numerical funding and reject unsupported
+  action-forecast requirements without inventing independent custody.
+- Add eleven public native regression definitions and five compile-fail
+  authority examples. Required RCH execution could not start; compilation and
+  runtime qualification remain open.
+
 ## 2026-11-26: withdraw Andon findings without rewriting original openings
 
 - Retain exact, previously validated opening prerequisites so source corrections

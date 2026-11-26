@@ -58,6 +58,16 @@ impl EvaluationState {
 }
 
 impl OversightBroker {
+    /// Cheap original identities for a separately authorized native mutation.
+    /// This does not evaluate a candidate or disclose the retained case corpus.
+    pub(crate) fn credibility_promotion_identity(&self) -> Result<(u64, u64), Error> {
+        let state = self.credibility.as_ref().ok_or(Error::Incomplete)?;
+        Ok((
+            self.delivery.controller().congress_policy().generation,
+            state.ledger.revision(),
+        ))
+    }
+
     /// One-time trusted bootstrap. The evaluator receives the only label-minting
     /// handle; the actor/effect interface receives no equivalent constructor.
     pub fn enable_credibility(

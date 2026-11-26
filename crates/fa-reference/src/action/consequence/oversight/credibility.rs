@@ -257,6 +257,11 @@ pub(crate) struct CredibilityLedger {
 }
 
 impl CredibilityLedger {
+    /// Original revision without rebuilding a full qualification report.
+    pub(crate) fn revision(&self) -> u64 {
+        self.revision
+    }
+
     pub(crate) fn new(
         protocol: EvaluationProtocol,
         contracts: CommitteeContract,

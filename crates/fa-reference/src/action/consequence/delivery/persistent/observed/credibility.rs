@@ -164,6 +164,20 @@ impl FileIndependentEvaluator {
 }
 
 impl FileOversight {
+    /// Original congress/evaluation coordinates for a sealed supervisor port.
+    /// No full-input report or candidate replay is performed by this read.
+    pub(in crate::action::consequence::delivery::persistent) fn credibility_promotion_identity(
+        &self,
+    ) -> Result<(u64, u64), JournalError> {
+        if self.fault.is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        self.machine
+            .broker
+            .credibility_promotion_identity()
+            .map_err(Into::into)
+    }
+
     /// Freeze the native protocol before ANY proposal/request and return the
     /// sole external labeling role only after canonical acknowledgment. First
     /// publication is guarded; there is no disable or protocol replacement API.

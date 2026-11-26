@@ -102,6 +102,16 @@ pub use request_history::{
     MAX_REQUEST_HISTORY_EVENTS, MAX_REQUEST_HISTORY_QUERIES, MAX_REQUEST_HISTORY_REVIEWS,
 };
 mod policy_promotion;
+mod credibility_promotion;
+pub use credibility_promotion::{
+    FileCredibilityPromotionBasis, FileCredibilityPromotionBlockReason,
+    FileCredibilityPromotionError, FileCredibilityPromotionObservation,
+    FileCredibilityPromotionPlan, FileCredibilityPromotionPlanObservation,
+    FileCredibilityPromotionPlanResult, FileCredibilityPromotionReceipt,
+    FileCredibilityPromotionRequest, FileCredibilityPromotionResult,
+    FileSupervisorCredibilityPromotionGrant, FileSupervisorCredibilityPromotionPort,
+    MAX_CREDIBILITY_PROMOTION_QUERIES, MAX_CREDIBILITY_PROMOTION_REPLAY_EVENTS,
+};
 mod policy_replay;
 pub use policy_promotion::{
     FilePolicyPromotionBasis, FilePolicyPromotionBlockReason, FilePolicyPromotionError,
