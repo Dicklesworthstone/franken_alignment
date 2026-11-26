@@ -577,3 +577,43 @@ pub(super) fn find_record<'a>(
 ) -> Option<&'a HistoryRecord> {
     records.iter().find(|record| &record.address == address)
 }
+
+/// Resolve one independent label history without discarding its original
+/// censored observation. A final label is immutable within the retained chain;
+/// an exact source retraction still withdraws that observation from the view.
+/// Missing subjects and foreign evaluators preserve incompleteness, but cannot
+/// conceal contradictory labels from the configured evaluation owner.
+pub(super) fn resolve_assessment_chain<L: Copy + Eq>(
+    original_sequence: Option<u64>,
+    assessments: Vec<(&HistoryRecord, &Address, L)>,
+    evaluation_owner: &Address,
+    censored: L,
+) -> Result<(Option<L>, Vec<Address>), QueryError> {
+    let mut unavailable = original_sequence.is_none();
+    let mut labels = Vec::new();
+    for (record, evaluator, label) in assessments {
+        if original_sequence.is_some_and(|sequence| record.occurred_at <= sequence) {
+            return Err(QueryError::InvalidReference);
+        }
+        if evaluator != evaluation_owner {
+            unavailable = true;
+        } else {
+            labels.push((record, label));
+        }
+    }
+    labels.sort_by_key(|(record, _)| record.occurred_at);
+    let mut state = None;
+    let mut previous = None;
+    let mut support = Vec::new();
+    for (record, label) in labels {
+        if previous.is_some_and(|sequence| record.occurred_at <= sequence)
+            || state.is_some_and(|old| old != censored || label == censored)
+        {
+            return Err(QueryError::ConflictingRecord);
+        }
+        previous = Some(record.occurred_at);
+        state = Some(label);
+        support.push(record.address.clone());
+    }
+    Ok((state.filter(|label| *label != censored && !unavailable), support))
+}

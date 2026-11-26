@@ -1,5 +1,37 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-25: resolve independently censored roster holds without rewriting history
+
+FA-125's typed roster query now accepts one strictly later definitive independent
+assessment after an original censored label. A confirmed violation can open the
+retirement finding and a benign outcome can complete its clean counterpart.
+Original hold, censor and resolution identities remain in exact support and
+retained history. Duplicate/final replacement, same-boundary ambiguity and
+pre-hold labels refuse atomically. Missing holds or foreign evaluator records
+cannot hide conflicting configured-owner labels. The existing canary query
+shares the same ordered-label law without changing its behavior.
+
+Eight new public regressions exercise those positive and causal-negative paths,
+including exact source withdrawal/restoration and a qualified-retirement twin.
+The Tower findings tampering regression now uses the registered Attempt noun
+instead of the nonexistent Request variant, preserving its original assertion.
+
+A frozen local checkout of d3703cfb plus these five Rust changes passed all 59
+selected integration tests with standard LLVM on nightly-2026-09-08: 26 base
+risk-theater, 29 extended risk-theater and four Tower findings tests. Command:
+`cargo +nightly-2026-09-08 test --locked --offline -p fa-reference --test risk_theater_queries --test risk_theater_queries_extended --test tower_governance_findings -j 1`.
+The run used disabled incremental/debug output, 256 codegen units and a 32 MiB
+test-thread stack. Independent source review and whitespace checks passed.
+
+The initial unmodified workspace library check passed on rolling nightly, but
+all-target checking exposed the invalid test noun. Subsequent full checks were
+interrupted by disk exhaustion, executor restarts or SIGKILL; they remain failed
+attempts. The successful focused run is not a full workspace, Clippy, formatting,
+RCH or production qualification. Concurrent main additions are outside its frozen
+source cut. FA-125 remains in progress; native authenticated complete feeds,
+governed activation and incident lifecycle remain open. See the
+[query contract](docs/RISK_THEATER_QUERIES.md#delayed-independent-resolution-of-held-cases).
+
 ## 2026-11-25: atomic joint evaluation for original learned publication
 
 The learned Andon bootstrap now accepts an independently selected

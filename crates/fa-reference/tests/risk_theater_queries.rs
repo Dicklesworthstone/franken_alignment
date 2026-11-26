@@ -229,6 +229,202 @@ fn late_hold_confirmation_opens_and_exact_correction_retracts_the_original_findi
 }
 
 #[test]
+fn censored_holds_resolve_to_independent_violation_or_benign_without_rewriting_history() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    for (label, expected_findings) in [
+        (HoldLabel::ConfirmedViolation, 1),
+        (HoldLabel::Benign, 0),
+    ] {
+        let mut engine = new_engine();
+        insert(&mut engine, vec![hold("hold", 1)]);
+        let censored = assessment("censored", 2, "hold", HoldLabel::Censored);
+        insert(&mut engine, vec![censored.clone()]);
+        let pending = insert(&mut engine, vec![retirement("retire", 3, absent(3))]);
+        assert!(!pending.family(family).complete);
+        assert!(pending.family(family).findings.is_empty());
+
+        let resolved = assessment("resolved", 4, "hold", label);
+        let snapshot = insert(&mut engine, vec![resolved.clone()]);
+        assert!(snapshot.family(family).complete);
+        assert_eq!(snapshot.family(family).findings.len(), expected_findings);
+        assert_eq!(snapshot.kernel().scores[&family], expected_findings as i64);
+        assert_eq!(engine.source_history()[1].changes, vec![HistoryChange::Insert(censored)]);
+        assert_eq!(engine.source_history()[3].changes, vec![HistoryChange::Insert(resolved)]);
+        if expected_findings != 0 {
+            let finding = &snapshot.family(family).findings[0];
+            assert_eq!(finding.subject, id("retire"));
+            assert_eq!(finding.support, vec![id("censored"), id("hold"), id("resolved"), id("retire")]);
+        }
+        assert_eq!(engine.verify_kernel(), Ok(snapshot.kernel().clone()));
+    }
+}
+
+#[test]
+fn resolution_and_original_hold_retractions_preserve_censoring_and_restore_exact_support() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    let mut engine = new_engine();
+    let original = hold("hold", 1);
+    insert(&mut engine, vec![original.clone()]);
+    insert(&mut engine, vec![assessment("censored", 2, "hold", HoldLabel::Censored)]);
+    insert(&mut engine, vec![retirement("retire", 3, absent(3))]);
+    let resolution = assessment("resolved", 4, "hold", HoldLabel::ConfirmedViolation);
+    let opened = insert(&mut engine, vec![resolution.clone()]);
+    for (sequence, withdrawn) in [(5, resolution), (7, original)] {
+        let corrected = engine.apply_frontier(&cut(sequence, vec![
+            HistoryChange::Retract(withdrawn.clone()),
+        ])).expect("withdraw exact source observation");
+        assert!(!corrected.family(family).complete);
+        assert!(corrected.family(family).findings.is_empty());
+        assert_eq!(corrected.kernel().scores[&family], 0);
+        assert!(corrected.kernel().supports.is_empty());
+        assert_eq!(engine.verify_kernel(), Ok(corrected.kernel().clone()));
+        let restored = engine.apply_frontier(&cut(sequence + 1, vec![
+            HistoryChange::Insert(withdrawn),
+        ])).expect("restore original source identity");
+        assert_eq!(restored.family(family), opened.family(family));
+        assert_eq!(engine.verify_kernel(), Ok(restored.kernel().clone()));
+    }
+}
+
+#[test]
+fn only_one_final_roster_label_is_allowed_and_censoring_resolves_only_once() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    let labels = [HoldLabel::Censored, HoldLabel::Benign, HoldLabel::ConfirmedViolation];
+    for first in labels {
+        for second in labels {
+            let mut engine = new_engine();
+            insert(&mut engine, vec![hold("hold", 1)]);
+            insert(&mut engine, vec![assessment("first", 2, "hold", first)]);
+            let next = cut(3, vec![HistoryChange::Insert(assessment("second", 3, "hold", second))]);
+            if first == HoldLabel::Censored && second != HoldLabel::Censored {
+                engine.apply_frontier(&next).expect("one final independent resolution");
+                let snapshot = insert(&mut engine, vec![retirement("retire", 4, absent(4))]);
+                assert!(snapshot.family(family).complete);
+                assert_eq!(snapshot.family(family).findings.len(), usize::from(second == HoldLabel::ConfirmedViolation));
+            } else {
+                // This includes a new record repeating the same final label:
+                // retrying an observation cannot manufacture another sample.
+                rejected(&mut engine, next, QueryError::ConflictingRecord);
+            }
+        }
+    }
+}
+
+#[test]
+fn same_boundary_censoring_and_resolution_refuse_but_a_later_resolution_is_admitted() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    let mut engine = new_engine();
+    insert(&mut engine, vec![hold("hold", 1)]);
+    insert(&mut engine, vec![retirement("retire", 2, absent(2))]);
+    let censored = assessment("censored", 3, "hold", HoldLabel::Censored);
+    rejected(&mut engine, cut(3, vec![
+        HistoryChange::Insert(censored.clone()),
+        HistoryChange::Insert(assessment("resolved", 3, "hold", HoldLabel::ConfirmedViolation)),
+    ]), QueryError::ConflictingRecord);
+    let pending = insert(&mut engine, vec![censored]);
+    assert!(!pending.family(family).complete);
+    let resolved = insert(&mut engine, vec![assessment("resolved", 4, "hold", HoldLabel::ConfirmedViolation)]);
+    assert!(resolved.family(family).complete);
+    assert_eq!(resolved.family(family).findings.len(), 1);
+}
+
+#[test]
+fn a_foreign_resolution_cannot_supply_truth_and_withdrawal_recovers_the_original_label_chain() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    for wrong_owner in [
+        address(Noun::Profile, "actor-written-label", 1),
+        address(Noun::Profile, "evaluation-owner", 2),
+    ] {
+        let mut engine = new_engine();
+        insert(&mut engine, vec![hold("hold", 1)]);
+        insert(&mut engine, vec![assessment("censored", 2, "hold", HoldLabel::Censored)]);
+        insert(&mut engine, vec![retirement("retire", 3, absent(3))]);
+        let mut foreign = assessment("foreign", 4, "hold", HoldLabel::ConfirmedViolation);
+        let HistoryFact::Roster(RosterFact::Assessment { evaluator, .. }) = &mut foreign.fact
+            else { unreachable!() };
+        *evaluator = wrong_owner;
+        let unavailable = insert(&mut engine, vec![foreign.clone()]);
+        assert!(!unavailable.family(family).complete);
+        assert!(unavailable.family(family).findings.is_empty());
+        let still_unavailable = insert(&mut engine, vec![
+            assessment("resolved", 5, "hold", HoldLabel::ConfirmedViolation),
+        ]);
+        assert!(!still_unavailable.family(family).complete);
+        assert!(still_unavailable.family(family).findings.is_empty());
+        let corrected = engine.apply_frontier(&cut(6, vec![HistoryChange::Retract(foreign)]))
+            .expect("withdraw unsupported evaluator observation");
+        assert!(corrected.family(family).complete);
+        assert_eq!(corrected.family(family).findings[0].support, vec![
+            id("censored"), id("hold"), id("resolved"), id("retire"),
+        ]);
+        assert_eq!(engine.verify_kernel(), Ok(corrected.kernel().clone()));
+    }
+}
+
+#[test]
+fn missing_holds_or_foreign_evaluators_cannot_hide_conflicting_final_labels() {
+    for missing_hold in [false, true] {
+        for foreign_owner in [false, true] {
+            let mut engine = new_engine();
+            let original = hold("hold", 1);
+            insert(&mut engine, vec![original.clone()]);
+            insert(&mut engine, vec![assessment("final", 2, "hold", HoldLabel::ConfirmedViolation)]);
+            let mut changes = Vec::new();
+            if missing_hold {
+                changes.push(HistoryChange::Retract(original));
+            }
+            if foreign_owner {
+                let mut foreign = assessment("foreign", 3, "hold", HoldLabel::Censored);
+                let HistoryFact::Roster(RosterFact::Assessment { evaluator, .. }) = &mut foreign.fact
+                    else { unreachable!() };
+                *evaluator = address(Noun::Profile, "wrong-owner", 1);
+                changes.push(HistoryChange::Insert(foreign));
+            }
+            engine.apply_frontier(&cut(3, changes)).expect("honest partial source view");
+            // There is not even a retirement yet. Validate the original label
+            // chain now, rather than hiding corruption behind query selection.
+            rejected(&mut engine, cut(4, vec![HistoryChange::Insert(
+                assessment("conflicting", 4, "hold", HoldLabel::Benign),
+            )]), QueryError::ConflictingRecord);
+        }
+    }
+}
+
+#[test]
+fn qualified_retirement_still_accepts_delayed_resolution_and_rejects_later_equivocation() {
+    let family = RiskTheaterFamily::RosterChurnNearHolds;
+    let mut engine = new_engine();
+    insert(&mut engine, vec![hold("hold", 1)]);
+    insert(&mut engine, vec![assessment("censored", 2, "hold", HoldLabel::Censored)]);
+    insert(&mut engine, vec![selection_report("report", 3, "retire")]);
+    let permitted = insert(&mut engine, vec![retirement("retire", 4, ReportReference::Present(id("report")))]);
+    assert!(permitted.family(family).complete);
+    assert!(permitted.family(family).findings.is_empty());
+    let resolved = insert(&mut engine, vec![assessment("resolved", 5, "hold", HoldLabel::ConfirmedViolation)]);
+    assert!(resolved.family(family).complete);
+    assert!(resolved.family(family).findings.is_empty());
+    rejected(&mut engine, cut(6, vec![HistoryChange::Insert(
+        assessment("conflicting", 6, "hold", HoldLabel::Benign),
+    )]), QueryError::ConflictingRecord);
+}
+
+#[test]
+fn an_orphan_assessment_cannot_become_a_resolution_of_a_later_hold() {
+    for foreign_owner in [false, true] {
+        let mut engine = new_engine();
+        let mut label = assessment("label", 1, "hold", HoldLabel::Censored);
+        if foreign_owner {
+            let HistoryFact::Roster(RosterFact::Assessment { evaluator, .. }) = &mut label.fact
+                else { unreachable!() };
+            *evaluator = address(Noun::Profile, "wrong-owner", 1);
+        }
+        let pending = insert(&mut engine, vec![label]);
+        assert!(!pending.family(RiskTheaterFamily::RosterChurnNearHolds).complete);
+        rejected(&mut engine, cut(2, vec![HistoryChange::Insert(hold("hold", 2))]), QueryError::InvalidReference);
+    }
+}
+
+#[test]
 fn a_late_or_unqualified_selection_report_cannot_retroactively_authorize_retirement() {
     let family = RiskTheaterFamily::RosterChurnNearHolds;
     let mut engine = new_engine();

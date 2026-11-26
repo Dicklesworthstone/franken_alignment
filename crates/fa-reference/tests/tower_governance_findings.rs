@@ -311,7 +311,7 @@ fn findings_receipts_cannot_be_relabelled_or_truncated_into_a_different_claim() 
             0 => forged.envelope.address.tenant = "2".into(),
             1 => forged.envelope.address.id = "9".into(),
             2 => forged.envelope.address.generation = Some(42),
-            3 => forged.envelope.address.kind = Noun::Request,
+            3 => forged.envelope.address.kind = Noun::Attempt,
             4 => forged.envelope.operation_id = "different-operation".into(),
             _ => forged.envelope.idempotency_key = Some("different-label".into()),
         }

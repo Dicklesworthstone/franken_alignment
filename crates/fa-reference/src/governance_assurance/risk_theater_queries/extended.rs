@@ -10,7 +10,7 @@
 
 use super::{
     FamilyEvaluation, HistoryFact, HistoryRecord, QueryError, QueryFinding, find_record,
-    validate_address, validate_family,
+    resolve_assessment_chain, validate_address, validate_family,
 };
 use crate::action::consequence::Consequence;
 use crate::address_resolver::{Address, Noun};
@@ -381,39 +381,17 @@ fn assessment(
     records: &[HistoryRecord],
     evaluation_owner: &Address,
 ) -> Result<(Option<CanaryOutcome>, Vec<Address>), QueryError> {
-    let mut unavailable = false;
     let mut labels = Vec::new();
     for record in records {
         let HistoryFact::Consequence(ConsequenceFact::CanaryAssessment {
             round: selected, outcome, evaluator,
         }) = &record.fact else { continue; };
         if selected != &round.address { continue; }
-        if record.occurred_at <= round.occurred_at {
-            return Err(QueryError::InvalidReference);
-        }
-        if evaluator != evaluation_owner {
-            unavailable = true;
-            continue;
-        }
-        labels.push((record, *outcome));
+        labels.push((record, evaluator, *outcome));
     }
-    labels.sort_by_key(|(record, _)| record.occurred_at);
-    let mut state = None;
-    let mut previous = round.occurred_at;
-    let mut support = Vec::new();
-    for (record, outcome) in labels {
-        if record.occurred_at <= previous || state.is_some_and(|old| old != CanaryOutcome::Censored) {
-            return Err(QueryError::ConflictingRecord);
-        }
-        if state == Some(CanaryOutcome::Censored) && outcome == CanaryOutcome::Censored {
-            return Err(QueryError::ConflictingRecord);
-        }
-        previous = record.occurred_at;
-        state = Some(outcome);
-        support.push(record.address.clone());
-    }
-    let final_outcome = state.filter(|value| *value != CanaryOutcome::Censored);
-    Ok((if unavailable { None } else { final_outcome }, support))
+    resolve_assessment_chain(
+        Some(round.occurred_at), labels, evaluation_owner, CanaryOutcome::Censored,
+    )
 }
 
 fn consequence_drift(

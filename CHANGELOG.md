@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-25: resolve censored independent roster assessments
+
+- Accept one strictly later independent Benign or ConfirmedViolation label after
+  a censored hold, retaining both original observations and exact finding support.
+- Reject repeated censoring, final-label replacement, ambiguous sequence order
+  and hidden conflicts atomically; preserve exact retraction/restoration.
+- Share the ordered assessment law with the existing canary query and restore
+  compilation of the Tower findings address-tampering test.
+- Add eight public regressions. The 26 base-query, 29 extended-query and four
+  Tower findings integration tests passed on a frozen local standard-LLVM build;
+  full workspace and remote RCH qualification remain outstanding.
+
 ## 2026-11-25: bootstrap jointly evaluated learned publication
 
 - Install the original learned recipe, independently selected joint credibility

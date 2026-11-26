@@ -80,6 +80,23 @@ The aggregate score kernel must not be published without that query coverage.
 | Autonomy inflation | Promotion violates dwell, skips a grade, or lacks its qualified carried report. | Follow the immediate principal/family predecessor; passport changes reset the grade and dwell basis. |
 | Audit-floor starvation | Scheduled work lacks its required funding at its original due boundary. | Bind funds to the exact audit, use checked sums and count only funding received by that deadline. |
 
+### Delayed independent resolution of held cases
+
+A roster hold may first receive a censored assessment and later one definitive
+Benign or ConfirmedViolation assessment from the same configured evaluation
+owner and generation. The final assessment must occur strictly after the
+censored assessment and both must follow the original hold. A confirmed
+violation can then open the supported retirement finding; a benign resolution
+is the nearby clean control. Both original assessment records remain in the
+finding's support and in retained source history.
+
+Repeated censoring, multiple final records, same-boundary resolution and final
+label replacement refuse atomically, even before any retirement is selected.
+Missing hold evidence or a foreign evaluator keeps the query incomplete without
+hiding conflicts between the configured owner's retained labels. Exact source
+retractions and restorations retain the existing correction contract; withdrawing
+the final assessment or its hold retracts the dependent finding.
+
 ### Consequence windows and canary identity
 
 A window closes an occurrence interval `[start, end)`. The baseline ends before
@@ -175,14 +192,20 @@ semantic predicates and cannot detect an omission shared by their supplied input
 
 ## Verification boundary
 
-Forty-seven public regression functions accompany all six predicates and pair
-findings with near-identical permitted histories. Cases cover rational threshold equality,
-original sample and budget identity, independent-owner isolation, active
-predecessors, missing versus absent evidence, exact retractions and atomic
-resource refusal. The new source has not been formatted, compiled or executed in
-this session: Rust and RCH tooling were unavailable, and the execution workspace
-disconnected during implementation. GitHub source review and committed-content
-verification do not substitute for the required RCH gate.
+Fifty-five public regression functions accompany all six predicates and pair
+findings with near-identical permitted histories. Eight additional roster cases
+cover delayed independent resolution, original supports, exact retractions,
+owner/generation isolation, same-boundary ambiguity and conflicting final labels.
+
+On 2026-11-25, the complete `risk_theater_queries` (26),
+`risk_theater_queries_extended` (29) and `tower_governance_findings` (4)
+integration targets passed locally on standard LLVM with
+`nightly-2026-09-08`. The frozen checkout was `d3703cfb` plus the exact
+roster-resolution changes and a registered-noun correction in the Tower test.
+Earlier attempts encountered an existing test compile error, resource-limit
+SIGKILLs and executor disconnections; those attempts were not successful gates.
+This selected execution does not qualify concurrent main changes, the complete
+workspace, native query feeds or the required remote RCH gate.
 
 FA-125 remains in progress. Native authenticated complete input feeds, governed
 query promotion, durable incident lifecycle, evaluator/governance access control,

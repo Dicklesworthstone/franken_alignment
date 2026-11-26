@@ -1,14 +1,14 @@
 //! Source predicates for roster churn, autonomy promotion and audit funding.
 //! Source records and evaluator identities are reference assertions only.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::address_resolver::{Address, Noun};
 use crate::governance_assurance::{AutonomyGrade, RiskTheaterFamily};
 
 use super::{
     FamilyEvaluation, HistoryFact, HistoryRecord, QueryError, QueryFinding, QueryPolicy,
-    find_record, validate_address, validate_family,
+    find_record, resolve_assessment_chain, validate_address, validate_family,
 };
 
 /// Absence is stronger than unavailable evidence. An Absent value asserts that
@@ -36,6 +36,9 @@ pub enum RosterFact {
         helper: Address,
         effect_family: String,
     },
+    /// One original label, followed optionally by a strictly later resolution
+    /// of Censored from the same configured evaluation owner. Both records
+    /// retain their identities and participate in any resulting finding.
     Assessment {
         hold: Address,
         evaluator: Address,
@@ -301,12 +304,9 @@ fn evaluate_roster(
 ) -> Result<FamilyEvaluation, QueryError> {
     let family = RiskTheaterFamily::RosterChurnNearHolds;
     let mut result = FamilyEvaluation { family, complete: true, findings: Vec::new() };
-    let mut assessed = BTreeSet::new();
+    let mut assessments = BTreeMap::<Address, Vec<_>>::new();
     for record in records {
-        if let HistoryFact::Roster(RosterFact::Assessment { hold, .. }) = &record.fact {
-            if !assessed.insert(hold.clone()) {
-                return Err(QueryError::ConflictingRecord);
-            }
+        if let HistoryFact::Roster(RosterFact::Assessment { hold, evaluator, label }) = &record.fact {
             match find_record(records, hold) {
                 Some(original) => {
                     if !matches!(&original.fact, HistoryFact::Roster(RosterFact::Hold { .. }))
@@ -317,7 +317,17 @@ fn evaluate_roster(
                 }
                 None => result.complete = false,
             }
+            assessments.entry(hold.clone()).or_default().push((record, evaluator, *label));
         }
+    }
+    let mut resolved = BTreeMap::new();
+    for (hold, labels) in assessments {
+        // Validate every retained chain before selecting a retirement. Missing
+        // source or a qualifying retirement report cannot hide label corruption.
+        let original_sequence = find_record(records, &hold).map(|record| record.occurred_at);
+        resolved.insert(hold, resolve_assessment_chain(
+            original_sequence, labels, policy.evaluation_owner(), HoldLabel::Censored,
+        )?);
     }
 
     let mut retired = BTreeSet::new();
@@ -354,26 +364,17 @@ fn evaluate_roster(
             {
                 continue;
             }
-            let assessment = records.iter().find(|record| {
-                matches!(&record.fact,
-                    HistoryFact::Roster(RosterFact::Assessment { hold: target, .. })
-                        if target == &hold.address)
-            });
-            let Some(assessment) = assessment else {
+            let Some((label, support)) = resolved.get(&hold.address) else {
                 result.complete = false;
                 continue;
             };
-            let HistoryFact::Roster(RosterFact::Assessment { evaluator, label, .. }) =
-                &assessment.fact else {
-                    unreachable!("assessment predicate checked above");
-                };
-            if evaluator != policy.evaluation_owner() || *label == HoldLabel::Censored {
+            let Some(label) = label else {
                 result.complete = false;
                 continue;
-            }
+            };
             if *label == HoldLabel::ConfirmedViolation {
                 confirmed_support.push(hold.address.clone());
-                confirmed_support.push(assessment.address.clone());
+                confirmed_support.extend(support.iter().cloned());
             }
         }
         if report_check.invalid && !confirmed_support.is_empty() {
