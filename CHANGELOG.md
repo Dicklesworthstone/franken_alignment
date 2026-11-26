@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-11-26: serve jointly evaluated learned publication and recovery
+
+- Admit explicit version-two Andon profiles for single and resident learned
+  services, preserving the existing marginal profile and every separately
+  required publication, predictor and governance contract.
+- Select atomic joint startup and pin the complete independent joint policy
+  during generation continuation, Message/Finish recovery and historical-only
+  evaluation. Preserve original evaluator custody, label accounting and Stop.
+- Add service regressions for real publication, separate human decisions,
+  independent labels, recovery refusals and resident handoffs; repair overlapping
+  accounting windows in the shared recovery test fixture.
+- Pass Rust parsing and scoped formatting checks for all twelve changed Rust
+  files, plus whitespace and independent source review. Required RCH compilation
+  and runtime qualification remain pending because the runner is absent.
+
 ## 2026-11-25: connect qualified helper weights to the live Tower operator
 
 - Connect a separately selected credibility_promotion capability to the existing

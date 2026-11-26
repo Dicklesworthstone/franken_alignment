@@ -17,18 +17,26 @@ struct Original {
 }
 
 fn prepared(root: &Root, published: usize) -> Original {
+    prepared_profile(root, published, false)
+}
+
+fn prepared_profile(root: &Root, published: usize, joint: bool) -> Original {
     assert!(published <= 2);
     let (mut config, paths, mut entries) = selected(root, None, None);
-    let selection = select_evaluation(
+    let selection = select_evaluation_profile(
         root,
         &config,
         &mut entries,
         std::process::id().checked_add(100_000).unwrap(),
         4,
+        joint,
     );
     let ((mut host, reviewer, observer, identity), evaluator) =
         selection.create(&config, &entries[0].loaded).unwrap();
     assert!(observer.is_none() && identity.is_none());
+    let settings = andon_settings::Settings::read(&root.0.join("andon.json")).unwrap();
+    assert_eq!(host.joint_credibility_policy().unwrap(), settings.joint);
+    assert_eq!(settings.joint.is_some(), joint);
     let revision = host.revision();
     host.register_andon_window(
         revision,
@@ -261,8 +269,12 @@ fn configured_peer(
 }
 
 fn run_suffix(first: usize, decision: ReviewDecision, exhausted: bool) {
+    run_suffix_profile(first, decision, exhausted, false);
+}
+
+fn run_suffix_profile(first: usize, decision: ReviewDecision, exhausted: bool, joint: bool) {
     let root = Root::new();
-    let original = prepared(&root, first);
+    let original = prepared_profile(&root, first, joint);
     evidence(&root, &original.config, 2, true, false);
     let old_archive = fs::read(&original.anchor).unwrap();
     let mode = if exhausted {
@@ -410,13 +422,16 @@ fn run_suffix(first: usize, decision: ReviewDecision, exhausted: bool) {
     // original accounting and complete numerical history. It performs no source
     // or model-file read; the evaluator has already removed those inputs.
     let settings = andon_settings::Settings::read(&accounting).unwrap();
-    let expected = FileAndonRecoveryRequirements::new(
+    let mut expected = FileAndonRecoveryRequirements::new(
         recovery::requirements(&original.config, loaded),
         settings.config.clone(),
         settings.windows.clone(),
         minimum,
     )
     .unwrap();
+    if let Some(policy) = settings.joint {
+        expected = expected.require_joint(policy).unwrap();
+    }
     let (host, roles) = FileOversight::open_andon_guarded_anchored_with_learned_generation(
         &original.config.store,
         original.config.profile.clone(),
@@ -430,6 +445,16 @@ fn run_suffix(first: usize, decision: ReviewDecision, exhausted: bool) {
     assert_eq!(host.inspect().executions, snapshot.executions);
     assert_eq!(host.inspect().control.ledger.charged, charged);
     assert_eq!(host.andon_ledger().unwrap().windows().len(), 2);
+    assert_eq!(host.joint_credibility_policy().unwrap(), settings.joint);
+    assert_eq!(settings.joint.is_some(), joint);
+    // These benign-only fixture labels preserve accounting, but cannot qualify
+    // a joint promotion without independent violation evidence.
+    if joint {
+        assert!(
+            host.joint_credibility_report(host.credibility_report().unwrap().revision)
+                .is_err()
+        );
+    }
     let numerical = host.learned_generation_inspection().unwrap().numerical;
     assert_eq!((numerical.position, numerical.sampled_draws), (6, 4));
     assert_eq!(numerical.cumulative_work.sampling_attempts, 4);
@@ -535,9 +560,13 @@ fn accounted_resident_recovery_rejects_rollback_missing_windows_and_higher_floor
 
 #[test]
 fn accounted_resident_replay_stop_wins_before_live_roles_at_preopen_midpoint_and_ready() {
+    stopped_profile(false);
+}
+
+fn stopped_profile(joint: bool) {
     for boundary in 0..3 {
         let root = Root::new();
-        let original = prepared(&root, 0);
+        let original = prepared_profile(&root, 0, joint);
         let reviewer = fixture::peers(&root, &original.config);
         let peer = configured_peer(
             &root,
@@ -727,4 +756,30 @@ fn recovered_history_cannot_become_a_future_actor_endpoint_or_retained_output() 
         );
         quiescent(&root);
     }
+}
+
+#[test]
+fn joint_accounted_resident_continuation_keeps_original_draws_and_pending_labels() {
+    run_suffix_profile(0, ReviewDecision::Approve, false, true);
+}
+
+#[test]
+fn joint_accounted_resident_message_and_finish_retain_one_original_evaluator() {
+    run_suffix_profile(1, ReviewDecision::Approve, false, true);
+}
+
+#[test]
+fn joint_accounted_resident_finish_requires_fresh_human_approval_without_another_draw() {
+    run_suffix_profile(2, ReviewDecision::Approve, false, true);
+    run_suffix_profile(2, ReviewDecision::Reject, false, true);
+}
+
+#[test]
+fn joint_accounted_resident_evaluator_budget_does_not_reset_after_recovery() {
+    run_suffix_profile(1, ReviewDecision::Approve, true, true);
+}
+
+#[test]
+fn joint_accounted_resident_replay_stop_preempts_live_roles_at_every_boundary() {
+    stopped_profile(true);
 }

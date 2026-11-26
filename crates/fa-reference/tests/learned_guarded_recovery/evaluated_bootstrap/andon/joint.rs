@@ -249,12 +249,21 @@ fn original_learned_publication_and_joint_replay_survive_exact_guarded_recovery(
     drive(&mut recovery);
     assert_eq!(root.bytes(), before_preview);
     let (host, fresh) = recovery.finish().unwrap();
-    assert_eq!(host.revision(), expected.base().minimum.journal_revision + 1);
+    assert_eq!(
+        host.revision(),
+        expected.base().minimum.journal_revision + 1
+    );
     assert_eq!(host.joint_credibility_policy().unwrap(), Some(policy));
     assert_eq!(host.credibility_report().unwrap(), marginal);
-    assert_eq!(host.joint_credibility_report(marginal.revision).unwrap(), report);
+    assert_eq!(
+        host.joint_credibility_report(marginal.revision).unwrap(),
+        report
+    );
     assert_eq!(host.andon_ledger().unwrap(), &accounting);
-    assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+    assert_eq!(
+        host.learned_generation_inspection().unwrap().numerical,
+        numerical
+    );
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert!(!host.clock_ready());
     assert_eq!(host.inspect().executions, 1);
@@ -319,7 +328,11 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
         let wrong = FileAndonRecoveryRequirements::new(
             expected.base().clone(),
             accounting(),
-            windows.windows().values().map(|window| window.budget).collect(),
+            windows
+                .windows()
+                .values()
+                .map(|window| window.budget)
+                .collect(),
             expected.minimum_evaluation_revision(),
         )
         .unwrap();
@@ -346,7 +359,10 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
     assert_eq!(root.bytes(), bytes);
     assert!(pending.exists());
     let (mut host, fresh) = recovery.finish().unwrap();
-    assert_eq!(host.revision(), expected.base().minimum.journal_revision + 1);
+    assert_eq!(
+        host.revision(),
+        expected.base().minimum.journal_revision + 1
+    );
     assert!(!pending.exists());
     assert_eq!(host.joint_credibility_policy().unwrap(), Some(policy));
     assert_eq!(host.andon_ledger().unwrap(), &windows);
@@ -363,7 +379,9 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
     let revision = host.revision();
     let fenced = root.bytes();
     assert_eq!(
-        old.evaluator.assess(&mut host, revision, &ticket, benign).err(),
+        old.evaluator
+            .assess(&mut host, revision, &ticket, benign)
+            .err(),
         Some(Error::Binding.into())
     );
     assert_eq!(
@@ -383,7 +401,8 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
 
     // A fresh clock is now in window 2; this label still charges window 1,
     // where the original applied empirical stop was observed.
-    host.observe_time(host.revision(), ElapsedTick(101)).unwrap();
+    host.observe_time(host.revision(), ElapsedTick(101))
+        .unwrap();
     let before = host.inspect().control;
     let revision = host.revision();
     assert!(
@@ -396,8 +415,14 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
     assert_eq!(first.false_stops, 1);
     assert_eq!(first.total_cost, 7);
     assert_eq!(first.incident.as_ref().unwrap().opened_by_round, 101);
-    assert_eq!(first.incident.as_ref().unwrap().rounds, BTreeSet::from([101]));
-    assert_eq!(host.andon_ledger().unwrap().windows()[&2], windows.windows()[&2]);
+    assert_eq!(
+        first.incident.as_ref().unwrap().rounds,
+        BTreeSet::from([101])
+    );
+    assert_eq!(
+        host.andon_ledger().unwrap().windows()[&2],
+        windows.windows()[&2]
+    );
     assert_eq!(host.inspect().control, before);
     let labelled = root.bytes();
     let revision = host.revision();
@@ -408,7 +433,10 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
             .unwrap()
     );
     assert_eq!(root.bytes(), labelled);
-    assert_eq!(host.learned_generation_inspection().unwrap().numerical, numerical);
+    assert_eq!(
+        host.learned_generation_inspection().unwrap().numerical,
+        numerical
+    );
     assert!(host.learned_generation_inspection().unwrap().paused);
     assert_eq!(host.inspect().executions, 0);
 }
@@ -416,9 +444,18 @@ fn exact_joint_recovery_rejects_every_changed_field_and_charges_the_original_win
 #[test]
 fn learned_joint_replay_work_exhaustion_never_falls_back_to_marginal_promotion() {
     for budget in [
-        JointReplayBudget { cases: 1, member_outcomes: 4 },
-        JointReplayBudget { cases: 2, member_outcomes: 3 },
-        JointReplayBudget { cases: 2, member_outcomes: 4 },
+        JointReplayBudget {
+            cases: 1,
+            member_outcomes: 4,
+        },
+        JointReplayBudget {
+            cases: 2,
+            member_outcomes: 3,
+        },
+        JointReplayBudget {
+            cases: 2,
+            member_outcomes: 4,
+        },
     ] {
         let root = Directory::new();
         let policy = joint(budget);
@@ -440,7 +477,8 @@ fn learned_joint_replay_work_exhaustion_never_falls_back_to_marginal_promotion()
         let control = host.inspect().control;
         if budget.cases < 2 || budget.member_outcomes < 4 {
             assert_eq!(
-                host.joint_credibility_report(request.expected_evaluation_revision).err(),
+                host.joint_credibility_report(request.expected_evaluation_revision)
+                    .err(),
                 Some(Error::Limit.into())
             );
             assert_eq!(
@@ -486,10 +524,8 @@ fn malformed_or_incompatible_joint_bootstrap_never_creates_storage() {
             _ => {
                 recipe = recipe
                     .with_required_held_out_joint(
-                        HeldOutJointPolicy::new(
-                            81, 1, 1, 1, 0, 0, HeldOutJointBudget::default(),
-                        )
-                        .unwrap(),
+                        HeldOutJointPolicy::new(81, 1, 1, 1, 0, 0, HeldOutJointBudget::default())
+                            .unwrap(),
                     )
                     .unwrap();
             }
@@ -544,8 +580,7 @@ fn complete_joint_bootstrap_preserves_the_terminal_event_reserve_at_the_boundary
     for extra in [0, 1] {
         let root = Directory::new();
         let mut selected = profile();
-        selected.delivery.limits.events =
-            complete + RecoveryReserve::terminal().events - 1 + extra;
+        selected.delivery.limits.events = complete + RecoveryReserve::terminal().events - 1 + extra;
         let result = FileOversight::create_joint_andon_guarded_with_learned_generation_reserved(
             root.store(),
             selected,
@@ -564,7 +599,10 @@ fn complete_joint_bootstrap_preserves_the_terminal_event_reserve_at_the_boundary
             let (host, _) = result.unwrap();
             let capacity = host.journal_capacity().unwrap();
             assert_eq!(capacity.ordinary_remaining().events, 0);
-            assert_eq!(capacity.remaining().events, RecoveryReserve::terminal().events);
+            assert_eq!(
+                capacity.remaining().events,
+                RecoveryReserve::terminal().events
+            );
             assert!(capacity.terminal_space_remaining());
             assert_eq!(host.joint_credibility_policy().unwrap(), Some(policy));
         }

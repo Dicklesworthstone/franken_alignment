@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: live jointly evaluated learned publication
+
+Single and resident learned publication services now accept the explicit
+`fa.native-andon-operator/2` profile. The original `JointPromotionPolicy`
+enters the same first image as the learned recipe, evaluator, Andon windows and
+terminal reserve. Version-one marginal invocations retain their existing path.
+
+Complete independently anchored recovery pins every joint-policy field,
+including rational thresholds and replay-work ceilings, before numerical replay
+or the recovery Fence. Single generation continuation, confirmed Message/Finish
+recovery, evaluation-only historical assessment and resident suffixes use that
+same contract. Recovery cannot infer a missing policy from the stored history
+or substitute the separate recipe-owned held-out publication policy.
+
+The service retains its original finite evaluator, human approval, source
+custody, Stop/deadline and history-output behavior. Nineteen new service
+regressions, alongside five new core regressions, exercise useful publication
+and independent labeling as well as causal refusals. Shared recovery fixtures
+now use adjacent original Andon windows;
+their previous overlapping intervals were rejected by the native ledger
+before the intended recovery scenario could begin. Production window rules
+and existing assertions are preserved.
+
+After the workspace reconnected, all twelve changed Rust files passed parsing
+with rustfmt 1.10.0-nightly (2026-08-30). New modules passed complete formatting;
+existing files passed formatting checks over their modified ranges. Whitespace,
+independent source review and exact committed-content checks also passed.
+The required RCH gate was attempted again on the restored final sources and
+exited 127 before Cargo because the runner is absent. Compilation, runtime tests,
+Clippy and canonical qualification remain pending. Integration with the concurrent
+live credibility-promotion operator preserves its separately selected numerical
+replay allowance, native qualification and exact predecessor checks. No deployment,
+detector-quality or gate-completion claim is made. FA-105/134 and the existing
+evaluation/recovery beads remain in progress. See the
+[live evaluation contract](docs/LIVE_ANDON_EVALUATION.md#joint-credibility-in-learned-evaluation).
+
 ## 2026-11-25: promote independently qualified helper weights through the live operator
 
 The original running publication owner now exposes its finite credibility

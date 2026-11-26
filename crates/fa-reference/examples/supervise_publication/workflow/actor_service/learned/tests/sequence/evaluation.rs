@@ -3,10 +3,11 @@
 //! fixture weights and authored tests do not establish detector qualification.
 use super::super::super::{anchors as archive, evaluation as selected_evaluation};
 use super::super::evaluation_tests::{
-    accounting_file, field, number, peer_file, read_json, wait_for,
+    accounting_file, field, joint_accounting_file, number, peer_file, read_json, wait_for,
 };
 use super::*;
-use crate::workflow::actor_service::evaluator;
+use crate::workflow::actor_service::{andon_settings, evaluator};
+use fa_reference::action::consequence::delivery::persistent::observed::guarded::evaluation::andon::FileAndonRecoveryRequirements;
 use fa_reference::knowledge_surface::KNOWLEDGE_JSON_LIMITS;
 use fa_reference::strict_json;
 use std::{
@@ -14,10 +15,12 @@ use std::{
     process::{Child, Command as ProcessCommand, Stdio},
 };
 
-#[path = "evaluation/transport.rs"]
-mod transport;
+#[path = "evaluation/joint.rs"]
+mod joint_tests;
 #[path = "evaluation/recovery.rs"]
 mod recovered_sequence;
+#[path = "evaluation/transport.rs"]
+mod transport;
 
 const CHILD: &str =
     "workflow::actor_service::learned::tests::resident_sequence::evaluation::evaluator_process";
@@ -89,7 +92,22 @@ fn select_evaluation(
     pid: u32,
     candidates: u32,
 ) -> selected_evaluation::Selection {
-    let accounting = accounting_file(root);
+    select_evaluation_profile(root, config, entries, pid, candidates, false)
+}
+
+fn select_evaluation_profile(
+    root: &Root,
+    config: &Config,
+    entries: &mut [resident::Entry],
+    pid: u32,
+    candidates: u32,
+    joint: bool,
+) -> selected_evaluation::Selection {
+    let accounting = if joint {
+        joint_accounting_file(root)
+    } else {
+        accounting_file(root)
+    };
     let peer = peer_file(root, &entries[0].actor, pid);
     let text = fs::read_to_string(&peer).unwrap();
     assert!(text.contains("\"candidate_limit\":2"));
@@ -321,6 +339,10 @@ fn poll(peers: &mut Peers, root: &Root, decisions: [Option<ReviewDecision>; 3]) 
 }
 
 fn run_sequence(hold: bool, approve: bool, mode: &str, candidates: u32) {
+    run_sequence_profile(hold, approve, mode, candidates, false);
+}
+
+fn run_sequence_profile(hold: bool, approve: bool, mode: &str, candidates: u32, joint: bool) {
     let root = Root::new();
     let (config, paths, mut entries) = selected(&root, None, None);
     let hold_assets = hold.then(Root::new);
@@ -341,7 +363,14 @@ fn run_sequence(hold: bool, approve: bool, mode: &str, candidates: u32) {
     }
     let reader = Reader::new(&root, &paths[0]);
     let mut child = EvaluatorChild::start(&root, mode);
-    let selection = select_evaluation(&root, &config, &mut entries, child.0.id(), candidates);
+    let selection = select_evaluation_profile(
+        &root,
+        &config,
+        &mut entries,
+        child.0.id(),
+        candidates,
+        joint,
+    );
     let mut peers = Peers::new(&root, &config, &entries);
     let reviewer = peers.reviewer.clone();
     let mut stop_peer = None;
@@ -497,11 +526,15 @@ fn final_request_deadline_retires_pending_evaluation_without_a_fresh_lifetime() 
 
 #[test]
 fn actual_evaluated_resident_command_keeps_the_original_case_history_through_finish() {
+    actual_command_profile(false);
+}
+
+fn actual_command_profile(joint: bool) {
     let root = Root::new();
     let (config, paths, mut entries) = selected(&root, None, None);
     let reader = Reader::new(&root, &paths[0]);
     let mut child = EvaluatorChild::start(&root, "both");
-    let selection = select_evaluation(&root, &config, &mut entries, child.0.id(), 4);
+    let selection = select_evaluation_profile(&root, &config, &mut entries, child.0.id(), 4, joint);
     let mut rows = Vec::new();
     for (index, entry) in entries.iter().enumerate() {
         let inputs = super::super::mediated_topology::command_inputs(
@@ -570,6 +603,41 @@ fn actual_evaluated_resident_command_keeps_the_original_case_history_through_fin
     assert_eq!(snapshot.revision, anchor.revision());
     assert!(anchor.revision() >= number(&receipt, &["after", "journal_revision"]));
     assert!(!selection.peer.socket_path().exists());
+    // Reopen the acknowledged original image with independently selected exact
+    // accounting. The evaluator already removed all native/source model inputs.
+    let settings = andon_settings::Settings::read(&root.0.join("andon.json")).unwrap();
+    let minimum = number(&receipt, &["after", "evaluation_revision"]);
+    let mut expected = FileAndonRecoveryRequirements::new(
+        recovery::requirements(&reader.config, &reader.loaded),
+        settings.config.clone(),
+        settings.windows.clone(),
+        minimum,
+    )
+    .unwrap();
+    if let Some(policy) = settings.joint {
+        expected = expected.require_joint(policy).unwrap();
+    }
+    let (host, roles) = FileOversight::open_andon_guarded_anchored_with_learned_generation(
+        &reader.config.store,
+        reader.config.profile.clone(),
+        &expected,
+        &settings.protocol,
+        &reader.loaded.generation,
+        &anchor,
+    )
+    .unwrap();
+    assert_eq!(host.joint_credibility_policy().unwrap(), settings.joint);
+    assert_eq!(settings.joint.is_some(), joint);
+    assert_eq!(host.credibility_report().unwrap().benign_origins, 2);
+    assert_eq!(host.credibility_report().unwrap().revision, minimum);
+    assert_eq!(host.inspect().executions, 3);
+    let numerical = host.learned_generation_inspection().unwrap().numerical;
+    assert_eq!((numerical.position, numerical.sampled_draws), (6, 4));
+    if joint {
+        assert!(host.joint_credibility_report(minimum).is_err());
+    }
+    drop(roles);
+    drop(host);
     quiescent(&root);
 }
 

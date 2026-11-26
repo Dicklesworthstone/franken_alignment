@@ -164,11 +164,6 @@ impl Options {
         if self.history_input.is_none() {
             settings.creation()?;
         }
-        if settings.joint.is_some() {
-            return Err(
-                "learned live evaluation requires the marginal evaluation/Andon profile".into(),
-            );
-        }
         let peer = evaluator::Settings::read(&self.peer)?;
         Ok(Selection {
             settings,
@@ -271,8 +266,7 @@ impl Selection {
         if self.history_input.is_none() {
             self.settings.creation()?;
         }
-        if self.settings.joint.is_some()
-            || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
+        if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
             || selected_operator.is_some_and(|selected| selected.settings.policy_promotion.is_some())
         {
             return Err(SEQUENCE_USAGE.into());
@@ -367,7 +361,6 @@ impl Selection {
                 .is_some()
             || loaded.generation.required_held_out_joint().is_some()
             || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
-            || self.settings.joint.is_some()
         {
             return Err(USAGE.into());
         }
@@ -446,16 +439,34 @@ impl Selection {
         self.settings.creation()?;
         let guards = learned_recovery::requirements(config, loaded).guards;
         let registration = super::credential::registration(loaded)?;
-        let (host, roles) = FileOversight::create_andon_guarded_with_learned_generation_reserved(
-            &config.store,
-            config.profile.clone(),
-            &guards,
-            registration,
-            self.settings.protocol.clone(),
-            &self.settings.config,
-            loaded.generation.clone(),
-            RecoveryReserve::terminal(),
-        )
+        // The independently selected joint policy is part of the FIRST image.
+        // A /2 failure cannot fall back to marginal evaluation, and this role
+        // does not qualify or activate a held-out publication committee.
+        let (host, roles) = match self.settings.joint {
+            Some(joint) => {
+                FileOversight::create_joint_andon_guarded_with_learned_generation_reserved(
+                    &config.store,
+                    config.profile.clone(),
+                    &guards,
+                    registration,
+                    self.settings.protocol.clone(),
+                    joint,
+                    &self.settings.config,
+                    loaded.generation.clone(),
+                    RecoveryReserve::terminal(),
+                )
+            }
+            None => FileOversight::create_andon_guarded_with_learned_generation_reserved(
+                &config.store,
+                config.profile.clone(),
+                &guards,
+                registration,
+                self.settings.protocol.clone(),
+                &self.settings.config,
+                loaded.generation.clone(),
+                RecoveryReserve::terminal(),
+            ),
+        }
         .map_err(debug)?;
         Ok((
             (

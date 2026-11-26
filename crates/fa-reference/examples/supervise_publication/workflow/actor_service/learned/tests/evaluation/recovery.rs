@@ -2,6 +2,8 @@
 //! labels. Original native fixtures test authority/custody, not detector quality.
 #[path = "history.rs"]
 mod history_tests;
+#[path = "joint.rs"]
+mod joint_tests;
 use super::super::continuation as native;
 use super::*;
 use fa_reference::action::consequence::delivery::persistent::{
@@ -172,20 +174,29 @@ struct Original {
 }
 
 fn prepared(root: &Root, published: bool) -> Original {
+    prepared_profile(root, published, false)
+}
+
+fn prepared_profile(root: &Root, published: bool, joint: bool) -> Original {
     let mut config = configured(root);
     let path = native::write(root);
     evidence(root, &config, 1, true, false);
     let mut loaded = recipe::load(&path, &config, true).unwrap();
     let actor = peers::actor_profile(root, &config, 1);
-    let (selection, accounting) = super::selected(
+    let (selection, accounting) = super::selected_profile(
         root,
         &config,
         &mut loaded,
         &actor,
         std::process::id().checked_add(100_000).unwrap(),
+        joint,
     );
     let ((mut host, reviewer, observer, identity), evaluator) =
         selection.create(&config, &loaded).unwrap();
+    assert_eq!(
+        host.joint_credibility_policy().unwrap(),
+        andon_settings::Settings::read(&accounting).unwrap().joint
+    );
     assert!(observer.is_none() && identity.is_none());
     let revision = host.revision();
     host.register_andon_window(
@@ -318,13 +329,17 @@ fn independent_requirements(
     settings: &andon_settings::Settings,
     minimum: u64,
 ) -> FileAndonRecoveryRequirements {
-    FileAndonRecoveryRequirements::new(
+    let expected = FileAndonRecoveryRequirements::new(
         recovery::requirements(config, loaded),
         settings.config.clone(),
         settings.windows.clone(),
         minimum,
     )
-    .unwrap()
+    .unwrap();
+    match settings.joint {
+        Some(joint) => expected.require_joint(joint).unwrap(),
+        None => expected,
+    }
 }
 
 struct Invocation<'a> {
@@ -476,6 +491,10 @@ fn reopened(original: &Original, loaded: &Loaded, completed: &Completed) -> File
     .unwrap();
     assert_eq!(host.revision(), completed.snapshot.revision + 1);
     assert!(host.learned_generation_inspection().unwrap().paused);
+    assert_eq!(
+        host.joint_credibility_policy().unwrap(),
+        completed.accounting.joint
+    );
     assert!(!host.clock_ready());
     assert_eq!(
         host.credibility_report().unwrap().revision,
@@ -490,8 +509,12 @@ fn reopened(original: &Original, loaded: &Loaded, completed: &Completed) -> File
 
 #[test]
 fn explicit_continue_generation_retains_the_original_sample_before_fresh_review_and_label() {
+    continued_profile(false);
+}
+
+fn continued_profile(joint: bool) {
     let root = Root::new();
-    let original = prepared(&root, false);
+    let original = prepared_profile(&root, false, joint);
     let old_archive = fs::read(&original.anchor).unwrap();
     let completed = run_command(
         &root,
@@ -533,8 +556,12 @@ fn explicit_continue_generation_retains_the_original_sample_before_fresh_review_
 }
 
 fn message_then_finish(decision: ReviewDecision) {
+    message_then_finish_profile(decision, false);
+}
+
+fn message_then_finish_profile(decision: ReviewDecision, joint: bool) {
     let root = Root::new();
-    let original = prepared(&root, true);
+    let original = prepared_profile(&root, true, joint);
     let old_archive = fs::read(&original.anchor).unwrap();
     evidence(&root, &original.config, 2, true, false);
     let (message_path, message) = native::next(&root, &original.config, 2);
@@ -880,9 +907,13 @@ fn invalid_message_predecessor_retains_the_acknowledged_recovery_fence_without_n
 
 #[test]
 fn authenticated_stop_at_early_middle_and_ready_uses_only_the_original_terminal_suffix() {
+    stopped_profile(false);
+}
+
+fn stopped_profile(joint: bool) {
     for position in 0..3 {
         let root = Root::new();
-        let original = prepared(&root, false);
+        let original = prepared_profile(&root, false, joint);
         let accounting = accounting_for(&original, &root, 0, "stop");
         let mut loaded = recipe::load(&root.0.join("recipe.json"), &original.config, true).unwrap();
         let (selection, reviewer) = live_selection(&root, &original, &mut loaded, &accounting);

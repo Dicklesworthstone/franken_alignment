@@ -98,9 +98,36 @@ pub(super) fn accounting_file(root: &Root) -> PathBuf {
         "/fixtures/native_andon_operator.json"
     ))
     .replace("2000000000000", &end.to_string())
+    // Recovery fixtures retain a separate [100, 200) historical window. Their
+    // original reviews occur at tick 1000 or wall time, so keep both windows
+    // disjoint without changing a review's original accounting interval.
+    .replace("\"start\": 0", "\"start\": 200")
     .replace("\"false_stops_allowed\": 2", "\"false_stops_allowed\": 1");
     fs::write(&path, content).unwrap();
     path
+}
+
+pub(super) fn joint_accounting_file(root: &Root) -> PathBuf {
+    let path = accounting_file(root);
+    let marginal = fs::read_to_string(&path).unwrap();
+    let joint = with_joint_policy(&marginal);
+    assert_ne!(joint, marginal);
+    fs::write(&path, joint).unwrap();
+    path
+}
+
+pub(super) fn with_joint_policy(marginal: &str) -> String {
+    marginal.replace(
+        "\"schema_version\": \"fa.native-andon-operator/1\",",
+        r#""schema_version": "fa.native-andon-operator/2",
+  "joint": {
+    "id": 71,
+    "generation": 1,
+    "maximum_escape_rate": {"numerator": 0, "denominator": 1},
+    "maximum_benign_stop_rate": {"numerator": 1, "denominator": 2},
+    "budget": {"cases": 512, "member_outcomes": 2048}
+  },"#,
+    )
 }
 
 pub(super) fn peer_file(root: &Root, actor: &Profile, evaluator_pid: u32) -> PathBuf {
@@ -155,7 +182,22 @@ fn selected(
     actor: &Profile,
     evaluator_pid: u32,
 ) -> (evaluation::Selection, PathBuf) {
-    let accounting = accounting_file(root);
+    selected_profile(root, config, loaded, actor, evaluator_pid, false)
+}
+
+fn selected_profile(
+    root: &Root,
+    config: &Config,
+    loaded: &mut Loaded,
+    actor: &Profile,
+    evaluator_pid: u32,
+    joint: bool,
+) -> (evaluation::Selection, PathBuf) {
+    let accounting = if joint {
+        joint_accounting_file(root)
+    } else {
+        accounting_file(root)
+    };
     let peer = peer_file(root, actor, evaluator_pid);
     let (remaining, options) =
         evaluation::take_options(&args(root, &accounting, &peer), None).unwrap();
@@ -371,6 +413,10 @@ where
 }
 
 fn run_assessed(hold: bool, approve: bool, partial: bool) {
+    run_assessed_profile(hold, approve, partial, false);
+}
+
+fn run_assessed_profile(hold: bool, approve: bool, partial: bool, joint: bool) {
     let root = Root::new();
     let config = configured(&root);
     let path = fixture::write(
@@ -387,7 +433,8 @@ fn run_assessed(hold: bool, approve: bool, partial: bool) {
     let reviewer = fixture::peers(&root, &config);
     let actor = peers::actor_profile(&root, &config, 1);
     let mut child = EvaluatorChild::start(&root, if partial { "partial" } else { "assess" });
-    let (evaluation, accounting_path) = selected(&root, &config, &mut loaded, &actor, child.0.id());
+    let (evaluation, accounting_path) =
+        selected_profile(&root, &config, &mut loaded, &actor, child.0.id(), joint);
     let accounting = andon_settings::Settings::read(&accounting_path).unwrap();
     let cleanup_ms = config.timing.cleanup_ms;
     let poll_ms = config.timing.poll_ms;
@@ -503,8 +550,15 @@ fn run_assessed(hold: bool, approve: bool, partial: bool) {
         2
     );
     assert_eq!(host.andon_config().unwrap(), Some(&accounting.config));
+    assert_eq!(host.joint_credibility_policy().unwrap(), accounting.joint);
+    assert_eq!(accounting.joint.is_some(), joint);
     let report = host.credibility_report().unwrap();
     assert_eq!(report.retained_cases, 1);
+    // This fixture has no independently labeled violation origin. Observing a
+    // benign case cannot qualify the joint candidate or promote its committee.
+    if joint {
+        assert!(host.joint_credibility_report(report.revision).is_err());
+    }
     let window = &host.andon_ledger().unwrap().windows()[&1];
     if partial {
         let receipt: StopControlReceipt = stop.unwrap().join().unwrap();
@@ -559,6 +613,23 @@ fn final_learned_hold_remains_assessable_under_the_original_two_candidate_allowa
 #[test]
 fn original_stop_preempts_a_partial_evaluator_frame_after_learned_hold() {
     run_assessed(true, false, true);
+}
+
+#[test]
+fn joint_learned_evaluation_preserves_native_and_independent_human_publication_keys() {
+    for approve in [false, true] {
+        run_assessed_profile(false, approve, false, true);
+    }
+}
+
+#[test]
+fn joint_learned_hold_keeps_original_false_stop_costs_and_unqualified_joint_evidence() {
+    run_assessed_profile(true, false, false, true);
+}
+
+#[test]
+fn joint_learned_stop_retires_partial_evaluation_without_applying_a_label() {
+    run_assessed_profile(true, false, true, true);
 }
 
 #[test]

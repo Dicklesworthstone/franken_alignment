@@ -31,6 +31,21 @@ original atomic learned constructor installs the complete numerical recipe,
 guards, native evaluation, Andon windows and terminal recovery reserve in its
 first acknowledged image. No provisional unaccounted owner is created.
 
+The accounting profile may be marginal `fa.native-andon-operator/1` or explicit
+joint `fa.native-andon-operator/2`. Version two installs its complete original
+`JointPromotionPolicy` in that same first image and retains it across every
+Message/Finish handoff. A suffix recovery requires the independently selected
+exact policy, including thresholds and replay-work ceilings. Selecting version
+one does not downgrade a joint history; omitting or changing the required
+policy refuses before the recovery Fence.
+
+This is joint qualification for the original live evaluation ledger. The
+separate recipe-owned held-out publication policy remains unsupported in this
+accounted composition. The existing independently selected
+[credibility-promotion operator](LIVE_CREDIBILITY_PROMOTION.md) requires its
+explicit numerical replay allowance and native joint qualification on this
+same owner. Independent labels still supply no publication key.
+
 One evaluator role, listener and original finite time/candidate/I/O/byte allowance
 remain attached to that owner through Message and Finish handoffs. Successful
 intermediate requests service the evaluator during their bounded actor-reply and

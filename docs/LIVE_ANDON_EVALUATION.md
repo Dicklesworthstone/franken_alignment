@@ -293,9 +293,11 @@ This is fresh single-request creation with the original learned numerical recipe
 native or explicitly selected process helpers, actor ingress and independent
 human reviewer. Plain and simple checked publication are supported. Both
 accounting and evaluator profiles, the actor profile and a new independent
-history output are required together. Select the marginal
-`fa.native-andon-operator/1` accounting profile with its unchanged initial
-windows and evaluation revision zero.
+history output are required together. Select `fa.native-andon-operator/1` for
+the existing marginal profile, or `fa.native-andon-operator/2` to retain an
+explicit `JointPromotionPolicy` for the original credibility ledger. Both
+profiles require their unchanged initial windows and evaluation revision zero
+at creation.
 
 The [atomic learned constructor](LEARNED_ANDON_BOOTSTRAP.md) installs the exact
 recipe, complete guards, evaluation, Andon accounting and terminal recovery
@@ -328,8 +330,8 @@ acknowledged labels and accounting from the same owner.
 Optional `--precheck-profile` and paired `--operator-profile` /
 `--tower-generation` preserve their existing contracts. A separately installed
 operator Ledger grant can read accounting and calibration Findings. Required
-raw/owned predictors, held-out joint recipes, joint accounting, stronger witness
-compositions, topology, campaigns, checkpoints and credibility activation refuse
+raw/owned predictors, held-out joint recipes, stronger witness compositions,
+topology, campaigns, checkpoints and credibility activation refuse
 this single-request opt-in. Explicit single-request continuation uses the complete
 anchored recovery composition below. Fresh resident learned sequences use their
 separate composition. An accounted learned journal cannot use the narrower
@@ -346,6 +348,40 @@ test-only accounting harness retains the original live owner for inspection;
 it does not recover or replace it. Qualified scoped parsing/format and whitespace
 checks passed; RCH compilation, runtime tests, Clippy and canonical qualification
 remain unexecuted because the runner is unavailable.
+
+## Joint credibility in learned evaluation
+
+The explicit version-two accounting profile works with single learned creation,
+interrupted-generation continuation, confirmed-Message/Finish recovery,
+evaluation-only historical assessment and resident learned sequences. The joint
+policy enters the same original first image as the numerical recipe, evaluator,
+Andon windows and terminal reserve. Startup failure does not retry with a
+marginal policy.
+
+Joint qualification uses the original independently labeled evaluation cases
+when the core credibility API evaluates candidate helper weights. The policy
+does not create labels, approve an effect, waive the original marginal rules,
+or qualify a helper merely by being present. An independently selected
+[live credibility-promotion operator](LIVE_CREDIBILITY_PROMOTION.md) can use
+this original joint ledger through its existing `next` / `promote` verbs.
+Learned owners require that operator's explicit `numerical_replay_events`
+allowance; its original qualification, exact predecessor and one-mutation
+limits remain in force. The separate recipe-owned held-out joint publication
+policy remains outside this evaluation contract.
+
+Recovery binds the selected policy before numerical replay, cleanup or the
+recovery Fence. An omitted or individually changed policy field refuses without
+altering canonical history or staging. Successful recovery preserves original
+pending/censored cases, assessment revisions, costs and incidents, then issues
+fresh separate roles. Every live release still needs the original source,
+helper review and human decision. Stop and evaluator work limits retain their
+existing priority and scope.
+
+New regression sources exercise real learned publication, independent
+subprocess labeling, held-output accounting, partial-frame Stop, exact-policy
+recovery and resident Message/Finish succession. These are deterministic
+boundary cases, not empirical detector-quality evidence. Compilation, runtime
+execution, Clippy and the required remote gate remain pending.
 
 ## Continue an evaluated learned service
 
@@ -368,9 +404,12 @@ Select exactly one original continuation mode:
 | `--after-message PREVIOUS_REQUEST` | Admit a new request only after the named original Message has a confirmed native receipt. |
 | `--finish-after-message PREVIOUS_REQUEST` | Admit Finish against the confirmed original Message history, with a fresh helper review and human decision. |
 
-The marginal accounting profile supplies the original deployment/evaluator and
+The selected accounting profile supplies the original deployment/evaluator and
 initial windows, **all** current windows, and an independently retained minimum
-evaluation revision. The original numerical recipe, complete learned guards,
+evaluation revision. A version-two profile additionally pins the complete
+original joint policy, including both rational thresholds and replay-work
+ceilings. Version one requires joint-policy absence; it cannot reopen a
+version-two history under marginal qualification. The original numerical recipe, complete learned guards,
 current policy/floors, simple publication requirements and exact history prefix
 must also match. These expectations come from the supplied profiles and archive;
 recovery never learns a more permissive contract from the journal being checked.
@@ -402,8 +441,8 @@ same recovered owner. It cannot rerun generation/review or supply an effect key.
 The new output anchor includes acknowledged late labels and Andon changes.
 
 Receipt-only/effect-retry modes, offline terminal modes,
-predictors, joint accounting, topology, campaigns, checkpoints and credibility
-activation remain outside this paired live recovery grammar. The resident
+predictors, topology, campaigns, checkpoints and credibility activation remain
+outside this paired live recovery grammar. The resident
 service also accepts an explicitly anchored remaining sequence under the
 complete accounting and evaluation requirements described below.
 

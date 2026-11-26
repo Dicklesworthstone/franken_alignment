@@ -18,14 +18,18 @@ struct Historical {
 }
 
 fn prepared_history(root: &Root, hold: bool) -> Historical {
+    prepared_history_profile(root, hold, false)
+}
+
+fn prepared_history_profile(root: &Root, hold: bool, joint: bool) -> Historical {
     let mut config = configured(root);
     let path = fixture::write(root, if hold { b"hold".as_slice() } else { b"allow".as_slice() });
     evidence(root, &config, 1, true, false);
     let mut loaded = recipe::load(&path, &config, true).unwrap();
     let actor = peers::actor_profile(root, &config, loaded.request);
-    let (selected, accounting) = super::super::selected(
+    let (selected, accounting) = super::super::selected_profile(
         root, &config, &mut loaded, &actor,
-        std::process::id().checked_add(100_000).unwrap(),
+        std::process::id().checked_add(100_000).unwrap(), joint,
     );
     let ((mut host, reviewer, observer, identity), evaluator) =
         selected.create(&config, &loaded).unwrap();
@@ -143,9 +147,18 @@ fn forget_live_inputs(root: &Root) {
 
 #[test]
 fn historical_hold_and_human_rejection_accept_late_truth_without_live_inputs_or_effects() {
+    historical_profile(false);
+}
+
+#[test]
+fn joint_historical_evaluation_retains_the_original_policy_and_charges_without_live_work() {
+    historical_profile(true);
+}
+
+fn historical_profile(joint: bool) {
     for hold in [true, false] {
         let root = Root::new();
-        let historical = prepared_history(&root, hold);
+        let historical = prepared_history_profile(&root, hold, joint);
         let original = &historical.original;
         let actor = peers::actor_profile(&root, &original.config, 1);
         let reviewer = fixture::peers(&root, &original.config);
@@ -196,6 +209,8 @@ fn historical_hold_and_human_rejection_accept_late_truth_without_live_inputs_or_
         assert_eq!(host.learned_generation_inspection().unwrap().numerical,
             historical.numerical.numerical);
         assert!(host.learned_generation_inspection().unwrap().paused);
+        assert_eq!(host.joint_credibility_policy().unwrap(), settings.joint);
+        assert_eq!(settings.joint.is_some(), joint);
         assert_eq!(host.request_status(1).unwrap(), historical.request);
         let report = host.credibility_report().unwrap();
         assert_eq!((report.revision, report.pending_cases, report.benign_origins), (2, 0, 1));

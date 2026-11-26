@@ -111,7 +111,9 @@ fixture admits an actual weight change, so its work-bound cases reach the
 original joint reducer instead of stopping at an unchanged-weight refusal.
 
 Independent source review checked those native contracts and test API bindings.
-The execution workspace disconnected before the final sources could be formatted;
-RCH was already unavailable. Formatting, compilation, runtime tests and Clippy
-remain pending for this extension. These source cases neither establish detector
-quality nor close the FA-105 execution gate.
+The execution workspace disconnected, then recovered long enough for the final
+sources to pass Rust parsing and scoped formatting checks. The joint test module
+passed complete formatting with rustfmt 1.10.0-nightly (2026-08-30). The required
+RCH gate still exits before Cargo because its runner is absent. Compilation,
+runtime tests and Clippy remain pending. These source cases neither establish
+detector quality nor close the FA-105 execution gate.

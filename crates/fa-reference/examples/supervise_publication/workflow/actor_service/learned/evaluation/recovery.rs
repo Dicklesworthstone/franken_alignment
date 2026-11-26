@@ -24,6 +24,11 @@ impl Selection {
             self.settings.minimum_evaluation_revision,
         )
         .map_err(debug)?;
+        if let Some(joint) = self.settings.joint {
+            // Required absence remains exact for /1. A /2 selection pins every
+            // original policy field and work ceiling before numerical replay.
+            expected = expected.require_joint(joint).map_err(debug)?;
+        }
         if let Some(publication) = &loaded.publication {
             expected = expected
                 .require_publication(publication.simple_limits()?)

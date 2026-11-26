@@ -120,6 +120,13 @@ invocation allowance. See
 [live accounted learned continuation](LIVE_ANDON_EVALUATION.md#continue-an-evaluated-learned-service)
 for the complete grammar and its bounded supported composition.
 
+The same command accepts the explicit version-two Andon profile's
+`JointPromotionPolicy`. It pins every original policy field through
+`require_joint`, in addition to the complete accounting windows and evaluation
+floor. Version-one absence cannot recover a joint history. This applies to
+single continuations, evaluation-only history and resident Message/Finish
+suffixes; none substitutes the separate recipe-owned held-out publication policy.
+
 ## Verification boundary
 
 Eight public regression functions use the existing original numerical, native review and
