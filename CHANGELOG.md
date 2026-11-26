@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-26: compose learned topology custody with independent Andon evaluation
+
+- Install the original learned recipe, topology, marginal or joint evaluator,
+  complete Andon accounting and terminal reserve in one acknowledged first image.
+- Add sealed cooperative recovery that independently pins original/current
+  topology and availability alongside every accounting, joint, publication,
+  policy and counter requirement before returning authority.
+- Preserve original Message/Finish selection and native Stop with no alternate
+  numerical replay, restored approvals or refund of unknown effects.
+- Add six focused regression definitions, including actual publication before
+  and after recovery, fresh role custody, complete-contract refusals and exact
+  terminal retry. Source review and scoped Rust formatting passed; required
+  remote compilation and runtime qualification remain open because RCH is absent.
+
 ## 2026-11-26: serve jointly evaluated learned publication and recovery
 
 - Admit explicit version-two Andon profiles for single and resident learned

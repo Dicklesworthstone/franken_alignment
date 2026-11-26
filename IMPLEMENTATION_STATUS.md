@@ -1,5 +1,41 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-26: original learned topology and Andon composition
+
+Learned publication can now retain topology enforcement, independent evaluation
+and complete Andon accounting in the same durable owner. Two reserved startup
+constructors install either the marginal or independently selected joint policy
+with the original learned recipe, guarded perimeter and topology in one first
+acknowledged image. Configuration and event-capacity checks precede storage;
+the human, evaluator and topology-observer roles remain separate.
+
+The sealed `FileMediatedAndonLearnedRecovery` reconstructs the original numerical
+history once. It pins the independent history anchor, recipe, complete original
+accounting configuration and window inventory, joint-policy replay ceilings,
+publication contract, initial/current graph, availability, guards, policy and
+counter/evaluation floors. Mismatches cannot return an inner cursor or live role.
+The successful original Fence preserves spending, labels and liabilities while
+withdrawing old approvals, identity eligibility, clock readiness and accepted
+topology cuts. Message/Finish selectors and terminal Stop use that same verified
+history; exact stopped retries append no additional events.
+
+Six new regression definitions pair actual marginal/joint publication before
+and after recovery with changed-contract refusals, sticky floor/availability
+failures before Stop clock access, unknown-charge preservation, exact retry,
+terminal-capacity boundaries and unsupported predictor/held-out custody. Two
+compile-fail examples prevent early role or inner-cursor extraction. Independent
+source review, Rust parsing, scoped formatting and whitespace checks passed.
+The required RCH runner is unavailable; compilation, runtime tests, Clippy and
+canonical qualification remain open. No packet or bead is closed by source-only
+evidence. This composition implements existing FA-026/073/105 contracts without
+changing the journal format or declaring operating-system containment.
+
+Source checkpoints remain independently retained and bound through the native
+topology-source workflow. Graph equality cannot replace that custody. Required
+raw/owned predictors and held-out joint publication retain their distinct roles
+and are refused by this composition. See the
+[core contract and public APIs](docs/MEDIATED_LEARNED_ANDON.md).
+
 ## 2026-11-26: live jointly evaluated learned publication
 
 Single and resident learned publication services now accept the explicit

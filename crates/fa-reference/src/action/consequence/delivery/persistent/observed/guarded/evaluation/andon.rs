@@ -11,16 +11,17 @@ use super::super::super::{
 };
 use super::super::anchored::FileHistoryAnchor;
 use super::super::bootstrap::PreparedGuardedBootstrap;
+use super::super::mediated::FileTopologyRequirement;
 pub use super::super::recovery::FileAndonRecovery;
 use super::super::{FileCredentialRegistration, FileGuardSet, FileRecoveryRequirements};
 use super::{FileCredibilitySnapshot, FileEvaluatedOversightRoles};
 use crate::Error;
+use crate::action::consequence::delivery::persistent::RecoveryReserve;
+use crate::action::consequence::delivery::publication_gate::PublicationLimits;
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
 use crate::action::consequence::oversight::credibility::native_andon::NativeEvaluatedFalseHold;
 use crate::action::consequence::oversight::joint_credibility::JointPromotionPolicy;
 use crate::round::review::andon::{AndonBudget, AndonLedger};
-use crate::action::consequence::delivery::publication_gate::PublicationLimits;
-use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::path::Path;
 
 /// Operator-retained expectations, never discovered from the journal under
@@ -89,10 +90,38 @@ impl FileAndonRecoveryRequirements {
         protocol: &EvaluationProtocol,
         recipe_publication: Option<PublicationLimits>,
     ) -> Result<(), Error> {
+        self.preflight_evaluated_with_topology(events, protocol, recipe_publication, None)
+    }
+
+    // Only the sealed mediated learned cursor supplies topology. The ordinary
+    // entry points continue to require its absence before numerical replay.
+    fn preflight_evaluated_with_topology(
+        &self,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+        recipe_publication: Option<PublicationLimits>,
+        topology: Option<&FileTopologyRequirement>,
+    ) -> Result<(), Error> {
         self.preflight(events)?;
-        self.base.guards.check_decoder_config(events)?;
+        self.base.guards.check_mediated_replay_config(
+            events,
+            None,
+            topology.map(|required| &required.initial),
+        )?;
         joint::check_protocol(events, protocol, self.joint)?;
-        self.check_publication(events, recipe_publication)
+        self.check_publication(events, recipe_publication)?;
+        if let Some(required) = topology {
+            use super::super::super::mediation::MediationEvent;
+            let current = events.iter().rev().find_map(|event| match event {
+                Event::Mediation(MediationEvent::Update(update)) => update.next.as_ref(),
+                Event::Mediation(MediationEvent::Enable(graph)) => Some(graph),
+                _ => None,
+            });
+            if current != Some(&required.current) {
+                return Err(Error::Binding);
+            }
+        }
+        Ok(())
     }
 
     pub(in super::super) fn check_replayed(
@@ -113,8 +142,33 @@ impl FileAndonRecoveryRequirements {
         protocol: &EvaluationProtocol,
         recipe_publication: Option<PublicationLimits>,
     ) -> Result<(), Error> {
-        self.base
-            .check_evaluated(profile, machine, events, Some(protocol))?;
+        self.check_replayed_with_topology(
+            profile,
+            machine,
+            events,
+            protocol,
+            recipe_publication,
+            None,
+        )
+    }
+
+    fn check_replayed_with_topology(
+        &self,
+        profile: &FileOversightProfile,
+        machine: &Machine,
+        events: &[Event],
+        protocol: &EvaluationProtocol,
+        recipe_publication: Option<PublicationLimits>,
+        topology: Option<&FileTopologyRequirement>,
+    ) -> Result<(), Error> {
+        self.base.check_mediated(
+            profile,
+            machine,
+            events,
+            Some(protocol),
+            None,
+            topology.map(|required| &required.initial),
+        )?;
         if machine.andon_contract() != Some(&self.config)
             || machine.broker.joint_credibility_policy() != self.joint
         { return Err(Error::Binding); }
@@ -131,6 +185,12 @@ impl FileAndonRecoveryRequirements {
             .eq(self.windows.iter().copied())
         {
             return Err(Error::Binding);
+        }
+        if let Some(required) = topology {
+            let actual = machine.mediation_snapshot(events.len() as u64)?;
+            if actual.graph != required.current || actual.available != required.available {
+                return Err(Error::Binding);
+            }
         }
         Ok(())
     }

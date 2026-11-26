@@ -35,6 +35,13 @@ labels, counts, costs, supports and numerical state from the original events.
 
 ## Use the original cooperative cursor
 
+An owner with topology enforcement uses the separate
+[mediated accounted learned cursor](MEDIATED_LEARNED_ANDON.md). It adds exact
+original/current graph and availability requirements while retaining the same
+accounting and numerical contracts. Plain recovery still requires topology
+absence. The source checkpoint remains independently bound to the same history;
+graph equality alone cannot replace that custody.
+
 ```rust,ignore
 let mut run =
     FileOversight::begin_open_andon_guarded_anchored_with_learned_generation(

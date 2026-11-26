@@ -112,6 +112,12 @@ governed by the original stopped-recovery contract.
 
 ## Scope and verification
 
+The separate [mediated Andon composition](MEDIATED_LEARNED_ANDON.md) accepts the
+complete original accounting contract with marginal or independently selected
+joint credibility evaluation. Its sealed recovery pins all windows, evaluation
+floors and joint-policy fields in addition to the original graph requirements.
+It preserves the role and inventory boundaries of the older APIs below.
+
 This profile admits ordinary learned generation and its optional marginal
 evaluator. Predictor-pinned raw/owned recipes, standalone predictors, joint
 evaluation, and held-out joint evaluation are refused explicitly. The existing

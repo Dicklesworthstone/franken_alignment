@@ -46,6 +46,11 @@ is not accepted by learning the on-disk value during recovery.
 
 ## Preserve the original bootstrap and accounting boundaries
 
+The [mediated accounting composition](MEDIATED_LEARNED_ANDON.md) installs the
+same marginal or joint evaluator and Andon contract with the original topology
+observer in one reserved first image. Plain constructors continue to require
+topology absence; selecting mediation uses its explicit complete role bundle.
+
 Every declared guard and the complete learned recipe are checked before storage
 creation. A recipe-owned policy source must equal the independent declaration;
 the original learned Enable installs that source exactly once. Required raw or

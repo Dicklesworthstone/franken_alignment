@@ -3,6 +3,8 @@
 mod accounted_recovery;
 #[path = "andon/joint.rs"]
 mod joint;
+#[path = "andon/mediated.rs"]
+mod mediated;
 #[path = "andon/recovery_profile.rs"]
 mod recovery_profile;
 use super::*;

@@ -1,5 +1,6 @@
 //! Complete independent accounting requirements over the original learned replay.
 //! One lock, one numerical reconstruction and one acknowledged finalization.
+mod mediated;
 use super::super::super::{
     FileOversight, FileOversightProfile, FileOversightRoles, JournalError,
     anchored::FileHistoryAnchor, learned::check_profile, learned_recovery::check_recovery_reserve,
@@ -17,15 +18,16 @@ use crate::action::consequence::delivery::{
                 FileLearnedConfig, FileLearnedRecovery, FileLearnedRecoveryProgress,
                 FileLearnedRecoveryStatus, checkpoint::FileLearnedResetIntent,
             },
-            stream::FileStreamProposal,
             shutdown::recovery::{
                 FileAdmissionStoppedHistory, FileStoppedHistory, FileStoppedRecovery,
             },
+            stream::FileStreamProposal,
         },
     },
     publication_gate::PublicationLimits,
 };
 use crate::action::consequence::oversight::credibility::EvaluationProtocol;
+pub use mediated::FileMediatedAndonLearnedRecovery;
 use std::{fmt, path::Path};
 
 /// A sealed original learned recovery with independently retained evaluation,
