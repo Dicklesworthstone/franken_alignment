@@ -281,6 +281,41 @@ where
     retention.finish(result)
 }
 
+/// Resume the exact first unsubmitted text intent from independent history,
+/// then keep that original numerical/source owner across the selected suffix.
+/// This ordinary path cannot infer evaluator, governor or activation contracts.
+pub(super) fn run_with_continuation<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selected_operator: Option<&operator::Selection>,
+    history: &anchors::Selection,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut retention = anchors::Retention::new(Some(history));
+    let result = run_retained(
+        config,
+        entries,
+        reviewer_profile,
+        publication,
+        (Mode::ContinueGeneration, selected_operator),
+        None,
+        Some(history),
+        None,
+        None,
+        None,
+        &mut retention,
+        time,
+        output,
+    );
+    retention.finish(result)
+}
+
 /// Create the original source-backed numerical owner with evaluation and Andon
 /// accounting in its first acknowledged image. The sole evaluator endpoint,
 /// original grants and finite lifetime survive every Message/Finish handoff.
@@ -435,8 +470,17 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (mode, selected_operator) = selection;
-    if mode == Mode::ContinueGeneration && accounting.is_none() {
-        return Err(andon::INVALID.into());
+    if mode == Mode::ContinueGeneration
+        && accounting.is_none()
+        && (credibility.is_some()
+            || selected_governor.is_some()
+            || requirements.is_some()
+            || history.and_then(anchors::Selection::input).is_none()
+            || history.and_then(anchors::Selection::output_path).is_none())
+    {
+        return Err(
+            "ordinary native continuation requires independent input and new output history without governed or activation contracts".into(),
+        );
     }
     let after = mode.after();
     governor::check_selected(
@@ -531,6 +575,10 @@ where
         credibility,
     )?;
     if let Some(history) = history {
+        if let Some(publication) = publication {
+            let files = publication.input_paths().iter().map(|path| path.as_path()).collect::<Vec<_>>();
+            history.check_files(&files)?;
+        }
         history.check_selected(
             &config,
             &entries
@@ -594,7 +642,7 @@ where
         retention.observe_stop(stopped);
         let (host, roles) = opened?;
         (host, roles.human, roles.policy_governor, None)
-    } else if after.is_some() {
+    } else if mode.is_recovery() {
         let mut stopped = None;
         let opened = bootstrap::open_with_retained_history(
             &config,

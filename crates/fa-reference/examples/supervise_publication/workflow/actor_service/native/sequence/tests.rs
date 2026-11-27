@@ -52,6 +52,8 @@ use fixture::{Root, inputs, profiles};
 mod checked;
 #[path = "tests/recovery.rs"]
 mod recovery_tests;
+#[path = "tests/continuation.rs"]
+mod continuation_tests;
 #[path = "tests/operator.rs"]
 mod operator_tests;
 #[path = "tests/precheck.rs"]

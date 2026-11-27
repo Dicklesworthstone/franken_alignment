@@ -17,7 +17,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor and optional per-release exact prechecks; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint compositions remain separate";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--continue-generation | --after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; ordinary --continue-generation requires both --history-anchor INPUT and --retain-history-anchor NEW_OUTPUT and excludes governor/activation selections; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor and optional per-release exact prechecks; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint compositions remain separate";
 
 struct Input {
     recipe: PathBuf,
@@ -126,6 +126,62 @@ fn take_operator(
     ))
 }
 
+/// Own the unary ordinary continuation selector before the pair-only parsers.
+/// Accounting has its own complete grammar and removes its selector first.
+/// Require independently retained input and a new output at selection time;
+/// mixed modes and unsupported guards cannot disappear during option removal.
+fn take_unaccounted_continuation(
+    args: &[String],
+    credibility: Option<&Path>,
+) -> Result<(Vec<String>, bool), String> {
+    if !args.iter().any(|arg| arg == "--continue-generation") {
+        return Ok((args.to_vec(), false));
+    }
+    if credibility.is_some()
+        || args.len() < 9
+        || args.len() > 15
+        || args.first().map(String::as_str) != Some("serve-native-generated")
+        || args[1..4]
+            .iter()
+            .any(|value| value.is_empty() || value.starts_with("--"))
+    {
+        return Err(USAGE.into());
+    }
+    let mut remaining = args[..4].to_vec();
+    let mut seen = BTreeSet::new();
+    let mut index = 4;
+    while index < args.len() {
+        let flag = args[index].as_str();
+        if !seen.insert(flag) {
+            return Err(USAGE.into());
+        }
+        if flag == "--continue-generation" {
+            index += 1;
+            continue;
+        }
+        let value = args.get(index + 1).ok_or(USAGE)?;
+        if value.is_empty() || value.starts_with("--") {
+            return Err(USAGE.into());
+        }
+        match flag {
+            "--history-anchor"
+            | "--retain-history-anchor"
+            | "--publication-profile"
+            | "--operator-profile"
+            | "--tower-generation" => remaining.extend_from_slice(&args[index..index + 2]),
+            _ => return Err(USAGE.into()),
+        }
+        index += 2;
+    }
+    if !seen.contains("--history-anchor")
+        || !seen.contains("--retain-history-anchor")
+        || seen.contains("--operator-profile") != seen.contains("--tower-generation")
+    {
+        return Err(USAGE.into());
+    }
+    Ok((remaining, true))
+}
+
 pub(super) fn command(args: &[String], credibility: Option<&Path>) -> Result<(), String> {
     command_with_clock(
         args,
@@ -145,13 +201,21 @@ where
     F: FnMut() -> ElapsedTick,
 {
     let (args, accounting_paths) = andon::take_options(args, credibility)?;
+    let (args, continue_generation) = take_unaccounted_continuation(&args, credibility)?;
     let (args, governor_path, recovery_path) = governor::take_recovery_options(&args, credibility)?;
     let (args, history_options) = anchors::take_options(&args)?;
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
-    let mode = accounting_paths
-        .as_ref()
-        .map_or(Mode::from_after(after), |paths| paths.mode);
+    let mode = accounting_paths.as_ref().map_or_else(
+        || {
+            if continue_generation {
+                Mode::ContinueGeneration
+            } else {
+                Mode::from_after(after)
+            }
+        },
+        |paths| paths.mode,
+    );
     if mode.after() != after {
         return Err(andon::INVALID.into());
     }
@@ -217,6 +281,11 @@ where
         .as_deref()
         .map(PublicationProfile::read)
         .transpose()?;
+    if let Some(publication) = &publication {
+        // Reserve delayed witness/producer/feed inputs as well as the outer
+        // profile, before any recipe can load assets or recovery can begin.
+        history_options.check_files(publication.input_paths())?;
+    }
     governor::check_publication(selected_governor.as_ref(), publication.as_ref())?;
     let recovery = recovery_path
         .as_deref()
@@ -251,6 +320,31 @@ where
         return super::run_accounted(
             config, entries, &peers, publication.as_ref(), (mode, selected_operator.as_ref()),
             history.as_ref().ok_or(andon::INVALID)?, accounting, time, output,
+        );
+    }
+    if mode == Mode::ContinueGeneration {
+        let (entries, history) = load_with_complete_services(
+            Path::new(&args[2]),
+            &config,
+            &peers,
+            mode,
+            selected_operator.as_ref(),
+            None,
+            Some(history_options),
+            None,
+            None,
+            None,
+            &[],
+        )?;
+        return super::run_with_continuation(
+            config,
+            entries,
+            &peers,
+            publication.as_ref(),
+            selected_operator.as_ref(),
+            history.as_ref().ok_or(USAGE)?,
+            time,
+            output,
         );
     }
     if let Some(governor) = selected_governor.as_ref() {
@@ -567,8 +661,16 @@ fn load_with_complete_services(
     accounting_inputs: &[&Path],
 ) -> Result<(Vec<Entry>, Option<anchors::Selection>), String> {
     let after = mode.after();
-    if mode == Mode::ContinueGeneration && accounting.is_none() {
-        return Err(andon::INVALID.into());
+    if mode == Mode::ContinueGeneration
+        && accounting.is_none()
+        && (credibility.is_some()
+            || selected_governor.is_some()
+            || recovery_path.is_some()
+            || !history_options
+                .as_ref()
+                .is_some_and(anchors::Options::is_recovery_pair))
+    {
+        return Err(USAGE.into());
     }
     if let Some(accounting) = accounting {
         accounting.check_mode(mode)?;

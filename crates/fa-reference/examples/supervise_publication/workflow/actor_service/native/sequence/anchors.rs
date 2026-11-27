@@ -14,7 +14,7 @@ use std::{
 };
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 
-const USAGE: &str = "native sequence history requires --history-anchor INPUT only with --after-message or explicitly accounted --continue-generation, and/or --retain-history-anchor NEW_OUTPUT";
+const USAGE: &str = "native sequence history requires --history-anchor INPUT only with --after-message or explicitly selected --continue-generation, and/or --retain-history-anchor NEW_OUTPUT";
 
 #[derive(Default)]
 pub(super) struct Options {
@@ -77,6 +77,10 @@ pub(in super::super) struct Selection {
 impl Options {
     pub(super) fn is_selected(&self) -> bool {
         self.input.is_some() || self.output.is_some()
+    }
+
+    pub(super) fn is_recovery_pair(&self) -> bool {
+        self.input.is_some() && self.output.is_some()
     }
 
     /// Archive custody cannot consume or later replace any explicitly selected

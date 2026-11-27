@@ -218,11 +218,12 @@ reviewer role. That same owner, numerical state and Stop session then serve the
 complete suffix, without reopening between its entries.
 
 Use `--after-message` recovery at the original confirmed-Message boundary. An
-accounted service can instead explicitly select
+accounted service can explicitly select
 [`--continue-generation`](#resume-interrupted-accounted-generation) for its
-original pending or completed-but-unsubmitted first Message. Ordinary unaccounted
-pending generation retains the existing single-release recovery path. No mode
-can skip outstanding numerical or publication work.
+original pending or completed-but-unsubmitted first Message. The ordinary
+unaccounted service can make the same explicit selection with independent input
+and output history anchors, as described below. No mode can skip outstanding
+numerical or publication work.
 
 The complete remaining selection must describe new work. All actor request IDs
 must be absent from the retained request history, and every selected Message's
@@ -248,6 +249,47 @@ native opener. Select an independently retained history archive below when
 recovery must compare a known original prefix. Historical replay remains
 synchronous within each original event; the service's checkpoints do not
 establish a hard real-time Stop bound.
+
+### Resume ordinary interrupted generation into a sequence
+
+An ordinary native owner can resume its exact pending generation, or publish its
+completed but unsubmitted result, and then serve the remaining selected Messages
+and optional Finish without replacing the numerical owner:
+
+```text
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --continue-generation \
+  --history-anchor ORIGINAL_INDEPENDENT_ANCHOR \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+Both history selections are required. The input archive supplies the original
+acknowledged predecessor bound; the output retains the new acknowledged recovery
+cut, including a later startup refusal or terminal Stop. Existing archives are
+never overwritten. The complete original model, tokenizer, stream, source and
+publication contracts are checked through the existing anchored source-backed
+opener before the one recovery Fence.
+
+The remaining sequence contains 1 through 16 entries and starts with a Message.
+Its first recipe must name the exact original pending or completed-unsubmitted
+text intent. Later Messages use new request and generation identities; an
+optional Finish is last. The whole suffix is checked against retained history
+and the original remaining message allowance before any new source reference,
+inference, helper review or effect. A changed raw command, already submitted
+first Message, conflicting later identity or another outstanding generation
+refuses; none can be treated as permission to resample.
+
+The original saved numerical position, RNG state and cumulative work survive
+resumption. A completed result needs no further sampling. Every release still
+requires fresh source evidence, helper review and independent human approval.
+One authenticated Stop session and the original invocation deadline remain
+active through replay, Ready, resumed generation and every subsequent release.
+
+The existing optional operator, per-entry version-two exact prechecks and
+publication profile can be selected. This ordinary mode does not select policy
+governance, governed recovery requirements, credibility activation or an
+`--after-message` predecessor. Accounted continuation retains its separate
+Andon/evaluator contract below.
 
 ## Independently retained history
 
@@ -977,6 +1019,16 @@ remains a fact even when a later entry fails. Cleanup consumes the resident
 driver once, after the sequence has completed or stopped.
 
 ## Scope and verification
+
+Eleven new regression definitions accompany ordinary interrupted-generation
+continuation. They exercise original pending and completed work, a prior
+generation's retained spend, singleton continuation, fresh human rejection,
+changed commands, later identity collisions, source loss, independent history
+rollback, Stop during replay and nested witness/archive custody. Independent
+source review found and corrected the nested-input collision before integration.
+The required RCH launcher is absent and the execution workspace disconnected;
+this increment has not been formatted, compiled or executed. Existing execution
+receipts do not qualify these changes.
 
 The resident command creates a new native stream, explicitly selects a new
 remaining suffix with `--after-message`, or resumes the first original accounted

@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Resume ordinary native generation through a resident sequence
+
+The ordinary `serve-native-generated --continue-generation` selection now resumes
+the exact original pending generation or completed-but-unsubmitted first Message
+and retains that owner through a finite remaining Message/Finish sequence.
+Independent input history and a new retained output are mandatory. The existing
+cooperative anchored opener, one recovery Fence, complete suffix preflight,
+original text-intent selector and numerical resumption path supply the behavior;
+no generator, source, budget, journal or authority is replaced.
+
+The original command, sampled state and accumulated work remain bound. Later
+identities are checked before new inference or actor output; every new release
+still requires current source evidence, fresh helper review and separate human
+approval. Stop and the invocation deadline remain live through replay, Ready,
+generation and all handoffs. Unsupported governance/activation combinations
+refuse before input work. Optional original operators, per-release exact
+prechecks and publication profiles retain their existing gates.
+
+Selected history now also reserves every nested publication input, before model
+loading and again before clocks/listeners for direct callers. An archive cannot
+consume a delayed witness or feed namespace during successful or failed recovery.
+
+Eleven new regression definitions cover positive pending/completed continuation,
+retained earlier work, singleton and human-rejection cases, changed commands,
+later identity collisions, source loss, rollback, Stop boundaries and nested
+custody. Independent source review corrected the custody gap and a missing
+import before integration. Connector content checks pass. RCH is absent and
+the execution workspace became unavailable; formatting, compilation, Clippy
+and runtime execution remain pending. No bead or qualification gate is closed.
+See [the ordinary continuation contract](docs/RESIDENT_NATIVE_PUBLICATION.md#resume-ordinary-interrupted-generation-into-a-sequence).
+
 ## 2026-11-27 · Preserve coverage predecessors through exact history corrections
 
 The bounded FA-125 coverage query now retains the original accepted transition

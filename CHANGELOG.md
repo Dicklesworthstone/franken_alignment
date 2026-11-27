@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-27 · Continue interrupted ordinary native publication sequences
+
+- Add explicit independently anchored `--continue-generation` for an ordinary
+  pending or completed-unsubmitted native Message, followed by its selected
+  remaining Messages and optional Finish on the same numerical owner.
+- Preserve original work, Stop, whole-suffix identity admission and fresh
+  source/helper/human review; reserve nested publication inputs against history
+  outputs before recovery.
+- Add eleven regression definitions. Compilation and runtime qualification
+  remain pending.
+
 ## 2026-11-27 · Preserve coverage history across source corrections
 
 - Permit exact first, middle and latest coverage-transition withdrawal without

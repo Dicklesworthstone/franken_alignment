@@ -21,6 +21,8 @@ use fixture::{Root, configured, inputs, profiles};
 
 #[path = "tests/combined.rs"]
 mod combined;
+#[path = "tests/continuation.rs"]
+mod continuation_tests;
 #[path = "tests/governor.rs"]
 mod governor_tests;
 #[path = "tests/history_inputs.rs"]
