@@ -887,8 +887,8 @@ mod tests {
 
         let event_address = Address::parse("fa://tenant-a/receipt/rc-1@1").unwrap();
         let subject_address = Address::parse("fa://tenant-a/run/run-1@1").unwrap();
-        let verb = "review\\\" , \\\"run_id\\\":\\\"forged\\\" \\\\ \\n \\t".to_owned();
-        let hint = "fix \\"quotation\\" and newline\\n and NUL \\0".to_owned();
+        let verb = "review\" , \"run_id\":\"forged\" \\ \n \t".to_owned();
+        let hint = "fix \"quotation\" and newline\n and NUL \0".to_owned();
         for hint_value in [None, Some(hint.clone())] {
             let record = AddressedEventRecord {
                 event_address: event_address.clone(),
@@ -898,17 +898,25 @@ mod tests {
             };
             let encoded = record.to_agent_json();
             let parsed = parse(encoded.as_bytes(), Limits::default()).unwrap();
-            let Json::Object(fields) = parsed else { panic!("event must be an object") };
+            let Json::Object(fields) = parsed else {
+                panic!("event must be an object");
+            };
             assert_eq!(fields.len(), if hint_value.is_some() { 4 } else { 3 });
             assert_eq!(fields["event"].as_str(), Some(event_address.canonical_string().as_str()));
             assert_eq!(fields["subject"].as_str(), Some(subject_address.canonical_string().as_str()));
             assert_eq!(fields["verb"].as_str(), Some(verb.as_str()));
-            assert_eq!(fields.get("would_change_this").and_then(Json::as_str), hint_value.as_deref());
+            assert_eq!(
+                fields.get("would_change_this").and_then(Json::as_str),
+                hint_value.as_deref()
+            );
             assert!(!fields.contains_key("run_id"));
         }
 
         // Even a directly-constructed malformed Address cannot smuggle a field.
-        let forged = Address { id: "x\\\",\\\"run_id\\\":\\\"spoof".into(), ..event_address };
+        let forged = Address {
+            id: "x\",\"run_id\":\"spoof".into(),
+            ..event_address
+        };
         let record = AddressedEventRecord {
             event_address: forged,
             subject_address,
