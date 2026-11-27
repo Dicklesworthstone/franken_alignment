@@ -2,7 +2,7 @@
 //! Configuration is not evidence, a label, an inference result or permission.
 use super::{
     ByteBpe, CredibilityEvent, Event, FileDecoderConfig, FileOversight, FileOversightProfile,
-    GeneratedSourceProfile, JournalError, Path, Prepared, storage,
+    GeneratedSourceProfile, InitialStore, JournalError, Path, Prepared,
 };
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
@@ -124,9 +124,9 @@ impl Prepared {
 impl PreparedEvaluation {
     fn publish_evaluated(
         self,
-        store: storage::Store,
+        destination: InitialStore<'_>,
     ) -> Result<(FileOversight, FileEvaluatedOversightRoles), JournalError> {
-        let (host, human) = self.prepared.publish(store)?;
+        let (host, human) = self.prepared.publish(destination)?;
         let roles = FileEvaluatedOversightRoles::from_published(&host, human);
         Ok((host, roles))
     }
@@ -140,8 +140,8 @@ impl FileOversight {
     /// No source-only or unaccounted intermediate owner can escape.
     ///
     /// Native configuration, protocol, reserve dimensions and event capacity
-    /// are checked before creating storage. Canonical byte encoding/storage can
-    /// still fail. The same sole replacement must acknowledge before the owner,
+    /// and the exact cost of the final path-bound encoding are checked before
+    /// creating storage. The sole replacement must acknowledge before the owner,
     /// human reviewer or independent evaluator is returned. A failed or uncertain
     /// initial write returns no role even when its complete image reached disk.
     ///
@@ -164,7 +164,7 @@ impl FileOversight {
     ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         Prepared::new(profile, decoder, &tokenizer, selected)?
             .evaluated(evaluation)?
-            .publish_evaluated(storage::Store::create(directory.as_ref())?)
+            .publish_evaluated(InitialStore::Create(directory.as_ref()))
     }
 }
 

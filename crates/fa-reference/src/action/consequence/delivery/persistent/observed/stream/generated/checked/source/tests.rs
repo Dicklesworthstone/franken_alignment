@@ -252,7 +252,7 @@ fn source_bootstrap_each_replacement_failure_leaves_no_model_only_canonical_imag
                 journal::encode(&prepared.profile, store.identity(), &prepared.events).unwrap();
             store.fail_once(stage);
             assert!(
-                matches!(prepared.publish(store), Err(JournalError::Io(f)) if f.operation == stage)
+                matches!(prepared.publish(InitialStore::Injected(store)), Err(JournalError::Io(f)) if f.operation == stage)
             );
             let path = root.store().join(storage::CANONICAL);
             if stage == JournalIo::DirectorySync {
@@ -614,6 +614,53 @@ fn source_bootstrap_full_image_retains_its_exact_terminal_event_allowance() {
             assert_eq!(capacity.remaining().events, reserve.events - 1);
             assert_eq!(capacity.reserve(), Some(reserve));
             assert_eq!(host.inspect().executions, 0);
+        }
+    }
+}
+
+#[test]
+fn source_bootstrap_admits_exact_path_bound_bytes_before_claiming_the_destination() {
+    for governed in [false, true] {
+        for mode in [0, 4, 5] {
+            let root = Directory::new();
+            let path = root.store();
+            let identity = std::fs::canonicalize(path.parent().unwrap())
+                .unwrap()
+                .join(path.file_name().unwrap());
+            let selected = selection(mode);
+            let mut p = profile();
+            let prepared = Prepared::with_campaigns(
+                p.clone(),
+                fixtures::stopped_config(),
+                &tokenizer(false),
+                selected,
+                governed.then_some(FileCampaignRequirement {
+                    limits: crate::action::consequence::policy_campaign::ReplayLimits {
+                        cases: 16,
+                        input_bytes: 1_048_576,
+                    },
+                    max_campaigns: 4,
+                }),
+            )
+            .unwrap();
+            let encoded = journal::encode(&p, &identity, &prepared.events).unwrap().len();
+            let reserved = selected.publication.reserve().map_or(0, |reserve| reserve.bytes);
+            p.delivery.limits.bytes = encoded + reserved - 1;
+            assert!(matches!(
+                create_reserve_case(&root, selected, p.clone(), governed),
+                Err(JournalError::Contract(Error::Limit))
+            ));
+            assert!(!path.exists(), "governed {governed}, mode {mode}");
+
+            p.delivery.limits.bytes += 1;
+            let expected = journal::encode(&p, &identity, &prepared.events).unwrap();
+            let host = create_reserve_case(&root, selected, p, governed).unwrap();
+            assert_eq!(canonical(&root), expected);
+            let capacity = host.journal_capacity().unwrap();
+            assert_eq!(capacity.ordinary_remaining().bytes, 0);
+            assert_eq!(capacity.remaining().bytes, reserved);
+            assert_eq!(host.policy_campaigns_required(), governed);
+            assert_eq!(host.file_source_status().unwrap().policy, selected.source);
         }
     }
 }

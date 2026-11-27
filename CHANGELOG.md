@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Retry native source-backed publication after first-image refusal
+
+- Ordinary, governed and independently evaluated native generation preflight the encoded journal and its reserved capacity before exclusive store creation. All three issue their original roles after durable replacement.
+
 ## 2026-11-27 · Allow a corrected guarded bootstrap to retry at the same path
 
 - Encode the complete path-bound journal, including terminal recovery capacity, before creating a guarded authority directory. The original exclusive lock and durable replacement still precede role issuance.

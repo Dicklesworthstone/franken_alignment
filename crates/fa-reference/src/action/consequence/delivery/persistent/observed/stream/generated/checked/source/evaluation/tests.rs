@@ -1,6 +1,6 @@
 //! First-image atomicity uses the original Store and native configuration laws.
 use super::super::super::{GeneratedPublicationFeed, GeneratedPublicationProfile};
-use super::super::{GeneratedSourcePublication, journal};
+use super::super::{GeneratedSourcePublication, journal, storage};
 use super::*;
 use crate::action::consequence::activation::monitor::decoder::sampled::generation::{
     MAX_SAMPLING_ENTRIES, text::TextGenerationRequest,
@@ -221,7 +221,7 @@ fn invalid_evaluation_inputs_refuse_before_creating_a_source_only_owner() {
         assert!(!root.store().exists());
         let (host, roles) = prepared(selection(1), evaluation(2))
             .unwrap()
-            .publish_evaluated(storage::Store::create(&root.store()).unwrap())
+            .publish_evaluated(InitialStore::Create(&root.store()))
             .unwrap();
         assert_eq!(roles.evaluator.check_owner(&host), Ok(()));
         assert_eq!(host.andon_config().unwrap(), Some(&accounting::config()));
@@ -282,7 +282,7 @@ fn every_original_store_failure_returns_no_partial_owner_or_evaluator_role() {
             )
             .unwrap();
             store.fail_once(stage);
-            assert!(matches!(prepared.publish_evaluated(store),
+            assert!(matches!(prepared.publish_evaluated(InitialStore::Injected(store)),
                 Err(JournalError::Io(failure)) if failure.operation == stage));
             let canonical = root.store().join(storage::CANONICAL);
             if stage == JournalIo::DirectorySync {
@@ -339,7 +339,7 @@ fn invalid_source_and_prior_payload_cannot_be_hidden_by_valid_accounting() {
         assert!(!root.store().exists());
         let (host, roles) = prepared(selection(1), evaluation(2))
             .unwrap()
-            .publish_evaluated(storage::Store::create(&root.store()).unwrap())
+            .publish_evaluated(InitialStore::Create(&root.store()))
             .unwrap();
         assert!(host.generated_text_stream_required().unwrap());
         assert_eq!(roles.evaluator.check_owner(&host), Ok(()));
@@ -446,7 +446,7 @@ fn native_andon_requires_original_helper_generations_before_storage() {
         assert!(!root.store().exists());
         let (host, roles) = prepared(selection(1), evaluation(ledger))
             .unwrap()
-            .publish_evaluated(storage::Store::create(&root.store()).unwrap())
+            .publish_evaluated(InitialStore::Create(&root.store()))
             .unwrap();
         assert_eq!(roles.evaluator.check_owner(&host), Ok(()));
         assert_eq!(
@@ -476,7 +476,7 @@ fn owned_round_evaluation_cannot_downgrade_the_exclusive_held_out_joint_lane() {
         // all four owned-round evaluation configurations, including joint.
         let (host, roles) = prepared(selection(4), evaluation(ledger))
             .unwrap()
-            .publish_evaluated(storage::Store::create(&root.store()).unwrap())
+            .publish_evaluated(InitialStore::Create(&root.store()))
             .unwrap();
         assert_eq!(roles.evaluator.check_owner(&host), Ok(()));
         assert_eq!(host.held_out_joint_policy().unwrap(), None);
@@ -484,5 +484,46 @@ fn owned_round_evaluation_cannot_downgrade_the_exclusive_held_out_joint_lane() {
             host.joint_credibility_policy().unwrap(),
             evaluation(ledger).joint_policy()
         );
+    }
+}
+
+#[test]
+fn evaluated_source_bootstrap_charges_the_full_first_image_before_creating_storage() {
+    for mode in [0, 4] {
+        for ledger in [0, 3] {
+            let root = Directory::new();
+            let path = root.store();
+            let identity = std::fs::canonicalize(path.parent().unwrap())
+                .unwrap()
+                .join(path.file_name().unwrap());
+            let selected = selection(mode);
+            let config = evaluation(ledger);
+            let initial = prepared(selected, config.clone()).unwrap().prepared;
+            let mut p = profile();
+            let encoded = journal::encode(&p, &identity, &initial.events).unwrap().len();
+            let reserved = selected.publication.reserve().map_or(0, |reserve| reserve.bytes);
+            let create = |p| {
+                FileOversight::create_generated_text_stream_from_source_evaluated(
+                    &path,
+                    p,
+                    fixtures::config(3.0, 65),
+                    fixtures::tokenizer(false),
+                    selected,
+                    config.clone(),
+                )
+            };
+            p.delivery.limits.bytes = encoded + reserved - 1;
+            assert!(matches!(create(p.clone()), Err(JournalError::Contract(Error::Limit))));
+            assert!(!path.exists(), "mode {mode}, ledger {ledger}");
+
+            p.delivery.limits.bytes += 1;
+            let expected = journal::encode(&p, &identity, &initial.events).unwrap();
+            let (host, roles) = create(p).unwrap();
+            assert_eq!(std::fs::read(path.join(storage::CANONICAL)).unwrap(), expected);
+            assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().bytes, 0);
+            assert_eq!(host.andon_config().unwrap(), config.andon());
+            assert_eq!(host.joint_credibility_policy().unwrap(), config.joint_policy());
+            assert_eq!(roles.evaluator.check_owner(&host), Ok(()));
+        }
     }
 }

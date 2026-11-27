@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Extend first-image byte admission to generated sources
+
+Native generated-source creation now uses the same pre-creation byte admission in its ordinary, governed and evaluated modes. Two regression tests exercise ten combinations of publication and accounting options at one byte below the bound and at exact fit. Injected replacement-failure tests retain their original storage barriers. Remote compilation and execution remain pending.
+
 ## 2026-11-27 · Check guarded first-image capacity before acquiring storage
 
 All 23 production call sites using PreparedGuardedBootstrap now pre-encode against the resolved destination. The new regression covers a parent alias, a one-byte shortfall and an exact-fit retry across three guard configurations. It also exercises preservation of existing storage and reserved Fence capacity. The required remote test gate has not run.

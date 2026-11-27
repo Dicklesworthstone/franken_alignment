@@ -178,6 +178,12 @@ impl GeneratedSourceProfile {
 
 // Shared initial-commit boundary. Tests inject failures into the ORIGINAL Store,
 // not a replacement filesystem or an externally supplied publication callback.
+enum InitialStore<'a> {
+    Create(&'a Path),
+    #[cfg(test)]
+    Injected(storage::Store),
+}
+
 struct Prepared {
     profile: FileOversightProfile,
     events: Vec<Event>,
@@ -232,10 +238,17 @@ impl Prepared {
     }
     fn publish(
         self,
-        store: storage::Store,
+        destination: InitialStore<'_>,
     ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
-        let bytes = journal::encode(&self.profile, store.identity(), &self.events)?;
-        store.replace(&bytes)?;
+        let encode = |identity: &Path| journal::encode(&self.profile, identity, &self.events);
+        let store = match destination {
+            InitialStore::Create(directory) => storage::Store::create_with_image(directory, encode)?,
+            #[cfg(test)]
+            InitialStore::Injected(store) => {
+                store.replace(&encode(store.identity())?)?;
+                store
+            }
+        };
         Ok(FileOversight::owner(
             self.profile,
             store,
@@ -246,14 +259,14 @@ impl Prepared {
 
     fn publish_governed(
         self,
-        store: storage::Store,
+        destination: InitialStore<'_>,
     ) -> Result<(FileOversight, FileHumanReviewer, FilePolicyGovernor), JournalError> {
         // This private path cannot issue a role from an unguarded preparation.
         // The ORIGINAL reducer, not the caller's selected flag, owns the guard.
         if !self.machine.broker.policy_campaigns_required() {
             return Err(Error::Binding.into());
         }
-        let (host, reviewer) = self.publish(store)?;
+        let (host, reviewer) = self.publish(destination)?;
         let governor = FilePolicyGovernor {
             issuer: Rc::clone(&host.issuer),
         };
@@ -268,8 +281,8 @@ impl FileOversight {
     /// that lacks the source required by its service. No token is computed.
     ///
     /// The existing source, numerical and authority constructors validate the
-    /// configuration before storage is created. Encoding/storage can still fail;
-    /// no owner or reviewer is returned before the complete image is acknowledged.
+    /// configuration and exact path-bound byte cost before storage is created.
+    /// The complete image must be acknowledged before issuing either role.
     /// A fresh actual source capture and clock are required before numerical
     /// admission. No source file is opened or absence promoted to evidence here.
     pub fn create_generated_text_stream_from_source(
@@ -280,15 +293,15 @@ impl FileOversight {
         selected: GeneratedSourceProfile,
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         Prepared::new(profile, decoder, &tokenizer, selected)?
-            .publish(storage::Store::create(directory.as_ref())?)
+            .publish(InitialStore::Create(directory.as_ref()))
     }
 
     /// Atomically create the original native stream with its independent policy
     /// campaign guard. The exact limits are validated by the original reducer
     /// alongside source, decoder, tokenizer, witnesses and terminal reserve
-    /// before creating a store. Encoding or storage can still fail; no role is
-    /// returned without acknowledgment. All configuration is published in ONE
-    /// initial replacement, so a partial bootstrap cannot omit governance.
+    /// before creating a store. The final path-bound encoding must also fit
+    /// before creation. All configuration is published in a single acknowledged
+    /// replacement, so a partial bootstrap cannot omit governance.
     ///
     /// The governor is separately owned and issued only AFTER acknowledgment of
     /// the complete image. It cannot publish an effect or replace human review.
@@ -308,7 +321,7 @@ impl FileOversight {
         campaigns: FileCampaignRequirement,
     ) -> Result<(Self, FileHumanReviewer, FilePolicyGovernor), JournalError> {
         Prepared::with_campaigns(profile, decoder, &tokenizer, selected, Some(campaigns))?
-            .publish_governed(storage::Store::create(directory.as_ref())?)
+            .publish_governed(InitialStore::Create(directory.as_ref()))
     }
 
     /// Pin source identity/generation/limits/lease AND complete publication mode

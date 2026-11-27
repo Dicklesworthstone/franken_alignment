@@ -314,7 +314,7 @@ fn governed_native_bootstrap_storage_failures_return_no_roles_or_partial_contrac
                 journal::encode(&prepared.profile, store.identity(), &prepared.events).unwrap();
             store.fail_once(stage);
             assert!(
-                matches!(prepared.publish_governed(store), Err(JournalError::Io(failure)) if failure.operation == stage)
+                matches!(prepared.publish_governed(InitialStore::Injected(store)), Err(JournalError::Io(failure)) if failure.operation == stage)
             );
             if stage == JournalIo::DirectorySync {
                 assert_eq!(canonical(&root), expected);
