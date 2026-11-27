@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Replay candidate policies against anchored native generated history
+
+The Linux policy-replay command can compare a candidate with the original native source-backed corpus using independent history, recipe, decoder/tokenizer and publication contracts. It checks the full canonical image after computing the report. The command acquires no live evaluator, governor or publication role. Added regressions cover a confirmed Message, an uncertain delivery, Ready-only access, repeat reads, stale image and input custody. Runtime qualification remains open.
+
 ## 2026-11-27 · Capture learned checkpoints before sampling under independent evaluation
 
 Single-Message and resident learned evaluation can capture the supervisor-selected quiet numerical state before the first selected Message draws a token. The source and history output checks include the checkpoint profile. Added regression definitions cover functional capture, independent late assessment, human approval and rejection, a two-Message sequence and refusal on an audit-only host. Source review confirmed the combined creation paths. Remote build and runtime evidence remain pending.

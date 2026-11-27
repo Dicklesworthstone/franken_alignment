@@ -657,3 +657,43 @@ fn admission_stop_retains_original_unknown_stream_liability_and_exact_retries() 
 
 #[cfg(target_os = "linux")]
 mod transport;
+
+#[test]
+fn native_policy_replay_preserves_unknown_delivery_and_requires_the_complete_original_cut() {
+    let root = Directory::new();
+    let host = unknown_message(&root);
+    let before = host.inspect();
+    let anchor = host.history_anchor().unwrap();
+    drop(host);
+    let original = canonical(&root);
+    fs::write(pending(&root), b"preserve pending").unwrap();
+
+    let candidate = Policy::new(2, vec![Predicate::PayloadAtMost(0)]).unwrap();
+    let limits = ReplayLimits { cases: 16, input_bytes: 1_048_576 };
+    let anchored = || FileOversight::begin_open_generated_text_stream_from_source_anchored(
+        root.store(), profile(), &fixtures::stopped_config(), &tokenizer(false),
+        selection(1), &anchor,
+    ).unwrap();
+    let mut premature = anchored();
+    premature.advance(0, 1).unwrap();
+    assert!(matches!(premature.finish_policy_replay(candidate.clone(), limits),
+        Err(JournalError::Contract(Error::Incomplete))));
+    let mut changed = anchored();
+    advance(&mut changed);
+    let mut replacement = original.clone();
+    replacement.push(0);
+    fs::write(root.store().join(storage::CANONICAL), &replacement).unwrap();
+    assert!(matches!(changed.finish_policy_replay(candidate.clone(), limits),
+        Err(JournalError::Contract(Error::Binding))));
+    assert_eq!(canonical(&root), replacement);
+    fs::write(root.store().join(storage::CANONICAL), &original).unwrap();
+
+    let mut verified = anchored();
+    advance(&mut verified);
+    let (cut, report) = verified.finish_policy_replay(candidate, limits).unwrap();
+    assert_eq!(cut, before);
+    assert_eq!(report.cases().len(), 2);
+    assert_eq!(report.newly_blocked().len(), 2);
+    assert_eq!(canonical(&root), original);
+    assert_eq!(fs::read(pending(&root)).unwrap(), b"preserve pending");
+}

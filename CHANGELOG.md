@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Replay candidate policies against anchored native generated history
+
+- Add a read-only native generated-history selection to policy-replay. It requires an independent anchor and emits the existing bounded policy comparison report.
+
 ## 2026-11-27 · Capture learned checkpoints before sampling under independent evaluation
 
 - Evaluated learned generation accepts a pre-sampling checkpoint on a functional restart boundary. Publication and independent labeling retain their original authority checks.

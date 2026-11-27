@@ -353,3 +353,96 @@ fn native_history_faulted_owner_never_exports_its_pre_failure_capture() {
     assert_eq!(std::fs::read(config.store.join("delivery.bin")).unwrap(), canonical);
     assert_eq!(std::fs::read(&pending).unwrap(), b"retained ambiguous staging");
 }
+
+#[test]
+fn native_policy_replay_reads_an_anchored_published_corpus_without_a_fence_or_live_evidence() {
+    let root = Root::new();
+    let anchor = root.0.join("original.anchor");
+    publish_retained(&root, &anchor, false).1.unwrap();
+    let store = root.0.join("store");
+    let source = root.0.join("evidence.json");
+    let canonical = std::fs::read(store.join("delivery.bin")).unwrap();
+    let archived = std::fs::read(&anchor).unwrap();
+    let pending = store.join("delivery.pending");
+    std::fs::write(&pending, b"keep staging").unwrap();
+    std::fs::remove_file(&source).unwrap();
+
+    let config = root.0.join("replay-config.json");
+    let candidate = root.0.join("candidate.json");
+    let config_bytes = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/fixtures/supervised_publication.json"))
+        .replace("/operator/publication-store", store.to_str().unwrap())
+        .replace("/operator/evidence.json", source.to_str().unwrap())
+        .replace("696e697469616c", "");
+    std::fs::write(&config, &config_bytes).unwrap();
+    std::fs::write(&candidate, include_bytes!(concat!(
+        env!("CARGO_MANIFEST_DIR"), "/fixtures/policy_replay_candidate.json"
+    ))).unwrap();
+    let args = vec![
+        "policy-replay".to_owned(),
+        config.display().to_string(),
+        candidate.display().to_string(),
+        "--native-text".into(),
+        root.0.join("recipe.json").display().to_string(),
+        "--history-anchor".into(),
+        anchor.display().to_string(),
+    ];
+    let mut output = Vec::new();
+    crate::policy_replay::command(&args, &mut output).unwrap();
+    let report = fa_reference::strict_json::parse(
+        &output, fa_reference::strict_json::Limits::default(),
+    ).unwrap();
+    let value = report.get("knowledge").unwrap().get("value").unwrap();
+    let cases = value.get("cases").unwrap().as_array().unwrap();
+    for kind in ["proposal", "review"] {
+        assert!(cases.iter().any(|case| {
+            case.get("id").unwrap().get("kind").unwrap().as_str() == Some(kind)
+        }));
+    }
+    assert_eq!(value.get("cut").unwrap().get("executions").unwrap().as_u64(), Some(1));
+    assert_eq!(
+        value.get("cut").unwrap().get("journal_revision").unwrap().as_u64(),
+        Some(archive::load(&anchor).unwrap().revision()),
+    );
+    // Preserve the entire accepted result and cut on a second read.
+    let mut again = Vec::new();
+    crate::policy_replay::command(&args, &mut again).unwrap();
+    assert_eq!(again, output);
+    // The prompt bytes are valid and identical in all three cases. Neither
+    // a direct reference nor a hard link may read the configured live source.
+    let recipe_path = root.0.join("recipe.json");
+    let recipe_text = std::fs::read_to_string(&recipe_path).unwrap();
+    std::fs::write(&source, b"ab").unwrap();
+    let separate = root.0.join("historical");
+    std::fs::create_dir(&separate).unwrap();
+    let distinct = separate.join("evidence.json");
+    std::fs::write(&distinct, b"ab").unwrap();
+    let linked = root.0.join("linked-prompt");
+    std::fs::hard_link(&source, &linked).unwrap();
+    for forbidden in ["evidence.json", "linked-prompt"] {
+        std::fs::write(&recipe_path, recipe_text.replace("prompt.txt", forbidden)).unwrap();
+        let mut empty = Vec::new();
+        assert!(crate::policy_replay::command(&args, &mut empty).unwrap_err()
+            .contains("aliases"));
+        assert!(empty.is_empty());
+    }
+    std::fs::write(&recipe_path, recipe_text.replace("prompt.txt", "historical/evidence.json")).unwrap();
+    let mut permitted = Vec::new();
+    crate::policy_replay::command(&args, &mut permitted).unwrap();
+    assert_eq!(permitted, output);
+    std::fs::remove_file(&source).unwrap();
+    std::fs::write(&recipe_path, recipe_text).unwrap();
+    let mut extra = args.clone();
+    extra.extend(["--retain-history-anchor".into(), root.0.join("unused").display().to_string()]);
+    let mut refused = Vec::new();
+    assert!(crate::policy_replay::command(&extra, &mut refused).is_err());
+    assert!(refused.is_empty());
+    assert!(!root.0.join("unused").exists());
+    std::fs::write(&config, config_bytes.replace("\"capture_generation\": 1", "\"capture_generation\": 2")).unwrap();
+    let mut refused = Vec::new();
+    assert!(crate::policy_replay::command(&args, &mut refused).is_err());
+    assert!(refused.is_empty());
+    assert_eq!(std::fs::read(store.join("delivery.bin")).unwrap(), canonical);
+    assert_eq!(std::fs::read(pending).unwrap(), b"keep staging");
+    assert_eq!(std::fs::read(anchor).unwrap(), archived);
+    assert!(!source.exists());
+}

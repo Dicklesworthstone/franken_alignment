@@ -20,6 +20,7 @@ mod learned;
 mod multi;
 #[path = "actor_service/native.rs"]
 mod native;
+pub(crate) use native::NativePolicyReplay;
 #[path = "actor_service/operator.rs"]
 mod operator;
 #[path = "actor_service/policy_recovery.rs"]

@@ -10,6 +10,9 @@ mod continuation;
 mod control;
 #[path = "native/evaluation.rs"]
 mod evaluation;
+#[path = "native/policy_replay.rs"]
+mod policy_replay;
+pub(crate) use policy_replay::NativePolicyReplay;
 #[path = "native/precheck.rs"]
 mod exact_precheck;
 #[path = "native/finish.rs"]

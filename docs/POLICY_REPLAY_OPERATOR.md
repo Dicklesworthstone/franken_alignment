@@ -76,6 +76,35 @@ incompatible checkpoints, corruption, deadlines and capacity failures yield no
 successful prefix or live recovery. Repeating the read with unchanged inputs
 observes the same cut and leaves all journal and custody bytes unchanged.
 
+## Source-backed native generated histories
+
+On Linux, a stopped native publication store can be compared against a candidate
+using the original model, tokenizer, stream and file-source contract. Supply
+the retained history anchor and, for checked or held-out joint publication, the
+same publication profile used by the writer.
+
+```sh
+supervise_publication policy-replay CONFIG CANDIDATE_JSON \
+  --native-text RECIPE --history-anchor INPUT
+```
+
+The operator needs exclusive access to the store for this read. The command
+checks the anchor against the same locked journal image before replaying any
+historical numerical event. It checks the elapsed budget between events,
+finishes the entire retained current-policy corpus, then reconfirms the
+canonical image before emitting the ordinary comparison report. The recipe's
+request identifier does not restrict the corpus. This is an operator-trusted
+prefix anchor; it does not authenticate the latest journal head.
+
+Replay rereads the selected numerical recipe and its assets to reconstruct historical work.
+The candidate, archive, recipe and model inputs must be separate from the configured
+live evidence and witness sources. Existing hard-link aliases are checked as well.
+It does not read live evidence, run helpers, create service sockets, advance
+the clock, fence, or remove pending files. The historical results carry no
+evaluator, reviewer, governor or effect authority. A stale or mismatched
+selection, busy store, failed event, missing asset or incompatible anchor
+yields no successful report.
+
 ## Candidate request
 
 The committed fixture illustrates a stricter payload limit for the ordinary

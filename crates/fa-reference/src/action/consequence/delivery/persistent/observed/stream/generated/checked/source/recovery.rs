@@ -12,7 +12,7 @@ use crate::action::consequence::activation::monitor::decoder::sampled::generatio
 };
 use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::{
-    MAX_JOURNAL_EVENTS,
+    FileDeliverySnapshot, MAX_JOURNAL_EVENTS,
     observed::{
         decoder::text::{check_text_config, check_text_machine},
         machine::Transition,
@@ -23,6 +23,8 @@ use crate::action::consequence::delivery::persistent::{
         },
     },
 };
+use crate::action::consequence::gate::containment::session::policy::Policy;
+use crate::action::consequence::policy_campaign::{PolicyReplayReport, ReplayLimits};
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -309,6 +311,25 @@ impl FileGeneratedSourceRecovery {
         }
         self.check_machine()?;
         Ok(())
+    }
+
+    /// Compare every retained current-policy case on the completed numerical
+    /// reconstruction. An unfinished or failed replay cannot produce a report.
+    /// The selected source, decoder, tokenizer and publication checks still
+    /// apply. Independently retained history is bound by the anchored opener.
+    /// This consumes the locked cursor without cleaning staging, fencing, or
+    /// returning a live owner. The historical report issues no approval or key.
+    pub fn finish_policy_replay(
+        self,
+        candidate: Policy,
+        limits: ReplayLimits,
+    ) -> Result<(FileDeliverySnapshot, PolicyReplayReport), JournalError> {
+        let machine = self.verified_guarded_machine()?;
+        let report = machine.broker.replay_candidate_policy(candidate, limits)?;
+        if self.store.read(self.profile.delivery.limits.bytes)? != self.canonical {
+            return Err(Error::Binding.into());
+        }
+        Ok((machine.snapshot(self.events.len()), report))
     }
 
     /// Check one recorded native Message against its exact original raw intent.
