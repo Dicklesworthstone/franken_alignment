@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-27 · Resume interrupted governed native publication
+
+- Add explicit governed `--continue-generation` through the original guarded
+  cursor, requiring complete independent policy/campaign expectations and both
+  retained input and new-output history anchors.
+- Reuse pending or completed native text and original numerical spending across
+  the selected Message/Finish suffix, preserving Stop and separate governor,
+  operator, helper and human custody.
+- Add recovery, transport, intent, custody and CLI regressions. Compilation and
+  runtime qualification remain pending.
+
 ## 2026-11-27 · Preserve autonomy trajectory and dwell under source corrections
 
 - Keep accepted enrollment, promotion, demotion and passport-change identity

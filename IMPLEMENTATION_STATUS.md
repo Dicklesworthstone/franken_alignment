@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Resume governed native generation before its first publication
+
+The resident native service now accepts explicit `--continue-generation` with
+the independent governor, governed operator, complete native recovery
+requirements, original input anchor and a new output anchor. The selected mode
+survives every parser and direct loader into the existing guarded recovery
+cursor; no Message predecessor is invented and missing requirements cannot fall
+back to ordinary recovery.
+
+One original pending or completed-unsubmitted Message can resume into its
+remaining Messages and optional Finish. Exact raw intent and whole-suffix
+identities are checked before source work or inference. Original numerical/RNG
+spending, campaign inventory, confirmed history and effect liabilities survive;
+completed text is not resampled. The same Stop, replay/Ready checkpoints, finite
+services and fresh helper/human publication keys remain in force. Confirmed
+`--after-message` recovery keeps its existing optional output-archive contract.
+
+Authored regressions cover pending/completed continuation, earlier numerical
+spend, singleton Message, separate authenticated governor inspection, human
+rejection, intent and suffix conflicts, missing source, stale policy/campaign
+requirements and floors, rollback, nested witness custody, replay/Ready Stop and
+deadline exits, complete CLI permutations and original asset loading. Source
+review is not execution. The required RCH command exits 127 because `rch` is
+unavailable; formatting, compilation, Clippy and runtime qualification remain
+pending. FA-026 and FA-130 stay in progress.
+
 ## 2026-11-27 · Preserve autonomy dwell and predecessor history through corrections
 
 FA-125's bounded autonomy query now validates state chronology against its

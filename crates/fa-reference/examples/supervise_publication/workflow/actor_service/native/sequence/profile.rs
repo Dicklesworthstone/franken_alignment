@@ -17,7 +17,7 @@ use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 const MAX_PROFILE_BYTES: usize = 64 * 1024;
-const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--continue-generation | --after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; ordinary --continue-generation requires both --history-anchor INPUT and --retain-history-anchor NEW_OUTPUT and excludes governor/activation selections; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor and optional per-release exact prechecks; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint compositions remain separate";
+const USAGE: &str = "serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE [--publication-profile PROFILE] [--continue-generation | --after-message NONZERO] [--operator-profile PROFILE --tower-generation NONZERO] [--governor-profile PROFILE with governed operator] [--recovery-requirements PROFILE with governed --after-message or --continue-generation and --history-anchor] [--credibility-activation CAPSULE with --after-message] [--history-anchor INPUT with explicit recovery] [--retain-history-anchor NEW_OUTPUT]; creation requires 2..=16 entries; explicit recovery accepts 1..=16 remaining Message/Finish entries; --continue-generation requires both --history-anchor INPUT and --retain-history-anchor NEW_OUTPUT and excludes fresh activation; governed continuation additionally requires the complete independent --recovery-requirements; plain/simple-witness services also accept paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE with --retain-history-anchor and optional per-release exact prechecks; evaluated --continue-generation or --after-message recovery requires --history-anchor and --evaluation-recovery REQUIREMENTS; singleton Finish requires --after-message; governor/topology/activation/joint compositions remain separate";
 
 struct Input {
     recipe: PathBuf,
@@ -126,7 +126,7 @@ fn take_operator(
     ))
 }
 
-/// Own the unary ordinary continuation selector before the pair-only parsers.
+/// Own the unary continuation selector before the pair-only parsers.
 /// Accounting has its own complete grammar and removes its selector first.
 /// Require independently retained input and a new output at selection time;
 /// mixed modes and unsupported guards cannot disappear during option removal.
@@ -139,7 +139,7 @@ fn take_unaccounted_continuation(
     }
     if credibility.is_some()
         || args.len() < 9
-        || args.len() > 15
+        || args.len() > 19
         || args.first().map(String::as_str) != Some("serve-native-generated")
         || args[1..4]
             .iter()
@@ -168,7 +168,9 @@ fn take_unaccounted_continuation(
             | "--retain-history-anchor"
             | "--publication-profile"
             | "--operator-profile"
-            | "--tower-generation" => remaining.extend_from_slice(&args[index..index + 2]),
+            | "--tower-generation"
+            | "--governor-profile"
+            | "--recovery-requirements" => remaining.extend_from_slice(&args[index..index + 2]),
             _ => return Err(USAGE.into()),
         }
         index += 2;
@@ -176,6 +178,8 @@ fn take_unaccounted_continuation(
     if !seen.contains("--history-anchor")
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
+        || seen.contains("--governor-profile") != seen.contains("--recovery-requirements")
+        || (seen.contains("--governor-profile") && !seen.contains("--operator-profile"))
     {
         return Err(USAGE.into());
     }
@@ -202,7 +206,7 @@ where
 {
     let (args, accounting_paths) = andon::take_options(args, credibility)?;
     let (args, continue_generation) = take_unaccounted_continuation(&args, credibility)?;
-    let (args, governor_path, recovery_path) = governor::take_recovery_options(&args, credibility)?;
+    let (args, governor_path, recovery_path) = governor::take_recovery_options(&args, credibility, continue_generation)?;
     let (args, history_options) = anchors::take_options(&args)?;
     let (args, operator_option) = take_operator(&args, credibility)?;
     let (publication_path, after) = options(&args, credibility)?;
@@ -273,7 +277,7 @@ where
     governor::check_selected(
         selected_governor.as_ref(),
         selected_operator.as_ref(),
-        after,
+        mode,
         credibility,
         recovery_path.is_some(),
     )?;
@@ -322,7 +326,7 @@ where
             history.as_ref().ok_or(andon::INVALID)?, accounting, time, output,
         );
     }
-    if mode == Mode::ContinueGeneration {
+    if mode == Mode::ContinueGeneration && selected_governor.is_none() {
         let (entries, history) = load_with_complete_services(
             Path::new(&args[2]),
             &config,
@@ -356,20 +360,30 @@ where
         )?;
         // A future listener cannot consume an independently retained archive.
         history_options.check_files(&[governor.socket.clone()])?;
-        let (entries, history) = load_with_recovery_services(
+        let (entries, history) = load_with_complete_services(
             Path::new(&args[2]),
             &config,
             &peers,
-            after,
+            mode,
             selected_operator.as_ref(),
             credibility,
             Some(history_options),
             Some(governor),
             recovery_path.as_deref(),
+            None,
+            &[],
         )?;
         let requirements = recovery
             .as_ref()
             .map(|selected| selected.requirements(&config, &entries[0].inputs));
+        if mode == Mode::ContinueGeneration {
+            return super::run_with_governed_continuation(
+                config, entries, &peers, publication.as_ref(),
+                selected_operator.as_ref().ok_or(USAGE)?,
+                history.as_ref().ok_or(USAGE)?, governor,
+                requirements.as_ref().ok_or(USAGE)?, time, output,
+            );
+        }
         return super::run_with_governed_recovery(
             config,
             entries,
@@ -664,8 +678,7 @@ fn load_with_complete_services(
     if mode == Mode::ContinueGeneration
         && accounting.is_none()
         && (credibility.is_some()
-            || selected_governor.is_some()
-            || recovery_path.is_some()
+            || selected_governor.is_some() != recovery_path.is_some()
             || !history_options
                 .as_ref()
                 .is_some_and(anchors::Options::is_recovery_pair))
@@ -681,7 +694,7 @@ fn load_with_complete_services(
     governor::check_selected(
         selected_governor,
         selected_operator,
-        after,
+        mode,
         credibility,
         recovery_path.is_some(),
     )?;
@@ -838,7 +851,7 @@ fn load_with_complete_services(
             config,
             &custody,
             peers,
-            after,
+            mode,
             credibility,
             None,
             true,

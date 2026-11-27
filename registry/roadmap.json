@@ -932,7 +932,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/tests/evaluation/history.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/continuation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/continuation.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/continuation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_continuation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor_continuation.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -3744,7 +3746,9 @@
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/andon.rs",
-        "docs/LIVE_ANDON_EVALUATION.md"
+        "docs/LIVE_ANDON_EVALUATION.md",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_continuation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor_continuation.rs"
       ],
       "founding_ideas": [
         "FI-A14",

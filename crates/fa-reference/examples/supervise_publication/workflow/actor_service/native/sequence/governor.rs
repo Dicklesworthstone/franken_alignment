@@ -6,7 +6,7 @@ pub(super) mod recovery;
 #[path = "governor/requirements.rs"]
 pub(super) mod requirements;
 use super::super::{Config, PeerProfile, Profile, PublicationProfile, exact_precheck, operator};
-use super::{Inputs, anchors};
+use super::{Inputs, Mode, anchors};
 pub(super) use crate::workflow::actor_service::governor::Settings;
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::FileRecoveryRequirements;
 use std::{
@@ -63,14 +63,21 @@ pub(super) fn take_option(
 pub(super) fn take_recovery_options(
     args: &[String],
     credibility: Option<&Path>,
+    continuing: bool,
 ) -> Result<(Vec<String>, Option<PathBuf>, Option<PathBuf>), String> {
     if !args.iter().any(|arg| arg == "--recovery-requirements") {
+        if continuing && args.iter().any(|arg| arg == "--governor-profile") {
+            return Err("native governed continuation requires complete independent recovery requirements".into());
+        }
         let (remaining, governor) = take_option(args, credibility)?;
         return Ok((remaining, governor, None));
     }
-    const RECOVERY: &str = "native governed recovery requires --governor-profile, paired --operator-profile/--tower-generation, --recovery-requirements, --after-message and --history-anchor";
-    if args.len() < 16
-        || args.len() > 20
+    const RECOVERY: &str = "native governed recovery requires --governor-profile, paired --operator-profile/--tower-generation, --recovery-requirements, --history-anchor and exactly one of --after-message or --continue-generation; continuation also requires a new --retain-history-anchor";
+    let minimum = if continuing { 14 } else { 16 };
+    let maximum = if continuing { 18 } else { 20 };
+    if args.len() < minimum
+        || args.len() > maximum
+        || (continuing && credibility.is_some())
         || args.len() % 2 != 0
         || args.first().map(String::as_str) != Some("serve-native-generated")
         || args[1..4]
@@ -106,12 +113,18 @@ pub(super) fn take_recovery_options(
         "--operator-profile",
         "--tower-generation",
         "--recovery-requirements",
-        "--after-message",
         "--history-anchor",
     ] {
         if !seen.contains(required) {
             return Err(RECOVERY.into());
         }
+    }
+    if continuing {
+        if seen.contains("--after-message") || !seen.contains("--retain-history-anchor") {
+            return Err(RECOVERY.into());
+        }
+    } else if !seen.contains("--after-message") {
+        return Err(RECOVERY.into());
     }
     Ok((remaining, governor, requirements))
 }
@@ -120,18 +133,23 @@ pub(super) fn take_recovery_options(
 pub(super) fn check_selected(
     governor: Option<&Settings>,
     operator: Option<&operator::Selection>,
-    after: Option<u64>,
+    mode: Mode,
     credibility: Option<&Path>,
     recovery: bool,
 ) -> Result<(), String> {
     if !recovery {
-        return check_selection(governor, operator, after, credibility);
+        if mode == Mode::ContinueGeneration && governor.is_some() {
+            return Err("native governed continuation requires complete independent recovery requirements".into());
+        }
+        return check_selection(governor, operator, mode.after(), credibility);
     }
     if governor.is_none()
         || !operator.is_some_and(operator::Selection::is_governed)
-        || after.is_none_or(|request| request == 0)
+        || !mode.is_recovery()
+        || mode.after() == Some(0)
+        || (mode == Mode::ContinueGeneration && credibility.is_some())
     {
-        return Err("native governance recovery requires independent governor/operator custody and a nonzero predecessor".into());
+        return Err("native governance recovery requires independent governor/operator custody and an explicit original recovery mode".into());
     }
     Ok(())
 }
@@ -221,7 +239,7 @@ pub(super) fn check(
         config,
         entries,
         peers,
-        after,
+        Mode::from_after(after),
         credibility,
         history,
         false,
@@ -234,12 +252,12 @@ pub(super) fn check_with_recovery(
     config: &Config,
     entries: &[(&Profile, Option<&exact_precheck::Selection>)],
     peers: &PeerProfile,
-    after: Option<u64>,
+    mode: Mode,
     credibility: Option<&Path>,
     history: Option<&anchors::Selection>,
     recovery: bool,
 ) -> Result<(), String> {
-    check_selected(governor, operator, after, credibility, recovery)?;
+    check_selected(governor, operator, mode, credibility, recovery)?;
     let Some(governor) = governor else {
         return Ok(());
     };

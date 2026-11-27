@@ -316,6 +316,34 @@ where
     retention.finish(result)
 }
 
+/// Continue the original governed text intent without an invented Message
+/// predecessor. Exact requirements and independent history admit the same
+/// recovery Fence; its fresh governor and human roles remain separate.
+pub(super) fn run_with_governed_continuation<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selected_operator: &operator::Selection,
+    history: &anchors::Selection,
+    governor: &governor::Settings,
+    requirements: &FileRecoveryRequirements,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
+    let mut retention = anchors::Retention::new(Some(history));
+    let result = run_retained(
+        config, entries, reviewer_profile, publication,
+        (Mode::ContinueGeneration, Some(selected_operator)), None,
+        Some(history), Some(governor), Some(requirements), None,
+        &mut retention, time, output,
+    );
+    retention.finish(result)
+}
+
 /// Create the original source-backed numerical owner with evaluation and Andon
 /// accounting in its first acknowledged image. The sole evaluator endpoint,
 /// original grants and finite lifetime survive every Message/Finish handoff.
@@ -473,20 +501,19 @@ where
     if mode == Mode::ContinueGeneration
         && accounting.is_none()
         && (credibility.is_some()
-            || selected_governor.is_some()
-            || requirements.is_some()
+            || selected_governor.is_some() != requirements.is_some()
             || history.and_then(anchors::Selection::input).is_none()
             || history.and_then(anchors::Selection::output_path).is_none())
     {
         return Err(
-            "ordinary native continuation requires independent input and new output history without governed or activation contracts".into(),
+            "native continuation requires independent input and new output history, complete selected governance and no fresh activation".into(),
         );
     }
     let after = mode.after();
     governor::check_selected(
         selected_governor,
         selected_operator,
-        after,
+        mode,
         credibility,
         requirements.is_some(),
     )?;
@@ -541,7 +568,7 @@ where
             .map(|entry| (&entry.actor, entry.precheck.as_ref()))
             .collect::<Vec<_>>(),
         reviewer_profile,
-        after,
+        mode,
         credibility,
         history,
         requirements.is_some(),

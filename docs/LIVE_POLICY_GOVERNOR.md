@@ -104,6 +104,15 @@ policy, original campaign bounds, explicit absence of unsupported guards and
 all three independently retained recovery floors. Configuration and recipes
 continue to pin the original native source and numerical contracts.
 
+For an original pending or completed-but-unsubmitted first Message, select
+[`--continue-generation`](RESIDENT_NATIVE_PUBLICATION.md#resume-interrupted-governed-generation)
+instead of `--after-message`. This mode requires both the original input anchor
+and a new retained output, together with the same complete governed requirements.
+It preserves original numerical spending and completed text, checks the whole
+remaining suffix, and still requires fresh helper and human publication approval.
+A singleton Message is supported; a singleton Finish uses confirmed-Message
+recovery. The output anchor remains optional for unaccounted `--after-message`.
+
 The same anchored native replay verifies those expectations before its original
 Fence provisions fresh human and governor roles. The original Stop and deadline
 remain active at each event and Ready. Campaign use, numerical spending,
@@ -112,7 +121,7 @@ eligibility do not. A recovered suffix may be one final Finish, with no new
 sampled draw, or new Messages with an optional final Finish. Every effect retains fresh human
 approval and every later policy promotion retains its independent campaign.
 
-Recovery can select `--credibility-activation CAPSULE`, including with the
+Confirmed-Message recovery can select `--credibility-activation CAPSULE`, including with the
 original held-out joint publication profile. The original activation runs once
 before the suffix, retains fresh governor/human roles, and withdraws old approval
 keys. The governor can request and review a new campaign, but policy promotion

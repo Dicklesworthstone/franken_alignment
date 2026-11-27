@@ -1,6 +1,8 @@
 //! A separate authenticated governor changes one ORIGINAL resident native
 //! owner. Real source intake, numerical work, helper processes and human keys
 //! still precede each cumulative Message/Finish publication.
+#[path = "governed_continuation.rs"]
+mod continuation_tests;
 #[path = "governed_recovery.rs"]
 mod recovery_tests;
 

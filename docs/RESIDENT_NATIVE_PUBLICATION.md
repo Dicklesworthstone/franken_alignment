@@ -222,12 +222,16 @@ accounted service can explicitly select
 [`--continue-generation`](#resume-interrupted-accounted-generation) for its
 original pending or completed-but-unsubmitted first Message. The ordinary
 unaccounted service can make the same explicit selection with independent input
-and output history anchors, as described below. No mode can skip outstanding
-numerical or publication work.
+and output history anchors, as described below. A governed service also supplies
+its complete independent policy/campaign recovery requirements through the
+[governed continuation selection](#resume-interrupted-governed-generation).
+No mode can skip outstanding numerical or publication work.
 
-The complete remaining selection must describe new work. All actor request IDs
-must be absent from the retained request history, and every selected Message's
-generation ID must be unused. The predecessor must satisfy the original native
+For `--after-message`, the complete remaining selection must describe new work.
+All actor request IDs must be absent from the retained request history, and every
+selected Message's generation ID must be unused. Explicit `--continue-generation`
+instead requires the exact original first generation; all later identities must
+still be unused. The predecessor must satisfy the original native
 confirmed-cut and continuation or Finish checks. A historical receipt, unknown
 effect, earlier superseded Message or altered Finish recipe cannot authorize the
 suffix. The original stream's remaining Message allowance also bounds the full
@@ -288,8 +292,10 @@ active through replay, Ready, resumed generation and every subsequent release.
 The existing optional operator, per-entry version-two exact prechecks and
 publication profile can be selected. This ordinary mode does not select policy
 governance, governed recovery requirements, credibility activation or an
-`--after-message` predecessor. Accounted continuation retains its separate
-Andon/evaluator contract below.
+`--after-message` predecessor. Use the separate
+[governed continuation selection](#resume-interrupted-governed-generation)
+to retain independent policy governance. Accounted continuation retains its
+separate Andon/evaluator contract below.
 
 ## Independently retained history
 
@@ -450,11 +456,55 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
   --retain-history-anchor NEW_OUTPUT_ANCHOR
 ```
 
-The new output archive is optional. The other recovery selections above are
-required together. An original checked-publication profile can also be selected
+The new output archive is optional for this unaccounted `--after-message`
+selection. Interrupted-generation continuation requires both input and new
+output anchors; evaluated recovery requires both anchors under either mode.
+The other recovery selections above are required together. An original checked-publication profile can also be selected
 with `--publication-profile`; recovery must preserve its exact original witness
 and held-out joint contracts. Topology selection and the single-release command
 family remain outside this mode.
+
+### Resume interrupted governed generation
+
+Use the same complete governed recovery selection with `--continue-generation`
+in place of `--after-message PREVIOUS_REQUEST` when the first remaining Message
+has an original pending or completed-but-unsubmitted generation:
+
+```sh
+supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_PROFILE \
+  --continue-generation \
+  --operator-profile OPERATOR_PROFILE --tower-generation NONZERO \
+  --governor-profile GOVERNOR_PROFILE \
+  --recovery-requirements RECOVERY_REQUIREMENTS \
+  --history-anchor PREVIOUS_INDEPENDENT_ANCHOR \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+This mode requires both history archives. The independently retained requirements
+pin the complete effective policy, campaign inventory and history floors, while
+the original configuration and recipes pin source, decoder, tokenizer, stream
+and publication contracts. Missing requirements never select an ordinary opener.
+
+The first selected Message must match the original raw text intent exactly.
+The remaining 1 through 16 entries are checked together against original request
+and generation history before any new source reference, inference or effect.
+Later Messages need unused identities; Finish, if selected, is last. A singleton
+Message is allowed. A changed prompt or budget, previously submitted first
+request, conflicting later generation or another outstanding intent refuses.
+
+Pending work resumes on the original numerical state and cumulative work. A
+completed result is reused without additional sampling. The same guarded replay
+cursor, original recovery Fence, independent Stop and invocation deadline cover
+replay, Ready and every subsequent release. The new output archive retains an
+acknowledged Fence or Stop even if later startup or source work refuses.
+
+The recovered governor and human reviewer have separate fresh custody. Later
+policy changes still need original-corpus replay, independent governor approval
+and explicit operator promotion. Every publication still needs fresh source,
+helper review and human approval. Fresh credibility activation, mixed recovery
+modes and a singleton Finish remain outside this continuation selection; use
+the existing explicitly selected confirmed-Message recovery for those supported
+operations.
 
 ### Requalify the original helper congress after recovery
 
@@ -1040,8 +1090,9 @@ this increment has not been formatted, compiled or executed. Existing execution
 receipts do not qualify these changes.
 
 The resident command creates a new native stream, explicitly selects a new
-remaining suffix with `--after-message`, or resumes the first original accounted
-intent with `--continue-generation`. Existing single-release native
+remaining suffix with `--after-message`, or resumes an original interrupted
+generation with explicit `--continue-generation` and its complete ordinary,
+governed or accounted recovery selection. Existing single-release native
 creation, continuation, pending-generation recovery and receipt commands keep
 their own grammars. The resident command does not implicitly select recovery,
 credibility activation, topology or policy-governor services. History custody

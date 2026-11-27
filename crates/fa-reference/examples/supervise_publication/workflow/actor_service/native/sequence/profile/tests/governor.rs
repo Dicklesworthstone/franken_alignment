@@ -1,6 +1,9 @@
 //! Governed creation owns its complete grammar before selected inputs, clocks,
 //! listeners or authority. Loader tests exercise original finite model fixtures;
 //! declared peer policies alone do not demonstrate authenticated live roles.
+#[path = "governor_continuation.rs"]
+mod continuation_tests;
+
 use super::super::super::{anchors as history_custody, governor as governance};
 use super::super::{USAGE, command_with_clock, load_with_services, options, take_operator};
 use super::*;
@@ -257,7 +260,14 @@ fn native_governor_creation_rejects_unpaired_conflicting_and_ambiguous_options_b
             Err(GOVERNOR_INVALID.to_owned()),
             "{args:?}"
         );
-        assert_eq!(command_failure(&args, None), GOVERNOR_INVALID, "{args:?}");
+        // The unary continuation parser owns this malformed selector before
+        // the paired governor parser; both must refuse before opening inputs.
+        let expected = if args.iter().any(|arg| arg == "--continue-generation") {
+            USAGE
+        } else {
+            GOVERNOR_INVALID
+        };
+        assert_eq!(command_failure(&args, None), expected, "{args:?}");
     }
     let capsule = Path::new("/missing/independent-capsule");
     assert_eq!(
@@ -502,7 +512,7 @@ fn native_governed_recovery_admits_complete_orderings_before_original_input_inta
                     args.extend([flag, value]);
                 }
                 let (remaining, governor, requirements) =
-                    governance::take_recovery_options(&args, None).unwrap();
+                    governance::take_recovery_options(&args, None, false).unwrap();
                 assert_eq!(governor, Some(root.0.join("governor.json")));
                 assert_eq!(requirements, Some(root.0.join("requirements.json")));
                 let (remaining, history) = history_custody::take_options(&remaining).unwrap();
@@ -558,7 +568,7 @@ fn native_governed_recovery_admits_the_explicit_capsule_after_complete_option_in
             let selected = crate::qualification::take_option(&mut args).unwrap();
             assert_eq!(selected.as_deref(), Some(capsule.as_path()));
             let (remaining, governor, requirements) =
-                governance::take_recovery_options(&args, selected.as_deref()).unwrap();
+                governance::take_recovery_options(&args, selected.as_deref(), false).unwrap();
             assert_eq!(governor, Some(root.0.join("governor.json")));
             assert_eq!(requirements, Some(root.0.join("requirements.json")));
             let (remaining, history) = history_custody::take_options(&remaining).unwrap();
@@ -585,14 +595,14 @@ fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_befo
         let mut missing = valid.clone();
         missing.drain(index..index + 2);
         assert!(
-            governance::take_recovery_options(&missing, None).is_err(),
+            governance::take_recovery_options(&missing, None, false).is_err(),
             "{missing:?}"
         );
         let _ = command_failure(&missing, None);
         let mut duplicate = valid.clone();
         duplicate.extend_from_slice(&valid[index..index + 2]);
         assert!(
-            governance::take_recovery_options(&duplicate, None).is_err(),
+            governance::take_recovery_options(&duplicate, None, false).is_err(),
             "{duplicate:?}"
         );
         let _ = command_failure(&duplicate, None);
@@ -607,7 +617,7 @@ fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_befo
     ] {
         let mut invalid = valid.clone();
         invalid.extend([flag.into(), "/missing/input".into()]);
-        assert!(governance::take_recovery_options(&invalid, None).is_err());
+        assert!(governance::take_recovery_options(&invalid, None, false).is_err());
         let _ = command_failure(&invalid, None);
     }
     for flag in ["--after-message", "--tower-generation"] {
@@ -621,12 +631,12 @@ fn native_governed_recovery_rejects_missing_duplicate_and_conflicting_pairs_befo
     // The capsule is separately parsed by the original qualification grammar.
     // It cannot supply an omitted independent recovery contract or anchor.
     let capsule = Some(Path::new("/missing/qualification"));
-    assert!(governance::take_recovery_options(&valid, capsule).is_ok());
+    assert!(governance::take_recovery_options(&valid, capsule, false).is_ok());
     for flag in ["--recovery-requirements", "--history-anchor"] {
         let mut missing = valid.clone();
         let index = missing.iter().position(|arg| arg == flag).unwrap();
         missing.drain(index..index + 2);
-        assert!(governance::take_recovery_options(&missing, capsule).is_err());
+        assert!(governance::take_recovery_options(&missing, capsule, false).is_err());
     }
     assert!(!root.0.join("store").exists());
 }
@@ -662,7 +672,7 @@ fn native_governed_recovery_reserves_capsule_custody_for_direct_and_loaded_selec
             &config,
             &selected,
             &peers,
-            Some(90),
+            Mode::AfterMessage(90),
             Some(&capsule),
             None,
             true,
@@ -691,7 +701,7 @@ fn native_governed_recovery_reserves_capsule_custody_for_direct_and_loaded_selec
         &config,
         &selected,
         &peers,
-        Some(90),
+        Mode::AfterMessage(90),
         Some(&independent),
         None,
         true,
