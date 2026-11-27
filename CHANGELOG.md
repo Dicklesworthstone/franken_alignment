@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Keep a redirected parent alias from claiming the wrong destination
+
+- Initial journal creation rechecks the selected parent after encoding and creates the directory using the resolved identity. A redirected alias observed during encoding now leaves both destinations available.
+
 ## 2026-11-27 · Preserve the requested path after ordinary bootstrap refusal
 
 - Basic delivery and oversight, native and learned text streams, and witness-checked publication now admit the complete path-bound journal before creating the directory. A caller can correct an insufficient byte limit and retry the same destination.

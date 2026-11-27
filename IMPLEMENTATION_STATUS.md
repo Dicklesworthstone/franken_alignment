@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Preserve storage custody when a parent alias changes
+
+The common first-image path rechecks its parent after encoding and creates through the pinned resolved path. A regression redirects a real parent symlink during encoding, checks for a binding refusal and absence of both destinations, then retries successfully through the new parent. Runtime qualification is pending.
+
 ## 2026-11-27 · Apply path-bound byte admission to ordinary publication
 
 The basic FileDelivery constructor and ten FileOversight initialization paths now validate the first canonical image before acquiring storage. The oversight entry points share their final store creation step after their original machine validation. Two tests exercise the public basic delivery and oversight constructors with a one-byte shortfall, an exact-fit retry and a subsequent duplicate create. Both check the resulting canonical bytes. Rust execution remains pending the required remote launcher.

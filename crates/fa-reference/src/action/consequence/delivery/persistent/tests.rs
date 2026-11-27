@@ -122,6 +122,32 @@ fn snapshot() -> Snapshot {
     }
 }
 #[test]
+fn redirected_parent_during_initial_encoding_preserves_both_destinations() {
+    use std::os::unix::fs::symlink;
+
+    let first = Directory::new();
+    let second = Directory::new();
+    let alias = first.0.join("selected-parent");
+    symlink(&first.0, &alias).unwrap();
+    let selected = alias.join("publication");
+    let result = storage::Store::create_with_image(&selected, |identity| {
+        assert_eq!(identity, std::fs::canonicalize(&first.0).unwrap().join("publication"));
+        std::fs::remove_file(&alias).unwrap();
+        symlink(&second.0, &alias).unwrap();
+        codec::encode(&profile(), identity, &[])
+    });
+    assert!(matches!(result, Err(JournalError::Contract(Error::Binding))));
+    assert!(!first.store().exists());
+    assert!(!second.store().exists());
+
+    let _owner = FileDelivery::create(&selected, profile()).unwrap();
+    let identity = std::fs::canonicalize(second.store()).unwrap();
+    let expected = codec::encode(&profile(), &identity, &[]).unwrap();
+    assert_eq!(std::fs::read(identity.join(storage::CANONICAL)).unwrap(), expected);
+    assert!(!first.store().exists());
+}
+
+#[test]
 fn delivery_first_image_byte_refusal_allows_exact_fit_at_the_same_path() {
     let root = Directory::new();
     let directory = root.store();

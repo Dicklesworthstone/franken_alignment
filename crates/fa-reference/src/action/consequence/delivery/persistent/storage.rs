@@ -67,9 +67,15 @@ impl Store {
             .parent()
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or(Path::new("."));
-        let intended = io_result(fs::canonicalize(parent), JournalIo::Directory, false)?.join(name);
+        let resolved_parent = io_result(fs::canonicalize(parent), JournalIo::Directory, false)?;
+        let intended = resolved_parent.join(name);
         let image = encode(&intended)?;
-        let store = Self::create(path)?;
+        if io_result(fs::canonicalize(parent), JournalIo::Directory, false)? != resolved_parent {
+            return Err(crate::Error::Binding.into());
+        }
+        // Exclusive creation uses the selected identity even if the caller's
+        // parent alias is redirected between the recheck and directory creation.
+        let store = Self::create(&intended)?;
         if store.identity() != intended {
             return Err(crate::Error::Binding.into());
         }
