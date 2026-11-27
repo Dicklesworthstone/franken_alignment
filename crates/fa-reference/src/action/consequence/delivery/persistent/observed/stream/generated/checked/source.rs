@@ -13,6 +13,7 @@ use crate::action::consequence::delivery::persistent::observed::{
     guarded::anchored::FileHistoryAnchor,
     source::{FileSourcePolicy, SourceEvent},
 };
+use crate::action::consequence::delivery::persistent::recovery_capacity::{Admission, Class};
 
 pub mod evaluation;
 mod recovery;
@@ -209,6 +210,16 @@ impl Prepared {
         }
         if events.len() > profile.delivery.limits.events {
             return Err(Error::Limit.into());
+        }
+        if let Some(reserve) = selected.publication.reserve() {
+            // Validate the complete first image, including campaign guards,
+            // before creating a directory that cannot be retried in place.
+            // Canonical encoding still checks actual bytes against its path.
+            Admission::new(profile.delivery.limits).record(
+                Class::Install(reserve),
+                events.len(),
+                0,
+            )?;
         }
         selected.check(&events)?;
         let machine = Machine::replay(&profile, &events)?;

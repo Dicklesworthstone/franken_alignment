@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-27 · Keep failed publication admission retryable
+
+- Validate complete guarded/native bootstrap event counts and recovery-reserve
+  dimensions before creating the authority directory. Invalid capacity no longer
+  strands an empty store that blocks a corrected create at the same path.
+- Retain exact-limit startup and the original recovery Fence, with regression
+  coverage across ordinary, checked, joint and campaign-governed selections.
+- Required RCH compilation and runtime qualification remain pending.
+
 ## 2026-11-26 · Recover an acknowledged learned-service creation after startup failure
 
 - Retain the selected history and topology checkpoints when listener setup

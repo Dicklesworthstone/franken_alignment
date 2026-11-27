@@ -478,3 +478,142 @@ fn source_preflight_does_not_validate_forged_replacement_or_duplicate_bootstraps
     assert_eq!(replacement.check(&malformed), Ok(())); // projection is not validation
     assert!(Machine::replay(&profile(), &malformed).is_err());
 }
+
+// Both public source constructors share the same reserve admission boundary.
+// Exercising them here catches a late encoder rejection that would otherwise
+// leave a directory without a canonical image and prevent corrected creation.
+fn create_reserve_case(
+    root: &Directory,
+    selected: GeneratedSourceProfile,
+    profile: FileOversightProfile,
+    governed: bool,
+) -> Result<FileOversight, JournalError> {
+    if governed {
+        FileOversight::create_generated_text_stream_from_source_governed(
+            root.store(),
+            profile,
+            fixtures::stopped_config(),
+            tokenizer(false),
+            selected,
+            FileCampaignRequirement {
+                limits: crate::action::consequence::policy_campaign::ReplayLimits {
+                    cases: 16,
+                    input_bytes: 1_048_576,
+                },
+                max_campaigns: 4,
+            },
+        )
+        .map(|(host, _, _)| host)
+    } else {
+        FileOversight::create_generated_text_stream_from_source(
+            root.store(),
+            profile,
+            fixtures::stopped_config(),
+            tokenizer(false),
+            selected,
+        )
+        .map(|(host, _)| host)
+    }
+}
+
+#[test]
+fn source_bootstrap_invalid_reserve_leaves_destination_reusable() {
+    for governed in [false, true] {
+        for mode in 1..6 {
+            for changed in 0..4 {
+                let root = Directory::new();
+                let mut selected = selection(mode);
+                let p = profile();
+                let reserve = match &mut selected.publication {
+                    GeneratedSourcePublication::Stream { reserve, .. } => reserve,
+                    GeneratedSourcePublication::Checked(publication)
+                    | GeneratedSourcePublication::Joint { publication, .. } => {
+                        &mut publication.reserve
+                    }
+                }
+                .as_mut()
+                .unwrap();
+                match changed {
+                    0 => reserve.events = RecoveryReserve::terminal().events - 1,
+                    1 => reserve.bytes = RecoveryReserve::terminal().bytes - 1,
+                    2 => reserve.events = p.delivery.limits.events,
+                    _ => reserve.bytes = p.delivery.limits.bytes,
+                }
+                assert!(matches!(
+                    create_reserve_case(&root, selected, p, governed),
+                    Err(JournalError::Contract(Error::InvalidInput | Error::Limit))
+                ));
+                assert!(
+                    !root.store().exists(),
+                    "governed {governed}, mode {mode}, case {changed}"
+                );
+                // Correct only the invalid reserve at the SAME path. A real
+                // source-bound owner and its original recovery Fence must work.
+                let host =
+                    create_reserve_case(&root, selection(mode), profile(), governed).unwrap();
+                assert_eq!(host.policy_campaigns_required(), governed);
+                let before = host.revision();
+                drop(host);
+                let (host, _) = reopen(&root, selection(mode)).unwrap();
+                assert_eq!(host.revision(), before + 1);
+                assert_eq!(host.policy_campaigns_required(), governed);
+                assert_eq!(
+                    host.journal_capacity().unwrap().reserve(),
+                    Some(RecoveryReserve::terminal())
+                );
+                assert_eq!(host.inspect().executions, 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn source_bootstrap_full_image_retains_its_exact_terminal_event_allowance() {
+    for governed in [false, true] {
+        for mode in 1..6 {
+            let root = Directory::new();
+            let selected = selection(mode);
+            let complete = selected
+                .events(fixtures::stopped_config(), &tokenizer(false))
+                .unwrap()
+                .len()
+                + usize::from(governed);
+            let reserve = RecoveryReserve::terminal();
+            let mut p = profile();
+            p.delivery.limits.events = complete + reserve.events - 1;
+            assert!(matches!(
+                create_reserve_case(&root, selected, p.clone(), governed),
+                Err(JournalError::Contract(Error::Limit))
+            ));
+            assert!(!root.store().exists(), "governed {governed}, mode {mode}");
+            // One additional event is exactly sufficient, including the
+            // optional governance event. No default-size budget hides the edge.
+            p.delivery.limits.events += 1;
+            let host = create_reserve_case(&root, selected, p.clone(), governed).unwrap();
+            assert_eq!(host.revision() as usize, complete);
+            assert_eq!(host.policy_campaigns_required(), governed);
+            let capacity = host.journal_capacity().unwrap();
+            assert_eq!(capacity.ordinary_remaining().events, 0);
+            assert_eq!(capacity.remaining().events, reserve.events);
+            assert!(capacity.terminal_space_remaining());
+            drop(host);
+            // Recovery spends only its original reserved tail and never
+            // replenishes ordinary admission, even at the exact first-image cap.
+            let (host, _) = FileOversight::open_generated_text_stream_from_source(
+                root.store(),
+                p,
+                &fixtures::stopped_config(),
+                &tokenizer(false),
+                selected,
+            )
+            .unwrap();
+            assert_eq!(host.revision() as usize, complete + 1);
+            assert_eq!(host.policy_campaigns_required(), governed);
+            let capacity = host.journal_capacity().unwrap();
+            assert_eq!(capacity.ordinary_remaining().events, 0);
+            assert_eq!(capacity.remaining().events, reserve.events - 1);
+            assert_eq!(capacity.reserve(), Some(reserve));
+            assert_eq!(host.inspect().executions, 0);
+        }
+    }
+}

@@ -9,6 +9,14 @@ replacement. `GeneratedSourcePublication` represents stream-only, witness-checke
 and joint-qualified publication selections without dropping their distinctions.
 `GeneratedSourceProfile` pairs that selection with the mandatory source policy.
 
+Reserve dimensions and the complete first-image event count are checked before
+creating the authority directory. This includes every selected witness/joint
+registration and the optional policy-campaign guard. A malformed reserve or an
+event allowance one short of the image plus its reserved tail therefore leaves
+the destination available for a corrected create. Actual path-bound byte
+encoding and storage barriers remain fallible; this preflight does not promise
+that every possible startup failure leaves no directory.
+
 This closes the model-only bootstrap cut left by creating a native owner and then
 calling `enable_file_source` as a second transaction. No successfully acknowledged
 initial image from the new constructor lacks the declared source requirement.

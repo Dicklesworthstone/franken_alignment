@@ -358,7 +358,8 @@ impl FileOversight {
         guards: &FileGuardSet,
         registration: Option<FileCredentialRegistration<'_>>,
     ) -> Result<(Self, FileOversightRoles), JournalError> {
-        let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?;
+        let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
+            .checked_event_capacity()?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
     }
@@ -376,7 +377,8 @@ impl FileOversight {
         reserve: super::super::super::RecoveryReserve,
     ) -> Result<(Self, FileOversightRoles), JournalError> {
         let prepared =
-            PreparedGuardedBootstrap::prepare_reserved(profile, guards, registration, reserve)?;
+            PreparedGuardedBootstrap::prepare_reserved(profile, guards, registration, reserve)?
+                .checked_event_capacity()?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
     }
@@ -400,7 +402,8 @@ impl FileOversight {
             registration,
             reserve,
             publication,
-        )?;
+        )?
+        .checked_event_capacity()?;
         let store = storage::Store::create(directory.as_ref())?;
         prepared.publish(store)
     }

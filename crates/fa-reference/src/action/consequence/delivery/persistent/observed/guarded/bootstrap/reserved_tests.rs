@@ -466,3 +466,121 @@ fn every_original_write_barrier_returns_no_partial_guarded_owner() {
         }
     }
 }
+
+// Exercise public startup, rather than only the private prepared-image helper:
+// a refused complete image must not leave storage that blocks a corrected retry.
+fn create_capacity_case(
+    root: &Directory,
+    profile: FileOversightProfile,
+    mode: usize,
+) -> Result<FileOversight, JournalError> {
+    let result = match mode {
+        0 => FileOversight::create_guarded(root.store(), profile, &guards(), None),
+        1 => FileOversight::create_guarded_reserved(
+            root.store(),
+            profile,
+            &guards(),
+            None,
+            RecoveryReserve::terminal(),
+        ),
+        2 => FileOversight::create_guarded_publication_reserved(
+            root.store(),
+            profile,
+            &guards(),
+            None,
+            RecoveryReserve::terminal(),
+            crate::action::consequence::delivery::publication_gate::PublicationLimits {
+                bindings: 4,
+                validation: crate::witness::refinement::RefinementBudget {
+                    steps: 1000,
+                    value_bytes: 10000,
+                },
+            },
+        ),
+        _ => unreachable!("capacity fixture mode"),
+    };
+    result.map(|(host, _)| host)
+}
+
+#[test]
+fn complete_guarded_event_inventory_refuses_before_storage_and_allows_corrected_retry() {
+    for mode in 0..3 {
+        let root = Directory::new();
+        // Original guard, source and campaign; reserved modes add the marker.
+        let complete = if mode == 0 { 3 } else { 4 };
+        let reserved = if mode == 0 {
+            0
+        } else {
+            RecoveryReserve::terminal().events
+        };
+        let mut selected = profile();
+        selected.delivery.limits.events = complete + reserved - 1;
+        assert!(matches!(
+            create_capacity_case(&root, selected.clone(), mode),
+            Err(JournalError::Contract(Error::Limit))
+        ));
+        assert!(!root.store().exists(), "mode {mode}");
+
+        selected.delivery.limits.events += 1;
+        let host = create_capacity_case(&root, selected.clone(), mode).unwrap();
+        assert_eq!(host.revision() as usize, complete);
+        assert!(host.policy_campaigns_required());
+        assert_eq!(
+            host.file_source_status().unwrap().policy,
+            guards().source.unwrap()
+        );
+        assert_eq!(host.inspect().executions, 0);
+        assert_eq!(host.inspect().control.ledger.available, 100);
+        assert!(!host.clock_ready());
+        let capacity = host.journal_capacity().unwrap();
+        assert_eq!(capacity.ordinary_remaining().events, 0);
+        assert_eq!(capacity.remaining().events, reserved);
+        assert_eq!(
+            capacity.reserve(),
+            (mode != 0).then_some(RecoveryReserve::terminal())
+        );
+        let bytes = fs::read(root.canonical()).unwrap();
+        let events = journal::decode(&selected, host.store.identity(), &bytes).unwrap();
+        assert_eq!(events.len(), complete);
+        if mode == 2 {
+            assert!(matches!(
+                events[0],
+                Event::PublicationWitness(
+                    super::super::super::publication::witness_gate::WitnessEvent::Enable(_)
+                )
+            ));
+        } else {
+            assert!(matches!(events[0], Event::PublicationGuard));
+        }
+    }
+}
+
+#[test]
+fn exact_guarded_bootstrap_event_capacity_keeps_the_original_recovery_fence() {
+    let root = Directory::new();
+    let mut selected = profile();
+    selected.delivery.limits.events = 4 + RecoveryReserve::terminal().events;
+    let host = create_capacity_case(&root, selected.clone(), 1).unwrap();
+    let expected = expected(&host);
+    let revision = host.revision();
+    drop(host);
+
+    let (host, roles) = FileOversight::open_guarded(root.store(), selected, &expected).unwrap();
+    assert_eq!(host.revision(), revision + 1);
+    assert!(roles.policy_governor.is_some());
+    assert!(host.policy_campaigns_required());
+    assert_eq!(
+        host.file_source_status().unwrap().policy,
+        guards().source.unwrap()
+    );
+    let capacity = host.journal_capacity().unwrap();
+    assert_eq!(capacity.reserve(), Some(RecoveryReserve::terminal()));
+    assert_eq!(capacity.ordinary_remaining().events, 0);
+    assert_eq!(
+        capacity.remaining().events,
+        RecoveryReserve::terminal().events - 1
+    );
+    assert_eq!(host.inspect().executions, 0);
+    assert_eq!(host.inspect().control.ledger.available, 100);
+    assert!(!host.clock_ready());
+}

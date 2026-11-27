@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Reject impossible publication bootstraps before creating storage
+
+Source-backed native creation now validates reserve dimensions and the complete
+initial event inventory, including optional campaign governance, through the
+original recovery-capacity admission law before storage creation. Ordinary,
+reserved and witness-checked guarded constructors also run their existing
+complete-event check before creating the authority directory. Previously these
+paths could reject during encoding after leaving a directory with no canonical
+image, blocking a corrected create at the same destination.
+
+Two native regression matrices cover all five reserved publication modes with
+and without governance, invalid event/byte reserves, one-event-short capacity,
+corrected same-path creation and original recovery fencing. Two guarded
+regressions cover unreserved, reserved and witness-checked first images, exact
+capacity and a real reserved recovery Fence. They preserve original guards,
+resource accounting and the finite terminal tail. Canonical byte encoding and
+I/O failures retain their existing behavior; no cleanup or capacity widening is
+introduced.
+
+Independent source review and scoped whitespace/exact-content checks cover this
+change. All four changed Rust files parse and their modified ranges pass dated
+nightly rustfmt (2026-09-07). The required RCH gate stops before Cargo because
+its launcher is absent (exit 127). Compilation, runtime tests, Clippy and the
+canonical gate remain unexecuted. These are authored regressions, not execution
+evidence, and no bead or qualification gate is closed.
+
 ## 2026-11-26 · Acknowledged creation survives evaluator startup failure
 
 The learned service captures its first acknowledged journal image and any

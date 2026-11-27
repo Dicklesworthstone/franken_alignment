@@ -38,6 +38,23 @@ bytes and older event encodings remain unchanged. Old readers reject this marker
 The marker itself changes no rights or native broker state; its only consumer is
 the canonical journal's capacity-admission rule.
 
+## Complete-image startup admission
+
+Ordinary guarded, witness-checked guarded and source-backed native constructors
+check the entire initial event inventory before creating their authority store.
+The reserve marker must leave room for all selected guards, including policy
+campaigns, and the full reserved tail. Unreserved guarded creation also checks
+its complete event count against the original limit. These checks use the same
+admission law as the canonical encoder; they do not reduce a selected guard or
+borrow recovery capacity to make startup fit.
+
+An invalid reserve dimension or event capacity leaves the requested destination
+absent, so a corrected configuration can create at that same path. An exact
+image-plus-reserve allowance remains valid, and a subsequent recovery Fence
+spends the original tail without restoring ordinary space. Canonical byte
+encoding and storage failures retain their existing contracts and can still
+leave a directory or an ambiguous image; no cleanup or overwrite is attempted.
+
 ## Minimum terminal plan and finite recovery debt
 
 `RecoveryReserve::terminal()` reserves three events and fifty encoded bytes.
