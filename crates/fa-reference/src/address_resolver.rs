@@ -728,17 +728,40 @@ pub struct AddressedEventRecord {
     pub would_change_this: Option<String>,
 }
 
+// Encode every field as a JSON string, including address fields: Address has
+// public components, so callers can construct a value without parsing it.
+fn json_string(value: &str) -> String {
+    let mut out = String::with_capacity(value.len() + 2);
+    out.push('"');
+    for ch in value.chars() {
+        match ch {
+            '"' => out.push_str("\\\""),
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            ch if ch <= '\u{001f}' => {
+                use std::fmt::Write;
+                write!(&mut out, "\\u{:04x}", ch as u32).expect("writing to String cannot fail");
+            }
+            ch => out.push(ch),
+        }
+    }
+    out.push('"');
+    out
+}
+
 impl AddressedEventRecord {
     pub fn to_agent_json(&self) -> String {
+        let event = json_string(&self.event_address.canonical_string());
+        let subject = json_string(&self.subject_address.canonical_string());
+        let verb = json_string(&self.verb);
         match &self.would_change_this {
             Some(hint) => format!(
-                "{{\"event\":\"{}\",\"subject\":\"{}\",\"verb\":\"{}\",\"would_change_this\":\"{}\"}}",
-                self.event_address, self.subject_address, self.verb, hint
+                "{{\"event\":{event},\"subject\":{subject},\"verb\":{verb},\"would_change_this\":{}}}",
+                json_string(hint)
             ),
-            None => format!(
-                "{{\"event\":\"{}\",\"subject\":\"{}\",\"verb\":\"{}\"}}",
-                self.event_address, self.subject_address, self.verb
-            ),
+            None => format!("{{\"event\":{event},\"subject\":{subject},\"verb\":{verb}}}"),
         }
     }
 }
@@ -856,6 +879,44 @@ mod tests {
             DisplayAliasTable::parse_authority_address("run#99"),
             Err(AddressError::DisplayAliasForbiddenInAuthorityPath { .. })
         ));
+    }
+
+    #[test]
+    fn addressed_event_json_escapes_untrusted_values_without_field_injection() {
+        use crate::strict_json::{Json, Limits, parse};
+
+        let event_address = Address::parse("fa://tenant-a/receipt/rc-1@1").unwrap();
+        let subject_address = Address::parse("fa://tenant-a/run/run-1@1").unwrap();
+        let verb = "review\\\" , \\\"run_id\\\":\\\"forged\\\" \\\\ \\n \\t".to_owned();
+        let hint = "fix \\"quotation\\" and newline\\n and NUL \\0".to_owned();
+        for hint_value in [None, Some(hint.clone())] {
+            let record = AddressedEventRecord {
+                event_address: event_address.clone(),
+                subject_address: subject_address.clone(),
+                verb: verb.clone(),
+                would_change_this: hint_value.clone(),
+            };
+            let encoded = record.to_agent_json();
+            let parsed = parse(encoded.as_bytes(), Limits::default()).unwrap();
+            let Json::Object(fields) = parsed else { panic!("event must be an object") };
+            assert_eq!(fields.len(), if hint_value.is_some() { 4 } else { 3 });
+            assert_eq!(fields["event"].as_str(), Some(event_address.canonical_string().as_str()));
+            assert_eq!(fields["subject"].as_str(), Some(subject_address.canonical_string().as_str()));
+            assert_eq!(fields["verb"].as_str(), Some(verb.as_str()));
+            assert_eq!(fields.get("would_change_this").and_then(Json::as_str), hint_value.as_deref());
+            assert!(!fields.contains_key("run_id"));
+        }
+
+        // Even a directly-constructed malformed Address cannot smuggle a field.
+        let forged = Address { id: "x\\\",\\\"run_id\\\":\\\"spoof".into(), ..event_address };
+        let record = AddressedEventRecord {
+            event_address: forged,
+            subject_address,
+            verb: "verify".into(),
+            would_change_this: None,
+        };
+        let parsed = parse(record.to_agent_json().as_bytes(), Limits::default()).unwrap();
+        assert_eq!(parsed.as_object().unwrap().len(), 3);
     }
 
     #[test]
