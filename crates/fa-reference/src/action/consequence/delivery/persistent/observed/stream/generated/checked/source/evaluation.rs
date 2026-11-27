@@ -6,7 +6,8 @@ use super::{
 };
 use crate::Error;
 use crate::action::consequence::delivery::persistent::observed::{
-    credibility::andon::FileAndonConfig, guarded::evaluation::FileEvaluatedOversightRoles,
+    credibility::andon::FileAndonConfig,
+    guarded::{FileCampaignRequirement, evaluation::FileEvaluatedOversightRoles},
 };
 use crate::action::consequence::delivery::persistent::recovery_capacity::{Admission, Class};
 use crate::action::consequence::oversight::{
@@ -14,14 +15,15 @@ use crate::action::consequence::oversight::{
 };
 
 /// Independently chosen bootstrap inputs for the original native evaluator.
-/// The protocol is mandatory; joint promotion and Andon accounting are explicit
-/// opt-ins. Absence never means "accept or reconstruct a policy from storage".
+/// The protocol is mandatory; campaign governance, joint promotion and Andon
+/// accounting are explicit opt-ins. Absence never means "accept or reconstruct a policy from storage".
 /// These inputs carry no assessment, accumulated credit or role authority.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileGeneratedEvaluationConfig {
     protocol: EvaluationProtocol,
     joint: Option<JointPromotionPolicy>,
     andon: Option<FileAndonConfig>,
+    campaigns: Option<FileCampaignRequirement>,
 }
 
 impl FileGeneratedEvaluationConfig {
@@ -30,6 +32,7 @@ impl FileGeneratedEvaluationConfig {
             protocol,
             joint: None,
             andon: None,
+            campaigns: None,
         }
     }
 
@@ -52,6 +55,22 @@ impl FileGeneratedEvaluationConfig {
         }
         self.andon = Some(config);
         Ok(self)
+    }
+
+    /// Select the original independent policy-campaign guard in the same first
+    /// image as native provenance and evaluation. Its complete bounds are
+    /// validated by the original campaign reducer before storage exists. This
+    /// does not approve a campaign, label a case or grant an effect permit.
+    pub fn with_campaigns(mut self, requirement: FileCampaignRequirement) -> Result<Self, Error> {
+        if self.campaigns.is_some() {
+            return Err(Error::Duplicate);
+        }
+        self.campaigns = Some(requirement);
+        Ok(self)
+    }
+
+    pub fn campaign_requirement(&self) -> Option<FileCampaignRequirement> {
+        self.campaigns
     }
 
     pub fn protocol(&self) -> &EvaluationProtocol {
@@ -135,8 +154,10 @@ impl PreparedEvaluation {
 impl FileOversight {
     /// Atomically create the original source-bound native text stream with its
     /// independent evaluation protocol and explicitly selected joint/Andon
-    /// accounting. The first canonical image includes native provenance,
-    /// decoder, tokenizer, source, publication guards, reserve and evaluation.
+    /// accounting and independent campaign governance. The first canonical
+    /// image includes native provenance, decoder, tokenizer, source, publication
+    /// guards, reserve, campaigns and evaluation. A selected governor is returned
+    /// separately in the original oversight role bundle after acknowledgment.
     /// No source-only or unaccounted intermediate owner can escape.
     ///
     /// Native configuration, protocol, reserve dimensions and event capacity
@@ -162,7 +183,7 @@ impl FileOversight {
         selected: GeneratedSourceProfile,
         evaluation: FileGeneratedEvaluationConfig,
     ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
-        Prepared::new(profile, decoder, &tokenizer, selected)?
+        Prepared::with_campaigns(profile, decoder, &tokenizer, selected, evaluation.campaigns)?
             .evaluated(evaluation)?
             .publish_evaluated(InitialStore::Create(directory.as_ref()))
     }

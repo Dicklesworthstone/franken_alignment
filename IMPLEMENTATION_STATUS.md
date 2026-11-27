@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Atomically retain governance and evaluation in a native generated owner
+
+The original native evaluated constructor now accepts an explicitly selected
+campaign guard through `FileGeneratedEvaluationConfig::with_campaigns`.
+Source, decoder/tokenizer, publication, terminal reserve, campaign governance,
+evaluation and optional joint/Andon accounting are admitted and published as
+one canonical first image. Complete event and byte admission precedes role
+issuance; failure cannot expose a partially configured owner.
+
+The existing role provisioner retains separate evaluator, governor and human
+custody. Original generated-source recovery requires the complete independently
+selected guard and effective-policy inventory and returns fresh roles after the
+same Fence, retaining pending/censored cases, campaign history, numerical work
+and charged effects. Delayed labels do not become policy or publication keys.
+
+Six authored regression functions cover compatible mode/accounting combinations,
+invalid and duplicate selections, exact terminal-reserve boundaries, all five
+original storage failures, actual two-key native publication and policy promotion,
+delayed censored-to-benign resolution across anchored recovery, old-role/ticket
+rejection and omitted/changed campaign requirements. Independent source review
+found no blocking issue. The required RCH command exits 127 because `rch` is
+unavailable; formatting, compilation, Clippy and runtime qualification remain
+pending. FA-105 and FA-130 remain in progress.
+
 ## 2026-11-27 · Resume governed native generation before its first publication
 
 The resident native service now accepts explicit `--continue-generation` with

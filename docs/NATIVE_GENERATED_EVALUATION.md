@@ -14,7 +14,8 @@ progress pending execution qualification.
 Select `FileGeneratedEvaluationConfig` from
 `observed::stream::generated::checked::source::evaluation`. Its mandatory input
 is the independent `EvaluationProtocol`; `with_joint` selects the existing joint
-promotion policy and `with_andon` selects the original accounting configuration.
+promotion policy, `with_andon` selects the original accounting configuration,
+and `with_campaigns` selects the original independent policy-campaign guard.
 The builder accepts each optional selection once. The original native reducers
 validate the selected configuration before storage is created. The original
 journal admission law also checks reserve dimensions and ensures the complete
@@ -34,7 +35,7 @@ No stronger selected guard is replaced with an ordinary mode.
 The sole first canonical replacement contains all bootstrap inputs. Only its
 acknowledgment releases the owner and `FileEvaluatedOversightRoles`; an uncertain
 write returns no role, even if the complete image reached disk. The human
-reviewer and evaluator remain separately owned. There is no public live-owner
+reviewer, evaluator and explicitly selected policy governor remain separately owned. There is no public live-owner
 role getter, imported score, second journal or new event format.
 
 The positive path still performs actual native inference, takes a fresh source
@@ -67,7 +68,7 @@ checks pass. Contract failures latch and cannot escape through `finish` or Stop.
 It never exposes its inner cursor or an early evaluator role.
 
 Successful `finish` acknowledges the original single recovery Fence before
-issuing fresh human and evaluator custody. Original numerical/RNG spending,
+issuing fresh human, evaluator and explicitly selected governor custody. Original numerical/RNG spending,
 pending or censored cases, labels, Andon receipts/incidents and unresolved effect
 liabilities survive. Old evaluator/ticket brands and human approvals do not.
 New generation still needs fresh source/time and explicit native resume. A late
@@ -78,6 +79,36 @@ Cancellation leaves canonical and staged bytes unchanged. The independent
 terminal admission Stop and authenticated recovery Stop paths use the original
 verified reconstruction and reserve; they do not first issue a live owner or
 ordinary recovery Fence. A finalization/storage failure returns no live roles.
+
+## Retain independent policy governance in the same owner
+
+`FileGeneratedEvaluationConfig::with_campaigns(FileCampaignRequirement)`
+selects the original policy-campaign guard alongside evaluation and optional
+joint/Andon accounting. Duplicate selection refuses. The same original campaign
+reducer validates the exact bounds before storage exists; the complete bootstrap
+then passes the original event, terminal-reserve and path-bound byte admission.
+
+The acknowledged `FileEvaluatedOversightRoles` contains the independent evaluator
+and, when selected, a separately held `oversight.policy_governor`. The governor
+can approve an original replay campaign; it cannot supply an evaluation label or
+a publication key. The evaluator can label original cases across policy changes;
+it cannot approve a campaign or publish. The human key remains separately held.
+
+Guarded generated-source recovery requires the independently selected campaign
+inventory and effective policy together with the original evaluation/Andon
+contract and history floors. Neither subsystem can be omitted on recovery.
+One acknowledged Fence issues fresh roles while preserving original cases,
+censored assessments, numerical spending, campaign use and effect charges.
+Old roles and tickets do not become valid on the recovered owner.
+
+Authored regressions cover compatible plain/checked and marginal/joint modes,
+exact complete-image event/byte limits, all five original storage barriers,
+invalid/duplicate selections, and actual native publication followed by policy
+promotion, delayed independent labels, anchored recovery and fresh publication.
+They remain uncompiled and unexecuted because the required RCH launcher is
+unavailable. This API composition does not qualify detector accuracy or install
+the six full native risk-theater feeds. Live-service support has its own explicit selection in the workflow contracts
+linked below.
 
 ## Verification and scope
 
@@ -94,10 +125,11 @@ changed canonical state, all five original Store failure barriers and exact
 terminal Stop retries. Synthetic model/helper choices test native plumbing and
 contracts; they are not evidence of learned detector accuracy.
 
-Independent source review completed. The changed core files and new public
-regression file pass the qualified rustfmt check. RCH is unavailable in this
-development environment; compilation, Clippy and runtime execution remain
-unverified. The Bead remains in progress. Neither this composition nor the
+Independent source review completed. The earlier constructor increment passed
+its scoped rustfmt check; that evidence does not qualify the new campaign
+composition. The required RCH launcher is unavailable in this development
+environment, so formatting, compilation, Clippy and runtime execution of the
+new changes remain unverified. The Bead remains in progress. Neither this composition nor the
 existing score kernel completes FA-125's six native risk-theater predicates.
 
 The native API supports separately guarded recovery. Live executable support is

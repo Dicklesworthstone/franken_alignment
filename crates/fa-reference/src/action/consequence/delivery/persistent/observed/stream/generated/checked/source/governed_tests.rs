@@ -15,6 +15,8 @@ use crate::round::{Verdict, commitment};
 
 #[path = "governed_recovery_tests.rs"]
 mod recovery;
+#[path = "governed_evaluation_tests.rs"]
+mod evaluation;
 
 fn campaigns() -> FileCampaignRequirement {
     FileCampaignRequirement {

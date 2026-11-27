@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 · Compose native evaluation and policy governance atomically
+
+- Add an explicit campaign selection to the original evaluated native bootstrap,
+  preserving source, numerical, publication, accounting and terminal-reserve
+  contracts in one acknowledged image.
+- Return separately held governor and evaluator roles; require complete exact
+  campaign/policy and accounting contracts through original anchored recovery.
+- Add six regression definitions, including actual publication, policy promotion,
+  delayed labels and storage failures. Runtime qualification remains pending.
+
 ## 2026-11-27 · Resume interrupted governed native publication
 
 - Add explicit governed `--continue-generation` through the original guarded

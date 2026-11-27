@@ -36,6 +36,9 @@ mod fixtures {
 }
 use fixtures::Directory;
 
+#[path = "tests/governance.rs"]
+mod governance;
+
 fn profile() -> FileOversightProfile {
     let mut profile = fixtures::host_profile();
     profile.delivery.initial_payload.clear();
