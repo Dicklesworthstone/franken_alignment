@@ -71,9 +71,7 @@ impl FileOversight {
             )));
         }
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory)?;
-        store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory, profile, events, machine)
     }
 
     /// Pin validation limits, source/initial change cut/lookup budget and the

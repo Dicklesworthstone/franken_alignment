@@ -116,9 +116,19 @@ impl FileOversight {
         profile: FileOversightProfile,
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let machine = Machine::new(&profile)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        store.replace(&journal::encode(&profile, store.identity(), &[])?)?;
-        Ok(Self::owner(profile, store, Vec::new(), machine))
+        Self::create_with_events(directory.as_ref(), profile, Vec::new(), machine)
+    }
+
+    fn create_with_events(
+        directory: &Path,
+        profile: FileOversightProfile,
+        events: Vec<Event>,
+        machine: Machine,
+    ) -> Result<(Self, FileHumanReviewer), JournalError> {
+        let store = storage::Store::create_with_image(directory, |identity| {
+            journal::encode(&profile, identity, &events)
+        })?;
+        Ok(Self::owner(profile, store, events, machine))
     }
 
     /// Reconstruct the original broker, then durably withdraw ALL old human

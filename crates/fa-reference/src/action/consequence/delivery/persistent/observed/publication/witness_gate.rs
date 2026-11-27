@@ -71,9 +71,7 @@ impl FileOversight {
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let events = vec![Event::PublicationWitness(WitnessEvent::Enable(limits))];
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory.as_ref(), profile, events, machine)
     }
 
     /// Require exactly the original limits BEFORE replay, cleanup or the recovery

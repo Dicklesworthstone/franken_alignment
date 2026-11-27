@@ -148,9 +148,7 @@ impl FileOversight {
             return Err(Error::Limit.into());
         }
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory.as_ref(), profile, events, machine)
     }
 
     /// Pin native provenance, exact stream/reserve and ALL selected witness

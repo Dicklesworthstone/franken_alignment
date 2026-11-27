@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Preserve the requested path after ordinary bootstrap refusal
+
+- Basic delivery and oversight, native and learned text streams, and witness-checked publication now admit the complete path-bound journal before creating the directory. A caller can correct an insufficient byte limit and retry the same destination.
+
 ## 2026-11-27 · Retry native source-backed publication after first-image refusal
 
 - Ordinary, governed and independently evaluated native generation preflight the encoded journal and its reserved capacity before exclusive store creation. All three issue their original roles after durable replacement.

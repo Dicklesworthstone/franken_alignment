@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Apply path-bound byte admission to ordinary publication
+
+The basic FileDelivery constructor and ten FileOversight initialization paths now validate the first canonical image before acquiring storage. The oversight entry points share their final store creation step after their original machine validation. Two tests exercise the public basic delivery and oversight constructors with a one-byte shortfall, an exact-fit retry and a subsequent duplicate create. Both check the resulting canonical bytes. Rust execution remains pending the required remote launcher.
+
 ## 2026-11-27 · Extend first-image byte admission to generated sources
 
 Native generated-source creation now uses the same pre-creation byte admission in its ordinary, governed and evaluated modes. Two regression tests exercise ten combinations of publication and accounting options at one byte below the bound and at exact fit. Injected replacement-failure tests retain their original storage barriers. Remote compilation and execution remain pending.

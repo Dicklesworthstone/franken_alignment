@@ -98,13 +98,7 @@ impl FileOversight {
             Event::Decoder(DecoderEvent::Tokenizer(canonical.into())),
         ]);
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory)?;
-        store.replace(&super::super::super::journal::encode(
-            &profile,
-            store.identity(),
-            &events,
-        )?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory, profile, events, machine)
     }
 
     /// Recover an originally native-text-only stream with NO recovery reserve.

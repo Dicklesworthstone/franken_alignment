@@ -58,13 +58,7 @@ impl FileOversight {
         // Validate the complete native stream/broker bootstrap before creating
         // storage. No actor, helper or human key is published during this replay.
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        store.replace(&super::journal::encode(
-            &profile,
-            store.identity(),
-            &events,
-        )?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory.as_ref(), profile, events, machine)
     }
 
     /// Pin the independent stream contract BEFORE cleanup or recovery writes.

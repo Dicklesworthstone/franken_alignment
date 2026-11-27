@@ -158,9 +158,7 @@ impl FileOversight {
             Configuration::new(config),
         ))));
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory)?;
-        store.replace(&journal::encode(&profile, store.identity(), &events)?)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory, profile, events, machine)
     }
 
     /// Uses original exact recipe matching, numerical/authority replay, storage

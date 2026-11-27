@@ -493,9 +493,9 @@ impl FileDelivery {
         profile: FileDeliveryProfile,
     ) -> Result<Self, JournalError> {
         let machine = Machine::new(&profile)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let bytes = codec::encode(&profile, store.identity(), &[])?;
-        store.replace(&bytes)?;
+        let store = storage::Store::create_with_image(directory.as_ref(), |identity| {
+            codec::encode(&profile, identity, &[])
+        })?;
         Ok(Self {
             profile,
             store,

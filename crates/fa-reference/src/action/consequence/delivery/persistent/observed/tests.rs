@@ -158,6 +158,29 @@ fn snapshot() -> Snapshot {
         values: BTreeMap::from([(7, b"ok".to_vec())]),
     }
 }
+#[test]
+fn oversight_first_image_byte_refusal_allows_exact_fit_at_the_same_path() {
+    let root = Directory::new();
+    let directory = root.store();
+    let identity = std::fs::canonicalize(&root.0).unwrap().join("publication");
+    let mut selected = profile();
+    let needed = journal::encode(&selected, &identity, &[]).unwrap().len();
+    selected.delivery.limits.bytes = needed - 1;
+    assert!(matches!(
+        FileOversight::create(&directory, selected.clone()),
+        Err(JournalError::Contract(Error::Limit))
+    ));
+    assert!(!directory.exists());
+
+    selected.delivery.limits.bytes = needed;
+    let expected = journal::encode(&selected, &identity, &[]).unwrap();
+    let _owner = FileOversight::create(&directory, selected.clone()).unwrap();
+    assert_eq!(expected.len(), needed);
+    assert_eq!(std::fs::read(directory.join(storage::CANONICAL)).unwrap(), expected);
+    assert!(FileOversight::create(&directory, selected).is_err());
+    assert_eq!(std::fs::read(directory.join(storage::CANONICAL)).unwrap(), expected);
+}
+
 fn create(root: &Directory) -> (FileOversight, FileHumanReviewer) {
     let (mut host, reviewer) = FileOversight::create(root.store(), profile()).unwrap();
     host.observe_time(host.revision(), ElapsedTick(1)).unwrap();

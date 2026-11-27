@@ -107,10 +107,7 @@ impl FileOversight {
             Configuration::new(config),
         )))];
         let machine = Machine::replay(&profile, &events)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let bytes = journal::encode(&profile, store.identity(), &events)?;
-        store.replace(&bytes)?;
-        Ok(Self::owner(profile, store, events, machine))
+        Self::create_with_events(directory.as_ref(), profile, events, machine)
     }
 
     pub fn learned_text_required(&self) -> bool {
