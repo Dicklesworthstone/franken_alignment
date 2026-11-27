@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Use change-feed witnesses with native independent evaluation
+
+- Single-request generated publication accepts checked feeds and optional exact current snapshot fallback alongside the independent evaluator. Anchored recovery checks the selected publication profile before fencing, including in historical evaluation-only mode.
+
 ## 2026-11-27 · Check paged candidate policy traces against retained observations
 
 - The replay client checks candidate results against facts disclosed by the original policy trace. It rejects contradictory decisions even when a passing Boolean arm masks the difference, and rejects missing-read claims for individually provable retained reads.

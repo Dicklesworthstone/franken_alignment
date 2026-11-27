@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Combine native witness-checked publication and evaluation
+
+The single-request native service admits an independently evaluated publication profile with a change feed and optional exact snapshot fallback. The same generated-source cursor checks the selected feed, freshness and fallback policy on recovery. Input custody validation runs before storage or listener creation. Publication wait/retry and held-out publication qualification remain separately gated. Regression definitions cover approvals, rejections, changed recovery inputs and path conflicts. The required RCH launcher was unavailable for compilation and execution.
+
 ## 2026-11-27 · Cross-check disclosed predicates during paged policy replay
 
 The read-only client uses the original exact-key, range and payload predicates to check candidate results for the same case. Two public tests alter real native page responses while keeping the aggregate disposition fixed, then retry the genuine response. Runtime execution awaits the repository’s remote test launcher.

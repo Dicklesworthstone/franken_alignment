@@ -271,7 +271,7 @@ fn observed_requirements(
     ).unwrap()
 }
 
-fn run_assessed(hold: bool, approve: bool, partial: bool) {
+fn run_assessed(hold: bool, approve: bool, partial: bool, snapshot_fallback: Option<bool>) {
     let root = Root::new();
     let mut config = configured(&root);
     if hold { hold_program(&mut config, &root); }
@@ -280,8 +280,15 @@ fn run_assessed(hold: bool, approve: bool, partial: bool) {
     let mut child = EvaluatorChild::start(&root, if partial { "partial" } else { "assess" });
     let (evaluation, history, accounting_path) = selected(&root, &config, &actor, child.0.id());
     let accounting = andon_settings::Settings::read(&accounting_path).unwrap();
-    let expected = observed_requirements(&config.profile, &native, config.source_policy,
+    let witness = snapshot_fallback.map(|fallback| {
+        checked_tests::publication_at(&root, &config, fallback, crate::workflow::clock())
+    });
+    let publication = witness.as_ref().map(|(profile, _)| profile);
+    let mut expected = observed_requirements(&config.profile, &native, config.source_policy,
         &accounting, if partial { 1 } else { 2 });
+    if let Some(publication) = publication {
+        expected = expected.require_publication(publication.limits).unwrap();
+    }
     let store = config.store.clone();
     let profile = config.profile.clone();
     let decoder = native.decoder.clone();
@@ -318,7 +325,7 @@ fn run_assessed(hold: bool, approve: bool, partial: bool) {
     let mut output = ReferenceOutput { bytes: Vec::new(), sender: Some(sender) };
     let result = serve_lifecycle_with_evaluation(
         config, (&actor, &reviewer), native,
-        (false, None, None, finish::Intent::Existing),
+        (false, publication, None, finish::Intent::Existing),
         Services { operator: None, precheck: None, history: Some(&history), evaluation: Some(&evaluation) },
         crate::workflow::clock, &mut output,
     );
@@ -395,17 +402,26 @@ fn run_assessed(hold: bool, approve: bool, partial: bool) {
 
 #[test]
 fn generated_allow_still_requires_the_original_independent_human_key() {
-    for approve in [false, true] { run_assessed(false, approve, false); }
+    for approve in [false, true] { run_assessed(false, approve, false, None); }
+}
+
+#[test]
+fn feed_checked_publication_preserves_human_decisions_and_late_independent_assessment() {
+    for fallback in [false, true] {
+        for approve in [false, true] {
+            run_assessed(false, approve, false, Some(fallback));
+        }
+    }
 }
 
 #[test]
 fn final_generated_hold_remains_assessable_with_the_original_two_candidate_allowance() {
-    run_assessed(true, false, false);
+    run_assessed(true, false, false, None);
 }
 
 #[test]
 fn original_stop_preempts_a_partial_evaluator_frame_after_generated_hold() {
-    run_assessed(true, false, true);
+    run_assessed(true, false, true, None);
 }
 
 #[test]
@@ -477,3 +493,37 @@ mod recovery;
 
 #[path = "evaluation/history.rs"]
 mod history;
+
+#[test]
+fn evaluated_producer_requires_its_own_path_before_startup() {
+    let root = Root::new();
+    let config = configured(&root);
+    let (actor, reviewer) = profiles(&root, &config);
+    let (evaluation, history, contract) = selected(
+        &root, &config, &actor, std::process::id().checked_add(100_000).unwrap(),
+    );
+    let text = checked_tests::profile_json(&root, &config, true);
+    let producer = root.0.join("producer/delivery.bin");
+    let valid = PublicationProfile::decode(text.as_bytes()).unwrap();
+    evaluation.check(
+        &config, &actor, &reviewer, (None, None, Some(&history)), (false, Some(&valid), None),
+    ).unwrap();
+    let future_output = history.output().unwrap();
+    for collision in [
+        future_output.to_path_buf(), future_output.join("producer"),
+        actor.socket.join("producer"), reviewer.socket(91),
+        crate::workflow::control::socket_path(&reviewer, 91),
+        config.store.join("delivery.bin"), config.source.path().to_path_buf(),
+        evaluation.peer.socket_path().to_path_buf(), contract,
+    ] {
+        let selected = PublicationProfile::decode(text.replace(
+            producer.to_str().unwrap(), collision.to_str().unwrap(),
+        ).as_bytes()).unwrap();
+        assert!(evaluation.check(
+            &config, &actor, &reviewer, (None, None, Some(&history)), (false, Some(&selected), None),
+        ).is_err(), "admitted overlap with {collision:?}");
+    }
+    assert!(!config.store.exists());
+    assert!(!future_output.exists());
+    assert!(!actor.socket.exists());
+}

@@ -108,6 +108,15 @@ impl NativePublicationSelection {
 }
 
 impl PublicationProfile {
+    /// The generated-source cursor pins the complete selected feed, freshness and
+    /// exact-snapshot fallback policy alongside its native accounting contract.
+    pub(crate) fn check_native_evaluation(&self) -> Result<(), String> {
+        if self.joint.is_some() || self.wait.is_some() {
+            return Err("native evaluation does not compose held-out publication qualification or publication wait/retry".into());
+        }
+        Ok(())
+    }
+
     // Retain the original expressly non-joint projection for existing callers.
     // Its refusal cannot be changed into a silent loss of the joint requirement.
     pub(crate) fn generated_profile(

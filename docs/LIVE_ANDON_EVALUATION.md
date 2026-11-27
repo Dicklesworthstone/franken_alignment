@@ -60,7 +60,13 @@ cargo run --locked -p fa-reference --example supervise_publication -- \
 ```
 
 The checked form adds `WITNESS_PROFILE` after `REVIEWER_PROFILE` and uses
-`serve-create-checked`; the live composition accepts the simple witness profile.
+`serve-create-checked`. Single-request native services accept simple witnesses,
+change-feed witnesses and profiles that explicitly select exact current snapshot
+fallback. These choices use the original native publication gate. The capture,
+feed and producer files need paths disjoint from the authority store, service
+endpoints, retained history and evaluation contracts. Held-out publication
+qualification and the bounded publication wait/retry profile require separate
+workflows.
 Both accounting and evaluator profiles are required together, with a new retained
 history output. The existing single-request native actor wire still accepts only
 the original generated-source reference; the service never emits unapproved text
@@ -99,7 +105,7 @@ and permits only an already acknowledged reply to drain. Final retained history
 includes any acknowledged assessments and accounting.
 
 This single-request selection supports native creation and explicit anchored
-recovery, plain or simple checked. Native topology, governor and held-out
+recovery for plain, simple-witness, change-feed and exact-snapshot publication. Native topology, governor and held-out
 qualification selections still need their own complete composition and refuse
 this option. The live recovery path below reuses the original
 [anchored accounting cursor](NATIVE_GENERATED_EVALUATION.md#recovery-with-independent-contracts).
@@ -144,7 +150,7 @@ supervise_publication serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
   --evaluation-recovery RECOVERY_REQUIREMENTS
 ```
 
-For simple checked publication, use `serve-open-checked CONFIG ACTOR_PROFILE
+For checked native publication, use `serve-open-checked CONFIG ACTOR_PROFILE
 REVIEWER_PROFILE WITNESS_PROFILE` followed by the same options. Both accounting
 and evaluator profiles, the retained input anchor, a new output anchor and the
 recovery requirements file are required together.
@@ -209,18 +215,21 @@ and invocation budgets, pending-case discovery, late labeling and terminal reply
 grace retain their creation-path contracts. A new invocation cannot replenish
 the original native numerical budget or erase prior accounting.
 
-This composition covers single-request plain or simple checked publication.
-Resident native sequence recovery uses its
+For a checked native owner, recovery compares the selected feed identity, change
+policy, freshness and snapshot-fallback setting with the original journal before
+fencing it. A later review reads current witness evidence under those same
+guards. Native topology, governance and held-out publication qualification have
+separate admission contracts. Resident native sequence recovery uses its
 [explicit suffix composition](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix).
-Topology, governors and stronger feed/snapshot/held-out qualification remain separate selections; unsupported
-combinations refuse without dropping a selected guard. Joint Andon accounting
-does not imply held-out joint publication qualification.
 
-Seven integration regressions and strict requirements-parser tests are authored.
+Integration regressions and strict requirements-parser tests are authored.
 They cover positive continuation and fresh human approval/rejection, independent
 late labels, accounting-window and protocol retention, each independent floor,
 foreign anchors, Ready Stop, source failure, receipt-only refusal and exact
-simple-checked guards. Compilation and runtime qualification remain pending the
+checked guards. The feed-backed regressions pair human approval and rejection with
+late independent assessment, check replay against omitted or changed feed and
+snapshot policies, and exercise witness-path conflicts. Compilation and runtime
+qualification remain pending the
 required remote RCH gate.
 
 ## Evaluate recorded native history
@@ -236,7 +245,7 @@ supervise_publication serve-open CONFIG ORIGINAL_ACTOR_PROFILE REVIEWER_PROFILE 
   --evaluation-recovery RECOVERY_REQUIREMENTS
 ```
 
-For an original simple checked owner, use `serve-open-checked` with its original
+For an original checked native owner, use `serve-open-checked` with its original
 `WITNESS_PROFILE` positional argument. To select an already recorded Finish,
 place `--finish-after-message PREVIOUS_REQUEST` last. The actor profile then
 identifies the original Finish request, and the recipe identifies its explicitly
@@ -248,9 +257,10 @@ the independent input archive, explicit journal/control/authority floors,
 original source/stream/publication/model/tokenizer contracts, original evaluation
 protocol and accounting identity, all current windows and the independently
 retained evaluation floor. Original numerical assets remain necessary for
-verified replay. Current publication evidence and helper invocations are not
-needed to evaluate historical cases. Plain and simple checked publication retain
-their existing supported accounting choices.
+verified replay. For feed-backed history, supply the original witness profile to
+verify its feed and snapshot settings. This assessment uses the recorded
+evidence and requires no live producer, current witness capture or helper
+invocation.
 
 The original sealed cursor reaches Ready before immutable historical selection.
 A Message must match its retained source event, generation, generation revision

@@ -186,7 +186,9 @@ impl Selection {
     pub(super) fn check_files(&self, forbidden: &[PathBuf]) -> Result<(), String> {
         for forbidden in forbidden {
             let forbidden = operator::resolve(forbidden)?;
-            if self.input_path.as_ref() == Some(&forbidden) || self.output.as_ref() == Some(&forbidden) {
+            if self.input_path.iter().chain(&self.output).any(|archive| {
+                archive.starts_with(&forbidden) || forbidden.starts_with(archive)
+            }) {
                 return Err("native history archive aliases a selected input or transport endpoint".into());
             }
         }

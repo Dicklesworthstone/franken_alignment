@@ -49,7 +49,7 @@ fn witness_inputs(scope: Scope, revision: u64, keys: &[u64]) -> FilePublicationI
         None,
     )
 }
-fn profile_json(root: &Root, config: &Config, fallback: bool) -> String {
+pub(super) fn profile_json(root: &Root, config: &Config, fallback: bool) -> String {
     let s = config.profile.delivery.scope;
     let text = format!(
         r#"{{"schema":"fa.supervised-witnesses/3","source":91,"producer":{{"path":"{}/producer/delivery.bin","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}}},"feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":5000,"lookup":{{"steps":10000,"bytes":1048576}}}},"limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[{{"kind":"exact_value","key":0,"role":"subject"}},{{"kind":"absent_key","key":1}},{{"kind":"empty_range","start":6,"end":9}},{{"kind":"range_members","start":2,"end":6}}]}}"#,
@@ -76,6 +76,15 @@ fn publication(
     config: &Config,
     fallback: bool,
 ) -> (PublicationProfile, FilePublicationProducer) {
+    publication_at(root, config, fallback, ElapsedTick(1000))
+}
+
+pub(super) fn publication_at(
+    root: &Root,
+    config: &Config,
+    fallback: bool,
+    now: ElapsedTick,
+) -> (PublicationProfile, FilePublicationProducer) {
     let scope = config.profile.delivery.scope;
     let identity = PublicationProducerProfile {
         source: 91,
@@ -88,7 +97,7 @@ fn publication(
         root.0.join("producer"),
         identity,
         witness_inputs(scope, 1, &[0, 2, 4]),
-        ElapsedTick(1000),
+        now,
     )
     .unwrap();
     (

@@ -123,7 +123,7 @@ impl Options {
         let peer = evaluator::Settings::read(&self.peer)?;
         let mut inputs = vec![self.accounting.clone(), self.peer];
         inputs.extend(self.recovery.iter().cloned());
-        check_contract_paths(peers, services, &peer, &inputs)?;
+        check_contract_paths(peers, services, &peer, &inputs, &[])?;
         let settings = andon_settings::Settings::read(&self.accounting)?;
         if self.recovery.is_none() {
             settings.creation()?;
@@ -140,6 +140,7 @@ fn check_contract_paths(
     services: (Option<&operator::Selection>, Option<&exact_precheck::Selection>, Option<&anchors::Selection>),
     evaluator: &evaluator::Settings,
     inputs: &[PathBuf],
+    witnesses: &[PathBuf],
 ) -> Result<(), String> {
     let (config, actor, reviewer) = peers;
     let (operator, precheck, history) = services;
@@ -154,17 +155,35 @@ fn check_contract_paths(
     if let Some(precheck) = precheck { endpoints.push(precheck.settings.socket_path().to_path_buf()); }
     let endpoints = endpoints.iter().map(|path| operator::resolve(path))
         .collect::<Result<Vec<_>, _>>()?;
-    let mut admitted = BTreeSet::new();
+    let mut contracts = BTreeSet::new();
     for input in inputs {
-        let path = operator::resolve(input)?;
-        if path.starts_with(&store) || path == source || endpoints.contains(&path)
-            || !admitted.insert(path)
-        {
-            return Err("native evaluation inputs require distinct custody outside the authority store, evidence source and service endpoints".into());
+        if !contracts.insert(operator::resolve(input)?) {
+            return Err("native evaluation contracts require distinct paths".into());
         }
     }
-    if let Some(history) = history { history.check_files(inputs)?; }
+    for input in inputs.iter().chain(witnesses) {
+        let path = operator::resolve(input)?;
+        if [&store, &source].into_iter().chain(&endpoints)
+            .any(|reserved| overlaps(&path, reserved))
+        {
+            return Err("native evaluation inputs overlap the authority store, evidence source or service endpoints".into());
+        }
+    }
+    for witness in witnesses {
+        let path = operator::resolve(witness)?;
+        if contracts.iter().any(|contract| overlaps(&path, contract)) {
+            return Err("native publication witnesses overlap evaluation contracts".into());
+        }
+    }
+    if let Some(history) = history {
+        history.check_files(inputs)?;
+        history.check_files(witnesses)?;
+    }
     Ok(())
+}
+
+fn overlaps(left: &Path, right: &Path) -> bool {
+    left.starts_with(right) || right.starts_with(left)
 }
 
 impl Selection {
@@ -189,9 +208,9 @@ impl Selection {
             return Err(USAGE.into());
         }
         if !open { self.settings.creation()?; }
-        // Stronger witness/held-out publication profiles need their separately
-        // composed workflow. A request for one is never reduced to simple mode.
-        publication.map(PublicationProfile::simple_limits).transpose()?;
+        if let Some(publication) = publication {
+            publication.check_native_evaluation()?;
+        }
         let (operator, precheck, history) = services;
         let history = history.ok_or(USAGE)?;
         if history.output().is_none() || history.input().is_some() != open {
@@ -202,7 +221,10 @@ impl Selection {
         {
             return Err(USAGE.into());
         }
-        check_contract_paths((config, actor, reviewer), services, &self.peer, &self.inputs)?;
+        check_contract_paths(
+            (config, actor, reviewer), services, &self.peer, &self.inputs,
+            publication.map_or(&[], PublicationProfile::input_paths),
+        )?;
         self.peer.check_host(
             config, actor, reviewer, operator.map(|selected| &selected.settings),
             &[actor.request], self.settings.config.identity(),
@@ -210,10 +232,6 @@ impl Selection {
         let mut custody = vec![config.source.path()];
         custody.extend(self.inputs.iter().map(PathBuf::as_path));
         if let Some(precheck) = precheck { custody.push(precheck.settings.socket_path()); }
-        if let Some(publication) = publication {
-            custody.extend(publication.input_paths().iter().map(PathBuf::as_path));
-            self.check_inputs(&publication.input_paths().iter().map(PathBuf::as_path).collect::<Vec<_>>())?;
-        }
         custody.push(history.output().expect("required above"));
         self.peer.check_custody_paths(&custody)?;
         let mut paths = self.inputs.clone();
