@@ -1,5 +1,29 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Preserve autonomy dwell and predecessor history through corrections
+
+FA-125's bounded autonomy query now validates state chronology against its
+original accepted identity history, including withdrawn enrollment, promotion,
+demotion and passport-change records. Removing a state can no longer select an
+older convenient dwell baseline, admit a stale branch, or make a missing terminal
+state look complete. The index supplies identity/order checks, never withdrawn
+evidence or authority.
+
+Findings retain their actual live supports. Missing predecessors retract
+dependent dwell/grade violations; independently proven report violations and
+unrelated subjects remain observable with explicit family incompleteness.
+Exact restoration and accepted-history replay recover the original results.
+The lifetime-bounded identity index remains staged until every family and the
+support kernel accept the whole boundary.
+
+Authored regressions cover first/middle/latest withdrawal, restoration, passport
+and demotion boundaries, stale forks, same-boundary ambiguity, independent
+supports, replay and whole-boundary rollback. Source review is not execution:
+the required remote RCH launcher was unavailable before the execution
+environment disconnected, so formatting, compilation, Clippy and runtime tests
+remain pending. FA-125 stays in progress, and the native Tower's six full
+risk-theater query families remain Unknown pending authentic complete feeds.
+
 ## 2026-11-27 · Evaluate governed publication history after the policy governor retires
 
 Ordinary evaluation-only recovery now accepts fa.guarded-submit/2. It checks the independently selected effective policy, campaign bounds, accounting and history cutoff before fencing. The service discards the governor role and serves only the independent evaluator and Stop. An integrated regression delays both an old-policy and a new-policy assessment until after a real policy promotion and service shutdown. It also checks stale policy and campaign bounds, original charges, and per-round receipts. Runtime execution remains pending.

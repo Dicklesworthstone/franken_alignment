@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-27 · Preserve autonomy trajectory and dwell under source corrections
+
+- Keep accepted enrollment, promotion, demotion and passport-change identity
+  order through exact retractions, preventing stale dwell baselines and forks.
+- Preserve explicit incompleteness and actual live supports; restore dependent
+  findings only when the original sources return.
+- Add causal correction, branch, passport and replay regressions. Compilation
+  and runtime qualification remain pending.
+
 ## 2026-11-27 · Evaluate governed publication history after the policy governor retires
 
 - Accept independently pinned governed history in ordinary --evaluate-only recovery, allowing original delayed labels after the governor and promotion operator have retired.

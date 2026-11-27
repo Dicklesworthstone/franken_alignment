@@ -229,11 +229,12 @@ pub(super) fn validate_fact(record: &HistoryRecord, scope: &Address) -> Result<(
 pub(super) fn evaluate(
     policy: &QueryPolicy,
     records: &[HistoryRecord],
+    identities: &BTreeMap<Address, HistoryRecord>,
     frontier: u64,
 ) -> Result<Vec<FamilyEvaluation>, QueryError> {
     Ok(vec![
         evaluate_roster(policy, records)?,
-        evaluate_autonomy(policy, records)?,
+        evaluate_autonomy(policy, records, identities)?,
         evaluate_audits(records, frontier)?,
     ])
 }
@@ -406,27 +407,18 @@ fn state(record: &HistoryRecord) -> Option<(&Address, &Address, &str, AutonomyGr
     Some((principal, passport, family, grade))
 }
 
-/// Require the immediate preceding transition for the complete principal and
-/// family, across passport changes. An older convenient baseline cannot inflate
-/// dwell; a passport change is an actual new Propose state in this profile.
+/// Validate the immediate predecessor against the complete accepted identity
+/// history, including withdrawn observations. This private dependency check is
+/// not live evidence: callers must separately require an active predecessor
+/// before deriving a dwell or grade finding from its bytes.
 fn predecessor<'a>(
-    records: &'a [HistoryRecord],
+    identities: &'a BTreeMap<Address, HistoryRecord>,
     record: &HistoryRecord,
     previous: &Address,
 ) -> Result<Option<(&'a HistoryRecord, AutonomyGrade)>, QueryError> {
     let (principal, passport, family, _) = state(record).ok_or(QueryError::InvalidRecord)?;
-    let Some(original) = find_record(records, previous) else {
-        return Ok(None);
-    };
-    let (prior_principal, prior_passport, prior_family, prior_grade) =
-        state(original).ok_or(QueryError::InvalidReference)?;
-    if principal != prior_principal || family != prior_family
-        || original.occurred_at >= record.occurred_at
-    {
-        return Err(QueryError::InvalidReference);
-    }
-    let latest = records
-        .iter()
+    let latest = identities
+        .values()
         .filter(|candidate| {
             candidate.occurred_at < record.occurred_at
                 && state(candidate).is_some_and(|(who, _, name, _)| {
@@ -434,7 +426,17 @@ fn predecessor<'a>(
                 })
         })
         .max_by_key(|candidate| candidate.occurred_at);
-    if latest.is_none_or(|latest| latest.address != original.address) {
+    if latest.is_some_and(|latest| &latest.address != previous) {
+        return Err(QueryError::InvalidReference);
+    }
+    let Some(original) = identities.get(previous) else {
+        return Ok(None);
+    };
+    let (prior_principal, prior_passport, prior_family, prior_grade) =
+        state(original).ok_or(QueryError::InvalidReference)?;
+    if principal != prior_principal || family != prior_family
+        || original.occurred_at >= record.occurred_at
+    {
         return Err(QueryError::InvalidReference);
     }
     match &record.fact {
@@ -450,6 +452,65 @@ fn predecessor<'a>(
         }
     }
     Ok(Some((original, prior_grade)))
+}
+
+/// Preserve the original state sequence even when its first, middle or terminal
+/// observation is withdrawn. A missing state makes the family incomplete; it
+/// cannot create a new enrollment, erase a demotion/passport reset, or lengthen
+/// dwell by selecting an older state. The existing lifetime identity bound also
+/// bounds this index, and a refused source boundary never commits any of it.
+fn validate_autonomy_history(
+    records: &[HistoryRecord],
+    identities: &BTreeMap<Address, HistoryRecord>,
+) -> Result<bool, QueryError> {
+    let mut complete = true;
+    let mut positions = BTreeSet::new();
+    for record in identities.values() {
+        let Some((principal, _, family, _)) = state(record) else {
+            continue;
+        };
+        if !positions.insert((principal.clone(), family.to_owned(), record.occurred_at)) {
+            // Even a same-boundary insert/retract cannot hide an ambiguous fork.
+            return Err(QueryError::ConflictingRecord);
+        }
+        if find_record(records, &record.address).is_none() {
+            complete = false;
+        }
+        let HistoryFact::Autonomy(fact) = &record.fact else {
+            unreachable!("state accepts only autonomy observations");
+        };
+        let previous = match fact {
+            AutonomyFact::Enrollment { .. } => {
+                if identities.values().any(|candidate| {
+                    candidate.occurred_at < record.occurred_at
+                        && state(candidate).is_some_and(|(who, _, name, _)| {
+                            who == principal && name == family
+                        })
+                }) {
+                    return Err(QueryError::ConflictingRecord);
+                }
+                continue;
+            }
+            AutonomyFact::Demotion { previous, .. }
+            | AutonomyFact::PassportChanged { previous, .. }
+            | AutonomyFact::Promotion { previous, .. } => previous,
+            AutonomyFact::PromotionReport { .. } => unreachable!("not an autonomy state"),
+        };
+        let Some((_, grade)) = predecessor(identities, record, previous)? else {
+            complete = false;
+            continue;
+        };
+        match fact {
+            AutonomyFact::Demotion { grade: next, .. } if *next >= grade => {
+                return Err(QueryError::InvalidRecord);
+            }
+            AutonomyFact::Promotion { to, .. } if *to <= grade => {
+                return Err(QueryError::InvalidRecord);
+            }
+            _ => {}
+        }
+    }
+    Ok(complete)
 }
 
 fn autonomy_report(
@@ -505,95 +566,58 @@ fn autonomy_report(
 fn evaluate_autonomy(
     policy: &QueryPolicy,
     records: &[HistoryRecord],
+    identities: &BTreeMap<Address, HistoryRecord>,
 ) -> Result<FamilyEvaluation, QueryError> {
     let family = RiskTheaterFamily::AutonomyInflation;
-    let mut result = FamilyEvaluation { family, complete: true, findings: Vec::new() };
-    let mut positions = BTreeSet::new();
+    let complete = validate_autonomy_history(records, identities)?;
+    let mut result = FamilyEvaluation { family, complete, findings: Vec::new() };
     for record in records {
-        if let Some((principal, _, name, _)) = state(record)
-            && !positions.insert((principal.clone(), name.to_owned(), record.occurred_at))
-        {
-            // A set-valued boundary cannot order two state transitions for the
-            // same subject. Refuse rather than choose an address tie-breaker.
-            return Err(QueryError::ConflictingRecord);
-        }
-    }
-    for record in records {
-        let HistoryFact::Autonomy(fact) = &record.fact else {
+        let HistoryFact::Autonomy(AutonomyFact::Promotion { previous, to, .. }) = &record.fact else {
             continue;
         };
-        let previous = match fact {
-            AutonomyFact::Enrollment { principal, effect_family, .. } => {
-                if records.iter().any(|candidate| {
-                    candidate.occurred_at < record.occurred_at
-                        && state(candidate).is_some_and(|(who, _, name, _)| {
-                            who == principal && name == effect_family
-                        })
-                }) {
-                    return Err(QueryError::ConflictingRecord);
-                }
-                continue;
-            }
-            AutonomyFact::Demotion { previous, .. }
-            | AutonomyFact::PassportChanged { previous, .. }
-            | AutonomyFact::Promotion { previous, .. } => previous,
-            AutonomyFact::PromotionReport { .. } => continue,
-        };
-        let prior = predecessor(records, record, previous)?;
+        let original = predecessor(identities, record, previous)?;
+        let prior = original.filter(|(record, _)| find_record(records, &record.address).is_some());
         if prior.is_none() {
             result.complete = false;
         }
-        match fact {
-            AutonomyFact::Demotion { grade, .. } => {
-                if prior.is_some_and(|(_, prior_grade)| *grade >= prior_grade) {
-                    return Err(QueryError::InvalidRecord);
-                }
+        // Original identity can still reject a contradictory report binding.
+        // It cannot qualify that report or supply a finding's absent support.
+        let mut report = autonomy_report(
+            policy, records, record, original.map(|(_, grade)| grade),
+        )?;
+        report.complete &= prior.is_some();
+        if !report.complete {
+            result.complete = false;
+        }
+        if report.invalid {
+            let mut support = vec![record.address.clone()];
+            support.extend(report.support);
+            result.findings.push(QueryFinding {
+                family,
+                subject: record.address.clone(),
+                support,
+                reason: "promotion_without_qualified_report",
+            });
+        }
+        if let Some((previous, grade)) = prior {
+            let elapsed = record.occurred_at
+                .checked_sub(previous.occurred_at)
+                .ok_or(QueryError::ArithmeticOverflow)?;
+            if elapsed < policy.minimum_dwell() {
+                result.findings.push(QueryFinding {
+                    family,
+                    subject: record.address.clone(),
+                    support: vec![record.address.clone(), previous.address.clone()],
+                    reason: "autonomy_dwell_violation",
+                });
             }
-            AutonomyFact::PassportChanged { .. } => {}
-            AutonomyFact::Promotion { to, .. } => {
-                let report = autonomy_report(
-                    policy, records, record, prior.map(|(_, grade)| grade),
-                )?;
-                if !report.complete {
-                    result.complete = false;
-                }
-                if report.invalid {
-                    let mut support = vec![record.address.clone()];
-                    support.extend(report.support);
-                    result.findings.push(QueryFinding {
-                        family,
-                        subject: record.address.clone(),
-                        support,
-                        reason: "promotion_without_qualified_report",
-                    });
-                }
-                if let Some((previous, grade)) = prior {
-                    if *to <= grade {
-                        return Err(QueryError::InvalidRecord);
-                    }
-                    let elapsed = record.occurred_at
-                        .checked_sub(previous.occurred_at)
-                        .ok_or(QueryError::ArithmeticOverflow)?;
-                    if elapsed < policy.minimum_dwell() {
-                        result.findings.push(QueryFinding {
-                            family,
-                            subject: record.address.clone(),
-                            support: vec![record.address.clone(), previous.address.clone()],
-                            reason: "autonomy_dwell_violation",
-                        });
-                    }
-                    if (*to as u8) > (grade as u8) + 1 {
-                        result.findings.push(QueryFinding {
-                            family,
-                            subject: record.address.clone(),
-                            support: vec![record.address.clone(), previous.address.clone()],
-                            reason: "autonomy_grade_skipped",
-                        });
-                    }
-                }
-            }
-            AutonomyFact::Enrollment { .. } | AutonomyFact::PromotionReport { .. } => {
-                unreachable!("non-transition variants handled above");
+            if (*to as u8) > (grade as u8) + 1 {
+                result.findings.push(QueryFinding {
+                    family,
+                    subject: record.address.clone(),
+                    support: vec![record.address.clone(), previous.address.clone()],
+                    reason: "autonomy_grade_skipped",
+                });
             }
         }
     }

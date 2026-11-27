@@ -191,6 +191,28 @@ state; stale predecessors, forks, conflicting identities and failed candidate
 boundaries cannot rewrite the chain. Replaying accepted source history rebuilds
 the same provenance without importing withdrawn records into finding support.
 
+### Autonomy trajectories survive source correction
+
+The accepted identity history fixes the immediate predecessor for each principal
+and effect family, including demotions and passport changes. Withdrawing a
+transition does not make an older state the new dwell baseline or permit a new
+branch from it. A fresh transition must continue the originally accepted
+trajectory; a changed passport still resets the observed grade to Propose.
+
+This retained history validates identity and order only. It never supplies a
+withdrawn observation as live support. A missing accepted state keeps the
+autonomy family incomplete, including when the latest state is withdrawn.
+Dwell and grade findings disappear when their actual immediate predecessor is
+missing. Independently established missing-report findings, and direct
+violations whose own live dependencies survive, remain observable. Restoring an
+exact original record restores only findings supported by the current sources.
+
+Conflicting enrollments, same-boundary states, stale predecessors and invalid
+passport/grade transitions refuse atomically even while an earlier state is
+withdrawn. Candidate identities are staged with the entire history boundary;
+failure in another query cannot install a new trajectory. Complete accepted
+history replay reconstructs the same results under the original lifetime bound.
+
 ## Preserve supports and corrections
 
 Derived supports use exact record identities. The query engine computes the

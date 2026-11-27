@@ -389,7 +389,12 @@ impl QueryEngine {
             return Err(QueryError::ResourceLimit);
         }
         let records: Vec<_> = active.values().cloned().collect();
-        let mut families = basic::evaluate(&self.policy, &records, frontier.sequence)?;
+        // The accepted identity index preserves the original autonomy trajectory
+        // through source corrections. It is staged with this entire boundary;
+        // withdrawn identities constrain predecessors, never supply evidence.
+        let mut families = basic::evaluate(
+            &self.policy, &records, &identities, frontier.sequence,
+        )?;
         // A refused later predicate or kernel update cannot qualify a new
         // historical opening. Source-history replay rebuilds the same bindings.
         let mut andon_openings = self.andon_openings.clone();
