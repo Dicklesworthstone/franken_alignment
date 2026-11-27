@@ -153,8 +153,13 @@ floors combine by maximum, so neither document weakens the other. Disjoint
 credentials, full path custody, original finite allowances and Stop remain
 mandatory. See the complete
 [native service command and recovery contract](RESIDENT_NATIVE_PUBLICATION.md#keep-evaluation-active-through-native-policy-promotion).
-The single-release grammar and separate held-out publication qualification are
-unchanged. Authored transport regressions remain pending required RCH execution.
+After the original native service shuts down, its cases can receive delayed labels
+through [historical native evaluation](LIVE_ANDON_EVALUATION.md#evaluate-governed-native-history-after-shutdown).
+That command selects both independent recovery documents and drops the recovered
+governor role before serving the evaluator and Stop. It cannot promote policy or
+publish, and old-policy labels retain their original case identity.
+The single-release live grammar and separate held-out publication qualification
+are unchanged. Authored transport regressions remain pending required RCH execution.
 
 ## Start with separate role custody
 

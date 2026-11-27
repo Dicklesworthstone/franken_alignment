@@ -312,6 +312,51 @@ refusals, authenticated Ready Stop and expiry, and unchanged staged bytes before
 fencing. Source review is complete; formatter, compilation and runtime execution
 were unavailable in this session.
 
+### Evaluate governed native history after shutdown
+
+For a native owner that already has policy-campaign governance, select the
+independent current policy and campaign inventory explicitly:
+
+```text
+supervise_publication serve-open CONFIG ORIGINAL_ACTOR_PROFILE REVIEWER_PROFILE \
+  --native-text ORIGINAL_RECIPE --evaluate-only \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor RETAINED_INPUT --retain-history-anchor NEW_OUTPUT \
+  --evaluation-recovery EVALUATION_REQUIREMENTS \
+  --recovery-requirements POLICY_AND_GUARD_REQUIREMENTS
+```
+
+The additional document uses the existing closed
+`fa.native-recovery-requirements/1` schema. It pins the actual effective policy,
+original campaign bounds, complete supported guard inventory and independently
+retained journal/control/authority floors. The separate evaluation requirements
+and Andon profile remain mandatory. Corresponding counter floors combine by
+maximum, and the minimum evaluation revision remains independently binding.
+An omitted campaign contract, stale policy or weakened original inventory cannot
+fall back to an ungoverned opener.
+
+This selection is restricted to historical `--evaluate-only`; it starts no
+live governor, operator or precheck service. The original guarded cursor verifies
+the selected history and recorded Message or Finish before its single Fence.
+The freshly provisioned governor role is immediately dropped. Only the
+independent evaluator and original Stop remain available.
+
+Delayed labels retain their original case, evidence and policy identity. A label
+for an earlier policy does not become current-policy credibility evidence, but
+a confirmed historical false Hold still charges its original Andon window.
+Evaluation changes neither numerical work nor publication count, payload,
+charged/reserved effect budget or the input anchor. Original immutable recipe,
+decoder and tokenizer inputs must be loaded for exact reconstruction; the
+historical service obtains no fresh source evidence and performs no numerical
+continuation, helper review or publication.
+
+Five new regression definitions exercise actual native publication or Hold,
+campaign approval and promotion, retired original roles, a separate historical
+evaluator, both independent floor documents, stale guards, custody aliases,
+closed mode grammar and Ready Stop. They received independent source review;
+formatting, compilation, Clippy and runtime qualification remain pending because
+the required RCH launcher is unavailable.
+
 ## Create an evaluated learned service
 
 ```text

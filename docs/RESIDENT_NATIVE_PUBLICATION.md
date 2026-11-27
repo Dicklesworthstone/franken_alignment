@@ -936,7 +936,10 @@ from the journal being checked. For feed-backed history, the original source
 cursor checks the feed identity, change and freshness policies, and snapshot
 fallback before it can fence the owner. Each subsequent release obtains fresh
 publication evidence. A historical evaluation-only session uses the single
-native service and its original request selector.
+native service and its original request selector. For governed history, it also
+selects the complete independent policy/campaign requirements through the
+[historical native evaluation command](LIVE_ANDON_EVALUATION.md#evaluate-governed-native-history-after-shutdown),
+without starting a live governor or promotion operator.
 
 Single-request and resident accounted recovery share the same checked driver
 over `FileAndonGeneratedSourceRecovery`. The original Stop and invocation

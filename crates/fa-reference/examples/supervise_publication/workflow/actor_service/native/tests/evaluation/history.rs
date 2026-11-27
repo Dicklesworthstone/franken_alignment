@@ -3,6 +3,8 @@
 //! Real kernel peers and synthetic native weights establish custody only.
 use super::recovery::Original;
 use super::*;
+#[path = "history/governed.rs"]
+mod governed;
 
 const HISTORY_CHILD: &str = "workflow::actor_service::native::tests::evaluation_tests::history::historical_evaluator_process";
 const HISTORY_ROUND: &str = "FA_NATIVE_HISTORICAL_EVALUATOR_ROUND";

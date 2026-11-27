@@ -44,7 +44,14 @@ impl Selection {
             return Err("native model tenant mismatch".into());
         }
         let selected = bootstrap::selection(&config, &inputs, publication)?;
-        let expected = self.recovery_requirements(&config, &inputs, &selected)?;
+        // This independent document supplies the current policy, original
+        // campaign guard and its floors. It selects no live governor service.
+        // The evaluation document and profile keep their own stricter floors.
+        let governed = self.policy_requirements.as_ref()
+            .map(|requirements| requirements.requirements(&config, &inputs));
+        let expected = self.recovery.as_ref().ok_or(super::USAGE)?.expected_selected(
+            &self.settings, &config, &inputs, &selected, governed.as_ref(),
+        )?;
         let anchor = history.input().ok_or(super::USAGE)?;
         let runtime = actor.runtime_ms.min(config.timing.runtime_ms);
         let start = time();
@@ -85,6 +92,9 @@ impl Selection {
             )?);
         }
         let (host, roles) = recovery.finish().map_err(debug)?;
+        // Guarded recovery reissues the original complete role inventory. This
+        // service retains only Stop and evaluator custody, never policy consent.
+        drop(roles.oversight.policy_governor);
         let checked: Result<(), String> = (|| {
             if !host.generated_text_stream_required().map_err(debug)?
                 || !host.publication_guard_required()

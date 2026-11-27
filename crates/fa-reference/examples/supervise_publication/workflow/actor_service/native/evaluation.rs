@@ -7,7 +7,7 @@ pub(super) mod recovery;
 mod history;
 use super::{
     Config, FileHumanReviewer, FileOversight, Inputs, PeerProfile, Profile,
-    PublicationProfile, anchors, debug, exact_precheck, operator,
+    PublicationProfile, anchors, debug, exact_precheck, operator, recovery_requirements,
 };
 use super::super::{andon_settings, evaluator};
 use fa_reference::action::consequence::delivery::persistent::observed::{
@@ -18,12 +18,13 @@ use fa_reference::action::consequence::delivery::persistent::observed::{
 };
 use std::{collections::BTreeSet, path::{Path, PathBuf}};
 
-const USAGE: &str = "native evaluation requires serve-create, serve-open or their -checked forms with --native-text RECIPE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; open additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS and may select --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original contracts; --evaluate-only selects an existing Message or Finish on open and excludes continuation, precheck and operator services";
+const USAGE: &str = "native evaluation requires serve-create, serve-open or their -checked forms with --native-text RECIPE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; open additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS and may select --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original contracts; --evaluate-only selects an existing Message or Finish on open, may select --recovery-requirements NATIVE_REQUIREMENTS for governed history, and excludes continuation, precheck, operator and live governor services";
 
 pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
     recovery: Option<PathBuf>,
+    policy_requirements: Option<PathBuf>,
     evaluate_only: bool,
 }
 
@@ -32,6 +33,7 @@ pub(super) struct Options {
 pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Options>), String> {
     if !args.iter().any(|arg| matches!(
         arg.as_str(), "--andon" | "--evaluator-profile" | "--evaluation-recovery" | "--evaluate-only"
+            | "--recovery-requirements"
     )) {
         return Ok((args.to_vec(), None));
     }
@@ -50,6 +52,7 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
     let mut accounting = None;
     let mut peer = None;
     let mut recovery = None;
+    let mut policy_requirements = None;
     let mut seen = BTreeSet::new();
     let mut continuing = false;
     let mut evaluate_only = false;
@@ -71,6 +74,7 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
             "--andon" => accounting = Some(PathBuf::from(&pair[1])),
             "--evaluator-profile" => peer = Some(PathBuf::from(&pair[1])),
             "--evaluation-recovery" if open => recovery = Some(PathBuf::from(&pair[1])),
+            "--recovery-requirements" if open => policy_requirements = Some(PathBuf::from(&pair[1])),
             "--history-anchor" if open => remaining.extend_from_slice(pair),
             "--after-message" | "--finish-after-message" if open => {
                 if std::mem::replace(&mut continuing, true) {
@@ -93,6 +97,7 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
         || open != seen.contains("--history-anchor")
         || open != recovery.is_some()
+        || (policy_requirements.is_some() && !evaluate_only)
         || (evaluate_only && ["--after-message", "--precheck-profile", "--operator-profile", "--tower-generation"]
             .iter().any(|flag| seen.contains(flag)))
     {
@@ -102,6 +107,7 @@ pub(super) fn take_options(args: &[String]) -> Result<(Vec<String>, Option<Optio
         accounting: accounting.ok_or(USAGE)?,
         peer: peer.ok_or(USAGE)?,
         recovery,
+        policy_requirements,
         evaluate_only,
     })))
 }
@@ -111,6 +117,7 @@ pub(super) struct Selection {
     pub(super) peer: evaluator::Settings,
     inputs: Vec<PathBuf>,
     recovery: Option<recovery::Requirements>,
+    policy_requirements: Option<recovery_requirements::Selection>,
     evaluate_only: bool,
 }
 
@@ -123,13 +130,19 @@ impl Options {
         let peer = evaluator::Settings::read(&self.peer)?;
         let mut inputs = vec![self.accounting.clone(), self.peer];
         inputs.extend(self.recovery.iter().cloned());
+        inputs.extend(self.policy_requirements.iter().cloned());
         check_contract_paths(peers, services, &peer, &inputs, &[])?;
         let settings = andon_settings::Settings::read(&self.accounting)?;
         if self.recovery.is_none() {
             settings.creation()?;
         }
         let recovery = self.recovery.as_deref().map(recovery::Requirements::read).transpose()?;
-        Ok(Selection { settings, peer, inputs, recovery, evaluate_only: self.evaluate_only })
+        let policy_requirements = self.policy_requirements.as_deref()
+            .map(|path| recovery_requirements::Selection::read(path, peers.0)).transpose()?;
+        Ok(Selection {
+            settings, peer, inputs, recovery, policy_requirements,
+            evaluate_only: self.evaluate_only,
+        })
     }
 }
 
@@ -203,6 +216,7 @@ impl Selection {
     ) -> Result<(), String> {
         let (open, publication, credibility) = deployment;
         if open != self.recovery.is_some() || credibility.is_some()
+            || (self.policy_requirements.is_some() && (!open || !self.evaluate_only))
             || config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
         {
             return Err(USAGE.into());
@@ -257,7 +271,9 @@ impl Selection {
         inputs: &Inputs,
         selected: GeneratedSourceProfile,
     ) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String> {
-        if self.recovery.is_some() || self.evaluate_only { return Err(USAGE.into()); }
+        if self.recovery.is_some() || self.policy_requirements.is_some() || self.evaluate_only {
+            return Err(USAGE.into());
+        }
         self.settings.creation()?;
         let mut evaluation = FileGeneratedEvaluationConfig::new(self.settings.protocol.clone());
         if let Some(joint) = self.settings.joint {

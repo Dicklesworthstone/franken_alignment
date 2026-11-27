@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 · Evaluate governed native history after policy promotion
+
+- Accept explicit complete native policy/campaign requirements in historical
+  `--evaluate-only`, alongside independent evaluation and accounting contracts.
+- Retain delayed original-policy labels and historical false-stop accounting
+  after shutdown while dropping recovered governor authority and preserving
+  numerical work, publication and effect charges.
+- Reuse the strict requirements parser and add actual native/history, floor,
+  custody, grammar and Stop regressions. Runtime qualification remains pending.
+
 ## 2026-11-27 · Retain native evaluation across live policy governance
 
 - Compose resident native generation, marginal/joint Andon accounting and the

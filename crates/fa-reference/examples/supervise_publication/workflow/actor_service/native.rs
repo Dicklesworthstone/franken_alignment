@@ -25,6 +25,8 @@ mod qualification;
 mod recipe;
 #[path = "native/recovery.rs"]
 mod recovery;
+#[path = "native/recovery_requirements.rs"]
+mod recovery_requirements;
 #[path = "native/sequence.rs"]
 mod sequence;
 #[cfg(test)]

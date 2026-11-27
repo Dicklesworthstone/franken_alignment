@@ -1,5 +1,31 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Label original governed native cases after policy promotion and shutdown
+
+Historical native `--evaluate-only` now accepts the existing strict complete
+policy/campaign recovery requirements alongside its independent evaluation
+floors and Andon profile. It verifies the actual effective policy and original
+guard inventory, keeps the greater selected journal/control/authority floors,
+and preserves the original recorded-Message/Finish check and single Fence.
+The freshly recovered governor role is explicitly dropped before the service
+retains only independent evaluator and Stop custody.
+
+Original cases remain labelable after policy promotion and retirement. Labels
+retain their evidence and original policy identity; old-policy labels cannot
+inflate current-policy credibility. Historical false Holds still charge their
+original accounting windows. Original numerical work, publication, payload,
+charges/reservations and input history remain unchanged. Full CLI reconstruction
+still requires the immutable recipe/model inputs; historical service performs no
+fresh source capture, numerical continuation, helper work or publication.
+
+Five authored tests cover actual native publication/Hold and campaign promotion,
+a separate historical evaluator, eleven expectation/selection refusals before
+Fence, both independent floor documents, custody and grammar, and Ready Stop.
+The unchanged strict parser and its tests are shared with resident governance.
+Independent source review found no remaining blocker. RCH is unavailable:
+formatting, compilation, Clippy and runtime qualification remain pending, and
+FA-026, FA-105 and FA-130 remain in progress.
+
 ## 2026-11-27 · Keep native resident evaluation through independent policy promotion
 
 The resident native generated service now composes original Andon/evaluation
