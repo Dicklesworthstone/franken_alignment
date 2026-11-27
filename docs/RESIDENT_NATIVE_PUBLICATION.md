@@ -654,7 +654,12 @@ supervise_publication serve-native-generated CONFIG SEQUENCE_PROFILE REVIEWER_PR
 ```
 
 The publication and paired operator selections in this example are optional.
-Publication accepts the existing simple witness profile. An operator that selects
+Publication accepts simple witnesses, change feeds and explicitly selected exact
+current snapshot fallback. Every release uses the original checked publication
+driver. Capture and feed files, including a coupled producer bundle, need paths
+disjoint from the store, evidence source, retained history and all scheduled
+role endpoints. The bounded publication wait/retry and held-out qualification
+profiles require separate workflows. An operator that selects
 the finite `governance_ledger` grant can read acknowledged credibility and Andon
 accounting through Ledger; the evaluator remains a separate role and endpoint.
 The sequence retains the ordinary creation rule of 2 through 16 entries, with
@@ -799,7 +804,7 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
   --evaluation-recovery RECOVERY_REQUIREMENTS
 ```
 
-The existing optional simple publication profile and independent operator pair
+The original optional witness profile and independent operator pair
 can accompany this selection. Recovery requires all three explicit inputs:
 the predecessor, independent input anchor and requirements file, together with
 the paired accounting/evaluator profiles and a new independent retained output.
@@ -813,10 +818,14 @@ as the single-request service. The journal revision, control sequence and
 authority-epoch floors are mandatory independently retained expectations.
 `CURRENT_ANDON_PROFILE` separately supplies the original identity and protocol,
 initial windows, complete current window inventory and minimum evaluation
-revision. The current config, recipes and optional simple witness profile pin
+revision. The current config, recipes and optional witness profile pin
 the complete supported source, decoder, tokenizer, stream, publication and
 unchanged policy contracts. Missing selected expectations cannot be inferred
-from the journal being checked.
+from the journal being checked. For feed-backed history, the original source
+cursor checks the feed identity, change and freshness policies, and snapshot
+fallback before it can fence the owner. Each subsequent release obtains fresh
+publication evidence. A historical evaluation-only session uses the single
+native service and its original request selector.
 
 Single-request and resident accounted recovery share the same checked driver
 over `FileAndonGeneratedSourceRecovery`. The original Stop and invocation
@@ -868,7 +877,7 @@ supervise_publication serve-native-generated CONFIG REMAINING_SEQUENCE REVIEWER_
 This unary option takes no value and cannot be combined with `--after-message`.
 Both accounting/evaluator profiles, an independently retained input anchor, a
 new output anchor and the same closed recovery requirements are mandatory. The
-optional simple witness profile, independent operator pair and explicit
+optional witness profile, independent operator pair and explicit
 version-two per-release exact prechecks remain available. Joint `/2` accounting
 requires its exact original policy throughout this recovery, just as it does
 for a confirmed-Message suffix. Governor, topology and offline credibility

@@ -170,7 +170,14 @@ impl Selection<'_> {
             return Err(INVALID.into());
         }
         if let Some(publication) = publication {
-            publication.simple_limits()?;
+            publication.check_native_evaluation()?;
+            let reserved = [operator::resolve(&config.store)?, operator::resolve(config.source.path())?];
+            for witness in publication.input_paths() {
+                let path = operator::resolve(witness)?;
+                if reserved.iter().any(|other| overlaps(other, &path)) {
+                    return Err("resident native publication witnesses overlap the authority store or evidence source".into());
+                }
+            }
         }
         if let Some(recovery) = self.recovery {
             recovery.check_configuration(config)?;

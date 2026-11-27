@@ -19,6 +19,7 @@ struct Pending {
     accounting: andon_settings::Settings,
     anchor: PathBuf,
     before: FileDeliverySnapshot,
+    publication: Option<PublicationProfile>,
 }
 
 fn begin(host: &mut FileOversight, inputs: &Inputs, generation: u64, steps: u64) {
@@ -38,17 +39,23 @@ fn begin(host: &mut FileOversight, inputs: &Inputs, generation: u64, steps: u64)
 }
 
 fn prepared(root: &Root, steps: u64, earlier_generation: bool) -> Pending {
+    prepared_with_witnesses(root, steps, earlier_generation, None)
+}
+
+fn prepared_with_witnesses(root: &Root, steps: u64, earlier_generation: bool, fallback: Option<bool>) -> Pending {
     assert!(matches!(steps, 3 | 4));
     let (mut config, entries, reviewer) = selected(root, true);
     let reader = Reader::new(&config, &entries[0]);
     let mut accounting = settings();
-    let selected = bootstrap::selection(&config, &entries[0].inputs, None).unwrap();
+    let publication = fallback.map(|fallback| checked::evaluated_publication(root, &reader, fallback));
+    let selected = bootstrap::selection(&config, &entries[0].inputs, publication.as_ref()).unwrap();
     let (mut host, human, evaluator) =
         bootstrap::prepare_andon(&config, &entries[0].inputs, selected, &accounting).unwrap();
+    let start = accounting.config.windows().iter().map(|window| window.end).max().unwrap();
     let later = AndonBudget {
         window: 2,
-        start: 100,
-        end: 200,
+        start,
+        end: start.checked_add(100).unwrap(),
         false_stops_allowed: 2,
         cost_per_stop: 9,
     };
@@ -101,6 +108,7 @@ fn prepared(root: &Root, steps: u64, earlier_generation: bool) -> Pending {
         accounting,
         anchor,
         before,
+        publication,
     }
 }
 
@@ -170,7 +178,7 @@ fn expected(pending: &Pending) -> FileAndonRecoveryRequirements {
 }
 
 fn run_pending(steps: u64, earlier_generation: bool, singleton: bool, approve: bool) {
-    run_pending_selected(steps, earlier_generation, singleton, approve, false);
+    run_pending_selected(steps, earlier_generation, singleton, approve, false, None);
 }
 
 fn run_pending_selected(
@@ -179,9 +187,10 @@ fn run_pending_selected(
     singleton: bool,
     approve: bool,
     prechecked: bool,
+    fallback: Option<bool>,
 ) {
     let root = Root::new();
-    let mut pending = prepared(&root, steps, earlier_generation);
+    let mut pending = prepared_with_witnesses(&root, steps, earlier_generation, fallback);
     if singleton {
         pending.entries.truncate(1);
     }
@@ -191,7 +200,10 @@ fn run_pending_selected(
         Vec::new()
     };
     let (recovery, history) = selections(&root, &pending);
-    let expected = expected(&pending);
+    let mut expected = expected(&pending);
+    if let Some(publication) = &pending.publication {
+        expected = expected.require_publication(publication.limits).unwrap();
+    }
     let old_anchor = fs::read(&pending.anchor).unwrap();
     let before = pending.reader.progress(7);
     let mut peer = EvaluatorProcess::start(
@@ -277,7 +289,7 @@ fn run_pending_selected(
         pending.config,
         pending.entries,
         &pending.reviewer,
-        None,
+        pending.publication.as_ref(),
         None,
         &history,
         &pending.accounting,
@@ -416,9 +428,14 @@ fn accounted_continuation_accepts_a_single_message_but_never_invents_its_human_k
 
 #[test]
 fn accounted_continuation_prechecks_retain_partial_and_completed_work_and_fresh_human_approval() {
-    run_pending_selected(3, false, false, true, true);
-    run_pending_selected(4, false, true, true, true);
-    run_pending_selected(3, false, false, false, true);
+    run_pending_selected(3, false, false, true, true, None);
+    run_pending_selected(4, false, true, true, true, None);
+    run_pending_selected(3, false, false, false, true, None);
+}
+
+#[test]
+fn snapshot_checked_continuation_retains_sampled_prefix_and_bounded_evaluator() {
+    run_pending_selected(3, false, false, true, false, Some(true));
 }
 
 fn inactive_peer(root: &Root, entry: &Entry) -> evaluator::Settings {

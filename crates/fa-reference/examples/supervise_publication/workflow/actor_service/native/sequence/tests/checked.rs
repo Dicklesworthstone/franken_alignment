@@ -10,7 +10,7 @@ use fa_reference::product_frontier::{
 };
 use fa_reference::witness::{AdapterDomainInput, DomainClosure, DomainProjection, SnapshotEntry};
 
-fn witness_inputs(reader: &Reader, revision: u64, keys: &[u64]) -> FilePublicationInputs {
+pub(super) fn witness_inputs(reader: &Reader, revision: u64, keys: &[u64]) -> FilePublicationInputs {
     let key = ProjectionKey {
         source: 40,
         branch: reader.profile.delivery.scope.branch,
@@ -48,21 +48,29 @@ fn witness_inputs(reader: &Reader, revision: u64, keys: &[u64]) -> FilePublicati
     )
 }
 
-fn publication(root: &Root, reader: &Reader) -> (PublicationProfile, FilePublicationProducer) {
-    selected_publication(root, reader, false)
+pub(super) fn publication(root: &Root, reader: &Reader) -> (PublicationProfile, FilePublicationProducer) {
+    selected_publication(root, reader, false, false, ElapsedTick(1000), 5000)
 }
 
 pub(super) fn joint_publication(
     root: &Root,
     reader: &Reader,
 ) -> (PublicationProfile, FilePublicationProducer) {
-    selected_publication(root, reader, true)
+    selected_publication(root, reader, true, false, ElapsedTick(1000), 5000)
+}
+
+/// Return the profile backed by the producer's original durable image.
+pub(super) fn evaluated_publication(root: &Root, reader: &Reader, fallback: bool) -> PublicationProfile {
+    selected_publication(root, reader, false, fallback, crate::workflow::clock(), 120_000).0
 }
 
 fn selected_publication(
     root: &Root,
     reader: &Reader,
     joint: bool,
+    fallback: bool,
+    now: ElapsedTick,
+    max_age: u64,
 ) -> (PublicationProfile, FilePublicationProducer) {
     let scope = reader.profile.delivery.scope;
     let (producer, _) = FilePublicationProducer::create(
@@ -75,18 +83,10 @@ fn selected_publication(
             after: 0,
         },
         witness_inputs(reader, 1, &[0]),
-        ElapsedTick(1000),
+        now,
     )
     .unwrap();
-    let document = format!(
-        r#"{{"schema":"fa.supervised-witnesses/3","source":91,"producer":{{"path":"{}/producer/delivery.bin","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}}},"feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":5000,"lookup":{{"steps":10000,"bytes":1048576}}}},"limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[{{"kind":"exact_value","key":0,"role":"subject"}},{{"kind":"absent_key","key":1}}]}}"#,
-        root.0.display(),
-        scope.tenant,
-        scope.principal,
-        scope.run,
-        scope.branch,
-        scope.authority,
-    );
+    let document = witness_document(&root.0.join("producer/delivery.bin"), reader, fallback, max_age);
     let document = if joint {
         format!(
             r#"{{"schema":"fa.supervised-joint-publication/1","joint":{{"id":9,"generation":1,"minimum_safe_roots":2,"minimum_violation_roots":2,"maximum_escape_ppm":0,"maximum_false_stop_ppm":0,"max_cases":8,"max_member_outcomes":32}},"publication":{document}}}"#,
@@ -97,6 +97,29 @@ fn selected_publication(
     (
         PublicationProfile::decode(document.as_bytes()).unwrap(),
         producer,
+    )
+}
+
+pub(super) fn witness_document(
+    path: &std::path::Path,
+    reader: &Reader,
+    fallback: bool,
+    max_age: u64,
+) -> String {
+    let scope = reader.profile.delivery.scope;
+    let (schema, history) = if fallback {
+        ("fa.supervised-witnesses/5", r#","history":"exact_current_snapshot""#)
+    } else {
+        ("fa.supervised-witnesses/3", "")
+    };
+    format!(
+        r#"{{"schema":"{schema}","source":91{history},"producer":{{"path":"{}","scope":{{"tenant":{},"principal":{},"run":{},"branch":{},"authority":{}}}}},"feed":{{"source":41,"after":0,"clock":"unix_milliseconds","max_age_ms":{max_age},"lookup":{{"steps":10000,"bytes":1048576}}}},"limits":{{"bindings":8,"steps":10000,"value_bytes":1048576}},"requests":[{{"kind":"exact_value","key":0,"role":"subject"}},{{"kind":"absent_key","key":1}}]}}"#,
+        path.display(),
+        scope.tenant,
+        scope.principal,
+        scope.run,
+        scope.branch,
+        scope.authority,
     )
 }
 

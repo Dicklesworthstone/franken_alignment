@@ -758,6 +758,96 @@ fn native_evaluation_rejects_foreign_roles_and_future_endpoint_aliases_before_cr
 }
 
 #[test]
+fn new_second_frame_witness_conflict_retains_first_accounted_publication() {
+    let root = Root::new();
+    let (config, entries, reviewer) = selected(&root, true);
+    let reader = Reader::new(&config, &entries[0]);
+    let (publication, mut producer) = checked::publication(&root, &reader);
+    let evaluator = evaluator::Settings::decode(
+        peer_profile(&root, &entries[0].actor, std::process::id().checked_add(100_000).unwrap(), 1).as_bytes(),
+    ).unwrap();
+    let (history, anchor) = history(&root, &config, &entries, &reviewer, None);
+    let mut humans = Humans::new(&reviewer, &reader, [Some(ReviewDecision::Approve); 3]);
+    let mut output = Output::new(&entries);
+    let mut first_charge = None;
+    let mut changed = false;
+    let result = run_with_andon(
+        config, entries, &reviewer, Some(&publication), None, &history, &settings(), &evaluator,
+        || {
+            humans.poll();
+            if !changed
+                && let Ok(image) = FileOversight::read_publication(&reader.store, &reader.profile)
+                && image.executions == 1
+                && image.control.ledger.charged > *first_charge.get_or_insert(image.control.ledger.charged)
+            {
+                // After both human approvals, invalidate the second frame's
+                // reviewed absence. The same evaluator is still resident.
+                assert!(evaluator.socket_path().exists());
+                producer.publish(1, checked::witness_inputs(&reader, 2, &[0, 1]), ElapsedTick(1001)).unwrap();
+                changed = true;
+            }
+            ElapsedTick(if changed { 1001 } else { 1000 })
+        },
+        &mut output,
+    );
+    assert!(changed && result.is_err());
+    assert_eq!(output.documents.len(), 2);
+    assert!(!humans.seen[2]);
+    let packets = humans.join();
+    let replies = output.join();
+    assert!(executed(&replies[0]) && !executed(&replies[1]));
+    let stream = reader.stream();
+    assert_eq!(stream.publication.executions, 1);
+    assert_eq!(stream.publication.payload, b"A");
+    assert_eq!(stream.publication.control.ledger.reserved, 0);
+    assert_eq!(stream.publication.control.ledger.charged, packets[0].as_ref().unwrap().action().spec().units);
+    assert_eq!(stream.confirmed, stream.published);
+    assert!(!stream.confirmed.finished());
+    reader.no_generation(9);
+    retained(&anchor, &reader);
+    assert!(!evaluator.socket_path().exists());
+}
+
+#[test]
+fn evaluated_resident_witness_paths_cannot_consume_a_later_role_or_authority_file() {
+    for role in ["later actor", "later human", "later Stop", "store", "source", "archive"] {
+        let root = Root::new();
+        let (config, entries, reviewer) = selected(&root, true);
+        let actor = &entries[0].actor;
+        let reader = Reader::new(&config, &entries[0]);
+        let last = entries.last().unwrap();
+        let evaluator = evaluator::Settings::decode(
+            peer_profile(&root, actor, actor.supervisor.pid().unwrap().checked_add(1).unwrap(), 2).as_bytes(),
+        ).unwrap();
+        let (history, anchor) = history(&root, &config, &entries, &reviewer, None);
+        let collision = match role {
+            "later actor" => last.actor.socket.join("producer"),
+            "later human" => reviewer.socket(last.actor.request),
+            "later Stop" => crate::workflow::control::socket_path(&reviewer, last.actor.request),
+            "store" => config.store.join("delivery.bin"),
+            "source" => config.source.path().to_path_buf(),
+            "archive" => anchor.join("producer"),
+            _ => unreachable!(),
+        };
+        let publication = PublicationProfile::decode(
+            checked::witness_document(&collision, &reader, true, 120_000).as_bytes(),
+        ).unwrap();
+        let store = config.store.clone();
+        let source = fs::read(config.source.path()).unwrap();
+        let source_path = config.source.path().to_path_buf();
+        let mut output = Vec::new();
+        assert!(run_with_andon(
+            config, entries, &reviewer, Some(&publication), None, &history, &settings(),
+            &evaluator, || panic!("witness alias reached startup"), &mut output,
+        ).is_err(), "admitted {role} alias");
+        assert!(output.is_empty());
+        assert!(!store.exists() && !anchor.exists());
+        assert_eq!(fs::read(source_path).unwrap(), source);
+        assert!(!evaluator.socket_path().exists());
+    }
+}
+
+#[test]
 fn native_evaluation_unsupported_modes_refuse_before_reading_profiles() {
     let base = [
         "serve-native-generated",

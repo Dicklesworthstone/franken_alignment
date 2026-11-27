@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Keep checked publication feeds across resident native evaluation
+
+- Resident native publication supports checked feeds and optional snapshot fallback alongside evaluation, including anchored continuation across a Message/Finish sequence.
+
 ## 2026-11-27 · Keep evaluation and accounting through live policy promotion
 
 - Compose ordinary Tower Andon publication with independent policy governance,

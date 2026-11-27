@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Keep checked publication feeds across resident native evaluation
+
+Resident native generated creation and recovery now compose checked feeds with independent evaluation across Message and Finish. Confirmed-prefix and interrupted-generation recovery keep exact change and fallback requirements, and each release still passes fresh publication checks. Five regression definitions cover positive and negative sequences, recovery, custody collisions and a changed witness after human approval. Runtime qualification awaits the required RCH execution environment.
+
 ## 2026-11-27 · Retain independent evaluation through ordinary live policy changes
 
 Ordinary Tower Andon publication now composes with an independently authenticated

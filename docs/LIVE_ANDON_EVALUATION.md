@@ -118,8 +118,9 @@ ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE` and a required
 allowances persist across Message/Finish handoffs, including a bounded labeling
 opportunity after a final helper Hold. Creation and
 [explicitly anchored suffix recovery](RESIDENT_NATIVE_PUBLICATION.md#recover-an-accounted-resident-suffix)
-accept marginal `/1` or explicit joint `/2` accounting and optional simple
-witnesses/operator Ledger. Joint creation installs the original policy atomically;
+accept marginal `/1` or explicit joint `/2` accounting and optional checked
+publication. Change-feed witnesses and exact current snapshot fallback apply
+at each release, alongside any independently selected operator Ledger. Joint creation installs the original policy atomically;
 recovery requires every original policy field before Fence. A separately funded
 live credibility-promotion grant may remain on that same numerical owner, with
 finite custody across all requests and reconnects. Recovery selects `--after-message` for a confirmed boundary or

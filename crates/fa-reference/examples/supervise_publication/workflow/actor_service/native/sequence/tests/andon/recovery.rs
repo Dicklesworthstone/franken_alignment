@@ -19,15 +19,21 @@ struct Seed {
     anchor: PathBuf,
     before: FileDeliverySnapshot,
     earlier: Vec<u8>,
+    publication: Option<PublicationProfile>,
 }
 
 fn seeded(root: &Root, maximum: usize) -> Seed {
+    seeded_with_witnesses(root, maximum, None)
+}
+
+fn seeded_with_witnesses(root: &Root, maximum: usize, fallback: Option<bool>) -> Seed {
     let (config, mut entries, reviewer) = selected(root, false);
     entries.truncate(2);
     for entry in &mut entries {
         entry.inputs.stream = StreamProfile::new(9, 1, maximum, 64, 256).unwrap();
     }
     let reader = Reader::new(&config, &entries[0]);
+    let publication = fallback.map(|fallback| checked::evaluated_publication(root, &reader, fallback));
     // A separate root prevents the resumed subprocess from mistaking an old
     // serial's completion file for its own operation. One discovery spends this
     // first service's allowance without labeling either historical case.
@@ -44,7 +50,7 @@ fn seeded(root: &Root, maximum: usize) -> Seed {
         config,
         entries,
         &reviewer,
-        None,
+        publication.as_ref(),
         None,
         &history,
         &settings(),
@@ -104,6 +110,7 @@ fn seeded(root: &Root, maximum: usize) -> Seed {
         anchor,
         before,
         earlier: earlier.expect("the first actual publication was observed"),
+        publication,
     }
 }
 
@@ -218,7 +225,7 @@ fn number(value: &Json, path: &[&str]) -> u64 {
 }
 
 fn recovered_suffix(finish_only: bool, approve: bool, candidates: u32) {
-    recovered_suffix_selected(finish_only, approve, candidates, false);
+    recovered_suffix_selected(finish_only, approve, candidates, false, None);
 }
 
 fn recovered_suffix_selected(
@@ -226,9 +233,10 @@ fn recovered_suffix_selected(
     approve: bool,
     candidates: u32,
     prechecked: bool,
+    fallback: Option<bool>,
 ) {
     let root = Root::new();
-    let seed = seeded(&root, if finish_only { 2 } else { 4 });
+    let seed = seeded_with_witnesses(&root, if finish_only { 2 } else { 4 }, fallback);
     let mut entries = suffix(&root, &seed, finish_only);
     let precheck_sockets = if prechecked {
         precheck_tests::select(&root, &mut entries, 1)
@@ -244,7 +252,10 @@ fn recovered_suffix_selected(
     let requirements = Recovery::read(&requirements_path, &seed.config).unwrap();
     let mut accounting = settings();
     accounting.minimum_evaluation_revision = 2;
-    let expected = expected(&seed, &entries, &accounting);
+    let mut expected = expected(&seed, &entries, &accounting);
+    if let Some(publication) = &seed.publication {
+        expected = expected.require_publication(publication.limits).unwrap();
+    }
     let original_anchor = fs::read(&seed.anchor).unwrap();
     let before = seed.reader.progress(8);
     let mut peer = EvaluatorProcess::start(&root, &entries[0].actor, candidates);
@@ -352,7 +363,7 @@ fn recovered_suffix_selected(
         seed.config,
         entries,
         &seed.reviewer,
-        None,
+        seed.publication.as_ref(),
         (AFTER, None),
         &history,
         &accounting,
@@ -487,9 +498,55 @@ fn recovered_native_evaluator_cannot_replenish_candidates_at_the_finish_handoff(
 
 #[test]
 fn recovered_accounted_prechecks_preserve_original_cases_finish_and_separate_human_keys() {
-    recovered_suffix_selected(false, true, 4, true);
-    recovered_suffix_selected(true, true, 2, true);
-    recovered_suffix_selected(false, false, 4, true);
+    recovered_suffix_selected(false, true, 4, true, None);
+    recovered_suffix_selected(true, true, 2, true, None);
+    recovered_suffix_selected(false, false, 4, true, None);
+}
+
+#[test]
+fn feed_checked_accounted_prefix_and_suffix_keep_original_labels_and_fresh_review() {
+    // A newly assessed old Message and the last case share the recovered
+    // evaluator's four candidates. Rejection still prevents the final effect.
+    recovered_suffix_selected(false, true, 4, false, Some(false));
+    recovered_suffix_selected(true, false, 4, false, Some(true));
+}
+
+#[test]
+fn changed_feed_contract_cannot_fence_a_confirmed_resident_prefix() {
+    let root = Root::new();
+    let seed = seeded_with_witnesses(&root, 4, Some(true));
+    let path = root.0.join("producer/delivery.bin");
+    let canonical = seed.reader.store.join("delivery.bin");
+    let before = fs::read(&canonical).unwrap();
+    let staging = seed.reader.store.join("delivery.pending");
+    fs::write(&staging, b"preserve staging on mismatch").unwrap();
+    let old_anchor = fs::read(&seed.anchor).unwrap();
+    let requirements_path = recovery_file(&root, &seed.before);
+    let requirements = Recovery::read(&requirements_path, &seed.config).unwrap();
+    let mut accounting = settings();
+    accounting.minimum_evaluation_revision = 2;
+    for changed in [None, Some((false, 120_000)), Some((true, 119_999))] {
+        let entries = suffix(&root, &seed, true);
+        let evaluator = inactive_peer(&root, &entries[0]);
+        let history = recovered_history(&root, &seed, &entries);
+        let publication = changed.map(|(fallback, age)| {
+            PublicationProfile::decode(checked::witness_document(&path, &seed.reader, fallback, age).as_bytes()).unwrap()
+        });
+        let mut config = fixture::configured(&root);
+        config.programs = fixture::native_programs_at_epoch(&root, 1);
+        let mut output = Vec::new();
+        let result = run_with_andon_recovery(
+            config, entries, &seed.reviewer, publication.as_ref(), (AFTER, None),
+            &history, &accounting, &evaluator, &requirements, crate::workflow::clock, &mut output,
+        );
+        assert!(result.is_err(), "changed witnesses acquired fresh roles");
+        assert!(output.is_empty());
+        assert_eq!(fs::read(&canonical).unwrap(), before);
+        assert_eq!(fs::read(&staging).unwrap(), b"preserve staging on mismatch");
+        assert_eq!(fs::read(&seed.anchor).unwrap(), old_anchor);
+        assert!(!history.output_path().unwrap().exists());
+        assert!(!evaluator.socket_path().exists());
+    }
 }
 
 fn inactive_peer(root: &Root, entry: &Entry) -> evaluator::Settings {
