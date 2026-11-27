@@ -15,7 +15,7 @@ use fa_reference::action::consequence::delivery::persistent::observed::guarded::
     FileGuardSet,
     evaluation::{
         FileEvaluatedOversightRoles,
-        andon::{FileAndonRecovery, FileAndonRecoveryRequirements},
+        andon::FileAndonRecovery,
     },
     recovery::FileGuardedRecoveryStatus,
 };
@@ -238,24 +238,7 @@ where
         }
         Mode::Existing(profile) => {
             let custody = recovery.expect("recovery custody admitted");
-            let expected = match governor {
-                Some(_) => {
-                    // Keep the independently selected effective policy and
-                    // campaign inventory; neither is inferred from history.
-                    let expected = FileAndonRecoveryRequirements::new(
-                        profile.requirements(&config),
-                        settings.config.clone(),
-                        settings.windows.clone(),
-                        settings.minimum_evaluation_revision,
-                    )
-                    .map_err(debug)?;
-                    match settings.joint {
-                        Some(policy) => expected.require_joint(policy).map_err(debug)?,
-                        None => expected,
-                    }
-                }
-                None => settings.requirements(&config, profile.minimum())?,
-            };
+            let expected = settings.recovery_requirements(profile.requirements(&config))?;
             let expected = match validation {
                 Some(limits) => expected.require_publication(limits).map_err(debug)?,
                 None => expected,

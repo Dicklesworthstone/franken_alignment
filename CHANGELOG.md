@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Evaluate governed publication history after the policy governor retires
+
+- Accept independently pinned governed history in ordinary --evaluate-only recovery, allowing original delayed labels after the governor and promotion operator have retired.
+
 ## 2026-11-27 · Replay candidate policies against anchored native generated history
 
 - Add a read-only native generated-history selection to policy-replay. It requires an independent anchor and emits the existing bounded policy comparison report.

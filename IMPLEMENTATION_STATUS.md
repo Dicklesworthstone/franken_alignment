@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Evaluate governed publication history after the policy governor retires
+
+Ordinary evaluation-only recovery now accepts fa.guarded-submit/2. It checks the independently selected effective policy, campaign bounds, accounting and history cutoff before fencing. The service discards the governor role and serves only the independent evaluator and Stop. An integrated regression delays both an old-policy and a new-policy assessment until after a real policy promotion and service shutdown. It also checks stale policy and campaign bounds, original charges, and per-round receipts. Runtime execution remains pending.
+
 ## 2026-11-27 · Replay candidate policies against anchored native generated history
 
 The Linux policy-replay command can compare a candidate with the original native source-backed corpus using independent history, recipe, decoder/tokenizer and publication contracts. It checks the full canonical image after computing the report. The command acquires no live evaluator, governor or publication role. Added regressions cover a confirmed Message, an uncertain delivery, Ready-only access, repeat reads, stale image and input custody. Runtime qualification remains open.

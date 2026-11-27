@@ -90,10 +90,18 @@ impl Settings {
     pub(super) fn requirements(&self, config: &Config, minimum: FileRecoveryFloor)
         -> Result<FileAndonRecoveryRequirements, String>
     {
-        let expected = FileAndonRecoveryRequirements::new(FileRecoveryRequirements {
+        self.recovery_requirements(FileRecoveryRequirements {
             guards: guards(config), effective_policy: config.profile.delivery.policy.clone(),
             credential_epoch: None, minimum,
-        }, self.config.clone(), self.windows.clone(), self.minimum_evaluation_revision).map_err(debug)?;
+        })
+    }
+
+    pub(super) fn recovery_requirements(&self, base: FileRecoveryRequirements)
+        -> Result<FileAndonRecoveryRequirements, String>
+    {
+        let expected = FileAndonRecoveryRequirements::new(
+            base, self.config.clone(), self.windows.clone(), self.minimum_evaluation_revision,
+        ).map_err(debug)?;
         match self.joint { Some(policy) => expected.require_joint(policy).map_err(debug), None => Ok(expected) }
     }
 

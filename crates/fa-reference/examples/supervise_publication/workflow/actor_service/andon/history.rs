@@ -51,7 +51,6 @@ where
     series::validate(requests, actor, reviewer)?;
     actor.check_host(&config)?;
     reviewer.check_host(&config)?;
-    profile.require_legacy()?;
     let custody = profile.admit(&config)?;
     let history_output = custody.output_path().ok_or(
         "historical ordinary evaluation requires a new independent successor history anchor",
@@ -87,7 +86,7 @@ where
         settings.config.identity(),
     )?;
     evaluator.check_custody_paths(&custody_paths)?;
-    let expected = settings.requirements(&config, profile.minimum())?;
+    let expected = settings.recovery_requirements(profile.requirements(&config))?;
     let expected = match validation {
         Some(limits) => expected.require_publication(limits).map_err(debug)?,
         None => expected,
@@ -151,6 +150,9 @@ where
     let acknowledged = host.revision();
     let (unused_actor, mut driver) = host.into_supervised_driver();
     drop(unused_actor);
+    // A governed history still owns its original campaign contract. This service
+    // consumes only the evaluator and the human role required for Stop.
+    drop(roles.oversight.policy_governor);
     let human = roles.oversight.human;
     let mut service = None;
     let outcome: Result<(), String> = (|| {

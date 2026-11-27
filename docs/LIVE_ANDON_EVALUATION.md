@@ -1075,9 +1075,13 @@ supervise_publication serve-open CONFIG ORIGINAL_ACTOR_PROFILE REVIEWER_PROFILE 
 ```
 
 For the corresponding simple checked owner, use `serve-open-checked` and its
-original `WITNESS_PROFILE` positional argument. The guarded v1 profile must select
-an independently retained input history, explicit journal/control/authority floors
-and a new `retain_history_anchor` output. The Andon profile must supply the original
+original `WITNESS_PROFILE` positional argument. An ordinary history uses
+`fa.guarded-submit/1`. A governed history uses `fa.guarded-submit/2` with the
+exact effective policy and original campaign limits. Both select an independently
+retained input history, explicit journal/control/authority floors and a new
+`retain_history_anchor` output. Policy and campaign mismatches refuse before
+the recovery Fence. The evaluator can label original cases across a promotion
+after both the live governor and promotion operator have retired. The Andon profile must supply the original
 evaluator protocol and accounting identity, complete current window inventory and
 independent evaluation revision floor. Original marginal or joint accounting and
 simple checked publication keep their exact existing contracts. No contract is
@@ -1121,7 +1125,7 @@ current or future endpoint must have distinct custody before recovery begins.
 
 The flag is unary and belongs only to the ordinary open grammar above. Creation,
 missing accounting/evaluator/recovery selections, duplicate flags, operator or
-precheck endpoints, topology, governance and credibility activation are rejected.
+precheck endpoints, topology, live governor roles and credibility activation are rejected.
 Native and learned generated owners retain their separately documented historical
 modes. The new service and command regression sources cover delayed original
 labels, finite allowances, history and counter mismatches, Stop and deadline
