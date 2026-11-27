@@ -175,6 +175,22 @@ mediation decrease can still be reported. Observing authorization does not erase
 the fact that coverage fell, and missing authorization does not suppress an
 otherwise supported erosion finding.
 
+Exact correction also preserves the originally accepted transition order.
+Withdrawing a middle change no longer makes its two surviving neighbors appear
+to conflict, and withdrawing the first change cannot silently turn its successor
+into a new baseline. The engine retains a bounded, private spine of original
+transition identities and their selected states, staged atomically with every
+accepted history boundary.
+
+That spine is dependency provenance, not live evidence. A missing original
+predecessor keeps the coverage family incomplete and withdraws findings from
+its dependent suffix. Findings before the gap and in unrelated effect families
+remain supported. Restoring the exact change restores its original suffix and
+supports. A fresh transition must still continue from the original selected
+state; stale predecessors, forks, conflicting identities and failed candidate
+boundaries cannot rewrite the chain. Replaying accepted source history rebuilds
+the same provenance without importing withdrawn records into finding support.
+
 ## Preserve supports and corrections
 
 Derived supports use exact record identities. The query engine computes the
@@ -215,6 +231,15 @@ relation's arithmetic and retractions; it is not an independent oracle for the
 semantic predicates and cannot detect an omission shared by their supplied inputs.
 
 ## Verification boundary
+
+Nine new public coverage-correction regression definitions exercise first,
+middle and latest transition withdrawal/restoration, unrelated-family findings,
+stale forks, immutable identities, refused-boundary rollback and accepted-history
+replay. They accompany the predecessor-provenance change dated 2026-11-27.
+This increment received source review only: the required RCH launcher is absent
+and the execution workspace became unavailable before formatting or compilation.
+These new regressions have not executed, and the earlier results below do not
+qualify this changed source.
 
 The base and extended query targets contain 55 public regressions over all six
 predicates, including eight cases for delayed independent roster resolution.

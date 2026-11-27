@@ -1,5 +1,30 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Preserve coverage predecessors through exact history corrections
+
+The bounded FA-125 coverage query now retains the original accepted transition
+order as private dependency provenance. Withdrawing a first, middle or latest
+change advances a lawful closed frontier without rebasing the surviving history
+or treating a gap as a contradictory new transition. Missing predecessors keep
+the family incomplete and retract dependent suffix findings; preceding and
+unrelated findings remain supported. Exact restoration restores the original
+supports. Stale forks and identity substitutions still refuse.
+
+Provenance is staged with the complete source boundary and committed only after
+all predicates and kernel updates succeed. Accepted-history replay reconstructs
+it under the existing lifetime record bound. Withdrawn records never become
+live finding support. No native journal, authority, query-policy or wire format
+changes, and all six full live Tower risk-theater families remain Unknown.
+
+Nine public regression definitions cover the lawful correction/continuation
+pairs, causal negatives, refused-candidate atomicity and complete history replay.
+Source review and connector content checks cover this increment. The canonical
+command `RCH_REQUIRE_REMOTE=1 rch exec -- cargo run --locked -p xtask -- check`
+could not start because `rch` is absent (exit 127); the execution workspace then
+became unavailable. Formatting, compilation, Clippy and runtime tests for this
+change remain unexecuted. FA-125 remains in progress; no bead or gate is closed.
+See [the coverage contract](docs/RISK_THEATER_QUERIES.md#componentwise-coverage-and-active-predecessors).
+
 ## 2026-11-27 · Preflight the first joint credibility image
 
 Both independently configured held-out joint initializers use the common storage preflight. One regression spans five configurations, measuring a real image, refusing one byte below that limit, creating at exact fit and rereading the original policy and execution state. Existing storage-fault fixtures retain their injected replacement barriers. The Rust regression has not run in this session.

@@ -251,6 +251,56 @@ impl AndonOpeningProvenance {
     }
 }
 
+/// The original occurrence order of coverage transitions already admitted at a
+/// closed source boundary. A withdrawn transition is not live evidence, but it
+/// cannot turn its successor into a fresh baseline or permit a stale fork.
+///
+/// At most MAX_QUERY_RECORDS transitions are retained. Their identities and
+/// endpoints are drawn from the existing lifetime source inventory. This is
+/// derived provenance, not an additional source, permission or completeness
+/// assertion; replaying accepted source history reconstructs the same spine.
+#[derive(Clone, Debug, Default)]
+pub(super) struct CoveragePredecessorProvenance {
+    transitions: BTreeMap<Address, CoverageTransition>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CoverageTransition {
+    effect_family: String,
+    occurred_at: u64,
+    previous: Address,
+    current: Address,
+}
+
+impl CoveragePredecessorProvenance {
+    fn retain(&mut self, records: &[HistoryRecord]) -> Result<(), QueryError> {
+        for record in records {
+            let HistoryFact::Coverage(CoverageFact::Change {
+                effect_family, previous, current, ..
+            }) = &record.fact else {
+                continue;
+            };
+            let transition = CoverageTransition {
+                effect_family: effect_family.clone(),
+                occurred_at: record.occurred_at,
+                previous: previous.clone(),
+                current: current.clone(),
+            };
+            if let Some(original) = self.transitions.get(&record.address) {
+                if original != &transition {
+                    return Err(QueryError::InvalidReference);
+                }
+            } else {
+                if self.transitions.len() >= MAX_QUERY_RECORDS {
+                    return Err(QueryError::ResourceLimit);
+                }
+                self.transitions.insert(record.address.clone(), transition);
+            }
+        }
+        Ok(())
+    }
+}
+
 pub(super) fn validate_policy(policy: &ExtendedQueryPolicy) -> Result<(), QueryError> {
     for rate in [policy.minimum_continue_increase, policy.minimum_canary_escape] {
         if rate.numerator == 0 || rate.denominator == 0 || rate.numerator > rate.denominator {
@@ -394,11 +444,12 @@ pub(super) fn evaluate(
     _frontier: u64,
     evaluation_owner: &Address,
     andon_openings: &mut AndonOpeningProvenance,
+    coverage_predecessors: &mut CoveragePredecessorProvenance,
 ) -> Result<Vec<FamilyEvaluation>, QueryError> {
     Ok(vec![
         consequence_drift(policy, records, evaluation_owner)?,
         andon_closures(policy, records, evaluation_owner, andon_openings)?,
-        coverage_erosion(records)?,
+        coverage_erosion(records, coverage_predecessors)?,
     ])
 }
 
@@ -884,31 +935,35 @@ fn andon_closures(
     Ok(FamilyEvaluation { family, complete, findings })
 }
 
-fn coverage_erosion(records: &[HistoryRecord]) -> Result<FamilyEvaluation, QueryError> {
+fn coverage_erosion(
+    records: &[HistoryRecord],
+    predecessors: &mut CoveragePredecessorProvenance,
+) -> Result<FamilyEvaluation, QueryError> {
     let family = RiskTheaterFamily::CoverageErosion;
     let changes: Vec<_> = records.iter().filter(|record| matches!(
         record.fact, HistoryFact::Coverage(CoverageFact::Change { .. })
     )).collect();
-    let mut complete = !changes.is_empty();
-    // Compare actual transitions in each effect family. Unused State objects
-    // are definitions, not installations and cannot reset the active profile.
-    let mut by_family: BTreeMap<&str, Vec<&HistoryRecord>> = BTreeMap::new();
-    for change in &changes {
-        let HistoryFact::Coverage(CoverageFact::Change { effect_family, .. }) = &change.fact else {
-            unreachable!("change selection");
-        };
-        by_family.entry(effect_family.as_str()).or_default().push(change);
+    // The caller stages this spine with every other candidate result. Only a
+    // fully accepted source boundary may establish a new predecessor identity.
+    predecessors.retain(records)?;
+    let mut complete = !predecessors.transitions.is_empty();
+    let mut by_family: BTreeMap<&str, Vec<(&Address, &CoverageTransition)>> = BTreeMap::new();
+    for (address, transition) in &predecessors.transitions {
+        by_family.entry(transition.effect_family.as_str()).or_default()
+            .push((address, transition));
+        if find_record(records, address).is_none() {
+            complete = false;
+        }
     }
+    // Preserve the original chronological chain even across a withdrawn first,
+    // middle or latest transition. Missing steps make evidence incomplete; they
+    // cannot erase a known predecessor and make an actually stale change lawful.
     for transitions in by_family.values_mut() {
-        transitions.sort_by_key(|record| record.occurred_at);
+        transitions.sort_by_key(|(_, transition)| transition.occurred_at);
         for pair in transitions.windows(2) {
-            let HistoryFact::Coverage(CoverageFact::Change { current: predecessor, .. }) = &pair[0].fact else {
-                unreachable!("change selection");
-            };
-            let HistoryFact::Coverage(CoverageFact::Change { previous, .. }) = &pair[1].fact else {
-                unreachable!("change selection");
-            };
-            if pair[0].occurred_at == pair[1].occurred_at || previous != predecessor {
+            if pair[0].1.occurred_at == pair[1].1.occurred_at
+                || pair[1].1.previous != pair[0].1.current
+            {
                 return Err(QueryError::ConflictingRecord);
             }
         }
@@ -935,16 +990,21 @@ fn coverage_erosion(records: &[HistoryRecord]) -> Result<FamilyEvaluation, Query
         {
             return Err(QueryError::InvalidReference);
         }
-        // Preserve the evidence used by the active-predecessor law, including
-        // benign earlier transitions. External contract identities stay fields
-        // of supporting State records, not unresolved support addresses.
+        // A finding claims the original active-predecessor contract. Its whole
+        // transition prefix must be present; private provenance cannot replace
+        // a withdrawn source. Earlier and unrelated supported findings survive.
         let mut support = Vec::new();
-        for predecessor in &by_family[effect_family.as_str()] {
+        let mut prefix_complete = true;
+        for (address, predecessor) in &by_family[effect_family.as_str()] {
             if predecessor.occurred_at > change.occurred_at { break; }
-            support.push(predecessor.address.clone());
+            let Some(original) = find_record(records, address) else {
+                prefix_complete = false;
+                continue;
+            };
+            support.push(original.address.clone());
             let HistoryFact::Coverage(CoverageFact::Change {
                 previous: from, current: to, authorization: authorized, ..
-            }) = &predecessor.fact else { unreachable!("change selection"); };
+            }) = &original.fact else { return Err(QueryError::InvalidReference); };
             for address in [Some(from), Some(to), authorized.as_ref()].into_iter().flatten() {
                 if find_record(records, address).is_some() { support.push(address.clone()); }
             }
@@ -969,7 +1029,7 @@ fn coverage_erosion(records: &[HistoryRecord]) -> Result<FamilyEvaluation, Query
             complete = false;
         }
         let lost_channel = comparable_capture && !prior_channels.is_subset(next_channels);
-        if next_mediation < prior_mediation || lost_channel {
+        if prefix_complete && (next_mediation < prior_mediation || lost_channel) {
             findings.push(QueryFinding {
                 family,
                 subject: change.address.clone(),

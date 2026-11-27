@@ -258,6 +258,7 @@ pub struct QueryEngine {
     kernel_history: Vec<ControlPlaneFrontier>,
     kernel_history_deltas: usize,
     andon_openings: extended::AndonOpeningProvenance,
+    coverage_predecessors: extended::CoveragePredecessorProvenance,
     snapshot: Option<QuerySnapshot>,
 }
 
@@ -279,6 +280,7 @@ impl QueryEngine {
             kernel_history: Vec::new(),
             kernel_history_deltas: 0,
             andon_openings: extended::AndonOpeningProvenance::default(),
+            coverage_predecessors: extended::CoveragePredecessorProvenance::default(),
             snapshot: None,
         })
     }
@@ -391,10 +393,11 @@ impl QueryEngine {
         // A refused later predicate or kernel update cannot qualify a new
         // historical opening. Source-history replay rebuilds the same bindings.
         let mut andon_openings = self.andon_openings.clone();
+        let mut coverage_predecessors = self.coverage_predecessors.clone();
         if let Some(policy) = self.policy.extended() {
             families.extend(extended::evaluate(
                 policy, &records, frontier.sequence, self.policy.evaluation_owner(),
-                &mut andon_openings,
+                &mut andon_openings, &mut coverage_predecessors,
             )?);
         }
         for family in RiskTheaterFamily::ALL {
@@ -452,6 +455,7 @@ impl QueryEngine {
         self.kernel_history.push(kernel_frontier);
         self.kernel_history_deltas = kernel_history_deltas;
         self.andon_openings = andon_openings;
+        self.coverage_predecessors = coverage_predecessors;
         self.sequence = frontier.sequence;
         self.snapshot = Some(snapshot.clone());
         Ok(snapshot)

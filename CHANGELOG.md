@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-27 · Preserve coverage history across source corrections
+
+- Permit exact first, middle and latest coverage-transition withdrawal without
+  discarding the original active predecessor or rejecting a lawful correction.
+- Retract findings that depend on a missing transition, preserve independent
+  findings and restore exact supports when the original source returns.
+- Reject stale forks and identity substitution atomically; add nine public
+  regression definitions. Compilation and runtime qualification remain pending.
+
 ## 2026-11-27 · Keep held-out joint credibility creation retryable
 
 - Standalone and witness-checked joint credibility creation now admit the complete first image against the resolved destination before claiming storage, including feed and fallback configuration.
