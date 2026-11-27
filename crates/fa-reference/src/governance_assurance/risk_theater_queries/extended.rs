@@ -442,27 +442,6 @@ fn increased(
         )?)
 }
 
-/// A censored label can resolve once; final labels cannot be overwritten.
-/// Repeated protocol replies use the same HistoryRecord address at ingestion,
-/// not another sample or a fresh differently addressed assessment.
-fn assessment(
-    round: &HistoryRecord,
-    records: &[HistoryRecord],
-    evaluation_owner: &Address,
-) -> Result<(Option<CanaryOutcome>, Vec<Address>), QueryError> {
-    let mut labels = Vec::new();
-    for record in records {
-        let HistoryFact::Consequence(ConsequenceFact::CanaryAssessment {
-            round: selected, outcome, evaluator,
-        }) = &record.fact else { continue; };
-        if selected != &round.address { continue; }
-        labels.push((record, evaluator, *outcome));
-    }
-    resolve_assessment_chain(
-        Some(round.occurred_at), labels, evaluation_owner, CanaryOutcome::Censored,
-    )
-}
-
 fn consequence_drift(
     policy: &ExtendedQueryPolicy,
     records: &[HistoryRecord],
@@ -472,6 +451,7 @@ fn consequence_drift(
     let mut groups: BTreeMap<Group, Comparison<'_>> = BTreeMap::new();
     let mut complete = true;
     let mut origins = BTreeSet::new();
+    let mut assessments = BTreeMap::<&Address, Vec<_>>::new();
     for record in records {
         match &record.fact {
             HistoryFact::Consequence(ConsequenceFact::Round {
@@ -481,9 +461,6 @@ fn consequence_drift(
                     if !origins.insert(source.origin.clone()) {
                         return Err(QueryError::ConflictingRecord);
                     }
-                    // Validate labels globally, including baseline/out-of-window
-                    // sources; a later window cannot uncover accepted corruption.
-                    assessment(record, records, evaluation_owner)?;
                 }
                 groups.entry(group(effect_family, helper_generation, policy_generation))
                     .or_default().rounds.push(record);
@@ -497,16 +474,32 @@ fn consequence_drift(
                     return Err(QueryError::ConflictingRecord);
                 }
             }
-            HistoryFact::Consequence(ConsequenceFact::CanaryAssessment { round, evaluator, .. }) => {
+            HistoryFact::Consequence(ConsequenceFact::CanaryAssessment { round, evaluator, outcome }) => {
                 if evaluator != evaluation_owner { complete = false; }
-                match find_record(records, round).map(|record| &record.fact) {
-                    Some(HistoryFact::Consequence(ConsequenceFact::Round { canary: Some(_), .. })) => {}
-                    None => complete = false,
-                    _ => return Err(QueryError::InvalidReference),
-                }
+                assessments.entry(round).or_default().push((record, evaluator, *outcome));
             }
             _ => {}
         }
+    }
+    // Check each retained chain even if its original round is missing or the
+    // round is outside the selected windows. A correction may withdraw the
+    // round, but cannot make two independent final answers consistent.
+    let mut resolved = BTreeMap::new();
+    for (round, labels) in assessments {
+        let original_sequence = match find_record(records, round) {
+            Some(record) if matches!(
+                &record.fact, HistoryFact::Consequence(ConsequenceFact::Round { canary: Some(_), .. })
+            ) => Some(record.occurred_at),
+            Some(_) => return Err(QueryError::InvalidReference),
+            None => {
+                complete = false;
+                None
+            }
+        };
+        let assessment = resolve_assessment_chain(
+            original_sequence, labels, evaluation_owner, CanaryOutcome::Censored,
+        )?;
+        resolved.insert(round, assessment);
     }
     if groups.is_empty() {
         complete = false;
@@ -564,8 +557,11 @@ fn consequence_drift(
                         lineage = Some(source.lineage.clone());
                     }
                     canaries = canaries.checked_add(1).ok_or(QueryError::ArithmeticOverflow)?;
-                    let (outcome, labels) = assessment(round, records, evaluation_owner)?;
-                    support.extend(labels);
+                    let Some((outcome, labels)) = resolved.get(&round.address) else {
+                        ready = false;
+                        continue;
+                    };
+                    support.extend(labels.iter().cloned());
                     match outcome {
                         Some(CanaryOutcome::Escaped) => {
                             escapes = escapes.checked_add(1).ok_or(QueryError::ArithmeticOverflow)?;

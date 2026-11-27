@@ -279,6 +279,55 @@ fn final_label_conflict_is_atomic_even_outside_selected_comparison_windows() {
 }
 
 #[test]
+fn withdrawing_a_canary_round_cannot_hide_conflicting_independent_outcomes() {
+    let records = drift_records();
+    let (mut engine, original) = history(&records, strict_drift_policy());
+    let withdrawn = &records[3];
+    let family = RiskTheaterFamily::ConsequenceDrift;
+    let missing = engine.apply_frontier(&HistoryFrontier {
+        sequence: 10,
+        closed: true,
+        changes: vec![HistoryChange::Retract(withdrawn.clone())],
+    }).unwrap();
+    assert!(!missing.family(family).complete);
+    assert!(missing.family(family).findings.is_empty());
+
+    let mut foreign = label("foreign", 11, "current-first", CanaryOutcome::Contained);
+    let HistoryFact::Consequence(ConsequenceFact::CanaryAssessment { evaluator, .. }) =
+        &mut foreign.fact else { unreachable!() };
+    evaluator.generation = Some(2);
+    assert_refused_atomically(&mut engine, 11, vec![
+        foreign,
+        label("second-final", 11, "current-first", CanaryOutcome::Contained),
+    ], QueryError::ConflictingRecord);
+
+    let restored = apply(&mut engine, 11, std::slice::from_ref(withdrawn));
+    assert_eq!(restored.family(family), original.family(family));
+    assert_eq!(engine.verify_kernel().unwrap(), *restored.kernel());
+}
+
+#[test]
+fn absent_canary_round_allows_ordered_censored_resolution_but_not_ambiguous_labels() {
+    let family = RiskTheaterFamily::ConsequenceDrift;
+    let (mut engine, _) = history(&[], strict_drift_policy());
+    let censored = label("censored", 2, "missing", CanaryOutcome::Censored);
+    assert_refused_atomically(&mut engine, 2, vec![
+        censored.clone(), label("same-cut", 2, "missing", CanaryOutcome::Escaped),
+    ], QueryError::ConflictingRecord);
+    let pending = apply(&mut engine, 2, &[censored]);
+    assert!(!pending.family(family).complete);
+    assert_refused_atomically(&mut engine, 3, vec![
+        label("repeat-censor", 3, "missing", CanaryOutcome::Censored),
+    ], QueryError::ConflictingRecord);
+    let resolved = apply(&mut engine, 3, &[label("later", 3, "missing", CanaryOutcome::Escaped)]);
+    assert!(!resolved.family(family).complete);
+    assert!(resolved.family(family).findings.is_empty());
+    assert_refused_atomically(&mut engine, 4, vec![
+        label("second-final", 4, "missing", CanaryOutcome::Escaped),
+    ], QueryError::ConflictingRecord);
+}
+
+#[test]
 fn correcting_a_denominator_retracts_and_restores_the_derived_finding_exactly() {
     let records = drift_records();
     let (mut engine, before) = history(&records, strict_drift_policy());

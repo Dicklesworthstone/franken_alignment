@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Keep canary assessments consistent after a round is withdrawn
+
+- Validate independent canary assessment chains before selecting consequence-drift windows. A missing round can acquire a later resolution, and restoring the original round recovers its finding with the original supports. Contradictory final labels reject the update atomically.
+
 ## 2026-11-27 · Evaluate delayed truth for topology-protected learned history
 
 - Support `--evaluate-only --topology-profile` for original learned Message and

@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Preserve canary assessment history across round withdrawal
+
+The consequence-drift query now checks retained labels even when their original round has been withdrawn. Two public regression tests cover conflicting final labels, ordered resolution of censored outcomes, refusal atomicity and restoration of the original finding. The required remote launcher was unavailable in this session, so these tests await execution.
+
 ## 2026-11-27 · Evaluate retained learned history with original topology custody
 
 Explicit learned `--evaluate-only` now composes with an exact v2 topology

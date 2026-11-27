@@ -111,6 +111,12 @@ the label arrives later. One censored label may resolve once; competing final
 labels or ambiguous same-boundary assessments refuse. Missing/censored outcomes,
 mixed sampling lineages and insufficient denominators remain incomplete.
 
+The query checks every retained assessment chain, including one whose round was
+withdrawn. Censoring can still resolve once in a strictly later boundary, but
+without the original round the outcome cannot contribute to a rate. A second
+final answer or ambiguous same-boundary resolution refuses the entire update.
+Restoring the original round reuses the same assessments and finding supports.
+
 This bounded profile supplies one baseline/current pair per exact group. Selecting
 comparison windows and asserting complete inputs remain responsibilities of its
 reference caller; this is not automatic rolling-window production monitoring.
