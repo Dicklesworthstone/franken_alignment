@@ -501,3 +501,42 @@ fn original_two_key_publication_still_rechecks_whole_input_after_dispatch() {
         );
     }
 }
+
+#[test]
+fn held_out_creation_admits_the_entire_first_image_before_claiming_the_store() {
+    // Exercise the standalone constructor and all four publication gate sets.
+    for level in [None, Some(0), Some(1), Some(2), Some(3)] {
+        let selected = selection(level.unwrap_or(0));
+        let root = Directory::new();
+        fs::create_dir(&root.0).unwrap();
+        let create = |path: &Path, profile: FileOversightProfile| match level {
+            None => FileOversight::create_with_held_out_joint(path, profile, selected.joint),
+            Some(_) => FileOversight::create_with_joint_publication(path, profile, selected),
+        };
+
+        // A real first image at an equal-length sibling supplies the byte cost,
+        // including the selected feed, freshness and exact-snapshot records.
+        let probe = root.0.join("probe");
+        let target = root.0.join("final");
+        let (host, _) = create(&probe, profile()).unwrap();
+        let image_bytes = host.journal_capacity().unwrap().used().bytes;
+        drop(host);
+        let mut bounded = profile();
+        bounded.delivery.limits.bytes = image_bytes - 1;
+        assert!(matches!(
+            create(&target, bounded.clone()),
+            Err(JournalError::Contract(Error::Limit))
+        ));
+        assert!(!target.exists());
+
+        bounded.delivery.limits.bytes += 1;
+        let (host, human) = create(&target, bounded.clone()).unwrap();
+        assert_eq!(human.reviewer_id(), 77);
+        assert_eq!(host.journal_capacity().unwrap().ordinary_remaining().bytes, 0);
+        let saved = FileOversight::read_joint_publication(&target, &bounded, selected).unwrap();
+        assert_eq!(saved.policy, selected.joint);
+        assert_eq!(saved.journal, host.inspect());
+        assert!(saved.promotions.is_empty());
+        assert_eq!(saved.journal.executions, 0);
+    }
+}

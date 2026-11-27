@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Keep held-out joint credibility creation retryable
+
+- Standalone and witness-checked joint credibility creation now admit the complete first image against the resolved destination before claiming storage, including feed and fallback configuration.
+
 ## 2026-11-27 · Keep a redirected parent alias from claiming the wrong destination
 
 - Initial journal creation rechecks the selected parent after encoding and creates the directory using the resolved identity. A redirected alias observed during encoding now leaves both destinations available.

@@ -172,7 +172,7 @@ impl FileOversight {
         expected: JointPublicationProfile,
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let prepared = expected.prepare(profile)?;
-        prepared.publish(storage::Store::create(directory.as_ref())?)
+        prepared.create(directory.as_ref())
     }
 
     /// Check every selected joint/publication field, including ABSENT gates,

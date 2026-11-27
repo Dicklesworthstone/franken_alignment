@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Preflight the first joint credibility image
+
+Both independently configured held-out joint initializers use the common storage preflight. One regression spans five configurations, measuring a real image, refusing one byte below that limit, creating at exact fit and rereading the original policy and execution state. Existing storage-fault fixtures retain their injected replacement barriers. The Rust regression has not run in this session.
+
 ## 2026-11-27 · Preserve storage custody when a parent alias changes
 
 The common first-image path rechecks its parent after encoding and creates through the pinned resolved path. A regression redirects a real parent symlink during encoding, checks for a binding refusal and absence of both destinations, then retries successfully through the new parent. Runtime qualification is pending.

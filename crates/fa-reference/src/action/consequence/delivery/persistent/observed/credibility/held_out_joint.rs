@@ -63,7 +63,7 @@ impl FileOversight {
         policy: HeldOutJointPolicy,
     ) -> Result<(Self, FileHumanReviewer), JournalError> {
         let prepared = Prepared::new(profile, policy)?;
-        prepared.publish(storage::Store::create(directory.as_ref())?)
+        prepared.create(directory.as_ref())
     }
 
     /// Pin this joint policy and the existing bootstrap before cleanup/fencing.
@@ -147,18 +147,28 @@ impl Prepared {
             machine,
         })
     }
+    fn create(
+        self,
+        directory: &Path,
+    ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
+        let store = storage::Store::create_with_image(directory, |identity| {
+            journal::encode(&self.profile, identity, &self.events)
+        })?;
+        Ok(self.owner(store))
+    }
+
+    #[cfg(test)]
     fn publish(
         self,
         store: storage::Store,
     ) -> Result<(FileOversight, FileHumanReviewer), JournalError> {
         let bytes = journal::encode(&self.profile, store.identity(), &self.events)?;
         store.replace(&bytes)?;
-        Ok(FileOversight::owner(
-            self.profile,
-            store,
-            self.events,
-            self.machine,
-        ))
+        Ok(self.owner(store))
+    }
+
+    fn owner(self, store: storage::Store) -> (FileOversight, FileHumanReviewer) {
+        FileOversight::owner(self.profile, store, self.events, self.machine)
     }
 }
 fn checked_image(
