@@ -462,6 +462,51 @@ fn unknown_candidate_reads_require_real_missing_read_nodes_and_matching_shadow_d
 }
 
 #[test]
+fn candidate_read_cannot_disagree_with_original_witness_inside_a_passing_boolean_arm() {
+    let mut native = NativePages::new(2, 2);
+    let policy = Policy::new(
+        2,
+        vec![
+            Predicate::ExactValue { key: 7, value: b"ok".to_vec() },
+            Predicate::PayloadAtMost(128),
+            Predicate::Any(vec![0, 1]),
+        ],
+    ).unwrap();
+    let sequence = native.sequence(policy);
+    let mut damaged = decode(&sequence[1].1);
+    // Both the real and altered candidate pass the Any node. Counts, deltas,
+    // witness ordinals, and action geometry agree throughout the page.
+    let trace = array_mut(path_mut(&mut rows_mut(&mut damaged)[0], &["candidate", "trace"]));
+    let outcome = field(&trace[0], "result").as_str().unwrap();
+    let reversed = if outcome == "satisfied" { "violated" } else { "satisfied" };
+    set(&mut trace[0], &["result"], text(reversed));
+    rejects_then_finishes(&sequence, 1, &encoded(&damaged));
+}
+
+#[test]
+fn shadow_page_distinguishes_an_undisclosed_value_from_a_missing_read() {
+    let mut native = NativePages::new(2, 2);
+    let policy = Policy::new(
+        2,
+        vec![
+            Predicate::Absent { key: 7 },
+            Predicate::Absent { key: 99 },
+            Predicate::All(vec![0, 1]),
+        ],
+    ).unwrap();
+    let sequence = native.sequence(policy);
+    let mut damaged = decode(&sequence[1].1);
+    let nodes = array_mut(path_mut(
+        &mut rows_mut(&mut damaged)[0], &["candidate", "missing_nodes"],
+    ));
+    assert_eq!(*nodes, vec![text(1)]);
+    // The original ExactValue on key 7 retained a witness even on denial.
+    // Its redacted value cannot make the same-key absence test unsupported.
+    nodes.insert(0, text(0));
+    rejects_then_finishes(&sequence, 1, &encoded(&damaged));
+}
+
+#[test]
 fn consumer_page_limit_preserves_an_honest_incomplete_result_without_accepting_more() {
     let mut native = NativePages::new(18, 3);
     let sequence = native.sequence(candidate());

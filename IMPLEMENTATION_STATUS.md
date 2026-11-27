@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Cross-check disclosed predicates during paged policy replay
+
+The read-only client uses the original exact-key, range and payload predicates to check candidate results for the same case. Two public tests alter real native page responses while keeping the aggregate disposition fixed, then retry the genuine response. Runtime execution awaits the repository’s remote test launcher.
+
 ## 2026-11-27 · Preserve canary assessment history across round withdrawal
 
 The consequence-drift query now checks retained labels even when their original round has been withdrawn. Two public regression tests cover conflicting final labels, ordered resolution of censored outcomes, refusal atomicity and restoration of the original finding. The required remote launcher was unavailable in this session, so these tests await execution.

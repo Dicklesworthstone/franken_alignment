@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Check paged candidate policy traces against retained observations
+
+- The replay client checks candidate results against facts disclosed by the original policy trace. It rejects contradictory decisions even when a passing Boolean arm masks the difference, and rejects missing-read claims for individually provable retained reads.
+
 ## 2026-11-27 · Keep canary assessments consistent after a round is withdrawn
 
 - Validate independent canary assessment chains before selecting consequence-drift windows. A missing round can acquire a later resolution, and restoring the original round recovers its finding with the original supports. Contradictory final labels reject the update atomically.

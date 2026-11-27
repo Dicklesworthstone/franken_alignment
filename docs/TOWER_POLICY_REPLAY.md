@@ -470,6 +470,16 @@ summary and seen identities, not action payloads, witness values or a second
 case corpus. `progress().complete` becomes true only after validated totals and
 all original cases agree.
 
+For each case, the consumer compares the two traces on the same retained action
+and observation. Repeated exact predicates agree even inside a Boolean arm
+that does not determine the root. An original keyed read covers that key for
+a candidate equality or absence check, including when the original comparison
+failed. A disclosed empty range covers its subranges, and a disclosed positive
+member refutes emptiness of a containing range. Missing-read claims are checked
+against these observations before the consumer accepts the page. The client
+checks facts derivable from the disclosed traces and does not reconstruct
+redacted values.
+
 ## Executed coverage and remaining qualification
 
 The automatic consumer increment adds ten public consumer and eight

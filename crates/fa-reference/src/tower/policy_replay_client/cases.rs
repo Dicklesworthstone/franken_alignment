@@ -127,9 +127,23 @@ pub(super) fn check(
             )?;
         }
     }
-    let original = evaluation(&row["original"], previous, action, false)?;
+    let original = evaluation(&row["original"], previous, action)?;
+    let retained = previous.nodes().iter().zip(&original);
+    let original_result = *original.last().ok_or(PolicyReplayClientError::InvalidResponse)?;
     let candidate_result = match row["candidate"].get("state").and_then(Json::as_str) {
-        Some("known") => evaluation(&row["candidate"], candidate, action, true)?,
+        Some("known") => {
+            let trace = evaluation(&row["candidate"], candidate, action)?;
+            for (node, result) in candidate.nodes().iter().zip(&trace) {
+                for (source, observed) in retained.clone() {
+                    if let Some(Disclosed::Decided(expected)) =
+                        disclosed_read(source, *observed, node)
+                    {
+                        ensure(*result == expected)?;
+                    }
+                }
+            }
+            *trace.last().ok_or(PolicyReplayClientError::InvalidResponse)?
+        }
         Some("unknown") => {
             let unknown = object(&row["candidate"], &["state", "reason", "missing_nodes"])?;
             ensure(text(&unknown["reason"])? == "missing_retained_observations")?;
@@ -142,6 +156,10 @@ pub(super) fn check(
                     last.is_none_or(|previous| index > previous)
                         && candidate.nodes().get(index).is_some_and(reads_state),
                 )?;
+                let node = &candidate.nodes()[index];
+                ensure(!retained.clone().any(|(source, observed)| {
+                    disclosed_read(source, *observed, node).is_some()
+                }))?;
                 last = Some(index);
             }
             Truth::Unknown
@@ -150,7 +168,7 @@ pub(super) fn check(
     };
     let delta = match candidate_result {
         Truth::Unknown => PolicyDelta::RequiresShadow,
-        observed if observed == original => PolicyDelta::Unchanged,
+        observed if observed == original_result => PolicyDelta::Unchanged,
         Truth::Satisfied => PolicyDelta::NewlyReviewable,
         Truth::Violated => PolicyDelta::NewlyBlocked,
     };
@@ -249,7 +267,72 @@ fn reads_state(node: &Predicate) -> bool {
     )
 }
 
-fn evaluation(value: &Json, policy: &Policy, action: Action, allow_unknown: bool) -> Result<Truth> {
+enum Disclosed {
+    Available,
+    Decided(Truth),
+}
+
+/// A previous evaluation retains an exact witness for each keyed read, an
+/// empty interval for a successful range test, or a positive member for a
+/// failed one. Even with witness values redacted, the disclosed policy and
+/// truth sometimes decide a candidate read, or establish its availability.
+fn disclosed_read(source: &Predicate, truth: Truth, candidate: &Predicate) -> Option<Disclosed> {
+    use Disclosed::{Available, Decided};
+    use Predicate::{Absent, EmptyRange, ExactValue, PayloadIs};
+    let holds = truth == Truth::Satisfied;
+    match (source, candidate) {
+        (ExactValue { key, value }, ExactValue { key: other, value: wanted }) if key == other => {
+            Some(if value == wanted {
+                Decided(truth)
+            } else if holds {
+                Decided(Truth::Violated)
+            } else {
+                Available
+            })
+        }
+        (ExactValue { key, .. }, Absent { key: other })
+        | (Absent { key }, ExactValue { key: other, .. }) if key == other => {
+            Some(if holds { Decided(Truth::Violated) } else { Available })
+        }
+        (Absent { key }, Absent { key: other }) if key == other => Some(Decided(truth)),
+        (ExactValue { key, .. } | Absent { key }, EmptyRange { start, end })
+            if start <= key && key < end =>
+        {
+            let present = match source {
+                ExactValue { .. } => holds.then_some(true),
+                _ => Some(!holds),
+            };
+            if present == Some(true) {
+                Some(Decided(Truth::Violated))
+            } else if end - start == 1 {
+                Some(match present {
+                    Some(false) => Decided(Truth::Satisfied),
+                    _ => Available,
+                })
+            } else {
+                None
+            }
+        }
+        (EmptyRange { start, end }, Absent { key } | ExactValue { key, .. })
+            if holds && start <= key && key < end =>
+        {
+            Some(Decided(from_bool(matches!(candidate, Absent { .. }))))
+        }
+        (EmptyRange { start, end }, EmptyRange { start: left, end: right })
+            if (holds && start <= left && right <= end)
+                || (!holds && left <= start && end <= right) =>
+        {
+            Some(Decided(truth))
+        }
+        // The action also retains the identical payload on both sides.
+        (PayloadIs(value), PayloadIs(wanted)) if value == wanted || holds => {
+            Some(Decided(from_bool(holds && value == wanted)))
+        }
+        _ => None,
+    }
+}
+
+fn evaluation(value: &Json, policy: &Policy, action: Action) -> Result<Vec<Truth>> {
     let value = object(
         value,
         &["state", "generation", "result", "trace", "witness_count"],
@@ -265,17 +348,15 @@ fn evaluation(value: &Json, policy: &Policy, action: Action, allow_unknown: bool
     )?;
     let mut trace = Vec::with_capacity(raw.len());
     let mut witnesses = 0;
-    let mut unknown = false;
     for (index, (step, node)) in raw.iter().zip(policy.nodes()).enumerate() {
         let step = object(step, &["node", "result", "witness"])?;
         ensure(natural(&step["node"])? == index)?;
         let observed = truth(&step["result"])?;
-        if observed == Truth::Unknown {
-            ensure(allow_unknown)?;
-            unknown = true;
-        }
+        // Native replay evaluates only a complete retained slice. Missing
+        // reads have a separate representation carrying their node indices.
+        ensure(observed != Truth::Unknown)?;
         let witness = optional_number(&step["witness"])?;
-        if reads_state(node) && observed != Truth::Unknown {
+        if reads_state(node) {
             ensure(witness == Some(witnesses as u64))?;
             witnesses += 1;
         } else {
@@ -331,12 +412,8 @@ fn evaluation(value: &Json, policy: &Policy, action: Action, allow_unknown: bool
         ensure(expected.is_none_or(|expected| expected == observed))?;
         trace.push(observed);
     }
-    ensure(
-        witnesses == witness_count
-            && trace.last() == Some(&result)
-            && (!unknown || result == Truth::Unknown),
-    )?;
-    Ok(result)
+    ensure(witnesses == witness_count && trace.last() == Some(&result))?;
+    Ok(trace)
 }
 
 fn truth(value: &Json) -> Result<Truth> {
