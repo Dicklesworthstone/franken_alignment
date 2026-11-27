@@ -27,6 +27,7 @@ where
         requests,
         generation,
         operator,
+        governor,
         evaluator,
         prechecks,
         inputs,
@@ -35,9 +36,9 @@ where
         return Err("historical ordinary evaluation requires guarded recovery".into());
     };
     let evaluator = evaluator.ok_or("historical ordinary evaluation requires an evaluator")?;
-    if generation == 0 || operator.is_some() || prechecks.is_some() {
+    if generation == 0 || operator.is_some() || governor.is_some() || prechecks.is_some() {
         return Err(
-            "historical ordinary evaluation requires a Tower generation without operator or prechecks"
+            "historical ordinary evaluation requires a Tower generation without operator, governor or prechecks"
                 .into(),
         );
     }

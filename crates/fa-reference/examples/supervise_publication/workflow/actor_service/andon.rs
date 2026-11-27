@@ -7,13 +7,19 @@ pub(super) use history::serve as serve_history;
 use super::{
     BoundSocket, Config, Deadline, Duration, ElapsedTick, FileOversight, Instant, OwnerStart,
     PeerProfile, Profile, PublicationProfile, RecoveryReserve, andon_settings::Settings,
-    check_deployment, debug, evaluator, operator, plus, precheck, series,
+    check_deployment, debug, evaluator, governor, operator, plus, precheck, series,
 };
 use crate::recover_stop::guarded::{CreationOutput, Custody, SubmitProfile};
 use crate::workflow::{continuation::guarded, control::Control};
 use fa_reference::action::consequence::delivery::persistent::observed::guarded::{
-    evaluation::andon::FileAndonRecovery, recovery::FileGuardedRecoveryStatus,
+    FileGuardSet,
+    evaluation::{
+        FileEvaluatedOversightRoles,
+        andon::{FileAndonRecovery, FileAndonRecoveryRequirements},
+    },
+    recovery::FileGuardedRecoveryStatus,
 };
+use fa_reference::action::consequence::delivery::publication_gate::PublicationLimits;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -30,6 +36,7 @@ pub(super) struct Selection<'a> {
     pub requests: &'a [u64],
     pub generation: u64,
     pub operator: Option<&'a operator::Settings>,
+    pub governor: Option<&'a governor::Settings>,
     pub evaluator: Option<&'a evaluator::Settings>,
     pub prechecks: Option<&'a precheck::schedule::Schedule>,
     pub inputs: &'a [&'a Path],
@@ -73,19 +80,23 @@ where
         requests,
         generation,
         operator,
+        governor,
         evaluator,
         prechecks,
         inputs,
     } = selected;
-    // All specialised guards must be selected explicitly. A richer witness,
-    // campaign profile or source-generated owner has no ordinary fallback.
+    // All specialised guards must be selected explicitly. A richer witness
+    // or source-generated owner has no ordinary fallback.
     let validation = publication
         .map(PublicationProfile::simple_limits)
         .transpose()?;
-    if generation == 0 || operator.is_some_and(|settings| settings.policy_promotion.is_some()) {
+    if generation == 0 || (governor.is_some() && requests.len() < 2) {
         return Err(
-            "live Andon requires an ordinary Tower generation without policy promotion".into(),
+            "live Andon requires a nonzero Tower generation; governance requires at least two scheduled requests".into(),
         );
+    }
+    if operator.is_some_and(|settings| settings.policy_promotion.is_some()) != governor.is_some() {
+        return Err("live Andon policy promotion requires both an independent governor and an explicit operator promotion allowance".into());
     }
     if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN {
         return Err("live Andon requires the configured Unix-millisecond clock domain".into());
@@ -99,7 +110,13 @@ where
             None
         }
         Mode::Existing(profile) => {
-            profile.require_legacy()?;
+            if let Some(governor) = governor {
+                if profile.campaign_requirement() != Some(governor.campaign_requirement()) {
+                    return Err("governed Andon recovery requires fa.guarded-submit/2 with the exact independently selected campaign limits".into());
+                }
+            } else {
+                profile.require_legacy()?;
+            }
             let custody = profile.admit(&config)?;
             if !custody.retention_requested() {
                 return Err(
@@ -142,7 +159,19 @@ where
         );
     }
     custody_paths.push(history_output);
-    let endpoints = check_paths(&config, actor, reviewer, operator, requests, &custody_paths)?;
+    let mut endpoints = check_paths(&config, actor, reviewer, operator, requests, &custody_paths)?;
+    if let Some(governor) = governor {
+        governor.check_host(
+            &config,
+            actor,
+            reviewer,
+            operator.expect("paired promotion operator checked above"),
+            requests,
+        )?;
+        governor.check_custody_paths(&custody_paths)?;
+        endpoints.push(governor.socket.clone());
+        custody_paths.push(&governor.socket);
+    }
     let endpoint_paths: Vec<_> = endpoints.iter().map(PathBuf::as_path).collect();
     if let Some(operator) = operator {
         operator.check_host(&config, actor, reviewer, &endpoint_paths)?;
@@ -156,6 +185,20 @@ where
             requests,
             settings.config.identity(),
         )?;
+        if let Some(governor) = governor {
+            // Different listener paths cannot make one credential set into
+            // both the independent labeler and the policy approval custodian.
+            let peer = evaluator.evaluator.policy()?;
+            let other = governor.governor;
+            if peer.uid() == other.uid()
+                && peer.gid() == other.gid()
+                && !matches!((peer.pid(), other.pid()), (Some(a), Some(b)) if a != b)
+            {
+                return Err(
+                    "live evaluator and policy governor require disjoint credential sets".into(),
+                );
+            }
+        }
         evaluator.check_custody_paths(&custody_paths)?;
         custody_paths.push(evaluator.socket_path());
     }
@@ -168,7 +211,7 @@ where
             reviewer,
             requests,
             operator,
-            None,
+            governor,
             &custody_paths,
         )?;
     }
@@ -185,12 +228,7 @@ where
     let (host, roles, retention, owner_start) = match mode {
         Mode::Create(_) => {
             deadline.check(time())?;
-            let (host, roles) = match validation {
-                Some(limits) => {
-                    settings.create_checked(&config, limits, RecoveryReserve::terminal())?
-                }
-                None => settings.create(&config, Some(RecoveryReserve::terminal()))?,
-            };
+            let (host, roles) = create(&config, settings, validation, governor)?;
             (
                 host,
                 roles,
@@ -200,7 +238,24 @@ where
         }
         Mode::Existing(profile) => {
             let custody = recovery.expect("recovery custody admitted");
-            let expected = settings.requirements(&config, profile.minimum())?;
+            let expected = match governor {
+                Some(_) => {
+                    // Keep the independently selected effective policy and
+                    // campaign inventory; neither is inferred from history.
+                    let expected = FileAndonRecoveryRequirements::new(
+                        profile.requirements(&config),
+                        settings.config.clone(),
+                        settings.windows.clone(),
+                        settings.minimum_evaluation_revision,
+                    )
+                    .map_err(debug)?;
+                    match settings.joint {
+                        Some(policy) => expected.require_joint(policy).map_err(debug)?,
+                        None => expected,
+                    }
+                }
+                None => settings.requirements(&config, profile.minimum())?,
+            };
             let expected = match validation {
                 Some(limits) => expected.require_publication(limits).map_err(debug)?,
                 None => expected,
@@ -248,6 +303,16 @@ where
     {
         return Err(retention.failure(&host, error));
     }
+    let live_governor = match (governor, roles.oversight.policy_governor) {
+        (Some(settings), Some(role)) => Some((settings, role)),
+        (None, None) => None,
+        _ => {
+            return Err(retention.failure(
+                &host,
+                "native Andon returned a different governor inventory than selected".into(),
+            ));
+        }
+    };
     let (port, mut driver) = host.into_supervised_driver();
     let human = roles.oversight.human;
     let prepared = control.checkpoint(&mut driver, &human, &deadline, &mut time);
@@ -281,6 +346,7 @@ where
         human,
         owner_start,
         Some(control),
+        live_governor,
         live_evaluator,
         prechecks,
         deadline,
@@ -288,6 +354,77 @@ where
         |host, _, _| retention.retain(host),
     );
     result.map_err(|error| guarded::acknowledged(acknowledged, &error))
+}
+
+/// Compose existing first-image contracts before the sole storage creation.
+/// No post-bootstrap enable can leave an evaluated owner without its required
+/// independent policy governor, and joint selection never falls back to /1.
+fn create(
+    config: &Config,
+    settings: &Settings,
+    publication: Option<PublicationLimits>,
+    governor: Option<&governor::Settings>,
+) -> Result<(FileOversight, FileEvaluatedOversightRoles), String> {
+    let Some(governor) = governor else {
+        return match publication {
+            Some(limits) => settings.create_checked(config, limits, RecoveryReserve::terminal()),
+            None => settings.create(config, Some(RecoveryReserve::terminal())),
+        };
+    };
+    settings.creation()?;
+    let guards = FileGuardSet {
+        stream: None,
+        decoder: None,
+        decoder_stop: None,
+        source: Some(config.source_policy),
+        identity: None,
+        campaigns: Some(governor.campaign_requirement()),
+        credential: None,
+    };
+    let reserve = RecoveryReserve::terminal();
+    match (settings.joint, publication) {
+        (Some(policy), Some(limits)) => FileOversight::create_checked_joint_andon_guarded_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            settings.protocol.clone(),
+            policy,
+            &settings.config,
+            limits,
+            reserve,
+        ),
+        (Some(policy), None) => FileOversight::create_joint_andon_guarded_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            settings.protocol.clone(),
+            policy,
+            &settings.config,
+            reserve,
+        ),
+        (None, Some(limits)) => FileOversight::create_checked_andon_guarded_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            settings.protocol.clone(),
+            &settings.config,
+            limits,
+            reserve,
+        ),
+        (None, None) => FileOversight::create_andon_guarded_reserved(
+            &config.store,
+            config.profile.clone(),
+            &guards,
+            None,
+            settings.protocol.clone(),
+            &settings.config,
+            reserve,
+        ),
+    }
+    .map_err(debug)
 }
 
 fn stop_recovery<F>(

@@ -260,6 +260,7 @@ fn seed_hold(root: &Directory) -> PathBuf {
         service::Selection {
             settings: &settings, mode: service::Mode::Create(&output), requests: &[7],
             generation: GENERATION, operator: None, evaluator: None, prechecks: None, inputs: &[],
+            governor: None,
         },
         || ElapsedTick(1000),
     )
@@ -293,6 +294,7 @@ fn run_history_label(root: &Directory, original: &Path, round: u64, requests: &[
         service::Selection {
             settings: &settings, mode: service::Mode::Existing(&recovered), requests,
             generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+            governor: None,
             prechecks: None, inputs: &[],
         },
         || {
@@ -404,6 +406,7 @@ fn historical_request_accounting_anchor_and_successor_refusals_preserve_the_orig
             service::Selection {
                 settings: &settings, mode: service::Mode::Existing(&recovered), requests,
                 generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+                governor: None,
                 prechecks: None, inputs: &[],
             },
             || {
@@ -472,6 +475,7 @@ fn historical_ready_and_final_prefence_stop_win_without_reconciliation_or_role_i
             service::Selection {
                 settings: &settings, mode: service::Mode::Existing(&recovered), requests,
                 generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+                governor: None,
                 prechecks: None, inputs: &[],
             },
             || {
@@ -535,6 +539,7 @@ fn historical_incomplete_evaluator_yields_to_authenticated_stop_and_outer_deadli
             service::Selection {
                 settings: &settings, mode: service::Mode::Existing(&recovered), requests: &[7, 8],
                 generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+                governor: None,
                 prechecks: None, inputs: &[],
             },
             || {
@@ -597,6 +602,7 @@ fn historical_output_cannot_alias_an_original_source_or_reserved_endpoint() {
             service::Selection {
                 settings: &settings(), mode: service::Mode::Existing(&recovered), requests: &[7, 8],
                 generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+                governor: None,
                 prechecks: None, inputs: &[],
             },
             || panic!("aliased history custody acquired time or replay ownership"),
@@ -630,6 +636,7 @@ fn historical_evaluator_startup_failure_retains_its_fence_for_a_corrected_reopen
         service::Selection {
             settings: &settings, mode: service::Mode::Existing(&recovered), requests: &[7, 8],
             generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+            governor: None,
             prechecks: None, inputs: &[],
         },
         || {
@@ -845,6 +852,7 @@ fn seed_profiled(
         service::Selection {
             settings, mode: service::Mode::Create(&output), requests: &[7],
             generation: GENERATION, operator: None, evaluator: None, prechecks: None, inputs: &[],
+            governor: None,
         },
         || ElapsedTick(1000),
     ).unwrap();
@@ -909,6 +917,7 @@ fn historical_checked_and_joint_profiles_keep_the_original_guards_and_label_cust
                 service::Selection {
                     settings: &wrong_settings, mode: service::Mode::Existing(&recovered), requests: &[7],
                     generation: GENERATION, operator: None, evaluator: Some(&fake),
+                    governor: None,
                     prechecks: None, inputs: &[],
                 },
                 || {
@@ -938,6 +947,7 @@ fn historical_checked_and_joint_profiles_keep_the_original_guards_and_label_cust
             service::Selection {
                 settings: &settings, mode: service::Mode::Existing(&recovered), requests: &[7],
                 generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+                governor: None,
                 prechecks: None, inputs: &[],
             },
             || {
@@ -999,6 +1009,7 @@ fn historical_stopped_owner_refuses_evaluation_and_retains_only_its_original_fen
         service::Selection {
             settings: &settings, mode: service::Mode::Existing(&recovered), requests: &[7, 8],
             generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+            governor: None,
             prechecks: None, inputs: &[],
         },
         || {
@@ -1025,6 +1036,7 @@ fn historical_stopped_owner_refuses_evaluation_and_retains_only_its_original_fen
         service::Selection {
             settings: &settings, mode: service::Mode::Existing(&recovered), requests: &[7, 8],
             generation: GENERATION, operator: None, evaluator: Some(&evaluator),
+            governor: None,
             prechecks: None, inputs: &[],
         },
         || {

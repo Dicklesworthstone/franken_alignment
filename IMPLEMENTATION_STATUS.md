@@ -1,5 +1,36 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Retain independent evaluation through ordinary live policy changes
+
+Ordinary Tower Andon publication now composes with an independently authenticated
+policy governor and its separately funded promotion operator. Plain and
+simple-witness checked creation use the existing marginal/joint reserved
+constructors to install source, campaign, evaluation and accounting guards in
+one first image. Governed recovery requires independently selected
+`fa.guarded-submit/2` effective-policy/campaign expectations, the complete
+accounting contract and original input/new-output history custody before Fence.
+
+The shared service loop retains original governor and evaluator roles, their
+finite counters and deadlines, Stop, charges, incidents and pending case
+identities across promotion. Old-policy cases remain labelable; later effects
+still require fresh source evidence, helper review and separate human approval.
+An evaluator remains optional, but selected evaluator and governor credentials
+and endpoints must be disjoint before startup. Governance requires an explicit
+schedule of at least two requests and both the governor and operator allowance.
+Historical evaluation-only selection continues to refuse those live control
+roles. No journal, authority or response format is replaced.
+
+Authored regressions cover plain/checked and marginal/joint combinations through
+actual helper/human/actor/governor/evaluator transports, delayed old-policy
+assessment, a causal human-rejection twin, anchored source-free historical
+recovery, stale-policy refusal before Fence, and identity/path/pairing conflicts.
+Existing ordinary selections explicitly retain no governor. Source review
+confirmed the original constructor, wrapper, role and fixture boundaries. Connector content checks pass. The required RCH launcher
+is absent and the execution workspace disconnected; formatting, compilation,
+Clippy and runtime execution remain pending. FA-105 and FA-130 remain in
+progress, and no bead or qualification gate is closed.
+See [the combined service contract](docs/LIVE_ANDON_EVALUATION.md#retain-evaluation-through-an-independent-policy-change).
+
 ## 2026-11-27 · Resume ordinary native generation through a resident sequence
 
 The ordinary `serve-native-generated --continue-generation` selection now resumes

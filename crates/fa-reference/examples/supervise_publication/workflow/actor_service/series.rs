@@ -836,7 +836,8 @@ where
 }
 
 /// Native evaluation is held by one separate peer for this owner's entire
-/// lifetime. A new scheduled request cannot recreate its role or allowances.
+/// lifetime. Optional independent governance retains its own original role.
+/// A new scheduled request cannot recreate either role or its allowances.
 pub(super) fn serve_ready_driver_with_evaluator<F, R>(
     config: Config,
     actor: &Profile,
@@ -851,6 +852,7 @@ pub(super) fn serve_ready_driver_with_evaluator<F, R>(
     reviewer: super::super::FileHumanReviewer,
     owner_start: OwnerStart,
     early_control: Option<super::super::control::Control>,
+    governor: Option<(&governor::Settings, fa_reference::action::consequence::delivery::persistent::observed::governance::campaigns::FilePolicyGovernor)>,
     evaluator: Option<(&evaluator::Settings, fa_reference::action::consequence::delivery::persistent::observed::credibility::FileIndependentEvaluator)>,
     prechecks: Option<&precheck::schedule::Schedule>,
     deadline: Deadline,
@@ -876,7 +878,7 @@ where
         None,
         owner_start,
         early_control,
-        None,
+        governor,
         evaluator,
         prechecks,
         deadline,

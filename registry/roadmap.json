@@ -2834,7 +2834,8 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/andon/precheck.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/client/inventory.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client/wire.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client/wire.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/andon.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3740,7 +3741,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/mediated.rs",
         "docs/LEARNED_JOINT_CREDIBILITY.md",
         "docs/RESIDENT_LEARNED_PUBLICATION.md",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/learned/tests/sequence_governor/qualification_admission.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/andon.rs",
+        "docs/LIVE_ANDON_EVALUATION.md"
       ],
       "founding_ideas": [
         "FI-A14",

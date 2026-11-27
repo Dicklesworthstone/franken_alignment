@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-27 · Keep evaluation and accounting through live policy promotion
+
+- Compose ordinary Tower Andon publication with independent policy governance,
+  preserving original evaluator custody, pending old-policy cases, charges,
+  incidents and finite service allowances.
+- Install campaign and marginal/joint accounting guards atomically at creation;
+  require exact independently selected policy/campaign history for recovery.
+- Keep fresh helper/human approval for each effect and reject overlapping
+  evaluator/governor identities or custody. Add transport regression scenarios;
+  compilation and runtime qualification remain pending.
+
 ## 2026-11-27 · Continue interrupted ordinary native publication sequences
 
 - Add explicit independently anchored `--continue-generation` for an ordinary

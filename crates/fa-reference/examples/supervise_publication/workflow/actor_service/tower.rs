@@ -27,7 +27,7 @@ use std::path::Path;
 
 const FLAG: &str = "--tower-generation";
 const HISTORY_USAGE: &str = "--evaluate-only requires serve-open or serve-open-checked with --tower-generation, --requests, --andon, --evaluator-profile and --guarded; select an independently retained input history and new retain_history_anchor in the guarded profile; operator, precheck, topology, governance and credibility selections are not supported";
-const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, but reject governor, topology, standalone prechecks and credibility activation; ordinary Andon open modes accept --evaluate-only with --evaluator-profile and explicit recorded --requests, retaining independent input/output history in --guarded; this mode rejects operator, precheck, topology, governance and credibility selections; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
+const USAGE: &str = "serve-create|serve-open CONFIG ACTOR_PROFILE REVIEWER_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; serve-create-checked|serve-open-checked CONFIG ACTOR_PROFILE REVIEWER_PROFILE WITNESS_PROFILE --tower-generation GENERATION [--requests KEYS | --precheck-profile PRECHECK_PROFILE] [--operator-profile OPERATOR_PROFILE]; create modes also accept --topology-profile TOPOLOGY_PROFILE with optional --requests KEYS or single-request --precheck-profile PRECHECK_PROFILE; ordinary open modes accept --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with an optional operator and one or more requests; mediated open modes accept --guarded RECOVERY_PROFILE --topology-profile MEDIATED_SUBMIT_V2_PROFILE, with optional --requests KEYS or single new-request --precheck-profile PRECHECK_PROFILE, and --operator-profile; plain and simple-witness checked scheduled modes with at least two requests also accept --governor-profile GOVERNOR_PROFILE paired with the independent operator policy_promotion selection and optional original topology; governed open additionally requires --guarded GUARDED_SUBMIT_V2_PROFILE with independent effective-policy and campaign expectations, and governed mediated recovery requires at least one new scheduled request; ordinary plain/simple-witness create and independently guarded open modes with --requests also accept --precheck-schedule SCHEDULE, optionally with operator, its independent governor and original topology; recovery requires explicit null rows for recorded requests and current selected epochs for new disclosures; never combine a schedule with --precheck-profile; ordinary Tower plain/simple-witness Andon creation requires --andon ANDON_PROFILE --retain-history-anchor NEW_FILE and permits --requests KEYS; Andon recovery requires --andon ANDON_PROFILE --guarded GUARDED_SUBMIT_V1_PROFILE --requests KEYS with a new retain_history_anchor in that profile; both permit --operator-profile OPERATOR_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --precheck-schedule SCHEDULE with explicit --requests, and paired --governor-profile with independently funded operator policy promotion; governed creation requires at least two explicit requests, governed recovery also requires fa.guarded-submit/2 with exact effective policy and campaign expectations; topology, standalone prechecks and credibility activation remain unsupported; ordinary Andon open modes accept --evaluate-only with --evaluator-profile and explicit recorded --requests, retaining independent input/output history in --guarded; this mode rejects operator, precheck, topology, governance and credibility selections; evaluator-assess EVALUATOR_PROFILE ASSESSMENT_JSON";
 
 struct Arguments<'a> {
     config: &'a Path,
@@ -208,12 +208,11 @@ impl<'a> Arguments<'a> {
         }
         if andon.is_some() {
             if topology.is_some()
-                || governor.is_some()
                 || precheck.is_some()
                 || (open && (guarded.is_none() || requests.is_none() || retain_history.is_some()))
                 || (!open && retain_history.is_none())
             {
-                return Err("live Andon requires ordinary plain/simple-witness Tower service, a new --retain-history-anchor on creation or --guarded plus explicit --requests on recovery; topology, governance and single-profile prechecks require separate composition".into());
+                return Err("live Andon requires ordinary plain/simple-witness Tower service, a new --retain-history-anchor on creation or --guarded plus explicit --requests on recovery; topology and single-profile prechecks require separate composition".into());
             }
         } else if retain_history.is_some() || evaluator.is_some() {
             return Err(
@@ -294,6 +293,10 @@ where
             .evaluator
             .map(super::evaluator::Settings::read)
             .transpose()?;
+        let governor = selected
+            .governor
+            .map(super::governor::Settings::read)
+            .transpose()?;
         let singleton = [actor.request];
         let requests = selected.requests.as_deref().unwrap_or(&singleton);
         let prechecks = selected
@@ -303,8 +306,10 @@ where
         let mut inputs = vec![selected.config, selected.actor, selected.reviewer, path];
         inputs.extend(selected.publication);
         inputs.extend(selected.operator);
+        inputs.extend(selected.governor);
         inputs.extend(selected.evaluator);
         inputs.extend(selected.guarded);
+        inputs.extend(selected.precheck_schedule);
         let selection = super::andon::Selection {
             settings: &settings,
             mode: match recovery.as_ref() {
@@ -318,6 +323,7 @@ where
             requests,
             generation: selected.generation,
             operator: operator.as_ref(),
+            governor: governor.as_ref(),
             evaluator: evaluator.as_ref(),
             prechecks: prechecks.as_ref(),
             inputs: &inputs,

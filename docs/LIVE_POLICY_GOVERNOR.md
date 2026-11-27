@@ -271,6 +271,25 @@ together. Native/learned numerical operator profiles refuse this ordinary
 promotion selection. The operator can receive only one approved campaign during
 its original lifetime; reconnects and request-schedule handoffs do not renew it.
 
+### Retain independent evaluation and Andon accounting
+
+The ordinary Tower service can compose this governor with original marginal or
+joint Andon accounting and an optional independently authenticated evaluator.
+Select `--andon`, `--governor-profile`, the separately funded
+`--operator-profile`, and an explicit schedule of at least two requests.
+Creation requires a new retained history anchor; governed recovery requires
+the exact `fa.guarded-submit/2` policy/campaign expectations and independent
+history custody. Plain and simple-witness checked publication keep their
+original final checks.
+
+One acknowledged owner retains campaigns, old and new evaluation cases,
+liabilities and incident history through promotion. The governor approves the
+campaign, the operator promotes it, the evaluator labels cases, and the human
+reviewer approves each effect. None of those roles can replace another. Their
+original service budgets and deadlines survive the transition. The full
+selection, recovery contract and commands are documented in
+[Retain evaluation through an independent policy change](LIVE_ANDON_EVALUATION.md#retain-evaluation-through-an-independent-policy-change).
+
 ## Recover the governed owner with fresh independent custody
 
 Both ordinary and simple-witness checked services can continue an already
@@ -884,6 +903,12 @@ still drops its own grant. Both sidecars run after the independent Stop check;
 new governor work ends before the terminal operator reply grace.
 
 ## Evidence and remaining scope
+
+The ordinary Andon/evaluator composition added on 2026-11-27 has authored
+positive and causal regression scenarios and independent source review.
+Formatting, compilation and execution remain pending because the required RCH
+launcher is absent and the execution workspace became unavailable. No existing
+receipt or gate is promoted to cover this changed source.
 
 The authored regression suite uses an actual separate governor process, native retained
 proposal/review cases, real authenticated sockets, an existing operator

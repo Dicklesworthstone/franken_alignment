@@ -12,6 +12,8 @@ use fa_reference::tower::{ReadArguments, TowerRequest, Verb, encode_request};
 use std::process::{Child, Command as ProcessCommand, ExitStatus};
 use std::sync::mpsc;
 
+#[path = "policy_governor/andon.rs"]
+mod andon;
 #[path = "policy_governor/checked.rs"]
 mod checked;
 #[path = "policy_governor/recovery.rs"]

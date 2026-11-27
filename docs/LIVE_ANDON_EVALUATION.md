@@ -981,6 +981,56 @@ source and witness inputs, profile files, retained archives and authority-store
 paths are checked for collisions before owner work. Precheck schedules retain
 their original input/disclosure reservations. No listener is silently replaced.
 
+## Retain evaluation through an independent policy change
+
+Ordinary Tower creation and guarded recovery can retain an independent policy
+governor beside the original evaluator. Select the governor together with an
+operator whose profile explicitly funds `policy_promotion`, and provide an
+explicit schedule containing at least two requests:
+
+```sh
+cargo run --locked -p fa-reference --example supervise_publication -- \
+  serve-create CONFIG ACTOR_PROFILE REVIEWER_PROFILE \
+  --tower-generation 41 --requests 7,8 \
+  --andon ANDON_PROFILE --retain-history-anchor NEW_HISTORY_ANCHOR \
+  --operator-profile OPERATOR_PROFILE --governor-profile GOVERNOR_PROFILE \
+  --evaluator-profile EVALUATOR_PROFILE
+```
+
+Both marginal `fa.native-andon-operator/1` and joint `/2` accounting retain
+their original contracts. Plain publication and the existing simple-witness
+checked profile are supported. The campaign guard, source guard, accounting and
+terminal recovery reserve are installed together in the first acknowledged
+image; no intermediate unaccounted owner is exposed.
+
+The governor requests and independently approves an original policy-replay
+campaign. The separate operator explicitly promotes that approved policy.
+The evaluator alone supplies independent labels. Each role retains its original
+finite allowance and deadline across every request; a policy change does not
+replenish them or erase old cases, charges or incidents. Pending cases from the
+previous policy remain discoverable and independently assessable. Later effects
+need fresh source evidence, helper review and human approval under the new
+policy; a label or campaign approval cannot supply either publication key.
+
+The evaluator is optional, as in ordinary accounted service, but when selected
+its authenticated peer must also be distinct from the governor. All role sockets,
+profile/source inputs, precheck endpoints and retained-history destinations must
+have distinct custody before clocks, listeners or storage are acquired.
+
+For `serve-open` or its checked variant, select the same governor/operator pair
+and an explicit `--requests` schedule. The guarded recovery profile must use
+`fa.guarded-submit/2` and independently pin the exact effective policy and
+campaign limits as well as the original history anchor, minimum floors and new
+retained output. The complete native accounting and campaign requirements are
+checked before the recovery Fence returns fresh roles. A stale same-generation
+policy, changed campaign budget or omitted guard cannot be inferred from storage
+or silently dropped. Ungoverned recovery keeps its existing legacy profile.
+
+Historical `--evaluate-only` remains a separate, evaluation-only selection and
+rejects a governor. Topology, richer publication profiles and credibility
+activation retain their separate composition requirements. See
+[the governor protocol](LIVE_POLICY_GOVERNOR.md) for Request, Approve and Promote.
+
 ## Recover the same accounted owner
 
 ```sh
@@ -1005,9 +1055,11 @@ an ordinary Fence or fresh evaluator role escapes.
 Historical-only schedules can serve exact receipts without source/helper work.
 New requests still require fresh source, helpers and human approval. The checked
 open variant accepts the corresponding simple witness profile. This ordinary
-recovery command does not select native/learned generated modes, topology, policy
-governor, standalone `--precheck-profile` or credibility-activation capsules.
-Native generated creation uses the separate composition documented above.
+recovery command does not select native/learned generated modes, topology,
+standalone `--precheck-profile` or credibility-activation capsules. Independent
+policy governance uses the explicit paired selection above; it cannot be
+inferred from the journal. Native generated creation uses its separate
+composition documented above.
 
 ## Evaluate recorded ordinary Tower history
 
@@ -1076,6 +1128,15 @@ boundaries, and custody races. Required RCH compilation and runtime qualificatio
 remain pending.
 
 ## Verification boundary
+
+The ordinary governance/evaluation composition adds an authored transport
+regression matrix for plain/checked publication with marginal/joint accounting,
+an old-policy label after promotion, fresh human rejection, source-free anchored
+history recovery, stale-policy refusal and cross-role custody conflicts.
+These cases use the original helper, human, actor, governor and evaluator paths.
+They received source review, but have not been formatted, compiled or executed:
+RCH is absent and the execution workspace disconnected during this session.
+The earlier evidence below does not qualify the new composition.
 
 The generated composition adds five regression functions and two child-process
 harness entrypoints. A distinct evaluator PID uses the actual case/assessment
