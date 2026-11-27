@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Capture learned checkpoints before sampling under independent evaluation
+
+Single-Message and resident learned evaluation can capture the supervisor-selected quiet numerical state before the first selected Message draws a token. The source and history output checks include the checkpoint profile. Added regression definitions cover functional capture, independent late assessment, human approval and rejection, a two-Message sequence and refusal on an audit-only host. Source review confirmed the combined creation paths. Remote build and runtime evidence remain pending.
+
 ## 2026-11-27 · Keep checked publication feeds across resident native evaluation
 
 Resident native generated creation and recovery now compose checked feeds with independent evaluation across Message and Finish. Confirmed-prefix and interrupted-generation recovery keep exact change and fallback requirements, and each release still passes fresh publication checks. Five regression definitions cover positive and negative sequences, recovery, custody collisions and a changed witness after human approval. Runtime qualification awaits the required RCH execution environment.

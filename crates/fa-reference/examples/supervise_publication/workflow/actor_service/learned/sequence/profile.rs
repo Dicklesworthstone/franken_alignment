@@ -125,7 +125,8 @@ pub(super) fn load_evaluated(
     topology: Option<&super::topology::Selection>,
 ) -> Result<Vec<Entry>, String> {
     evaluation.check_sequence_inputs(history, &[path, config.source.path()])?;
-    let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, recovery, false)?;
+    let plan = decode_selected(&read_regular(path, MAX_PROFILE_BYTES)?, recovery,
+        evaluation.checkpoint_before_generation)?;
     let mut inputs = selected_inputs.to_vec();
     inputs.extend([path.to_path_buf(), config.source.path().to_path_buf()]);
     for input in &plan {

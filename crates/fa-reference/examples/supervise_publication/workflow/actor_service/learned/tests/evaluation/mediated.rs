@@ -1136,3 +1136,70 @@ fn evaluator_bind_failure_retains_only_an_acknowledged_creation_cut() {
     assert_eq!(delivered.snapshot.payload, b"A");
     assert!(resumed.read().last_operation() > saved.last_operation());
 }
+
+#[test]
+fn evaluated_mediated_message_keeps_the_original_prompt_checkpoint_after_independent_review() {
+    for decision in [ReviewDecision::Approve, ReviewDecision::Reject] {
+        let root = Root::new();
+        let config_path = super::super::functional_creation::config_file(&root, "functional_restart");
+        let config = Config::read_learned_generation(&config_path).unwrap();
+        let recipe_path = native::write(&root);
+        evidence(&root, &config, 1, true, false);
+        let topology = topology_fixture::creation_profile(&root, false);
+        let mut loaded = recipe::load(&recipe_path, &config, true).unwrap();
+        let prompt = super::super::checkpoint_on_generation::selected_file(&root, 71, 2, 0);
+        let accounting = joint_accounting_file(&root);
+        let pair = Archives::first(&root);
+        let outcome = run_command(&root, &config, Invocation {
+            recipe: &recipe_path,
+            loaded: &loaded,
+            accounting: &accounting,
+            topology: &topology,
+            input: None,
+            output: &pair,
+            mode: &["--checkpoint-before-generation", prompt.to_str().unwrap()],
+            round: 1,
+            decision,
+            evaluator_mode: "assess",
+        });
+        assert_eq!(outcome.snapshot.executions, u64::from(decision == ReviewDecision::Approve));
+        assert_eq!(outcome.evaluation_revision, 2);
+        let cursor = verified_history(&root, &config, &mut loaded, &pair, outcome.evaluation_revision);
+        let (host, _) = cursor.finish().unwrap();
+        let saved = host.learned_stream_checkpoint(71).unwrap();
+        assert_eq!((saved.info().position, saved.info().sampled_draws), (2, 0));
+        assert_eq!(host.learned_generation_inspection().unwrap().numerical.sampled_draws, 2);
+        assert_eq!(host.learned_recovery_usage().unwrap().restart_attempts, 0);
+        assert_eq!(host.inspect().control.ledger.charged, outcome.snapshot.control.ledger.charged);
+        assert_eq!(host.credibility_report().unwrap().revision, outcome.evaluation_revision);
+    }
+}
+
+#[test]
+fn evaluated_audit_only_owner_refuses_checkpoint_capture_before_time_or_storage() {
+    let root = Root::new();
+    let (config, recipe, loaded) = topology_fixture::selected(&root, None, false);
+    let actor = peers::actor_profile(&root, &config, 1);
+    let peer = peer_file(&root, &actor, std::process::id().checked_add(1).unwrap());
+    let accounting = accounting_file(&root);
+    let output = Archives::first(&root);
+    let selected = super::super::checkpoint_on_generation::selected_file(&root, 71, 2, 0);
+    let args = arguments(&root, &config, &actor, &peer, &Invocation {
+        recipe: &recipe,
+        loaded: &loaded,
+        accounting: &accounting,
+        topology: &root.0.join("create-topology.json"),
+        input: None,
+        output: &output,
+        mode: &["--checkpoint-before-generation", selected.to_str().unwrap()],
+        round: 1,
+        decision: ReviewDecision::Approve,
+        evaluator_mode: "assess",
+    });
+    let err = command_with_clock(&args, None, || panic!("rejected checkpoint acquired a clock"))
+        .unwrap_err();
+    assert!(err.contains("functional_restart"), "{err}");
+    assert!(!config.store.exists());
+    assert!(!output.history.exists() && !output.source.exists());
+    assert!(!actor.socket.exists());
+}

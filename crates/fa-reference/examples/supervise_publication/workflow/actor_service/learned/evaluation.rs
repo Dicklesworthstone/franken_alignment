@@ -19,15 +19,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; historical topology uses the same exact v2 input and paired new checkpoint without opening next-source documents; optional precheck and paired operator/generation retain their original live contracts";
+const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; live Messages may select --checkpoint-before-generation PROFILE at a functional restart boundary; historical topology uses the same exact v2 input and paired new checkpoint without opening next-source documents; optional precheck and paired operator/generation retain their original live contracts";
 
-const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; optional --topology-profile requires paired checkpoint output and exact v2 source custody on recovery; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
+const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; optional --topology-profile requires paired checkpoint output and exact v2 source custody on recovery; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; the first remaining Message may select --checkpoint-before-generation PROFILE; operator/generation remains an optional pair";
 
 pub(super) struct Options {
     accounting: PathBuf,
     peer: PathBuf,
     history_input: Option<PathBuf>,
     topology_input: Option<PathBuf>,
+    checkpoint_input: Option<PathBuf>,
     pub(super) evaluate_only: bool,
 }
 
@@ -76,6 +77,7 @@ fn parse_options(
     let mut peer = None;
     let mut history_input = None;
     let mut topology_input = None;
+    let mut checkpoint_input = None;
     let mut seen = BTreeSet::new();
     let mut remaining = args[..4].to_vec();
     let mut continuing = false;
@@ -119,6 +121,10 @@ fn parse_options(
                 }
                 remaining.extend_from_slice(&args[at..at + 2]);
             }
+            "--checkpoint-before-generation" => {
+                checkpoint_input = Some(PathBuf::from(value));
+                remaining.extend_from_slice(&args[at..at + 2]);
+            }
             "--topology-profile" => {
                 topology_input = Some(PathBuf::from(value));
                 remaining.extend_from_slice(&args[at..at + 2]);
@@ -135,6 +141,7 @@ fn parse_options(
         || !seen.contains("--retain-history-anchor")
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
         || (continuing || evaluate_only) != history_input.is_some()
+        || (checkpoint_input.is_some() && (evaluate_only || seen.contains("--finish-after-message")))
         || (evaluate_only
             && [
                 "--continue-generation",
@@ -155,6 +162,7 @@ fn parse_options(
             peer: peer.ok_or(usage)?,
             history_input,
             topology_input,
+            checkpoint_input,
             evaluate_only,
         }),
     ))
@@ -163,6 +171,7 @@ fn parse_options(
 pub(super) struct Selection {
     settings: andon_settings::Settings,
     pub(super) peer: evaluator::Settings,
+    pub(super) checkpoint_before_generation: bool,
     inputs: Vec<PathBuf>,
     pub(super) history_input: Option<PathBuf>,
 }
@@ -177,8 +186,9 @@ impl Options {
         Ok(Selection {
             settings,
             peer,
+            checkpoint_before_generation: self.checkpoint_input.is_some(),
             inputs: [self.accounting, self.peer]
-                .into_iter().chain(self.topology_input).collect(),
+                .into_iter().chain(self.topology_input).chain(self.checkpoint_input).collect(),
             history_input: self.history_input,
         })
     }
@@ -221,8 +231,10 @@ impl Selection {
         inputs.extend(self.history_input.iter().cloned());
         for (index, entry) in entries.iter().enumerate() {
             let loaded = &entry.loaded;
-            if (index != 0 && (loaded.recovery_anchor.is_some() || loaded.topology.is_some()))
-                || loaded.checkpoint_on_generation.is_some()
+            if (index != 0
+                && (loaded.recovery_anchor.is_some()
+                    || loaded.topology.is_some()
+                    || loaded.checkpoint_on_generation.is_some()))
                 || loaded.creation_campaigns.is_some()
                 || loaded.expected_campaigns.is_some()
                 || loaded.generation.required_pre_output_forecast().is_some()
@@ -406,7 +418,6 @@ impl Selection {
             || continuing != self.history_input.is_some()
             || credibility.is_some()
             || loaded.anchor_output.is_none()
-            || loaded.checkpoint_on_generation.is_some()
             || loaded.creation_campaigns.is_some()
             || loaded.expected_campaigns.is_some()
             || loaded.generation.required_pre_output_forecast().is_some()

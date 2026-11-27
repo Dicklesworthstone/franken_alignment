@@ -11,7 +11,7 @@ fn document(id: u64, position: u64, draws: u64) -> String {
 fn selection(id: u64, position: u64, draws: u64) -> checkpoint::Selection {
     checkpoint::Selection::decode(document(id, position, draws).as_bytes()).unwrap()
 }
-fn selected_file(root: &Root, id: u64, position: u64, draws: u64) -> PathBuf {
+pub(super) fn selected_file(root: &Root, id: u64, position: u64, draws: u64) -> PathBuf {
     let path = root.0.join("generation-checkpoint.json");
     fs::write(&path, document(id, position, draws)).unwrap();
     path

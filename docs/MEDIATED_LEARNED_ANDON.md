@@ -147,6 +147,23 @@ without obtaining a new source, rerunning helpers or supplying an effect key.
 Evaluator retirement precedes capture of the final source/history pair, so late
 acknowledged labels are retained in that pair.
 
+A live evaluated Message can also select `--checkpoint-before-generation PROFILE`
+with a `functional_restart` host. The profile uses
+`fa.learned-generation-checkpoint/1` and supplies a fresh checkpoint ID plus
+the expected position and sampled draw count. For example, a two-token prompt
+can select position `"2"` and sampled draws `"0"` to capture its state before
+the first sample. Capture runs on the original generation owner and consumes
+journal capacity. A crossed or mismatched boundary stops generation before a
+new sample. The actor still submits the Message, native helpers review it, and
+the human reviewer decides whether it may publish. The independent evaluator
+can subsequently label the original case.
+
+A resident sequence applies this selection only to its first remaining Message.
+The service retains the numerical checkpoint and later assessments in the same
+history. With topology enabled, the separate source checkpoint still carries
+the original source expenditure. Historical assessment and Finish require no
+generation and refuse this option.
+
 For an explicitly selected next Message:
 
 ```sh

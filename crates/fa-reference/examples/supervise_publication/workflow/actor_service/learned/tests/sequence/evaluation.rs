@@ -534,16 +534,35 @@ fn actual_evaluated_resident_command_keeps_the_original_case_history_through_fin
 }
 
 fn actual_command_profile(joint: bool) {
+    run_command_profile(joint, false);
+}
+
+#[test]
+fn resident_evaluation_captures_only_the_first_message_before_sampling() {
+    run_command_profile(true, true);
+}
+
+fn run_command_profile(joint: bool, checkpoint: bool) {
     let root = Root::new();
     let (config, paths, mut entries) = selected(&root, None, None);
-    let reader = Reader::new(&root, &paths[0]);
+    let config = if checkpoint {
+        let path = super::super::functional_creation::config_file(&root, "functional_restart");
+        Config::read_learned_generation(&path).unwrap()
+    } else {
+        config
+    };
+    let reader = Reader {
+        loaded: recipe::load(&paths[0], &config, false).unwrap(),
+        config,
+    };
+    let config = &reader.config;
     let mut child = EvaluatorChild::start(&root, "both");
-    let selection = select_evaluation_profile(&root, &config, &mut entries, child.0.id(), 4, joint);
+    let selection = select_evaluation_profile(&root, config, &mut entries, child.0.id(), 4, joint);
     let mut rows = Vec::new();
     for (index, entry) in entries.iter().enumerate() {
         let inputs = super::super::mediated_topology::command_inputs(
             &root,
-            &config,
+            config,
             &paths[index],
             &entry.actor,
         );
@@ -579,7 +598,11 @@ fn actual_command_profile(joint: bool) {
     args[1] = root.0.join("command-host.json").display().to_string();
     args[2] = manifest.display().to_string();
     args[3] = root.0.join("command-reviewer.json").display().to_string();
-    let mut peers = Peers::new(&root, &config, &entries);
+    if checkpoint {
+        let path = super::super::checkpoint_on_generation::selected_file(&root, 71, 2, 0);
+        args.extend(["--checkpoint-before-generation".into(), path.display().to_string()]);
+    }
+    let mut peers = Peers::new(&root, config, &entries);
     let outcome = resident::command_with_clock(&args, None, || {
         poll(&mut peers, &root, [Some(ReviewDecision::Approve); 3]);
         crate::workflow::clock()
@@ -637,6 +660,11 @@ fn actual_command_profile(joint: bool) {
     assert_eq!(host.inspect().executions, 3);
     let numerical = host.learned_generation_inspection().unwrap().numerical;
     assert_eq!((numerical.position, numerical.sampled_draws), (6, 4));
+    if checkpoint {
+        let saved = host.learned_stream_checkpoint(71).unwrap();
+        assert_eq!((saved.info().position, saved.info().sampled_draws), (2, 0));
+        assert_eq!(host.learned_recovery_usage().unwrap().restart_attempts, 0);
+    }
     if joint {
         assert!(host.joint_credibility_report(minimum).is_err());
     }
@@ -664,13 +692,17 @@ fn evaluated_resident_grammar_and_future_custody_refuse_before_owner_or_clock_wo
     assert!(selected_evaluation::take_sequence_options(&topology, None).is_ok());
     topology.extend(["--topology-profile".into(), "duplicate".into()]);
     assert!(resident::command_with_clock(&topology, None, || panic!("duplicate topology sampled time")).is_err());
+    let mut checkpoint = valid.clone();
+    checkpoint.extend(["--checkpoint-before-generation".into(), "selected".into()]);
+    assert!(selected_evaluation::take_sequence_options(&checkpoint, None).is_ok());
+    checkpoint.extend(["--checkpoint-before-generation".into(), "duplicate".into()]);
+    assert!(selected_evaluation::take_sequence_options(&checkpoint, None).is_err());
     for option in [
         "--continue-generation",
         "--after-message",
         "--governor-profile",
         "--campaign-profile",
         "--history-anchor",
-        "--checkpoint-before-generation",
         "--actor-profile",
     ] {
         let mut args = valid.clone();

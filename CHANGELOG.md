@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Capture learned checkpoints before sampling under independent evaluation
+
+- Evaluated learned generation accepts a pre-sampling checkpoint on a functional restart boundary. Publication and independent labeling retain their original authority checks.
+
 ## 2026-11-27 · Keep checked publication feeds across resident native evaluation
 
 - Resident native publication supports checked feeds and optional snapshot fallback alongside evaluation, including anchored continuation across a Message/Finish sequence.
