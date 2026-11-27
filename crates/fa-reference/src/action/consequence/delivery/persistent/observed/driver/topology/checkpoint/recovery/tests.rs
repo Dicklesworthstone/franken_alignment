@@ -1,26 +1,42 @@
 //! Real native source checks and guarded recovery. Transport is not authentication.
 use super::*;
-use crate::action::consequence::delivery::persistent::observed::driver::topology::{
-    FileDriverTopology, checkpoint::MAX_TOPOLOGY_CHECKPOINT_BYTES};
-use crate::action::consequence::delivery::persistent::observed::mediation::source::{
-    TopologySourceWork, TOPOLOGY_REFRESH_READ_BYTES};
-use crate::action::consequence::mediation::MAX_CHECK_EDGE_VISITS;
-use crate::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};
 use crate::action::consequence::congress::{CongressPolicy, MemberPolicy};
-use crate::action::consequence::delivery::persistent::{FileDeliveryProfile, JournalLimits, RecoveryReserve};
+use crate::action::consequence::delivery::StopRequest;
 use crate::action::consequence::delivery::persistent::observed::FileOversightProfile;
+use crate::action::consequence::delivery::persistent::observed::credibility::andon::tests as accounting;
+use crate::action::consequence::delivery::persistent::observed::driver::topology::{
+    FileDriverTopology, checkpoint::MAX_TOPOLOGY_CHECKPOINT_BYTES,
+};
+use crate::action::consequence::delivery::persistent::observed::guarded::mediated::FileMediatedRoles;
 use crate::action::consequence::delivery::persistent::observed::guarded::{
     FileGuardSet, FileRecoveryRequirements,
     mediated::{FileMediatedBootstrap, FileMediatedRequirements, FileTopologyRequirement},
-    recovery::FileGuardedRecoveryStatus};
-use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
+    recovery::FileGuardedRecoveryStatus,
+};
+use crate::action::consequence::delivery::persistent::observed::mediation::FileMediationUpdate;
+use crate::action::consequence::delivery::persistent::observed::mediation::source::{
+    TOPOLOGY_REFRESH_READ_BYTES, TopologySourceWork,
+};
+use crate::action::consequence::delivery::persistent::{
+    FileDeliveryProfile, JournalIo, JournalLimits, RecoveryReserve,
+};
 use crate::action::consequence::gate::containment::session::policy::{Policy, Predicate};
+use crate::action::consequence::gate::containment::{ActorState, RestartGrade, RestartProfile};
 use crate::action::consequence::mediation::CutCheck;
-use crate::action::consequence::oversight::{CommitteeContract, HelperContract};
+use crate::action::consequence::mediation::MAX_CHECK_EDGE_VISITS;
+use crate::action::consequence::oversight::credibility::GroundTruth;
 use crate::action::consequence::oversight::human::HumanReviewPolicy;
+use crate::action::consequence::oversight::{CommitteeContract, HelperContract};
+use crate::action::{ElapsedTick, Purpose, ResolvedTarget, Scope};
 use crate::full_input::InputProfileBinding;
 use crate::reducer::Caps;
-use std::{collections::BTreeMap, fs, io::Cursor, sync::atomic::{AtomicU64, Ordering}};
+use crate::round::Verdict;
+use std::{
+    collections::BTreeMap,
+    fs,
+    io::Cursor,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 struct Directory(PathBuf);
 impl Directory {
@@ -119,13 +135,15 @@ fn selection(root: &Directory, generation: u64) -> TopologyCheckpointResume {
     TopologyCheckpointResume { topology_path: root.topology(), inventory_path: root.inventory(),
         next: loaded(generation + 1) }
 }
-fn recover(root: &Directory, record: &TopologyCheckpoint, generation: u64)
-    -> (FileSupervisedDriver, FileMediationObserver)
-{
+fn recover(
+    root: &Directory,
+    record: &TopologyCheckpoint,
+    generation: u64,
+) -> (FileSupervisedDriver, FileMediationObserver) {
     let expected = FileMediatedRequirements {
         oversight: FileRecoveryRequirements { guards: guards(), effective_policy: profile().delivery.policy,
             credential_epoch: None, minimum: record.minimum() },
-        topology: FileTopologyRequirement { initial: loaded(1).graph().clone(), current: loaded(generation).graph().clone(), available: true },
+        topology: FileTopologyRequirement { initial: loaded(1).graph().clone(), current: loaded(generation).graph().clone(), available: record.available() },
         prediction: None, evaluation: None,
     };
     let mut run = FileOversight::begin_open_mediated_guarded_anchored(root.store(), profile(),
@@ -234,4 +252,285 @@ fn post_recovery_source_loss_remains_withdrawn_and_spent_work_can_be_retained() 
     let after = capture(&driver);
     assert_eq!(after.work().checks, 2); assert_eq!(after.last_operation(), 3);
     assert_eq!(decoded(&encoded(&after)), after);
+}
+
+fn seed_evaluated() -> (FileSupervisedDriver, Directory) {
+    let root = Directory::new();
+    fs::write(root.topology(), text(1)).unwrap();
+    fs::write(root.inventory(), INVENTORY).unwrap();
+    let (mut host, roles) = FileOversight::create_mediated_guarded_reserved(
+        root.store(),
+        accounting::profile(),
+        &guards(),
+        None,
+        FileMediatedBootstrap {
+            topology: loaded(1).graph().clone(),
+            reserve: RecoveryReserve::terminal(),
+            publication: None,
+        },
+        None,
+        Some(accounting::protocol()),
+    )
+    .unwrap();
+    host.observe_time(host.revision(), ElapsedTick(1)).unwrap();
+    let mut source = roles
+        .topology_observer
+        .bind_topology_source(
+            &host,
+            host.revision(),
+            root.topology(),
+            root.inventory(),
+            loaded(1),
+        )
+        .unwrap();
+    let rev = host.revision();
+    certified(source.refresh(&mut host, rev, 1).unwrap());
+    // A real original full-input Hold remains pending independent evaluation.
+    // No saved transcript or fabricated assessment is imported on recovery.
+    accounting::case(&mut host, 1, Verdict::Hold);
+    assert_eq!(host.credibility_report().unwrap().pending_cases, 1);
+    let (port, mut driver) = host.into_supervised_driver();
+    drop(port);
+    driver
+        .require_topology(revision(&driver), FileDriverTopology::new(source))
+        .unwrap();
+    (driver, root)
+}
+
+fn recover_evaluated(
+    root: &Directory,
+    record: &TopologyCheckpoint,
+) -> (FileOversight, FileMediatedRoles) {
+    let expected = FileMediatedRequirements {
+        oversight: FileRecoveryRequirements {
+            guards: guards(),
+            effective_policy: accounting::profile().delivery.policy,
+            credential_epoch: None,
+            minimum: record.minimum(),
+        },
+        topology: FileTopologyRequirement {
+            initial: loaded(1).graph().clone(),
+            current: record.expected().graph().clone(),
+            available: record.available(),
+        },
+        prediction: None,
+        evaluation: Some(accounting::protocol()),
+    };
+    let mut run = FileOversight::begin_open_mediated_guarded_anchored(
+        root.store(),
+        accounting::profile(),
+        &expected,
+        record.history_anchor(),
+    )
+    .unwrap()
+    .require_recovery_reserve(RecoveryReserve::terminal())
+    .unwrap();
+    while run.progress().status == FileGuardedRecoveryStatus::Replaying {
+        run.advance(run.progress().replayed_events, 1).unwrap();
+    }
+    run.finish().unwrap()
+}
+
+fn same_source_work(before: &TopologyCheckpoint, after: &TopologyCheckpoint) {
+    assert_eq!(after.expected(), before.expected());
+    assert_eq!(after.topology_bytes(), before.topology_bytes());
+    assert_eq!(after.inventory_bytes(), before.inventory_bytes());
+    assert_eq!(after.work(), before.work());
+    assert_eq!(after.last_operation(), before.last_operation());
+    assert!(!after.available());
+}
+
+#[test]
+fn evaluated_checkpoint_retains_late_labels_and_resumes_original_source_work() {
+    let (driver, root) = seed_evaluated();
+    let original = capture(&driver);
+    assert_eq!(original.work().checks, 1);
+    drop(driver);
+    // Historical evaluation and checkpoint export must not read next sources.
+    fs::remove_file(root.topology()).unwrap();
+    fs::remove_file(root.inventory()).unwrap();
+    let (mut host, roles) = recover_evaluated(&root, &original);
+    let observer = roles.topology_observer;
+    let evaluator = roles.evaluator.unwrap();
+    let fenced = observer
+        .evaluated_topology_checkpoint(&host, &original)
+        .unwrap();
+    same_source_work(&original, &fenced);
+    assert_eq!(
+        fenced.history_anchor().revision(),
+        original.history_anchor().revision() + 1
+    );
+    host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
+    let control = host.inspect().control;
+    assert!(accounting::assess(&mut host, &evaluator, 1, GroundTruth::Benign).unwrap());
+    assert_eq!(host.inspect().control, control);
+    assert_eq!(host.evaluation_history(101).unwrap().len(), 1);
+    assert_eq!(host.credibility_report().unwrap().pending_cases, 0);
+    let before = root.bytes();
+    let saved = observer
+        .evaluated_topology_checkpoint(&host, &original)
+        .unwrap();
+    same_source_work(&original, &saved);
+    assert_eq!(saved.history_anchor(), &host.history_anchor().unwrap());
+    assert_eq!(decoded(&encoded(&saved)), saved);
+    assert_eq!(root.bytes(), before);
+    assert!(host.mediation_snapshot().unwrap().accepted.is_none());
+    assert_eq!(host.inspect().executions, 0);
+    drop(host);
+
+    // The exported withdrawn pair remains usable for a later real source
+    // continuation. Neither the historical label nor recovery refills work.
+    let (mut host, roles) = recover_evaluated(&root, &decoded(&encoded(&saved)));
+    assert_eq!(host.evaluation_history(101).unwrap().len(), 1);
+    host.observe_time(host.revision(), ElapsedTick(3)).unwrap();
+    fs::write(root.topology(), text(2)).unwrap();
+    fs::write(root.inventory(), INVENTORY).unwrap();
+    let (port, mut driver) = host.into_supervised_driver();
+    drop(port);
+    let report = driver
+        .resume_topology_checkpoint(
+            revision(&driver),
+            2,
+            roles.topology_observer,
+            &saved,
+            selection(&root, 1),
+        )
+        .unwrap();
+    certified(report);
+    let resumed = capture(&driver);
+    assert_eq!(resumed.work().checks, original.work().checks + 1);
+    assert_eq!(
+        resumed.work().reserved_read_bytes,
+        2 * TOPOLOGY_REFRESH_READ_BYTES
+    );
+    assert_eq!(resumed.last_operation(), 3);
+    assert_eq!(
+        driver
+            .supervisor()
+            .host()
+            .unwrap()
+            .evaluation_history(101)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(driver.supervisor().host().unwrap().inspect().executions, 0);
+}
+
+#[test]
+fn evaluated_checkpoint_rejects_foreign_custody_and_a_cut_before_later_source_work() {
+    let (mut driver, root) = seed();
+    let old = capture(&driver);
+    certified(driver.refresh_topology(revision(&driver)).unwrap());
+    let current = capture(&driver);
+    drop(driver);
+    let (driver, observer) = recover(&root, &current, 1);
+    let (other, foreign_root) = seed();
+    let foreign = capture(&other);
+    drop(other);
+    let (_other, foreign_observer) = recover(&foreign_root, &foreign, 1);
+    let host = driver.supervisor().host().unwrap();
+    let before = root.bytes();
+    assert!(
+        foreign_observer
+            .evaluated_topology_checkpoint(&host, &current)
+            .is_err()
+    );
+    assert!(
+        observer
+            .evaluated_topology_checkpoint(&host, &foreign)
+            .is_err()
+    );
+    assert!(observer.evaluated_topology_checkpoint(&host, &old).is_err());
+    let saved = observer
+        .evaluated_topology_checkpoint(&host, &current)
+        .unwrap();
+    same_source_work(&current, &saved);
+    assert_eq!(saved.work().checks, 2);
+    assert_eq!(root.bytes(), before);
+}
+
+#[test]
+fn evaluated_checkpoint_rejects_ordinary_work_after_its_recovery_fence() {
+    for change in [
+        "extra-fence",
+        "effect-sweep",
+        "topology-update",
+        "unacknowledged-time",
+    ] {
+        let (driver, root) = seed();
+        let original = capture(&driver);
+        drop(driver);
+        let (mut driver, observer) = recover(&root, &original, 1);
+        let mut host = driver.supervisor_mut().host_mut().unwrap();
+        assert!(
+            observer
+                .evaluated_topology_checkpoint(&host, &original)
+                .is_ok()
+        );
+        let rev = host.revision();
+        match change {
+            "extra-fence" => host.fence(rev).unwrap(),
+            "effect-sweep" => assert!(host.reconcile_pending(rev).unwrap().is_empty()),
+            "unacknowledged-time" => {
+                host.fail_storage_once(JournalIo::Stage);
+                assert!(host.observe_time(rev, ElapsedTick(3)).is_err());
+            }
+            _ => {
+                let update = FileMediationUpdate {
+                    operation: 2,
+                    expected_generation: 1,
+                    expected_authority_epoch: host.inspect().control.ledger.epoch,
+                    next: Some(loaded(2).graph().clone()),
+                };
+                observer.update(&mut host, rev, &update).unwrap();
+            }
+        }
+        let before = root.bytes();
+        assert!(
+            observer
+                .evaluated_topology_checkpoint(&host, &original)
+                .is_err(),
+            "{change}"
+        );
+        assert_eq!(root.bytes(), before, "{change}");
+    }
+}
+
+#[test]
+fn evaluated_checkpoint_preserves_original_stop_but_refuses_labels_after_stop() {
+    let (driver, root) = seed_evaluated();
+    let original = capture(&driver);
+    drop(driver);
+    let (mut host, roles) = recover_evaluated(&root, &original);
+    let observer = roles.topology_observer;
+    let evaluator = roles.evaluator.unwrap();
+    host.observe_time(host.revision(), ElapsedTick(2)).unwrap();
+    let state = host.inspect();
+    let request = StopRequest {
+        operation: 71,
+        expected_control_sequence: state.control.sequence,
+        expected_authority_epoch: state.control.ledger.epoch,
+    };
+    host.request_stop(host.revision(), request).unwrap();
+    host.fence(host.revision()).unwrap();
+    host.progress_stop(host.revision(), ElapsedTick(3)).unwrap();
+    assert!(host.stop_progress().unwrap().drained());
+    let before = root.bytes();
+    let stopped = observer
+        .evaluated_topology_checkpoint(&host, &original)
+        .unwrap();
+    same_source_work(&original, &stopped);
+    assert_eq!(stopped.history_anchor(), &host.history_anchor().unwrap());
+    assert_eq!(root.bytes(), before);
+    // Native history permits delayed labels, but this service's selected
+    // assessment-only interval ends at Stop and cannot absorb a later label.
+    assert!(accounting::assess(&mut host, &evaluator, 1, GroundTruth::Benign).unwrap());
+    let before = root.bytes();
+    assert!(
+        observer
+            .evaluated_topology_checkpoint(&host, &original)
+            .is_err()
+    );
+    assert_eq!(root.bytes(), before);
 }

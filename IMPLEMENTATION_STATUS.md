@@ -1,5 +1,42 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Evaluate retained learned history with original topology custody
+
+Explicit learned `--evaluate-only` now composes with an exact v2 topology
+checkpoint and its independently retained history anchor. The original sealed
+mediated Andon cursor verifies the complete marginal/joint, numerical and source
+contracts, then selects an original Message or Finish before the recovery Fence.
+Its topology observer remains unbound throughout assessment. The command opens
+no current evidence, helper weights, next graph or inventory, purchases no
+source operation and creates no actor or human-approval listener.
+
+`FileMediationObserver::evaluated_topology_checkpoint` carries the original
+source documents, finite expenditure and last operation through that Fence,
+independent assessments and their clock observations. Only the original terminal
+Stop/Fence/StopProgress sequence may end the interval. Foreign custody, a stale
+source cut, poisoned storage, ordinary extra fences, numerical transitions and
+other work refuse. Availability stays withdrawn; this export grants no source
+or publication authority. Startup failure and final evaluator retirement attempt
+both matching checkpoint outputs while preserving the original error.
+
+Four core regressions cover a real late independent label followed by real
+new-source continuation, foreign/stale custody, unsupported successors, storage
+failure and original Stop boundaries. Six service regressions cover held and
+human-rejected Messages in marginal/joint modes; an actual two-Message history
+and reviewed Finish; exact predecessor/contract/output refusals before fencing;
+Stop during a partial assessment; evaluator startup failure followed by a
+corrected restart from the exported pair; and a real numerical Resume that makes
+the restricted export refuse. Positive historical cases remove live inputs and
+check unchanged numerical work, source spending, publication disposition and
+effect accounting, then reopen the newly retained pair.
+
+Independent source review found no remaining blocker. All ten changed Rust
+files parse and their changed ranges pass dated nightly rustfmt (2026-09-07),
+with the new test module formatted in full; `git diff --check` also passes.
+The required RCH launcher is absent (exit 127), so compilation, runtime tests,
+Clippy and the canonical gate remain unexecuted. The regressions are authored
+coverage, not execution evidence. No bead or qualification gate is closed.
+
 ## 2026-11-27 · Reject impossible publication bootstraps before creating storage
 
 Source-backed native creation now validates reserve dimensions and the complete

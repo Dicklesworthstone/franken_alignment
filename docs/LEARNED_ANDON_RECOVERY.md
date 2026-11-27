@@ -141,8 +141,11 @@ complete accounting/joint/graph requirements and two new output destinations.
 The source extent is checked before event zero. The sole Fence and terminal Stop
 both retain their acknowledged source/history pair; fresh source binding cannot
 discard that recovery point on failure. The ordinary cursor is never used as a
-fallback for a mediated history. Resident and evaluation-only topology remain
-outside this live composition.
+fallback for a mediated history. Resident sequences retain the same composition.
+Explicit [evaluation-only topology recovery](MEDIATED_LEARNED_ANDON.md#evaluate-retained-topology-protected-history)
+keeps the original observer unbound and carries unchanged source work through
+late independent labels into a new paired checkpoint. It opens no next-source
+documents and grants no publication or source authority.
 
 ## Verification boundary
 

@@ -19,7 +19,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT, forbids topology and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; optional precheck and paired operator/generation retain their original live contracts";
+const USAGE: &str = "learned evaluation requires create-learned-generated CONFIG LEARNED_RECIPE REVIEWER_PROFILE with --actor-profile ACTOR_PROFILE, --andon ANDON_PROFILE, --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation, --after-message PREVIOUS_REQUEST or --finish-after-message PREVIOUS_REQUEST additionally requires --history-anchor INPUT; optional --topology-profile requires a new paired source checkpoint and exact v2 source custody on recovery; --evaluate-only requires --history-anchor INPUT and permits only an optional historical --finish-after-message PREVIOUS_REQUEST; historical topology uses the same exact v2 input and paired new checkpoint without opening next-source documents; optional precheck and paired operator/generation retain their original live contracts";
 
 const SEQUENCE_USAGE: &str = "resident learned evaluation requires serve-learned-generated CONFIG SEQUENCE_PROFILE REVIEWER_PROFILE with --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; optional --topology-profile requires paired checkpoint output and exact v2 source custody on recovery; --continue-generation or --after-message PREVIOUS_REQUEST requires --history-anchor INPUT; operator/generation remains an optional pair";
 
@@ -142,7 +142,6 @@ fn parse_options(
                 "--precheck-profile",
                 "--operator-profile",
                 "--tower-generation",
-                "--topology-profile",
             ]
             .iter()
             .any(|flag| seen.contains(flag)))

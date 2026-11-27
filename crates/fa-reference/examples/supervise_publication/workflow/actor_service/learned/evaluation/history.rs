@@ -1,21 +1,17 @@
 //! Explicit bounded evaluation of original learned history after a restart.
 //! Replay verifies numerical provenance once. This path never creates an actor
 //! listener, resumes generation, reads live evidence, offers review or dispatches.
+use super::super::{anchors, checked, cleanup, finish, plus, recipe, startup_custody, topology};
 use super::{
-    Config, Control, Deadline, ElapsedTick, FileSupervisedDriver, Loaded, Options,
-    PeerProfile, Profile, Selection, USAGE, debug, evaluator, ingress,
+    Config, Control, Deadline, ElapsedTick, FileSupervisedDriver, Loaded, Options, PeerProfile,
+    Profile, Selection, USAGE, debug, evaluator, ingress,
 };
-use super::super::{anchors, checked, cleanup, finish, plus, recipe, startup_custody};
 use std::{
     path::Path,
     time::{Duration, Instant},
 };
 
-pub(in super::super) fn command<F>(
-    args: &[String],
-    options: Options,
-    time: F,
-) -> Result<(), String>
+pub(in super::super) fn command<F>(args: &[String], options: Options, time: F) -> Result<(), String>
 where
     F: FnMut() -> ElapsedTick,
 {
@@ -27,6 +23,7 @@ where
     let (args, actor_path) = ingress::take_option(args)?;
     let actor_path = actor_path.ok_or(USAGE)?;
     let (args, anchor_options) = anchors::take_options(&args)?;
+    let (args, topology_path) = topology::take_option(&args)?;
     let (args, finish_after) = finish::take_option(&args)?;
     if args.len() != 4 || args[0] != "create-learned-generated" {
         return Err(USAGE.into());
@@ -38,6 +35,14 @@ where
     // present policy evidence, native helper weights and credentials unopened.
     let mut loaded = recipe::load(Path::new(&args[2]), &config, false)?;
     anchor_options.admit(&config, &mut loaded, true)?;
+    // Select the complete retained source cut and a new paired destination.
+    // Assessment never calls the next-source loader or binds its observer.
+    topology::admit(
+        &config,
+        &mut loaded,
+        topology_path.as_deref(),
+        topology::Mode::Assessment,
+    )?;
     let selected = options.read()?;
     selected.check_inputs(
         &loaded,
@@ -93,11 +98,25 @@ where
     // Original independent Stop is admitted before replay and remains serviced
     // through the final evaluator quantum. No human approval session is opened.
     let mut control = Control::new(&config, loaded.request, Some(reviewer))?;
-    let ((host, human, _observer, _identity), role) = selected.open_history(
+    let ((host, human, _observer, _identity), role, source) = selected.start_history(
         &config, &loaded, &mut control, &deadline, &mut time, finish_after,
     )?;
     let custody = startup_custody::Captured::capture(&loaded, true, &host, None, None)?;
-    let retain_startup = |error| custody.retain_error(error);
+    let source_cut = source
+        .as_ref()
+        .map(|source| source.capture(&host))
+        .transpose()
+        .map_err(|error| custody.retain_error(error))?;
+    let retain_startup = |error| {
+        let error = custody.retain_error(error);
+        match (&source, &source_cut) {
+            (Some(source), Some(saved)) => match source.retain(saved) {
+                Ok(()) => error,
+                Err(retention) => format!("{error}; {retention}"),
+            },
+            _ => error,
+        }
+    };
     let (unused_actor, supervisor) = host
         .into_learned_text_stream_actor_gateway()
         .map_err(debug)
@@ -121,7 +140,21 @@ where
     );
     // No retained output can predate a successful assessment or acknowledged
     // Stop. Attempt custody retention even when the service reports a failure.
-    let failure = anchors::retain(&loaded, &driver, failure);
+    let source_cut = source
+        .as_ref()
+        .map(|source| {
+            let host = driver.supervisor().host().map_err(debug)?;
+            source.capture(&host)
+        })
+        .transpose();
+    let mut failure = anchors::retain(&loaded, &driver, failure);
+    let retained = source_cut.and_then(|saved| match (&source, saved) {
+        (Some(source), Some(saved)) => source.retain(&saved),
+        _ => Ok(()),
+    });
+    if let Err(error) = retained {
+        super::retain_failure(&mut failure, error);
+    }
     let pending = cleanup(driver, config.timing.cleanup_ms, config.timing.poll_ms);
     if let Some(error) = failure {
         return Err(error);

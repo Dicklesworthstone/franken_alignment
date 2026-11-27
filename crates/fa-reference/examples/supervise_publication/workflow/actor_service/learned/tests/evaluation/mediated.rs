@@ -15,6 +15,9 @@ use fa_reference::action::consequence::delivery::persistent::{
 };
 use std::io::Cursor;
 
+#[path = "mediated/history.rs"]
+mod historical_tests;
+
 const PEER_TEST: &str =
     "workflow::actor_service::learned::tests::evaluation_tests::mediated_tests::evaluator_process";
 const PEER_ROOT: &str = "FA_MEDIATED_ACCOUNTED_ROOT";

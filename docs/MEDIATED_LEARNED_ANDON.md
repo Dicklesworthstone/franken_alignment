@@ -186,9 +186,58 @@ All selected source/history destinations are checked against the accounting,
 topology, recipe, actor/reviewer and other profile inputs, the authority store
 and every service endpoint before the first clock or storage creation.
 Optional prechecks and the existing operator pair retain their original
-contracts. Historical `--evaluate-only`, required predictors, campaign governance
-and a separate held-out publication policy remain outside this mediated
-evaluation grammar.
+contracts. Required predictors, campaign governance and a separate held-out
+publication policy remain outside this mediated evaluation grammar.
+
+## Evaluate retained topology-protected history
+
+Independent truth can arrive after the original service has stopped. Select the
+same original Message or Finish, accounting contract and retained source/history
+pair explicitly:
+
+```sh
+supervise_publication create-learned-generated CONFIG ORIGINAL_RECIPE REVIEWER_PROFILE \
+  --evaluate-only --actor-profile ORIGINAL_ACTOR_PROFILE \
+  --topology-profile HISTORY_TOPOLOGY \
+  --andon CURRENT_ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --history-anchor /absolute/independent/retained-history.anchor \
+  --retain-history-anchor /absolute/independent/evaluated-history.anchor
+```
+
+For a recorded Finish, also select `--finish-after-message PREVIOUS_REQUEST`
+and its original request/recipe binding. `HISTORY_TOPOLOGY` uses the existing
+continuation profile with the exact v2 `source_checkpoint` paired to the input
+anchor and a distinct new `retain_checkpoint` output. Both marginal and joint
+Andon profiles retain their complete independently selected contracts. The saved
+source checkpoint must cover the complete selected journal before replay; an
+older pair cannot omit later source expenditure.
+
+The original sealed recovery cursor verifies numerical provenance and selects
+the recorded request before its sole Fence. The returned topology observer stays
+unbound throughout assessment. No current evidence, helper weights, next graph
+or inventory document is opened, and no source operation is purchased. Original
+model/codec assets and the independently retained historical inputs remain
+necessary for replay. Only the evaluator and authenticated Stop endpoints are
+served; no actor or human-approval listener is opened.
+
+After evaluator retirement, the original observer carries its unchanged source
+documents, work and last operation into the new checkpoint. The checkpoint and
+history output include the same acknowledged assessments and terminal Stop.
+The restricted [historical checkpoint rule](TOPOLOGY_WORK_CHECKPOINT.md#historical-evaluation-successors)
+permits only evaluation/time and original terminal events after the recovery
+Fence. It cannot conceal source, numerical, policy or publication successors.
+Availability stays withdrawn; a later live continuation must bind newer source
+generations and pass the original source checks and fresh independent review.
+
+A listener failure after fencing attempts to retain the new Fence pair while
+preserving the error and the existing listener. Correcting that conflict and
+selecting the new pair can reopen the same pending case. Output validation occurs
+before clocks and recovery, and each output remains create-only. Retention is a
+separate fallible operation; a partial export is not an acknowledged pair.
+
+This supplies late-label custody rather than new publication authority. The
+regressions are authored and source reviewed; required RCH compilation and
+runtime qualification remain pending.
 
 ## Serve a resident learned sequence
 

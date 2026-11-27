@@ -33,6 +33,7 @@ pub(super) enum Mode {
     Create,
     Live,
     Historical,
+    Assessment,
 }
 
 const FLAG: &str = "--topology-profile";
@@ -87,7 +88,7 @@ impl Selection {
     pub(super) fn read(config: &Config, path: &Path, mode: Mode) -> Result<Self, String> {
         match mode {
             Mode::Create => Ok(Self::Create(Creation::read(path)?)),
-            Mode::Live | Mode::Historical => {
+            Mode::Live | Mode::Historical | Mode::Assessment => {
                 let selection = Continuation::read(path)?;
                 if matches!(mode, Mode::Historical) && selection.retention_requested() {
                     return Err(

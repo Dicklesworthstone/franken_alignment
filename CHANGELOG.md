@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-11-27 · Evaluate delayed truth for topology-protected learned history
+
+- Support `--evaluate-only --topology-profile` for original learned Message and
+  Finish histories with exact paired v2 source/history custody and new outputs.
+- Keep the original topology observer unbound while independent labels arrive;
+  retain the same source documents, spent work and last operation without live
+  source reads, numerical resumption or publication authority.
+- Export matching acknowledged history/source cuts after evaluator retirement,
+  terminal Stop or listener startup failure. Permit corrected restart from the
+  exported Fence pair and reject unsupported successors or changed contracts.
+- Add four core and six service regressions, including actual Finish selection,
+  independent late truth, Stop priority and numerical-work refusal. Scoped
+  parsing/format checks and source review passed; RCH execution remains pending.
+
 ## 2026-11-27 · Keep failed publication admission retryable
 
 - Validate complete guarded/native bootstrap event counts and recovery-reserve

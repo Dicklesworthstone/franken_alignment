@@ -90,6 +90,33 @@ cut before binding and actual source capture after binding to preserve selected
 outputs on failure. See [source continuity](TOPOLOGY_SOURCE_CONTINUITY.md) for
 failure semantics, independent export requirements and verification limits.
 
+## Historical evaluation successors
+
+`FileMediationObserver::evaluated_topology_checkpoint(host, saved)` retains
+source custody while independent labels are added after recovery. The observer
+must belong to the same healthy owner and remain unbound: binding consumes it,
+so a source cannot spend unjournaled work behind an unchanged journal cut.
+
+The complete retained prefix must be followed by one recovery Fence. Subsequent
+events may contain original clock observations and independent assessments,
+optionally ending in the original Stop/Fence/StopProgress sequence. No label or
+clock may follow that terminal Stop in this assessment interval. Source or graph
+changes, numerical work, effect transitions, policy changes and unrelated fences
+refuse. Original graph/availability, owner identity and control/authority floors
+must also match; a poisoned owner cannot export a successful-looking old cut.
+
+Original topology/inventory bytes, source limits, spent work and last operation
+are preserved exactly. Only the acknowledged history, withdrawn availability
+and native floors advance. This method performs no source read, source binding,
+clock observation, journal mutation or authority grant. Retain its new history
+anchor and source checkpoint together; later live work still needs the original
+newer-generation resumption and fresh source certification.
+
+The [historical learned evaluator](MEDIATED_LEARNED_ANDON.md#evaluate-retained-topology-protected-history)
+uses this boundary after retiring its evaluator, including after an authenticated
+Stop or a listener startup failure. The narrower exact-Fence method and the
+separate terminal/reconciliation reducers keep their existing contracts.
+
 ## Ordinary reconciled checkpoint successors
 
 `FileMediatedRecovery::finish_reconciled_with_checkpoint(&saved, clock)` carries

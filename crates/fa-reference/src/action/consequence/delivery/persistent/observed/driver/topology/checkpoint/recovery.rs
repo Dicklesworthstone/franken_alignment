@@ -95,6 +95,36 @@ impl FileMediationObserver {
         }
         checkpoint.after_recovery_fence(host)
     }
+    /// Retain the original source-work cut across one recovered historical
+    /// evaluation session, without binding or reading any next source.
+    ///
+    /// This separately held observer must belong to the same healthy owner.
+    /// Binding a source consumes it, so unjournaled source operations cannot be
+    /// hidden behind unchanged history. The exact retained prefix, graph and
+    /// availability are checked. Its suffix must begin with one recovery Fence
+    /// and contain only Time/independent Assess events, optionally ending in
+    /// the original Stop/Fence/StopProgress sequence. Other work refuses.
+    ///
+    /// Original documents, spent work and last operation remain unchanged;
+    /// availability remains withdrawn. This read issues no role, refreshes no
+    /// source and writes no journal. Retain the returned checkpoint together
+    /// with its exact history anchor before releasing the original custody.
+    pub fn evaluated_topology_checkpoint(
+        &self,
+        host: &FileOversight,
+        checkpoint: &TopologyCheckpoint,
+    ) -> Result<TopologyCheckpoint, JournalError> {
+        if host.storage_failure().is_some() {
+            return Err(JournalError::Unavailable);
+        }
+        if !Rc::ptr_eq(&self.issuer, &host.issuer) {
+            return Err(Error::Binding.into());
+        }
+        if host.mediation_snapshot()?.accepted.is_some() {
+            return Err(Error::Binding.into());
+        }
+        checkpoint.after_evaluated_recovery(host)
+    }
 }
 
 fn check_history(host: &FileOversight, revision: u64, checkpoint: &TopologyCheckpoint)

@@ -397,7 +397,8 @@ fn historical_evaluation_owns_the_complete_closed_grammar_before_profiles_or_tim
         vec!["--evaluate-only"], vec!["--continue-generation"],
         vec!["--after-message", "1"], vec!["--precheck-profile", "extra"],
         vec!["--operator-profile", "extra", "--tower-generation", "1"],
-        vec!["--topology-profile", "extra"], vec!["--finish-after-message", "01"],
+        vec!["--topology-profile", "extra", "--topology-profile", "duplicate"],
+        vec!["--finish-after-message", "01"],
     ] {
         let mut bad = valid.clone();
         bad.extend(extra.into_iter().map(str::to_owned));

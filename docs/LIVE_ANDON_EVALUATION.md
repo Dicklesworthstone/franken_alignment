@@ -500,8 +500,9 @@ See [live mediated learned evaluation](MEDIATED_LEARNED_ANDON.md#use-the-live-le
 for creation, continuation and the existing topology profile formats. Both
 commands support `--continue-generation` and `--after-message`. The
 single-request command accepts `--finish-after-message`. In a resident
-sequence, a final Finish is selected in the manifest. Topology with
-`--evaluate-only`, predictors, campaigns and separate held-out publication
+sequence, a final Finish is selected in the manifest. Historical `--evaluate-only`
+supports the same exact source/history pair through the unbound observer as
+described below. Predictors, campaigns and separate held-out publication
 qualification remain excluded.
 
 ## Evaluate recorded learned history
@@ -536,8 +537,18 @@ Only the independent evaluator and authenticated Stop endpoints are served.
 The actor profile supplies original audience, request identity and finite service
 limits; its socket is never bound. The reviewer profile supplies the existing
 Stop credentials; no approval session is opened. `--continue-generation`,
-`--after-message`, operator/precheck service options, topology, campaigns,
+`--after-message`, operator/precheck service options, campaigns,
 predictors, stronger qualification and checkpoint compositions are excluded.
+
+For a topology-protected learned history, additionally select
+`--topology-profile HISTORY_TOPOLOGY` with its exact v2 `source_checkpoint` and
+new `retain_checkpoint` output. The checkpoint must match the independent input
+anchor and complete original journal extent. The same sealed mediated recovery
+retains the topology observer without binding a source. Current graph/inventory
+files and next-source documents are not opened. The new pair includes late labels
+and acknowledged Stop while preserving source work, original documents and last
+operation exactly; availability stays withdrawn. See the
+[complete historical topology contract](MEDIATED_LEARNED_ANDON.md#evaluate-retained-topology-protected-history).
 
 Stop and the invocation deadline are checked at every replay boundary, at Ready
 and again after historical selection before the sole Fence. One fresh finite
