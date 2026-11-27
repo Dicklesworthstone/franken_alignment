@@ -132,7 +132,9 @@ environment, so formatting, compilation, Clippy and runtime execution of the
 new changes remain unverified. The Bead remains in progress. Neither this composition nor the
 existing score kernel completes FA-125's six native risk-theater predicates.
 
-The native API supports separately guarded recovery. Live executable support is
-documented separately in [the evaluator workflow](LIVE_ANDON_EVALUATION.md) and
+The native API supports separately guarded recovery. Resident generation can
+select both original live roles through the
+[governed evaluation workflow](RESIDENT_NATIVE_PUBLICATION.md#keep-evaluation-active-through-native-policy-promotion).
+Other live executable support is documented in [the evaluator workflow](LIVE_ANDON_EVALUATION.md) and
 [native text publication](NATIVE_TEXT_PUBLICATION_SERVICE.md); unsupported live
 mode combinations continue to refuse explicitly.

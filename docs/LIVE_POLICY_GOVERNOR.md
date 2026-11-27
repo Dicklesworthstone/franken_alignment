@@ -135,6 +135,27 @@ Full grammar, JSON, custody and failure behavior:
 The core contract is [guarded native recovery](GUARDED_NATIVE_RECOVERY.md).
 Execution scope for this increment is recorded in `IMPLEMENTATION_STATUS.md`.
 
+## Keep evaluation active during native policy governance
+
+The resident `serve-native-generated` command can retain this independent governor
+alongside its original `--andon` and `--evaluator-profile` selection. The original
+atomic bootstrap admits source, numerical, publication, campaign and accounting
+contracts before issuing separate human, governor and evaluator roles. Plain and
+checked publication, including original change feeds and snapshot fallback, work
+with marginal or joint accounting. Delayed old-policy labels remain on their
+original cases after promotion; they supply no publication or campaign key.
+
+Recovery selects both `--evaluation-recovery` and `--recovery-requirements`,
+independent input/new-output anchors, and either the confirmed-Message or exact
+interrupted-generation mode. The independently selected policy, campaign and
+accounting inventory must all match before the single original Fence. Counter
+floors combine by maximum, so neither document weakens the other. Disjoint
+credentials, full path custody, original finite allowances and Stop remain
+mandatory. See the complete
+[native service command and recovery contract](RESIDENT_NATIVE_PUBLICATION.md#keep-evaluation-active-through-native-policy-promotion).
+The single-release grammar and separate held-out publication qualification are
+unchanged. Authored transport regressions remain pending required RCH execution.
+
 ## Start with separate role custody
 
 ```sh

@@ -5,6 +5,8 @@
 mod continuation_tests;
 #[path = "governed_recovery.rs"]
 mod recovery_tests;
+#[path = "governor/andon.rs"]
+mod andon_tests;
 
 use super::*;
 use crate::workflow::actor_service::{governor as live_governor, operator as live_operator};

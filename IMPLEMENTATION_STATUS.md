@@ -1,5 +1,34 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Keep native resident evaluation through independent policy promotion
+
+The resident native generated service now composes original Andon/evaluation
+with an independently authenticated policy governor and separately selected
+promotion operator. It uses the atomic evaluated campaign bootstrap and the
+original resident control loop; the same numerical owner, cases, charges,
+incidents, finite service allowances and Stop survive all Message/Finish
+handoffs. Old-policy cases remain independently labelable after promotion.
+Every later effect still needs current source, helper review, a fresh human
+key and its original final publication witnesses.
+
+Creation preserves the concurrent checked-feed/snapshot-fallback support and
+both marginal and joint accounting. Explicit recovery requires both original
+evaluation-floor and complete policy/campaign documents, exact accounting and
+input/new-output history custody. It retains the larger independently selected
+journal/control/authority lower bounds, uses one original replay/Fence, and
+returns fresh separate human/governor/evaluator roles. The unary continuation
+mode remains explicit across all parser stages and cannot become creation.
+
+Authored service regressions cover plain/feed and marginal/joint combinations
+with separate governor/evaluator processes, actual policy promotion and delayed
+labels, fresh human approval/rejection, original pending/completed numerical
+continuation, contract/floor mismatches before Fence, independent credential and
+path custody, and Stop retirement. Tests reuse original native/helper/human
+transports and exact retained accounting. Independent source review does not
+qualify execution: the required RCH command exits 127 because `rch` is absent,
+so formatting, compilation, Clippy and runtime tests remain pending. FA-026,
+FA-105 and FA-130 stay in progress.
+
 ## 2026-11-27 · Atomically retain governance and evaluation in a native generated owner
 
 The original native evaluated constructor now accepts an explicitly selected

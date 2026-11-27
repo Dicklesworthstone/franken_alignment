@@ -86,20 +86,41 @@ pub(super) fn prepare_governed(
 /// Native generation, source provenance, the terminal reserve and independent
 /// accounting are one original first image. No post-proposal enable or second
 /// writer is used to obtain the evaluator role.
+#[cfg(test)]
 pub(super) fn prepare_andon(
     config: &Config,
     inputs: &Inputs,
     selected: GeneratedSourceProfile,
     settings: &super::super::andon_settings::Settings,
 ) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String> {
+    let (host, human, _, evaluator) =
+        prepare_andon_selected(config, inputs, selected, settings, None)?;
+    Ok((host, human, evaluator))
+}
+
+/// Preserve both independent role types when the original evaluated first
+/// image also selects campaign governance. Neither is reconstructed from a
+/// flag after publication, and neither grants the independent human effect key.
+pub(super) fn prepare_andon_selected(
+    config: &Config,
+    inputs: &Inputs,
+    selected: GeneratedSourceProfile,
+    settings: &super::super::andon_settings::Settings,
+    campaigns: Option<FileCampaignRequirement>,
+) -> Result<(
+    FileOversight, FileHumanReviewer, Option<FilePolicyGovernor>, FileIndependentEvaluator,
+), String> {
     settings.creation()?;
     let mut evaluation = FileGeneratedEvaluationConfig::new(settings.protocol.clone());
     if let Some(policy) = settings.joint {
         evaluation = evaluation.with_joint(policy).map_err(debug)?;
     }
-    let evaluation = evaluation
+    let mut evaluation = evaluation
         .with_andon(settings.config.clone())
         .map_err(debug)?;
+    if let Some(campaigns) = campaigns {
+        evaluation = evaluation.with_campaigns(campaigns).map_err(debug)?;
+    }
     let (host, roles) = FileOversight::create_generated_text_stream_from_source_evaluated(
         &config.store,
         config.profile.clone(),
@@ -109,5 +130,5 @@ pub(super) fn prepare_andon(
         evaluation,
     )
     .map_err(debug)?;
-    Ok((host, roles.oversight.human, roles.evaluator))
+    Ok((host, roles.oversight.human, roles.oversight.policy_governor, roles.evaluator))
 }

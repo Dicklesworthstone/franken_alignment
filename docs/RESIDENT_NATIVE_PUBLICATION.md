@@ -814,9 +814,9 @@ even without a confirmed Message predecessor. Its first selected disclosure
 binds the actual post-Fence owner epoch before source acquisition or numerical
 resume. Later stale expectations cannot initiate a successor.
 
-Policy governance, topology, offline credibility activation and the separate
-held-out joint publication guard still require their own compositions and are
-refused. The newly supported Andon `/2` policy qualifies original helper-weight
+Policy governance requires the complete independent role and recovery selection
+below. Topology, offline credibility activation and the separate held-out joint
+publication guard still require their own compositions and are refused. The newly supported Andon `/2` policy qualifies original helper-weight
 updates; it does not supply a missing held-out publication contract. No selected guard
 is silently removed. Single-release native and learned modes keep their separate
 grammars.
@@ -840,6 +840,67 @@ correctly remains marginally unqualified; these fixtures do not claim successful
 weight promotion. All four changed Rust files passed scoped parsing/formatting
 with the available 2026-08-30 rustfmt. Compilation and runtime execution remain
 pending.
+
+### Keep evaluation active through native policy promotion
+
+Resident native generation can explicitly combine its original Andon/evaluator
+selection with independent policy governance:
+
+```sh
+supervise_publication serve-native-generated CONFIG SEQUENCE REVIEWER_PROFILE \
+  --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE \
+  --operator-profile OPERATOR_PROFILE --tower-generation NONZERO \
+  --governor-profile GOVERNOR_PROFILE \
+  --retain-history-anchor NEW_OUTPUT_ANCHOR
+```
+
+The original source, decoder/tokenizer, stream, publication, reserve, campaign,
+evaluation and marginal or joint Andon contracts are installed in one
+acknowledged first image. Checked publication keeps its original simple
+witnesses, change feeds and selected snapshot fallback. The independently
+selected governor and evaluator must have disjoint credential sets and service
+paths; an account or socket name alone cannot establish separate custody.
+
+One resident owner retains both roles and their original finite service
+allowances across Messages, policy promotion and Finish. Old-policy cases can
+receive delayed independent labels after a promotion. Labels preserve their
+original case identity and do not authorize policy changes or effects. A policy
+change still requires the original retained-corpus campaign, separate governor
+approval and explicit operator promotion. The next release still requires fresh
+source evidence, helper review, independent human approval and final witnesses.
+
+For an explicitly recovered suffix, supply both
+`--evaluation-recovery EVALUATION_REQUIREMENTS` and
+`--recovery-requirements POLICY_AND_GUARD_REQUIREMENTS`, together with the
+independent input/new-output anchors and either `--continue-generation` or
+`--after-message PREVIOUS_REQUEST`. The two documents have different jobs:
+the original evaluation document retains its independent lower bounds, while
+the governed document pins the complete effective policy and campaign guards.
+Each journal/control/authority minimum is the greater selected lower bound;
+neither document can weaken the other. Complete accounting and window inventory
+remain mandatory through the original Andon profile.
+
+The same original accounted recovery cursor checks all contracts and floors
+before its one Fence. It returns fresh separate human, governor and evaluator
+roles, preserving numerical work, delayed cases, charges and incidents. Pending
+or completed-unsubmitted generation continues only when its original intent
+matches. Confirmed-Message suffix and singleton Finish retain their existing
+recovery rules. Stop and invocation deadlines remain in force throughout.
+
+The complete source/contract/history namespace is reserved against every future
+actor, human, Stop, precheck, operator, evaluator and governor endpoint before
+live work. Creation without the independent role pair, overlapping credential
+sets, omitted recovery requirements and changed original contracts refuse.
+Topology, fresh credibility activation and the separate held-out publication
+guard still require their own compositions.
+
+Authored regressions cover plain/feed publication and marginal/joint accounting,
+separate governor and evaluator processes, policy replay while current source is
+absent, delayed old/new-policy labels, fresh human approval and rejection,
+pending/completed recovery without resampling, both independent floor documents,
+credential/path conflicts and authenticated Stop. Source review and these
+regression definitions are not compilation or runtime evidence; required RCH
+qualification remains pending.
 
 ### Recover an accounted resident suffix
 
@@ -1104,7 +1165,10 @@ explicit creation or independently guarded recovery governor selection described
 Live evaluation and Andon accounting require their paired selection and new
 retained anchor. Accounted recovery additionally requires explicit
 `--after-message` or `--continue-generation`, an independent input anchor and
-the evaluation recovery requirements above. Exact prechecks still require their
+the evaluation recovery requirements above. Accounted policy governance also
+requires the independent governor/operator selection and complete policy/campaign
+recovery requirements; neither recovery document replaces the other.
+Exact prechecks still require their
 explicit version-two manifest selections; accounting does not imply governance
 or any additional disclosure.
 

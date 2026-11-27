@@ -457,6 +457,7 @@ where
     )
 }
 
+#[cfg(test)]
 fn run_accounted<F>(
     config: Config,
     entries: Vec<Entry>,
@@ -471,10 +472,36 @@ fn run_accounted<F>(
 where
     F: FnMut() -> ElapsedTick,
 {
+    run_accounted_selected(
+        config, entries, reviewer_profile, publication, selection, history,
+        accounting, None, None, time, output,
+    )
+}
+
+/// Independent evaluation and governance retain separate original roles beside
+/// one numerical owner. Complete recovery requirements never come from labels
+/// or the governor's current connection.
+fn run_accounted_selected<F>(
+    config: Config,
+    entries: Vec<Entry>,
+    reviewer_profile: &PeerProfile,
+    publication: Option<&PublicationProfile>,
+    selection: (Mode, Option<&operator::Selection>),
+    history: &anchors::Selection,
+    accounting: andon::Selection<'_>,
+    selected_governor: Option<&governor::Settings>,
+    requirements: Option<&FileRecoveryRequirements>,
+    time: F,
+    output: &mut impl Write,
+) -> Result<(), String>
+where
+    F: FnMut() -> ElapsedTick,
+{
     let mut retention = anchors::Retention::new(Some(history));
     let result = run_retained(
         config, entries, reviewer_profile, publication, selection, None,
-        Some(history), None, None, Some(accounting), &mut retention, time, output,
+        Some(history), selected_governor, requirements, Some(accounting),
+        &mut retention, time, output,
     );
     retention.finish(result)
 }
@@ -522,12 +549,12 @@ where
     profile::validate_mode(&config, &entries, reviewer_profile, mode)?;
     if let Some(accounting) = accounting {
         accounting.check_mode(mode)?;
-        if credibility.is_some()
-            || selected_governor.is_some()
-            || requirements.is_some()
-        {
+        if credibility.is_some() {
             return Err(andon::INVALID.into());
         }
+        accounting.check_governor(
+            selected_governor, selected_operator, requirements.is_some(),
+        )?;
         accounting.check_configuration(&config, publication)?;
         accounting.check_actors(
             &config,
@@ -634,22 +661,23 @@ where
     first.actor.secure_socket()?;
     let mut control = Control::new(&config, first.actor.request, Some(reviewer_profile))?;
     let (host, reviewer, governor_role, evaluator_role) = if let Some(accounting) = accounting {
-        let (host, reviewer, evaluator) = match accounting.recovery {
+        let (host, reviewer, governor, evaluator) = match accounting.recovery {
             Some(recovery) => {
                 let mut stopped = None;
                 let opened = recovery.open(
-                    &config, &first.inputs, selected, accounting,
+                    &config, &first.inputs, selected, accounting, requirements,
                     history.ok_or(andon::INVALID)?, &mut control, &first_deadline,
                     &mut time, &mut stopped,
                 );
                 retention.observe_stop(stopped);
                 opened?
             }
-            None => bootstrap::prepare_andon(
+            None => bootstrap::prepare_andon_selected(
                 &config, &first.inputs, selected, accounting.settings,
+                selected_governor.map(governor::Settings::campaign_requirement),
             )?,
         };
-        (host, reviewer, None, Some(evaluator))
+        (host, reviewer, governor, Some(evaluator))
     } else if let Some(requirements) = requirements {
         let anchor = history
             .and_then(anchors::Selection::input)

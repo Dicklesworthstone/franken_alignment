@@ -934,7 +934,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/continuation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/continuation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_continuation.rs",
-        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor_continuation.rs"
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor_continuation.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon/recovery.rs"
       ],
       "founding_ideas": [
         "FI-I03",
@@ -2839,7 +2841,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/evaluator/tests/inventory_client/wire.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/tests/tower_service/series/policy_governor/andon.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests/governance.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/governed_evaluation_tests.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/governed_evaluation_tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon/recovery.rs"
       ],
       "founding_ideas": [
         "FI-A08",
@@ -3752,7 +3756,9 @@
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governed_continuation.rs",
         "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/profile/tests/governor_continuation.rs",
         "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/evaluation/tests/governance.rs",
-        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/governed_evaluation_tests.rs"
+        "crates/fa-reference/src/action/consequence/delivery/persistent/observed/stream/generated/checked/source/governed_evaluation_tests.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon.rs",
+        "crates/fa-reference/examples/supervise_publication/workflow/actor_service/native/sequence/tests/governor/andon/recovery.rs"
       ],
       "founding_ideas": [
         "FI-A14",

@@ -2,14 +2,14 @@
 //! Configuration and evaluator custody are selected before numerical assets,
 //! listeners or the first image; none is inferred from a later journal.
 use super::super::{Config, PeerProfile, Profile, PublicationProfile, exact_precheck, operator};
-use super::{Mode, anchors, evaluation};
+use super::{Mode, anchors, evaluation, governor};
 use crate::workflow::actor_service::{andon_settings, evaluator};
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
 
-pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; credibility promotion requires the explicitly selected joint Andon policy and numerical operator allowance; policy governance, topology and held-out activation require their own composition";
+pub(super) const INVALID: &str = "native live evaluation requires serve-native-generated with paired --andon ANDON_PROFILE --evaluator-profile EVALUATOR_PROFILE and --retain-history-anchor NEW_OUTPUT; explicit --continue-generation or --after-message suffix recovery additionally requires --history-anchor INPUT and --evaluation-recovery REQUIREMENTS; credibility promotion requires the explicitly selected joint Andon policy and numerical operator allowance; independent policy governance requires its paired governed operator and recovery additionally requires --recovery-requirements; topology and held-out activation require their own composition";
 
 pub(super) struct Paths {
     pub settings: PathBuf,
@@ -42,7 +42,7 @@ pub(super) fn take_options(
     }
     if credibility.is_some()
         || args.len() < 10
-        || args.len() > 22
+        || args.len() > 26
         || args.first().map(String::as_str) != Some("serve-native-generated")
         || args[1..4]
             .iter()
@@ -95,7 +95,9 @@ pub(super) fn take_options(
             | "--history-anchor"
             | "--publication-profile"
             | "--operator-profile"
-            | "--tower-generation" => remaining.extend_from_slice(pair),
+            | "--tower-generation"
+            | "--governor-profile"
+            | "--recovery-requirements" => remaining.extend_from_slice(pair),
             _ => return Err(INVALID.into()),
         }
         index += 2;
@@ -105,6 +107,9 @@ pub(super) fn take_options(
         || seen.contains("--operator-profile") != seen.contains("--tower-generation")
         || mode.is_recovery() != seen.contains("--history-anchor")
         || mode.is_recovery() != recovery.is_some()
+        || (seen.contains("--governor-profile") && !seen.contains("--operator-profile"))
+        || seen.contains("--recovery-requirements")
+            != (seen.contains("--governor-profile") && mode.is_recovery())
     {
         return Err(INVALID.into());
     }
@@ -216,9 +221,7 @@ impl Selection<'_> {
         if self.recovery.is_none() {
             self.settings.creation()?;
         }
-        if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN
-            || selected_operator.is_some_and(operator::Selection::is_governed)
-        {
+        if config.profile.delivery.clock_domain != crate::config::CLOCK_DOMAIN {
             return Err(INVALID.into());
         }
         // A numerical promotion grant may only use the immutable joint policy
@@ -251,6 +254,34 @@ impl Selection<'_> {
             )?;
         }
         self.evaluator.check_custody_paths(&[config.source.path()])
+    }
+
+    /// A governor is a separate credential set and service namespace from the
+    /// original evaluator, even when both inspect the same retained history.
+    /// Each independently selected recovery contract remains mandatory.
+    pub(super) fn check_governor(
+        self,
+        governor: Option<&governor::Settings>,
+        selected_operator: Option<&operator::Selection>,
+        requirements: bool,
+    ) -> Result<(), String> {
+        if governor.is_some() != selected_operator.is_some_and(operator::Selection::is_governed)
+            || requirements != (governor.is_some() && self.recovery.is_some())
+        {
+            return Err(INVALID.into());
+        }
+        let Some(governor) = governor else {
+            return Ok(());
+        };
+        let evaluator = self.evaluator.evaluator.policy()?;
+        let peer = governor.governor;
+        if evaluator.uid() == peer.uid()
+            && evaluator.gid() == peer.gid()
+            && !matches!((evaluator.pid(), peer.pid()), (Some(a), Some(b)) if a != b)
+        {
+            return Err("native evaluator and policy governor require disjoint credential sets".into());
+        }
+        self.check_files(&[governor.socket.as_path()])
     }
 
     pub(super) fn check_history(self, history: &anchors::Selection) -> Result<(), String> {

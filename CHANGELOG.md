@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-27 · Retain native evaluation across live policy governance
+
+- Compose resident native generation, marginal/joint Andon accounting and the
+  original independent evaluator with live governor/operator policy promotion.
+- Preserve checked feeds, delayed old-policy cases, numerical work, charges,
+  finite allowances, fresh human approval and the original Stop lifecycle.
+- Recover through both independent floor and policy/campaign documents without
+  weakening either; add real transport and causal regression definitions.
+  Compilation and runtime qualification remain pending.
+
 ## 2026-11-27 · Compose native evaluation and policy governance atomically
 
 - Add an explicit campaign selection to the original evaluated native bootstrap,

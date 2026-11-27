@@ -131,9 +131,21 @@ recovery requirements used below; one fresh evaluator serves the recovered
 sequence without renewing its allowance at handoffs. Explicit version-two
 per-release exact prechecks compose with both creation and recovered sequences,
 retaining their original actor grants, complete endpoint/input custody and
-actual owner epoch checks before source or numerical work. Policy governance,
-topology and separate held-out publication qualification remain excluded. Required RCH compilation and runtime
-qualification remain pending.
+actual owner epoch checks before source or numerical work.
+
+The resident command can also select an
+[independent policy governor](RESIDENT_NATIVE_PUBLICATION.md#keep-evaluation-active-through-native-policy-promotion)
+and separately funded promotion operator alongside the evaluator. Both roles
+remain on the original native owner across promotion and Message/Finish handoffs;
+old-policy cases retain independent delayed labeling. Creation installs all
+campaign and accounting contracts atomically. Recovery additionally requires the
+complete independent `--recovery-requirements` policy/campaign document; its
+journal/control/authority floors combine with `--evaluation-recovery` by maximum.
+Disjoint role credentials and full endpoint/input/history custody are checked
+before live setup. Every effect still requires fresh source, helper review and
+independent human approval. Topology and separate held-out publication
+qualification retain their own composition requirements. Required RCH compilation
+and runtime qualification remain pending.
 
 ## Recover an evaluated native generated service
 

@@ -8,7 +8,9 @@ use super::super::{
 };
 use super::{anchors, andon};
 use fa_reference::action::consequence::delivery::persistent::observed::{
-    credibility::FileIndependentEvaluator, guarded::anchored::FileHistoryAnchor,
+    credibility::FileIndependentEvaluator,
+    governance::campaigns::FilePolicyGovernor,
+    guarded::{FileRecoveryRequirements, anchored::FileHistoryAnchor},
     stream::generated::checked::source::GeneratedSourceProfile,
 };
 use std::path::{Path, PathBuf};
@@ -75,18 +77,21 @@ impl Recovery {
         inputs: &Inputs,
         selected: GeneratedSourceProfile,
         accounting: andon::Selection<'_>,
+        governed: Option<&FileRecoveryRequirements>,
         history: &anchors::Selection,
         control: &mut Control,
         deadline: &Deadline,
         time: &mut F,
         stopped: &mut Option<FileHistoryAnchor>,
-    ) -> Result<(FileOversight, FileHumanReviewer, FileIndependentEvaluator), String>
+    ) -> Result<(
+        FileOversight, FileHumanReviewer, Option<FilePolicyGovernor>, FileIndependentEvaluator,
+    ), String>
     where
         F: FnMut() -> ElapsedTick,
     {
         let expected =
             self.requirements
-                .expected(accounting.settings, config, inputs, &selected)?;
+                .expected_selected(accounting.settings, config, inputs, &selected, governed)?;
         let anchor = history.input().ok_or(andon::INVALID)?;
         let (recovery, pending) = accounted::ready(
             config,
@@ -106,7 +111,7 @@ impl Recovery {
             return Err(control.stop_recovery_with_anchor(target, deadline, time, stopped)?);
         }
         let (host, roles) = recovery.finish().map_err(debug)?;
-        Ok((host, roles.oversight.human, roles.evaluator))
+        Ok((host, roles.oversight.human, roles.oversight.policy_governor, roles.evaluator))
     }
 }
 

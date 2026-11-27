@@ -71,21 +71,52 @@ impl Requirements {
         inputs: &Inputs,
         selected: &GeneratedSourceProfile,
     ) -> Result<FileAndonRecoveryRequirements, String> {
-        let mut expected = FileAndonRecoveryRequirements::new(
-            FileRecoveryRequirements {
-                guards: FileGuardSet {
-                    stream: Some(inputs.stream),
-                    decoder: Some(inputs.decoder.clone()),
-                    decoder_stop: None,
-                    source: Some(config.source_policy),
-                    identity: None,
-                    campaigns: None,
-                    credential: None,
-                },
-                effective_policy: config.profile.delivery.policy.clone(),
-                credential_epoch: None,
-                minimum: self.minimum,
+        self.expected_selected(settings, config, inputs, selected, None)
+    }
+
+    /// Composed governance retains its independently selected effective policy
+    /// and campaign guard while requiring the SAME native/source inventory.
+    /// Both documents' lower bounds remain binding; neither can weaken the other.
+    pub(in super::super) fn expected_selected(
+        &self,
+        settings: &andon_settings::Settings,
+        config: &Config,
+        inputs: &Inputs,
+        selected: &GeneratedSourceProfile,
+        governed: Option<&FileRecoveryRequirements>,
+    ) -> Result<FileAndonRecoveryRequirements, String> {
+        let mut base = FileRecoveryRequirements {
+            guards: FileGuardSet {
+                stream: Some(inputs.stream),
+                decoder: Some(inputs.decoder.clone()),
+                decoder_stop: None,
+                source: Some(config.source_policy),
+                identity: None,
+                campaigns: None,
+                credential: None,
             },
+            effective_policy: config.profile.delivery.policy.clone(),
+            credential_epoch: None,
+            minimum: self.minimum,
+        };
+        if let Some(governed) = governed {
+            let mut guards = base.guards.clone();
+            guards.campaigns = governed.guards.campaigns;
+            if guards.campaigns.is_none()
+                || governed.guards != guards
+                || governed.credential_epoch.is_some()
+            {
+                return Err("evaluated native governance requires its exact independently selected campaign and native guard inventory".into());
+            }
+            base = governed.clone();
+            base.minimum = FileRecoveryFloor {
+                journal_revision: base.minimum.journal_revision.max(self.minimum.journal_revision),
+                control_sequence: base.minimum.control_sequence.max(self.minimum.control_sequence),
+                authority_epoch: base.minimum.authority_epoch.max(self.minimum.authority_epoch),
+            };
+        }
+        let mut expected = FileAndonRecoveryRequirements::new(
+            base,
             settings.config.clone(),
             settings.windows.clone(),
             settings.minimum_evaluation_revision,

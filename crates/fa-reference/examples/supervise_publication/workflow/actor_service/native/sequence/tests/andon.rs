@@ -38,7 +38,7 @@ fn parse(bytes: &[u8]) -> Json {
     strict_json::parse(bytes, strict_json::Limits::default()).unwrap()
 }
 
-fn settings() -> andon_settings::Settings {
+pub(super) fn settings() -> andon_settings::Settings {
     andon_settings::Settings::decode(include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/fixtures/native_andon_operator.json"
@@ -46,7 +46,7 @@ fn settings() -> andon_settings::Settings {
     .unwrap()
 }
 
-fn peer_profile(root: &Root, actor: &Profile, pid: u32, candidates: u32) -> String {
+pub(super) fn peer_profile(root: &Root, actor: &Profile, pid: u32, candidates: u32) -> String {
     let scope = actor.scope;
     let server = actor.supervisor;
     format!(
@@ -70,7 +70,7 @@ fn peer_profile(root: &Root, actor: &Profile, pid: u32, candidates: u32) -> Stri
     )
 }
 
-fn history(
+pub(super) fn history(
     root: &Root,
     config: &Config,
     entries: &[Entry],
@@ -176,17 +176,17 @@ fn ledger(reply: &Json, retained: u64, pending: u64, labels: u64) {
     assert_eq!(field(&windows[0], &["total_cost"]).as_str(), Some("0"));
 }
 
-struct EvaluatorProcess {
+pub(super) struct EvaluatorProcess {
     child: Option<Child>,
     input: Option<ChildStdin>,
     root: PathBuf,
     profile: PathBuf,
-    selected: evaluator::Settings,
+    pub(super) selected: evaluator::Settings,
     serial: u64,
 }
 
 impl EvaluatorProcess {
-    fn start(root: &Root, actor: &Profile, candidates: u32) -> Self {
+    pub(super) fn start(root: &Root, actor: &Profile, candidates: u32) -> Self {
         let mut child = Process::new(std::env::current_exe().unwrap())
             .args(["--exact", PEER_TEST, "--nocapture", "--test-threads=1"])
             .env(PEER_ROOT, &root.0)
@@ -209,7 +209,7 @@ impl EvaluatorProcess {
         }
     }
 
-    fn operation(&mut self, mode: &str, round: u64) -> (bool, Vec<u8>) {
+    pub(super) fn operation(&mut self, mode: &str, round: u64) -> (bool, Vec<u8>) {
         self.begin(mode, round);
         self.completion()
     }
@@ -249,7 +249,7 @@ impl EvaluatorProcess {
         (result == "ok", bytes)
     }
 
-    fn finish(mut self) {
+    pub(super) fn finish(mut self) {
         drop(self.input.take());
         let result = self.child.take().unwrap().wait_with_output().unwrap();
         assert!(
@@ -409,7 +409,7 @@ fn native_resident_evaluator_process() {
     }
 }
 
-fn retained(path: &Path, reader: &Reader) {
+pub(super) fn retained(path: &Path, reader: &Reader) {
     let anchor = FileHistoryAnchor::read_trusted(
         &mut Cursor::new(fs::read(path).unwrap()),
         MAX_HISTORY_ANCHOR_BYTES,
