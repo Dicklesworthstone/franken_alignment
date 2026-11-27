@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-27 · Allow a corrected guarded bootstrap to retry at the same path
+
+- Encode the complete path-bound journal, including terminal recovery capacity, before creating a guarded authority directory. The original exclusive lock and durable replacement still precede role issuance.
+
 ## 2026-11-27 · Use change-feed witnesses with native independent evaluation
 
 - Single-request generated publication accepts checked feeds and optional exact current snapshot fallback alongside the independent evaluator. Anchored recovery checks the selected publication profile before fencing, including in historical evaluation-only mode.

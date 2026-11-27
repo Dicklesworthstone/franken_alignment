@@ -55,6 +55,28 @@ pub(super) fn identity(path: &Path) -> Result<PathBuf, JournalError> {
     io_result(fs::canonicalize(path), JournalIo::Directory, false)
 }
 impl Store {
+    /// Encode the complete first image against its intended canonical identity
+    /// before claiming the directory. Creation remains exclusive. A changed
+    /// parent during admission cannot publish an image bound to another path.
+    pub(super) fn create_with_image(
+        path: &Path,
+        encode: impl FnOnce(&Path) -> Result<Vec<u8>, crate::Error>,
+    ) -> Result<Self, JournalError> {
+        let name = path.file_name().ok_or(JournalError::InvalidFile)?;
+        let parent = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or(Path::new("."));
+        let intended = io_result(fs::canonicalize(parent), JournalIo::Directory, false)?.join(name);
+        let image = encode(&intended)?;
+        let store = Self::create(path)?;
+        if store.identity() != intended {
+            return Err(crate::Error::Binding.into());
+        }
+        store.replace(&image)?;
+        Ok(store)
+    }
+
     pub(super) fn create(path: &Path) -> Result<Self, JournalError> {
         io_result(
             DirBuilder::new().mode(0o700).create(path),

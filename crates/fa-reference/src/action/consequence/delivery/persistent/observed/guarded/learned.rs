@@ -26,8 +26,7 @@ impl FileOversight {
         check_profile(guards)?;
         let prepared =
             PreparedGuardedBootstrap::prepare(profile, guards, registration)?.learned(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        prepared.publish(store)
+        prepared.create(directory.as_ref())
     }
 
     /// Publish the terminal reserve, complete independent guards and original
@@ -46,7 +45,7 @@ impl FileOversight {
         }
         let prepared = prepare_reserved(profile, guards, registration, config, reserve)?
             .checked_guards(guards)?;
-        prepared.publish(storage::Store::create(directory.as_ref())?)
+        prepared.create(directory.as_ref())
     }
 
     /// Recover ONE composed owner and all its separately provisioned roles.

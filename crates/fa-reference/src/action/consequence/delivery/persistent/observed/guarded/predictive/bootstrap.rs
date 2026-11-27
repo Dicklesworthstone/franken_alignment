@@ -1,6 +1,6 @@
 //! First-image learned prediction with the complete separate guard-role bundle.
 use super::{EvaluationProtocol, FileConsistencyConfig, FileCredentialRegistration,
-    FileGuardSet, FileOversight, FileOversightProfile, FilePredictiveRoles, JournalError, storage};
+    FileGuardSet, FileOversight, FileOversightProfile, FilePredictiveRoles, JournalError};
 use super::super::{learned, mediated::predictive::FileMediatedPredictor};
 use super::super::super::{consistency::learned::FileLearnedConsistencyConfig,
     decoder::learned::FileLearnedConfig};
@@ -46,7 +46,7 @@ fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet
     let mut prepared = learned::prepare_reserved(profile, guards, registration, config, reserve)?;
     if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
     let prepared = prepared.checked_predictive(guards, evaluation.as_ref(), &prediction)?;
-    let (host, oversight) = prepared.publish(storage::Store::create(directory)?)?;
+    let (host, oversight) = prepared.create(directory)?;
     let roles = FilePredictiveRoles::provision(&host, oversight, evaluation.is_some());
     Ok((host, roles))
 }

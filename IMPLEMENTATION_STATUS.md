@@ -1,5 +1,9 @@
 # Implementation status · design revision 0.3
 
+## 2026-11-27 · Check guarded first-image capacity before acquiring storage
+
+All 23 production call sites using PreparedGuardedBootstrap now pre-encode against the resolved destination. The new regression covers a parent alias, a one-byte shortfall and an exact-fit retry across three guard configurations. It also exercises preservation of existing storage and reserved Fence capacity. The required remote test gate has not run.
+
 ## 2026-11-27 · Combine native witness-checked publication and evaluation
 
 The single-request native service admits an independently evaluated publication profile with a change feed and optional exact snapshot fallback. The same generated-source cursor checks the selected feed, freshness and fallback policy on recovery. Input custody validation runs before storage or listener creation. Publication wait/retry and held-out publication qualification remain separately gated. Regression definitions cover approvals, rejections, changed recovery inputs and path conflicts. The required RCH launcher was unavailable for compilation and execution.

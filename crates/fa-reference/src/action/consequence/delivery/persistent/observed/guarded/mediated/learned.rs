@@ -6,7 +6,7 @@ pub use policy_promotion::{FileMediatedPolicyPromotionHistory, FileMediatedPolic
 use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileCredentialRegistration, FileGuardSet, FileMediatedRequirements, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, JournalError, Machine,
-    MediationEvent, PreparedGuardedBootstrap, storage};
+    MediationEvent, PreparedGuardedBootstrap};
 use super::predictive::{FileMediatedStreamControlRecovery, FileMediatedStreamControlRequest};
 use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
@@ -153,8 +153,7 @@ fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet
     if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
     let prepared = prepared.mediated(topology.clone())?
         .checked_mediated(guards, evaluation.as_ref(), &topology)?;
-    let store = storage::Store::create(directory)?;
-    let (host, oversight) = prepared.publish(store)?;
+    let (host, oversight) = prepared.create(directory)?;
     let roles = FileMediatedRoles::provision(&host, oversight, false, evaluation.is_some());
     Ok((host, roles))
 }

@@ -39,8 +39,7 @@ impl FileOversight {
     ) -> Result<(Self, FileEvaluatedOversightRoles), JournalError> {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
             .jointly_evaluated(protocol, joint)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }

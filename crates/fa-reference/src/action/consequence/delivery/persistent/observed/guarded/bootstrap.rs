@@ -332,6 +332,18 @@ impl PreparedGuardedBootstrap {
         Ok(self)
     }
 
+    pub(super) fn create(
+        self,
+        directory: &Path,
+    ) -> Result<(FileOversight, FileOversightRoles), JournalError> {
+        let store = storage::Store::create_with_image(directory, |identity| {
+            journal::encode(&self.profile, identity, &self.events)
+        })?;
+        Ok(self.provision(store))
+    }
+
+    // Storage fault fixtures supply a locked store with an injected failure.
+    #[cfg(test)]
     pub(super) fn publish(
         self,
         store: storage::Store,
@@ -340,9 +352,13 @@ impl PreparedGuardedBootstrap {
         // The only canonical replacement. A failed or ambiguous write returns
         // neither owner nor roles. Recovery validates the actual canonical image.
         store.replace(&bytes)?;
+        Ok(self.provision(store))
+    }
+
+    fn provision(self, store: storage::Store) -> (FileOversight, FileOversightRoles) {
         let (host, human) = FileOversight::owner(self.profile, store, self.events, self.machine);
         let roles = FileOversightRoles::provision(&host, human);
-        Ok((host, roles))
+        (host, roles)
     }
 }
 
@@ -360,8 +376,7 @@ impl FileOversight {
     ) -> Result<(Self, FileOversightRoles), JournalError> {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
             .checked_event_capacity()?;
-        let store = storage::Store::create(directory.as_ref())?;
-        prepared.publish(store)
+        prepared.create(directory.as_ref())
     }
 
     /// Publish every independently selected guard and the original terminal
@@ -379,8 +394,7 @@ impl FileOversight {
         let prepared =
             PreparedGuardedBootstrap::prepare_reserved(profile, guards, registration, reserve)?
                 .checked_event_capacity()?;
-        let store = storage::Store::create(directory.as_ref())?;
-        prepared.publish(store)
+        prepared.create(directory.as_ref())
     }
 
     /// Publish the original plain witness gate, all selected guards and the
@@ -404,8 +418,7 @@ impl FileOversight {
             publication,
         )?
         .checked_event_capacity()?;
-        let store = storage::Store::create(directory.as_ref())?;
-        prepared.publish(store)
+        prepared.create(directory.as_ref())
     }
 }
 

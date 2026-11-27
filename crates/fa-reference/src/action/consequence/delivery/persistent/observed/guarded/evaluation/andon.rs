@@ -267,8 +267,7 @@ impl FileOversight {
         let prepared = PreparedGuardedBootstrap::prepare(profile, guards, registration)?
             .evaluated(protocol)?
             .with_andon(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }
@@ -283,8 +282,7 @@ impl FileOversight {
     {
         let prepared = PreparedGuardedBootstrap::prepare_publication(
             profile, guards, registration, publication)?.evaluated(protocol)?.with_andon(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }
@@ -298,8 +296,7 @@ impl FileOversight {
         let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(
             profile, guards, registration, reserve, publication)?
             .evaluated(protocol)?.with_andon(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }

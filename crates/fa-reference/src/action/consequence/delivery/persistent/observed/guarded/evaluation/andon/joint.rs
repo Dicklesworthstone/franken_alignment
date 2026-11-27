@@ -1,10 +1,12 @@
 //! Compose original joint promotion safeguards with durable native Andon accounting.
 //! All requirements are independently chosen; absence is not a wildcard. The
 //! existing journal, native reweighting rule and joint replay remain authoritative.
+#[cfg(test)]
+use super::storage;
 use super::{CredibilityEvent, EvaluationProtocol, Event, FileAndonConfig,
     FileAndonRecoveryRequirements, FileCredentialRegistration, FileEvaluatedOversightRoles,
     FileGuardSet, FileOversight, FileOversightProfile, JointPromotionPolicy, JournalError,
-    PreparedGuardedBootstrap, PublicationLimits, storage};
+    PreparedGuardedBootstrap, PublicationLimits};
 use crate::Error;
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use std::path::Path;
@@ -69,8 +71,7 @@ impl FileOversight {
         let prepared = PreparedGuardedBootstrap::prepare_publication_reserved(
             profile, guards, registration, reserve, publication)?
             .jointly_evaluated(protocol, joint)?.with_andon(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }
@@ -118,8 +119,7 @@ fn publish(
     prepared: PreparedGuardedBootstrap,
     directory: &Path,
 ) -> Result<(FileOversight, FileEvaluatedOversightRoles), JournalError> {
-    let store = storage::Store::create(directory)?;
-    let (host, oversight) = prepared.publish(store)?;
+    let (host, oversight) = prepared.create(directory)?;
     let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
     Ok((host, roles))
 }

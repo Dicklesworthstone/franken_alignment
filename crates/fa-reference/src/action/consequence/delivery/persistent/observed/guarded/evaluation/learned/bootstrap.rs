@@ -1,5 +1,4 @@
 //! Publish the original evaluated, guarded and learned configuration together.
-use super::super::super::super::storage;
 use super::super::super::{
     FileCredentialRegistration, FileGuardSet, bootstrap::PreparedGuardedBootstrap,
 };
@@ -53,8 +52,7 @@ impl FileOversight {
         .with_andon(accounting)?
         .checked_evaluated(guards, &protocol)?
         .checked_event_capacity()?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }
@@ -94,8 +92,7 @@ impl FileOversight {
         .with_andon(accounting)?
         .checked_evaluated(guards, &protocol)?
         .checked_event_capacity()?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }
@@ -137,8 +134,7 @@ impl FileOversight {
             .learned(config)?
             .evaluated(protocol.clone())?
             .checked_evaluated(guards, &protocol)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }

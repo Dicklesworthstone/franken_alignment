@@ -1,8 +1,10 @@
 //! Compose existing topology, source and terminal capacity in the FIRST image.
 //! The operator consumer must still obtain the native independent cut check.
+#[cfg(test)]
+use super::storage;
 use super::{AuthorityGraph, EvaluationProtocol, FileConsistencyConfig, FileCredentialRegistration,
     FileGuardSet, FileMediatedRoles, FileOversight, FileOversightProfile, JournalError,
-    PreparedGuardedBootstrap, storage};
+    PreparedGuardedBootstrap};
 use crate::action::consequence::delivery::persistent::RecoveryReserve;
 use crate::action::consequence::delivery::publication_gate::PublicationLimits;
 use std::path::Path;
@@ -39,8 +41,7 @@ impl FileOversight {
         let predicted = prediction.is_some();
         let evaluated = evaluation.is_some();
         let prepared = prepare(profile, guards, registration, bootstrap, prediction, evaluation)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileMediatedRoles::provision(&host, oversight, predicted, evaluated);
         Ok((host, roles))
     }

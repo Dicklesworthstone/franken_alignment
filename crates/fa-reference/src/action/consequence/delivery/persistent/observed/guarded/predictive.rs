@@ -85,8 +85,7 @@ impl FileOversight {
             prepared = prepared.evaluated(protocol)?;
         }
         let prepared = prepared.predictive(prediction)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FilePredictiveRoles::provision(&host, oversight, evaluated);
         Ok((host, roles))
     }

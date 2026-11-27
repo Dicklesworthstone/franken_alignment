@@ -1,9 +1,11 @@
 //! Live publication admission retains native evaluation and existing liabilities.
+#[cfg(test)]
+use super::storage;
 use super::super::super::bootstrap::PreparedGuardedBootstrap;
 use super::super::super::{FileCredentialRegistration, FileGuardSet};
 use super::{
     EvaluationProtocol, FileAndonRecovery, FileEvaluatedOversightRoles, FileOversight,
-    FileOversightProfile, JournalError, RecoveryReserve, storage,
+    FileOversightProfile, JournalError, RecoveryReserve,
 };
 use crate::action::ElapsedTick;
 use crate::action::consequence::delivery::persistent::observed::credibility::andon::FileAndonConfig;
@@ -29,8 +31,7 @@ impl FileOversight {
             PreparedGuardedBootstrap::prepare_reserved(profile, guards, registration, reserve)?
                 .evaluated(protocol)?
                 .with_andon(config)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileEvaluatedOversightRoles::provision(&host, oversight);
         Ok((host, roles))
     }

@@ -102,8 +102,7 @@ impl FileOversight {
             prepared = prepared.predictive(config)?;
         }
         let prepared = prepared.mediated(topology)?;
-        let store = storage::Store::create(directory.as_ref())?;
-        let (host, oversight) = prepared.publish(store)?;
+        let (host, oversight) = prepared.create(directory.as_ref())?;
         let roles = FileMediatedRoles::provision(&host, oversight, predicted, evaluated);
         Ok((host, roles))
     }

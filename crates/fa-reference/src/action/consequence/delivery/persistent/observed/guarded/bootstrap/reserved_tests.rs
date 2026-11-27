@@ -474,17 +474,25 @@ fn create_capacity_case(
     profile: FileOversightProfile,
     mode: usize,
 ) -> Result<FileOversight, JournalError> {
+    create_capacity_case_at(&root.store(), profile, mode)
+}
+
+fn create_capacity_case_at(
+    path: &Path,
+    profile: FileOversightProfile,
+    mode: usize,
+) -> Result<FileOversight, JournalError> {
     let result = match mode {
-        0 => FileOversight::create_guarded(root.store(), profile, &guards(), None),
+        0 => FileOversight::create_guarded(path, profile, &guards(), None),
         1 => FileOversight::create_guarded_reserved(
-            root.store(),
+            path,
             profile,
             &guards(),
             None,
             RecoveryReserve::terminal(),
         ),
         2 => FileOversight::create_guarded_publication_reserved(
-            root.store(),
+            path,
             profile,
             &guards(),
             None,
@@ -583,4 +591,56 @@ fn exact_guarded_bootstrap_event_capacity_keeps_the_original_recovery_fence() {
     assert_eq!(host.inspect().executions, 0);
     assert_eq!(host.inspect().control.ledger.available, 100);
     assert!(!host.clock_ready());
+}
+
+#[test]
+fn guarded_creation_admits_the_complete_encoded_image_and_preserves_the_terminal_bytes() {
+    for mode in 0..3 {
+        let root = Directory::new();
+        // Equal-length physical names make the original observed image size
+        // comparable. The retry selects the destination via a longer alias.
+        let measuring = root.0.join("measurement");
+        let target = root.store();
+        let alias = root.0.join("longer-alias-to-parent");
+        std::os::unix::fs::symlink(&root.0, &alias).unwrap();
+        let selected_path = alias.join(target.file_name().unwrap());
+        let probe = create_capacity_case_at(&measuring, profile(), mode).unwrap();
+        let image_len = fs::metadata(measuring.join(storage::CANONICAL))
+            .unwrap()
+            .len() as usize;
+        drop(probe);
+
+        let mut selected = profile();
+        let reserve_bytes = if mode == 0 {
+            0
+        } else {
+            RecoveryReserve::terminal().bytes
+        };
+        selected.delivery.limits.bytes = image_len + reserve_bytes - 1;
+        assert!(matches!(
+            create_capacity_case_at(&selected_path, selected.clone(), mode),
+            Err(JournalError::Contract(Error::Limit))
+        ));
+        assert!(!target.exists());
+        selected.delivery.limits.bytes += 1;
+        let host = create_capacity_case_at(&selected_path, selected.clone(), mode).unwrap();
+        let space = host.journal_capacity().unwrap();
+        assert_eq!(space.used().bytes, image_len);
+        assert_eq!(space.ordinary_remaining().bytes, 0);
+        assert_eq!(space.remaining().bytes, reserve_bytes);
+        let canonical = fs::read(root.canonical()).unwrap();
+        let identity = fs::canonicalize(&target).unwrap();
+        assert!(journal::decode(&selected, &identity, &canonical).is_ok());
+        assert!(journal::decode(&selected, &selected_path, &canonical).is_err());
+        assert!(create_capacity_case_at(&selected_path, selected.clone(), mode).is_err());
+        assert_eq!(fs::read(root.canonical()).unwrap(), canonical);
+        if mode == 1 {
+            let before = host.revision();
+            let expected = expected(&host);
+            drop(host);
+            let (reopened, _) = FileOversight::open_guarded(&target, selected, &expected).unwrap();
+            assert_eq!(reopened.revision(), before + 1);
+            assert!(reopened.journal_capacity().unwrap().remaining().bytes < reserve_bytes);
+        }
+    }
 }

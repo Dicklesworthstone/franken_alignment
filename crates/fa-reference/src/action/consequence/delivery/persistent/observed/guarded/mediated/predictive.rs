@@ -7,7 +7,7 @@ pub use stream_control::{FileMediatedStreamControlHistory,
 use super::{AuthorityGraph, CredibilityEvent, EvaluationProtocol, Event,
     FileConsistencyConfig, FileCredentialRegistration, FileGuardSet, FileMediatedRoles,
     FileOversight, FileOversightProfile, FileOversightRoles, FileRecoveryRequirements,
-    FileTopologyRequirement, JournalError, Machine, MediationEvent, PreparedGuardedBootstrap, storage};
+    FileTopologyRequirement, JournalError, Machine, MediationEvent, PreparedGuardedBootstrap};
 use super::super::{anchored::FileHistoryAnchor, learned::check_profile,
     learned_recovery::check_recovery_reserve};
 use super::super::super::consistency::{ConsistencyEvent, learned::FileLearnedConsistencyConfig};
@@ -208,8 +208,7 @@ fn create(directory: &Path, profile: FileOversightProfile, guards: &FileGuardSet
     if let Some(protocol) = &evaluation { prepared = prepared.evaluated(protocol.clone())?; }
     let prepared = prepared.mediated(topology.clone())?
         .checked_predictive_mediated(guards, evaluation.as_ref(), &prediction, &topology)?;
-    let store = storage::Store::create(directory)?;
-    let (host, oversight) = prepared.publish(store)?;
+    let (host, oversight) = prepared.create(directory)?;
     let roles = FileMediatedRoles::provision(&host, oversight, true, evaluation.is_some());
     Ok((host, roles))
 }

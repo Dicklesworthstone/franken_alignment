@@ -17,7 +17,6 @@ use crate::action::consequence::delivery::persistent::observed::{
         mediated::{FileMediatedRoles, FileTopologyRequirement},
     },
     shutdown::recovery::{FileAdmissionStoppedHistory, FileStoppedHistory},
-    storage,
 };
 use crate::action::consequence::{
     mediation::AuthorityGraph, oversight::joint_credibility::JointPromotionPolicy,
@@ -205,8 +204,7 @@ fn create(
         .mediated(topology.clone())?
         .checked_mediated(guards, Some(&protocol), &topology)?
         .checked_event_capacity()?;
-    let store = storage::Store::create(directory)?;
-    let (host, oversight) = prepared.publish(store)?;
+    let (host, oversight) = prepared.create(directory)?;
     let roles = FileMediatedRoles::provision(&host, oversight, false, true);
     Ok((host, roles))
 }
